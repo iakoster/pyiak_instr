@@ -88,20 +88,13 @@ class TestRWConfig(unittest.TestCase):
     def tearDownClass(cls) -> None:
         shutil.rmtree(DATA_TEST_DIR)
 
-    def test_init_without_path(self):
-        with self.assertRaises(ValueError) as err:
-            RWConfig()
-        self.assertEqual(
-            f'Указанный путь не ведет к *.ini файлу: .',
-            err.exception.args[0]
-        )
-
     def test_path_is_dir(self):
         test_path = Path('.\\data_test\\only_dir')
         with self.assertRaises(ValueError) as err:
             RWConfig(test_path)
         self.assertEqual(
-            f'Указанный путь не ведет к *.ini файлу: {test_path}',
+            'The specified path does not lead to '
+            f'the *.ini file: {test_path}',
             err.exception.args[0]
         )
 
@@ -110,7 +103,8 @@ class TestRWConfig(unittest.TestCase):
         with self.assertRaises(ValueError) as err:
             RWConfig(test_path)
         self.assertEqual(
-            f'Указанный путь не ведет к *.ini файлу: {test_path}',
+            'The specified path does not lead to '
+            f'the *.ini file: {test_path}',
             err.exception.args[0]
         )
 
@@ -135,7 +129,7 @@ class TestRWConfig(unittest.TestCase):
                 )
 
     def test_write_dict_conv(self):
-        self.test_config.write_dict(TEST_DICT_CONV)
+        self.test_config.write(TEST_DICT_CONV)
         readed_config = configparser.ConfigParser()
         readed_config.read(CONFIG_PATH)
         self.assertDictEqual(
@@ -145,7 +139,7 @@ class TestRWConfig(unittest.TestCase):
         )
 
     def test_write_dict_str(self):
-        self.test_config.write_dict(TEST_DICT_STR)
+        self.test_config.write(TEST_DICT_STR)
         readed_config = configparser.ConfigParser()
         readed_config.read(CONFIG_PATH)
         self.assertDictEqual(
@@ -155,7 +149,7 @@ class TestRWConfig(unittest.TestCase):
         )
 
     def setUp(self) -> None:
-        self.test_config.write_dict(TEST_DICT_STR)
+        self.test_config.write(TEST_DICT_STR)
 
     def test_read_conversion(self) -> None:
         high_items = TEST_DICT_CONV.items()

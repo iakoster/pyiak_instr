@@ -2,160 +2,172 @@ import io
 import re
 import configparser
 from pathlib import Path
-from typing import Any
+from typing import overload, Any
+
+
+__all__ = ['RWConfig']
 
 
 class RWConfig(object):
-    _list_delimiter = ','
-    _list_pattern = re.compile(_list_delimiter)
-    _tuple_delimiter = ';'
-    _tuple_pattern = re.compile(_tuple_delimiter)
 
-    _int_pattern = re.compile('^\d+$')
-    _float_pattern = re.compile('^\d+\.\d+$')
-    _efloat_pattern = re.compile('^\d\.\d+[eE][+-]\d+$')
+    _LIST_DELIMITER = ','
+    _LIST_PATTERN = re.compile(_LIST_DELIMITER)
+    _TUPLE_DELIMITER = ';'
+    _TUPLE_PATTERN = re.compile(_TUPLE_DELIMITER)
 
-    _filename_pattern = re.compile('\w+.ini$')
+    _INT_PATTERN = re.compile('^\d+$')
+    _FLOAT_PATTERN = re.compile('^\d+\.\d+$')
+    _EFLOAT_PATTERN = re.compile('^\d\.\d+[eE][+-]\d+$')
 
-    def __init__(self, config_path: Path = None):
+    _FILENAME_PATTERN = re.compile('\w+.ini$')
 
-        self.config_path = config_path if config_path is not None else Path()
-        self._config = configparser.ConfigParser()
-        self.upd_config()
+    def __init__(self, config_path: Path | str):
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
 
-    def upd_config(self) -> None:
-        self._config = configparser.ConfigParser()
-        if self.config_path is not None:
-            self.change_path(self.config_path)
+        self._cfg_path = config_path
+        self._cfg = configparser.ConfigParser()
+        self.update_config()
 
-    def change_path(self, config_path: Path) -> None:
+    def update_config(self) -> None:
+        self.change_path(self._cfg_path)
 
-        if self._filename_pattern.match(
+    def change_path(self, config_path: Path | str) -> None:
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
+
+        if self._FILENAME_PATTERN.match(
                 config_path.name) is None:
             raise ValueError(
-                f'Указанный путь не ведет к *.ini файлу: {config_path}'
-            )
+                'The specified path does not lead to '
+                f'the *.ini file: {config_path}')
 
-        self.config_path = config_path
-        if not self.config_path.parent.exists():
-            self.config_path.parent.mkdir(parents=True)
-        self._config = self.get_config()
+        self._cfg_path = config_path
+        if not self._cfg_path.parent.exists():
+            self._cfg_path.parent.mkdir(parents=True)
+        self._cfg = self.get_file_config()
 
-    def get_config(
-            self, from_: str = 'file') -> configparser.ConfigParser:
+    def get_file_config(self) -> configparser.ConfigParser:
 
-        if from_ == 'file':
-            config = configparser.ConfigParser()
-            if self.config_path.exists():
-                config.read(self.config_path)
-            else:
-                with io.open(self.config_path, 'w') as cnfg_file:
-                    config.write(cnfg_file)
-            return config
-        elif from_ == 'self':
-            return self._config
+        config = configparser.ConfigParser()
+        if self._cfg_path.exists():
+            config.read(self._cfg_path)
         else:
-            raise ValueError
+            with io.open(self._cfg_path, 'w') as cfg_file:
+                config.write(cfg_file)
+        return config
 
     def set(self, section: str, option: str, value: Any) -> None:
-        self._config.set(section, option, self._convert_any2str(value))
+        self._cfg.set(section, option, self._convert_any2str(value))
 
     def apply_changes(self) -> None:
-        with io.open(self.config_path, 'w') as cnfg_file:
-            self._config.write(cnfg_file)
+        with io.open(self._cfg_path, 'w') as cnfg_file:
+            self._cfg.write(cnfg_file)
 
     def get(self, section: str, option: str, convert: bool = True) -> Any:
-        value = self._config.get(section, option)
+        value = self._cfg.get(section, option)
         if convert:
             return self._convert2any(value)
         else:
             return value
 
+    @overload
     def write(self, section: str, option: str, value: Any) -> None:
+        ...
 
-        conv_value = self._convert_any2str(value)
-        config = configparser.ConfigParser()
-        config.read(self.config_path)
-        config.set(section, option, conv_value)
-        self.set(section, option, conv_value)
-        with io.open(self.config_path, 'w') as cnfg_file:
-            config.write(cnfg_file)
+    @overload
+    def write(self, dictionary: dict):
+        ...
 
-    def write_dict(self, dictionary: dict) -> None:
+    def write(self, *args) -> None:
 
-        conv_dict = {}
-        for section, item in dictionary.items():
-            conv_dict[section] = {}
-            for option, raw_value in item.items():
-                conv_dict[section][option] = self._convert_any2str(raw_value)
-        self._config = configparser.ConfigParser()
-        self._config.read_dict(conv_dict)
-        with io.open(self.config_path, 'w') as cnfg_file:
-            self._config.write(cnfg_file)
+        match args:
+            case (str() as section, str() as option, value):
+                conv_value = self._convert_any2str(value)
+                config = configparser.ConfigParser()
+                config.read(self._cfg_path)
+                config.set(section, option, conv_value)
+                self.set(section, option, conv_value)
+                with io.open(self._cfg_path, 'w') as cnfg_file:
+                    config.write(cnfg_file)
+
+            case (dict() as dictionary,):
+                conv_dict = {}
+                for section, item in dictionary.items():
+                    conv_dict[section] = {}
+                    for option, raw_value in item.items():
+                        conv_dict[section][option] = self._convert_any2str(raw_value)
+                self._cfg = configparser.ConfigParser()
+                self._cfg.read_dict(conv_dict)
+                with io.open(self._cfg_path, 'w') as cnfg_file:
+                    self._cfg.write(cnfg_file)
+
+            case _: TypeError('Wrong args for write method')
 
     def _convert_any2str(self, value) -> str:
 
+        def val2str(val: int | float | str) -> str:
+            return str(val)
+
         if isinstance(value, dict):
-            conv_value = self._list_delimiter.join(
-                [self._tuple_delimiter.join(
-                    map(self._convert_val2str, item)
-                ) for item in value.items()]
-            )
+            return self._LIST_DELIMITER.join(
+                [self._TUPLE_DELIMITER.join(val2str(i) for i in item)
+                 for item in value.items()])
+
         elif isinstance(value, tuple):
-            conv_value = self._tuple_delimiter.join(
-                map(self._convert_val2str, value)
-            )
+            return self._TUPLE_DELIMITER.join(
+                val2str(v) for v in value)
+
         elif isinstance(value, list):
-            conv_value = self._list_delimiter.join(
-                map(self._convert_val2str, value)
-            )
+            return self._LIST_DELIMITER.join(
+                val2str(v) for v in value)
+
         else:
-            conv_value = self._convert_val2str(value)
-
-        return conv_value
-
-    @staticmethod
-    def _convert_val2str(value: int | float | str) -> str:
-        return str(value)
+            return val2str(value)
 
     def read(self, section: str, option: str) -> str:
 
         config = configparser.ConfigParser()
-        config.read(self.config_path)
+        config.read(self._cfg_path)
         return self._convert2any(config.get(section, option))
 
     def _convert2any(self, value: str) -> Any:
 
-        if (self._tuple_pattern.search(value) is not None and
-                self._list_pattern.search(value) is not None):
-            raw_dict = [item.split(self._tuple_delimiter)
-                        for item in value.split(self._list_delimiter)]
-            return {
-                self._convert_val2any(raw_key):
-                    self._convert_val2any(raw_val)
-                for (raw_key, raw_val) in raw_dict
-            }
+        def str2any(val: str) -> int | float | str | bool:
+            if self._INT_PATTERN.match(val) is not None:
+                return int(val)
+            elif (self._FLOAT_PATTERN.match(val) is not None or
+                  self._EFLOAT_PATTERN.match(val) is not None):
+                return float(val)
+            elif val in ('True', 'False'):
+                return eval(val)
+            else:
+                return val
 
-        elif self._tuple_pattern.search(value) is not None:
-            return tuple(map(self._convert_val2any,
-                             value.split(self._tuple_delimiter)))
-        elif self._list_pattern.search(value) is not None:
-            return list(map(self._convert_val2any,
-                            value.split(self._list_delimiter)))
+        if (self._TUPLE_PATTERN.search(value) is not None and
+                self._LIST_PATTERN.search(value) is not None):
+            raw_dict = [item.split(self._TUPLE_DELIMITER)
+                        for item in value.split(self._LIST_DELIMITER)]
+            return {str2any(raw_key): str2any(raw_val)
+                    for (raw_key, raw_val) in raw_dict}
+
+        elif self._TUPLE_PATTERN.search(value) is not None:
+            return tuple(str2any(v) for v in
+                         value.split(self._TUPLE_DELIMITER))
+
+        elif self._LIST_PATTERN.search(value) is not None:
+            return [str2any(v) for v in
+                    value.split(self._LIST_DELIMITER)]
         else:
-            return self._convert_val2any(value)
-
-    def _convert_val2any(self, value: str) -> int | float | str | bool:
-
-        if self._int_pattern.match(value) is not None:
-            return int(value)
-        elif (self._float_pattern.match(value) is not None or
-              self._efloat_pattern.match(value) is not None):
-            return float(value)
-        elif value in ('True', 'False'):
-            return eval(value)
-        else:
-            return value
+            return str2any(value)
 
     def items(self) -> configparser.ConfigParser.items:
-        return self._config.items()
+        return self._cfg.items()
+
+    @property
+    def config(self):
+        return self._cfg
+
+    @property
+    def path(self):
+        return self._cfg_path
