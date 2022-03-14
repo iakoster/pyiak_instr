@@ -1,12 +1,15 @@
-import unittest as _unittest
-import configparser as _configparser
-from pathlib import Path as _Path
+import shutil
+import unittest
+import configparser
+from pathlib import Path
 
-from lib.rwfile import RWConfig as _RWConfig
+from lib.rwfile import RWConfig
+
+from tests.env_vars import DATA_TEST_DIR
 
 
 CONFIG_NAME = 'test_config.ini'
-CONFIG_PATH = _Path() / CONFIG_NAME
+CONFIG_PATH = DATA_TEST_DIR / CONFIG_NAME
 TEST_DICT_STR = {
     'test_str': {
         'test_letter': 'a',
@@ -75,44 +78,45 @@ TEST_DICT_CONV = {
 }
 
 
-class TestRWConfigInit(_unittest.TestCase):
+class TestRWConfig(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.test_config = RWConfig(CONFIG_PATH)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        shutil.rmtree(DATA_TEST_DIR)
 
     def test_init_without_path(self):
         with self.assertRaises(ValueError) as err:
-            _RWConfig()
+            RWConfig()
         self.assertEqual(
             f'Указанный путь не ведет к *.ini файлу: .',
             err.exception.args[0]
         )
 
-    def test_file_creation(self):
-        _RWConfig(CONFIG_PATH)
-        self.assertTrue(CONFIG_PATH.exists())
-
     def test_path_is_dir(self):
-        test_path = _Path('.\\test_data\\only_dir')
+        test_path = Path('.\\data_test\\only_dir')
         with self.assertRaises(ValueError) as err:
-            _RWConfig(test_path)
+            RWConfig(test_path)
         self.assertEqual(
             f'Указанный путь не ведет к *.ini файлу: {test_path}',
             err.exception.args[0]
         )
 
     def test_wrong_fileformat(self):
-        test_path = _Path('.\\test_data\\not_ini.txt')
+        test_path = Path('.\\date_test\\not_ini.txt')
         with self.assertRaises(ValueError) as err:
-            _RWConfig(test_path)
+            RWConfig(test_path)
         self.assertEqual(
             f'Указанный путь не ведет к *.ini файлу: {test_path}',
             err.exception.args[0]
         )
 
-
-class TestRWConfigBasicWrite(_unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.test_config = _RWConfig(CONFIG_PATH)
+    def test_file_creation(self):
+        RWConfig(CONFIG_PATH)
+        self.assertTrue(CONFIG_PATH.exists())
 
     def test_write_single(self):
         options = ['test_int', 'test_float',
@@ -123,7 +127,7 @@ class TestRWConfigBasicWrite(_unittest.TestCase):
             with self.subTest(option=options[i]):
                 self.test_config.write(
                     'test_single', options[i], vals[i])
-                readed_config = _configparser.ConfigParser()
+                readed_config = configparser.ConfigParser()
                 readed_config.read(CONFIG_PATH)
                 self.assertEqual(
                     vals_str[i],
@@ -132,7 +136,7 @@ class TestRWConfigBasicWrite(_unittest.TestCase):
 
     def test_write_dict_conv(self):
         self.test_config.write_dict(TEST_DICT_CONV)
-        readed_config = _configparser.ConfigParser()
+        readed_config = configparser.ConfigParser()
         readed_config.read(CONFIG_PATH)
         self.assertDictEqual(
             TEST_DICT_STR,
@@ -142,20 +146,13 @@ class TestRWConfigBasicWrite(_unittest.TestCase):
 
     def test_write_dict_str(self):
         self.test_config.write_dict(TEST_DICT_STR)
-        readed_config = _configparser.ConfigParser()
+        readed_config = configparser.ConfigParser()
         readed_config.read(CONFIG_PATH)
         self.assertDictEqual(
             TEST_DICT_STR,
             {s: dict(readed_config.items(s))
              for s in readed_config.sections()}
         )
-
-
-class TestRWConfigBasicRead(_unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.test_config = _RWConfig(CONFIG_PATH)
 
     def setUp(self) -> None:
         self.test_config.write_dict(TEST_DICT_STR)
@@ -173,16 +170,6 @@ class TestRWConfigBasicRead(_unittest.TestCase):
                         self.test_config.read(section, option),
                         conv_value
                     )
-
-
-class TestRWConfigSetGet(_unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.test_config = _RWConfig(CONFIG_PATH)
-
-    def setUp(self) -> None:
-        self.test_config.write_dict(TEST_DICT_CONV)
 
     def test_get(self) -> None:
         section = 'test_single'
