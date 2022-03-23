@@ -112,6 +112,11 @@ class TestRWConfig(unittest.TestCase):
         RWConfig(CONFIG_PATH)
         self.assertTrue(CONFIG_PATH.exists())
 
+    def test_filepath_as_str(self):
+        cfg = RWConfig(str(CONFIG_PATH))
+        cfg.change_path(str(CONFIG_PATH))
+        self.assertTrue(CONFIG_PATH.exists())
+
     def test_write_single(self):
         options = ['test_int', 'test_float',
                    'test_efloat_small', 'test_efloat_huge']
@@ -146,6 +151,33 @@ class TestRWConfig(unittest.TestCase):
             TEST_DICT_STR,
             {s: dict(readed_config.items(s))
              for s in readed_config.sections()}
+        )
+
+    def test_write_dict_part(self):
+        test_dict = {'test_single': {
+            'test_int': 2,
+            'test_float': 5.4321,
+            'test_efloat_small': 5.4321e-99,
+            'test_efloat_huge': 5.4321e+99,
+        }}
+
+        self.test_config.write(test_dict)
+        readed_config = configparser.ConfigParser()
+        readed_config.read(CONFIG_PATH)
+        red_dict = TEST_DICT_STR
+        red_dict['test_single']['test_int'] = '2'
+        self.assertDictEqual(
+            red_dict,
+            {s: dict(readed_config.items(s))
+             for s in readed_config.sections()}
+        )
+
+    def test_write_wrong_args(self):
+        with self.assertRaises(TypeError) as exc:
+            self.test_config.write('', '')
+        self.assertEqual(
+            exc.exception.args[0],
+            'Wrong args for write method'
         )
 
     def setUp(self) -> None:

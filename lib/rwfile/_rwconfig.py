@@ -45,9 +45,9 @@ class RWConfig(object):
         self._cfg_path = config_path
         if not self._cfg_path.parent.exists():
             self._cfg_path.parent.mkdir(parents=True)
-        self._cfg = self.get_file_config()
+        self._cfg = self.get_config_from_path()
 
-    def get_file_config(self) -> configparser.ConfigParser:
+    def get_config_from_path(self) -> configparser.ConfigParser:
 
         config = configparser.ConfigParser()
         if self._cfg_path.exists():
@@ -61,15 +61,12 @@ class RWConfig(object):
         self._cfg.set(section, option, self._convert_any2str(value))
 
     def apply_changes(self) -> None:
-        with io.open(self._cfg_path, 'w') as cnfg_file:
-            self._cfg.write(cnfg_file)
+        with io.open(self._cfg_path, 'w') as cfg_file:
+            self._cfg.write(cfg_file)
 
     def get(self, section: str, option: str, convert: bool = True) -> Any:
         value = self._cfg.get(section, option)
-        if convert:
-            return self._convert2any(value)
-        else:
-            return value
+        return self._convert2any(value) if convert else value
 
     @overload
     def write(self, section: str, option: str, value: Any) -> None:
@@ -97,12 +94,12 @@ class RWConfig(object):
                     conv_dict[section] = {}
                     for option, raw_value in item.items():
                         conv_dict[section][option] = self._convert_any2str(raw_value)
-                self._cfg = configparser.ConfigParser()
                 self._cfg.read_dict(conv_dict)
                 with io.open(self._cfg_path, 'w') as cnfg_file:
                     self._cfg.write(cnfg_file)
 
-            case _: TypeError('Wrong args for write method')
+            case _:
+                raise TypeError('Wrong args for write method')
 
     def _convert_any2str(self, value) -> str:
 
@@ -125,7 +122,7 @@ class RWConfig(object):
         else:
             return val2str(value)
 
-    def read(self, section: str, option: str) -> str:
+    def read(self, section: str, option: str) -> Any:
 
         config = configparser.ConfigParser()
         config.read(self._cfg_path)
@@ -136,16 +133,19 @@ class RWConfig(object):
         def str2any(val: str) -> int | float | str | bool:
             if self._INT_PATTERN.match(val) is not None:
                 return int(val)
-            elif (self._FLOAT_PATTERN.match(val) is not None or
-                  self._EFLOAT_PATTERN.match(val) is not None):
+
+            elif (self._FLOAT_PATTERN.match(val) or
+                  self._EFLOAT_PATTERN.match(val)) is not None:
                 return float(val)
+
             elif val in ('True', 'False'):
                 return eval(val)
+
             else:
                 return val
 
-        if (self._TUPLE_PATTERN.search(value) is not None and
-                self._LIST_PATTERN.search(value) is not None):
+        if None not in (self._TUPLE_PATTERN.search(value),
+                        self._LIST_PATTERN.search(value)):
             raw_dict = [item.split(self._TUPLE_DELIMITER)
                         for item in value.split(self._LIST_DELIMITER)]
             return {str2any(raw_key): str2any(raw_val)
@@ -158,11 +158,9 @@ class RWConfig(object):
         elif self._LIST_PATTERN.search(value) is not None:
             return [str2any(v) for v in
                     value.split(self._LIST_DELIMITER)]
+
         else:
             return str2any(value)
-
-    def items(self) -> configparser.ConfigParser.items:
-        return self._cfg.items()
 
     @property
     def config(self):
