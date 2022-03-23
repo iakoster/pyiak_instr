@@ -4,6 +4,8 @@ import configparser
 from pathlib import Path
 from typing import overload, Any
 
+from ._rwf_exception import FilepathPatternError
+
 
 __all__ = ['RWConfig']
 
@@ -38,9 +40,8 @@ class RWConfig(object):
 
         if self._FILENAME_PATTERN.match(
                 config_path.name) is None:
-            raise ValueError(
-                'The specified path does not lead to '
-                f'the *.ini file: {config_path}')
+            raise FilepathPatternError(
+                self._FILENAME_PATTERN, config_path)
 
         self._cfg_path = config_path
         if not self._cfg_path.parent.exists():

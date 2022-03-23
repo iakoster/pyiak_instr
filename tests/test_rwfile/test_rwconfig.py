@@ -4,6 +4,7 @@ import configparser
 from pathlib import Path
 
 from lib.rwfile import RWConfig
+from lib.rwfile import FilepathPatternError
 
 from tests.env_vars import DATA_TEST_DIR
 
@@ -90,21 +91,19 @@ class TestRWConfig(unittest.TestCase):
 
     def test_path_is_dir(self):
         test_path = Path('.\\data_test\\only_dir')
-        with self.assertRaises(ValueError) as err:
+        with self.assertRaises(FilepathPatternError) as err:
             RWConfig(test_path)
         self.assertEqual(
-            'The specified path does not lead to '
-            f'the *.ini file: {test_path}',
+            'The path does not lead to \'\\\\w+.ini$\' file',
             err.exception.args[0]
         )
 
     def test_wrong_fileformat(self):
         test_path = Path('.\\date_test\\not_ini.txt')
-        with self.assertRaises(ValueError) as err:
+        with self.assertRaises(FilepathPatternError) as err:
             RWConfig(test_path)
         self.assertEqual(
-            'The specified path does not lead to '
-            f'the *.ini file: {test_path}',
+            'The path does not lead to \'\\\\w+.ini$\' file',
             err.exception.args[0]
         )
 

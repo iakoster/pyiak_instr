@@ -2,7 +2,9 @@ import shutil
 import unittest
 
 from tests.env_vars import DATA_TEST_DIR
+
 from lib.rwfile import RWExcel
+from lib.rwfile import FilepathPatternError
 
 EXCEL_NAME = 'test_excel.xlsx'
 EXCEL_PATH = DATA_TEST_DIR / EXCEL_NAME
@@ -20,19 +22,19 @@ class TestRWExcel(unittest.TestCase):
             RWExcel.create_empty(EXCEL_PATH, sheet_name='test_sheet')
 
     def test_init_wrong_path(self):
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(FilepathPatternError) as exc:
             RWExcel(r'.\abrakadabre')
         self.assertEqual(
-            exc.exception.args[0],
-            'The specified path does not lead to the *.xlsx file: abrakadabre'
+            'The path does not lead to \'\\\\w+.xlsx$\' file',
+            exc.exception.args[0]
         )
 
     def test_create_empty_wrong_path(self):
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(FilepathPatternError) as exc:
             RWExcel.create_empty(r'.\abrakaderbre')
         self.assertEqual(
-            exc.exception.args[0],
-            'The specified path does not lead to the *.xlsx file: abrakaderbre'
+            'The path does not lead to \'\\\\w+.xlsx$\' file',
+            exc.exception.args[0]
         )
 
     def test_create_empty(self):

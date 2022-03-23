@@ -2,6 +2,8 @@ import re
 from pathlib import Path
 from typing import overload, Any
 
+from ._rwf_exception import FilepathPatternError
+
 import openpyxl as opxl
 from openpyxl.cell.cell import Cell
 
@@ -14,9 +16,8 @@ class RWExcel(object):
         if isinstance(filepath, str):
             filepath = Path(filepath)
         if self._FILENAME_PATTERN.match(filepath.name) is None:
-            raise ValueError(
-                'The specified path does not lead to '
-                f'the *.xlsx file: {filepath}')
+            raise FilepathPatternError(
+                self._FILENAME_PATTERN, filepath)
         if not filepath.parent.exists():
             filepath.parent.mkdir(parents=True)
 
@@ -39,9 +40,8 @@ class RWExcel(object):
         if isinstance(filepath, str):
             filepath = Path(filepath)
         if cls._FILENAME_PATTERN.match(filepath.name) is None:
-            raise ValueError(
-                'The specified path does not lead to '
-                f'the *.xlsx file: {filepath}')
+            raise FilepathPatternError(
+                cls._FILENAME_PATTERN, filepath)
         if filepath.exists():
             raise FileExistsError('Excel file is already exists')
         if not filepath.parent.exists():
