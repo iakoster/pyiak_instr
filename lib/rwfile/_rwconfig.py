@@ -12,38 +12,38 @@ __all__ = ['RWConfig']
 
 class RWConfig(object):
 
-    _LIST_DELIMITER = ','
-    _LIST_PATTERN = re.compile(_LIST_DELIMITER)
-    _TUPLE_DELIMITER = ';'
-    _TUPLE_PATTERN = re.compile(_TUPLE_DELIMITER)
+    LIST_DELIMITER = ','
+    LIST_PATTERN = re.compile(LIST_DELIMITER)
+    TUPLE_DELIMITER = ';'
+    TUPLE_PATTERN = re.compile(TUPLE_DELIMITER)
 
-    _INT_PATTERN = re.compile('^\d+$')
-    _FLOAT_PATTERN = re.compile('^\d+\.\d+$')
-    _EFLOAT_PATTERN = re.compile('^\d\.\d+[eE][+-]\d+$')
+    INT_PATTERN = re.compile('^\d+$')
+    FLOAT_PATTERN = re.compile('^\d+\.\d+$')
+    EFLOAT_PATTERN = re.compile('^\d\.\d+[eE][+-]\d+$')
 
-    _FILENAME_PATTERN = re.compile('\w+.ini$')
+    FILENAME_PATTERN = re.compile('\w+.ini$')
 
-    def __init__(self, config_path: Path | str):
-        if isinstance(config_path, str):
-            config_path = Path(config_path)
+    def __init__(self, filepath: Path | str):
+        if isinstance(filepath, str):
+            filepath = Path(filepath)
 
-        self._cfg_path = config_path
+        self._cfg_path = filepath
         self._cfg = configparser.ConfigParser()
         self.update_config()
 
     def update_config(self) -> None:
         self.change_path(self._cfg_path)
 
-    def change_path(self, config_path: Path | str) -> None:
-        if isinstance(config_path, str):
-            config_path = Path(config_path)
+    def change_path(self, filepath: Path | str) -> None:
+        if isinstance(filepath, str):
+            filepath = Path(filepath)
 
-        if self._FILENAME_PATTERN.match(
-                config_path.name) is None:
+        if self.FILENAME_PATTERN.match(
+                filepath.name) is None:
             raise FilepathPatternError(
-                self._FILENAME_PATTERN, config_path)
+                self.FILENAME_PATTERN, filepath)
 
-        self._cfg_path = config_path
+        self._cfg_path = filepath
         if not self._cfg_path.parent.exists():
             self._cfg_path.parent.mkdir(parents=True)
         self._cfg = self.get_config_from_path()
@@ -108,16 +108,16 @@ class RWConfig(object):
             return str(val)
 
         if isinstance(value, dict):
-            return self._LIST_DELIMITER.join(
-                [self._TUPLE_DELIMITER.join(val2str(i) for i in item)
+            return self.LIST_DELIMITER.join(
+                [self.TUPLE_DELIMITER.join(val2str(i) for i in item)
                  for item in value.items()])
 
         elif isinstance(value, tuple):
-            return self._TUPLE_DELIMITER.join(
+            return self.TUPLE_DELIMITER.join(
                 val2str(v) for v in value)
 
         elif isinstance(value, list):
-            return self._LIST_DELIMITER.join(
+            return self.LIST_DELIMITER.join(
                 val2str(v) for v in value)
 
         else:
@@ -132,11 +132,11 @@ class RWConfig(object):
     def _convert2any(self, value: str) -> Any:
 
         def str2any(val: str) -> int | float | str | bool:
-            if self._INT_PATTERN.match(val) is not None:
+            if self.INT_PATTERN.match(val) is not None:
                 return int(val)
 
-            elif (self._FLOAT_PATTERN.match(val) or
-                  self._EFLOAT_PATTERN.match(val)) is not None:
+            elif (self.FLOAT_PATTERN.match(val) or
+                  self.EFLOAT_PATTERN.match(val)) is not None:
                 return float(val)
 
             elif val in ('True', 'False'):
@@ -145,20 +145,20 @@ class RWConfig(object):
             else:
                 return val
 
-        if None not in (self._TUPLE_PATTERN.search(value),
-                        self._LIST_PATTERN.search(value)):
-            raw_dict = [item.split(self._TUPLE_DELIMITER)
-                        for item in value.split(self._LIST_DELIMITER)]
+        if None not in (self.TUPLE_PATTERN.search(value),
+                        self.LIST_PATTERN.search(value)):
+            raw_dict = [item.split(self.TUPLE_DELIMITER)
+                        for item in value.split(self.LIST_DELIMITER)]
             return {str2any(raw_key): str2any(raw_val)
                     for (raw_key, raw_val) in raw_dict}
 
-        elif self._TUPLE_PATTERN.search(value) is not None:
+        elif self.TUPLE_PATTERN.search(value) is not None:
             return tuple(str2any(v) for v in
-                         value.split(self._TUPLE_DELIMITER))
+                         value.split(self.TUPLE_DELIMITER))
 
-        elif self._LIST_PATTERN.search(value) is not None:
+        elif self.LIST_PATTERN.search(value) is not None:
             return [str2any(v) for v in
-                    value.split(self._LIST_DELIMITER)]
+                    value.split(self.LIST_DELIMITER)]
 
         else:
             return str2any(value)

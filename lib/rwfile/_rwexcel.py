@@ -10,14 +10,14 @@ from openpyxl.cell.cell import Cell
 
 class RWExcel(object):
 
-    _FILENAME_PATTERN = re.compile('\w+.xlsx$')
+    FILENAME_PATTERN = re.compile('\w+.xlsx$')
 
     def __init__(self, filepath: Path | str, autosave: bool = False):
         if isinstance(filepath, str):
             filepath = Path(filepath)
-        if self._FILENAME_PATTERN.match(filepath.name) is None:
+        if self.FILENAME_PATTERN.match(filepath.name) is None:
             raise FilepathPatternError(
-                self._FILENAME_PATTERN, filepath)
+                self.FILENAME_PATTERN, filepath)
         if not filepath.parent.exists():
             filepath.parent.mkdir(parents=True)
 
@@ -39,9 +39,9 @@ class RWExcel(object):
     ) -> None:
         if isinstance(filepath, str):
             filepath = Path(filepath)
-        if cls._FILENAME_PATTERN.match(filepath.name) is None:
+        if cls.FILENAME_PATTERN.match(filepath.name) is None:
             raise FilepathPatternError(
-                cls._FILENAME_PATTERN, filepath)
+                cls.FILENAME_PATTERN, filepath)
         if filepath.exists():
             raise FileExistsError('Excel file is already exists')
         if not filepath.parent.exists():
