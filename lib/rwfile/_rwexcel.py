@@ -1,14 +1,25 @@
+import re
 from pathlib import Path
-from typing import overload, Any, Iterable
+from typing import overload, Any
 
 import openpyxl as opxl
-import openpyxl.utils as opxl_u
 from openpyxl.cell.cell import Cell
 
 
 class RWExcel(object):
 
-    def __init__(self, filepath: Path, autosave: bool = False):
+    _FILENAME_PATTERN = re.compile('\w+.xlsx$')
+
+    def __init__(self, filepath: Path | str, autosave: bool = False):
+        if isinstance(filepath, str):
+            filepath = Path(filepath)
+        if self._FILENAME_PATTERN.match(filepath.name) is None:
+            raise ValueError(
+                'The specified path does not lead to '
+                f'the *.xlsx file: {filepath}')
+        if not filepath.parent.exists():
+            filepath.parent.mkdir(parents=True)
+
         self._filepath = filepath
         self._autosave = autosave
         self._xcl = opxl.open(self._filepath)
@@ -22,11 +33,20 @@ class RWExcel(object):
     @classmethod
     def create_empty(
             cls,
-            filepath: Path,
+            filepath: Path | str,
             sheet_name: str = 'Sheet'
     ) -> None:
+        if isinstance(filepath, str):
+            filepath = Path(filepath)
+        if cls._FILENAME_PATTERN.match(filepath.name) is None:
+            raise ValueError(
+                'The specified path does not lead to '
+                f'the *.xlsx file: {filepath}')
         if filepath.exists():
-            raise FileExistsError('Excel file is already excists')
+            raise FileExistsError('Excel file is already exists')
+        if not filepath.parent.exists():
+            filepath.parent.mkdir(parents=True)
+
         wb = opxl.Workbook()
         wb.active.title = sheet_name
         wb.save(filepath)
@@ -39,26 +59,12 @@ class RWExcel(object):
     def cell(self, row: int, col: int, value: Any = None) -> Cell:
         ...
 
-    @overload
-    def cell(self, row_num: int, value: Iterable = None) -> tuple[Cell]:
-        ...
-
-    @overload
-    def cell(self, row: slice, col: int, value: Iterable = None) -> tuple[Cell]:
-        ...
-
-    def cell(self, *coords, **kwargs) -> Cell | tuple[Cell]:
-        coords = coords[0]
+    def cell(self, *coords, **kwargs) -> Cell:
         match coords:
-            case str() as cell_name:
+            case (str() as cell_name,):
                 cell = self._xcl.active[cell_name]
             case (int() as row, int() as col):
                 cell = self._xcl.active.cell(row + 1, col + 1)
-            case int() as row:
-                cell = self._xcl.active[row + 1]
-            case (slice(start=None, stop=None, step=None), int() as col):
-                cell = self._xcl.active[
-                    opxl_u.cell.get_column_letter(col + 1)]
             case _:
                 raise ValueError(f'Incorrect input: {coords}')
         if 'value' in kwargs:
@@ -75,11 +81,12 @@ class RWExcel(object):
     def excel(self):
         return self._xcl
 
-    def __getitem__(self, *coords: str | int | tuple[int, int]) -> Any:
+    def __getitem__(self, *coords: str | tuple[int, int]) -> Cell:
+        match coords:
+            case ((int(), int()),):
+                coords = coords[0]
         res = self.cell(*coords)
-        if isinstance(res, Iterable):
-            return tuple(cell.value for cell in res)
-        elif isinstance(res, Cell):
-            return res.value
+        if isinstance(res, Cell):
+            return res
         else:
             assert False, f'incorrect .cell return: {type(res)}'
