@@ -3,8 +3,8 @@ import unittest
 
 from tests.env_vars import DATA_TEST_DIR
 
-from lib.rwfile import RWExcel
-from lib.rwfile import FilepathPatternError
+from pyinstr_iakoster.rwfile import RWExcel
+from pyinstr_iakoster.rwfile import FilepathPatternError
 
 EXCEL_NAME = 'test_excel.xlsx'
 EXCEL_PATH = DATA_TEST_DIR / EXCEL_NAME

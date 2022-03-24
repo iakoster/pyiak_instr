@@ -3,8 +3,8 @@ import unittest
 import configparser
 from pathlib import Path
 
-from lib.rwfile import RWConfig
-from lib.rwfile import FilepathPatternError
+from pyinstr_iakoster.rwfile import RWConfig
+from pyinstr_iakoster.rwfile import FilepathPatternError
 
 from tests.env_vars import DATA_TEST_DIR
 

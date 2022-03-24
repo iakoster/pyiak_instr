@@ -8,6 +8,9 @@ import openpyxl as opxl
 from openpyxl.cell.cell import Cell
 
 
+__all__ = ['RWExcel']
+
+
 class RWExcel(object):
 
     FILENAME_PATTERN = re.compile('\w+.xlsx$')
