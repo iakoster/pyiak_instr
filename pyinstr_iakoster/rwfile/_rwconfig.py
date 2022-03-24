@@ -12,6 +12,11 @@ __all__ = ['RWConfig']
 
 
 class RWConfig(object):
+    """
+    Class for reading and writing to the configfile as *.ini.
+    Include autoconverter for values.
+
+    """
 
     LIST_DELIMITER = ','
     LIST_PATTERN = re.compile(LIST_DELIMITER)
@@ -25,6 +30,9 @@ class RWConfig(object):
     FILENAME_PATTERN = re.compile('\w+.ini$')
 
     def __init__(self, filepath: Path | str):
+        """
+        :param filepath: path to .ini configfile
+        """
         filepath = if_str2path(filepath)
         check_filename(self.FILENAME_PATTERN, filepath)
         create_dir_if_not_exists(filepath)
@@ -34,9 +42,20 @@ class RWConfig(object):
         self.update_config()
 
     def update_config(self) -> None:
+        """
+        Re-reads the config file and writes to the class
+
+        :return: None
+        """
         self._cfg = self.read_config()
 
     def read_config(self) -> configparser.ConfigParser:
+        """
+        Read config from filepath
+
+        :return: readed configfile as ConfigParser
+        :rtype: configparser.ConfigParser
+        """
 
         config = configparser.ConfigParser()
         if self._filepath.exists():
@@ -47,25 +66,73 @@ class RWConfig(object):
         return config
 
     def set(self, section: str, option: str, value: Any) -> None:
+        """
+        set the value for the configparser
+
+        DOES NOT CHANGE the configfile
+
+        :param section: section name string
+        :param option: option name string
+        :param value: value to be set in the section option
+        :return: None
+        """
         self._cfg.set(section, option, self._any2str(value))
 
     def apply_changes(self) -> None:
+        """
+        write configparser to the configfile
+
+        Used for save changes which created by .set method
+
+        :return: None
+        """
         with io.open(self._filepath, 'w') as cfg_file:
             self._cfg.write(cfg_file)
 
-    def get(self, section: str, option: str, convert: bool = True) -> Any:
+    def get(self, section: str, option: str,
+            convert: bool = True) -> Any:
+        """
+        get value from the configparser
+
+        Convert is a boolean value.
+        If it is False the value will be returned 'as is'
+        as a string.
+        If it is True, then the value will try to convert to
+        some type (e.g. to the tuple with ints, list with bools, etc.)
+
+        :param section: section name string
+        :param option: option name string
+        :param convert: boolean flag
+        :return: value
+        """
         value = self._cfg.get(section, option)
         return self._str2any(value) if convert else value
 
     @overload
     def write(self, section: str, option: str, value: Any) -> None:
+        """
+        :param section: section name string
+        :param option: option name string
+        :param value: value to be write in the section option
+        :return: None
+        """
         ...
 
     @overload
-    def write(self, dictionary: dict):
+    def write(self, dictionary: dict) -> None:
+        """
+        :param dictionary: dictionary of values in format
+            {section: {option: value}}
+        :return: None
+        """
         ...
 
     def write(self, *args) -> None:
+        """
+        write value or dict to the configfile.
+
+        Also writes values to the configparser
+        """
 
         match args:
             case (str() as section, str() as option, value):
@@ -91,6 +158,15 @@ class RWConfig(object):
                 raise TypeError('Wrong args for write method')
 
     def _any2str(self, value) -> str:
+        """
+        convert any value to the string.
+
+        There is a specific rules for converting
+        dict, tuple and list
+
+        :param value: value for converting
+        :return: value string
+        """
 
         def val2str(val: int | float | str) -> str:
             return str(val)
@@ -112,12 +188,28 @@ class RWConfig(object):
             return val2str(value)
 
     def read(self, section: str, option: str) -> Any:
+        """
+        get value from the configfile
+
+        :param section: section name string
+        :param option: option name string
+        :return: value from the configfile
+        """
 
         config = configparser.ConfigParser()
         config.read(self._filepath)
         return self._str2any(config.get(section, option))
 
     def _str2any(self, value: str) -> Any:
+        """
+        convert string value to the any.
+
+        If there are no templates to convert, then returns
+        the value 'as is' as a string.
+
+        :param value: string value
+        :return: converted value
+        """
 
         def val2any(val: str) -> int | float | str | bool:
             if self.INT_PATTERN.match(val) is not None:
@@ -153,8 +245,14 @@ class RWConfig(object):
 
     @property
     def config(self):
+        """
+        :return: ConfigParser
+        """
         return self._cfg
 
     @property
     def filepath(self):
+        """
+        :return: path to the configfile
+        """
         return self._filepath
