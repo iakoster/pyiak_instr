@@ -12,6 +12,9 @@ __all__ = ['RWExcel']
 
 
 class RWExcel(object):
+    """
+    Class for reading and writing to the excel file as *.xlsx.
+    """
 
     FILENAME_PATTERN = re.compile('\w+.xlsx$')
 

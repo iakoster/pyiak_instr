@@ -15,7 +15,6 @@ class RWConfig(object):
     """
     Class for reading and writing to the configfile as *.ini.
     Include autoconverter for values.
-
     """
 
     LIST_DELIMITER = ','
