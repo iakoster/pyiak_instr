@@ -21,6 +21,7 @@ TEST_DICT_STR = {
         'test_float': '5.4321',
         'test_efloat_small': '5.4321e-99',
         'test_efloat_huge': '5.4321e+99',
+        'test_bool': 'True',
     },
     'test_list': {
         'test_str': 'a,b,c,d,e',
@@ -53,6 +54,7 @@ TEST_DICT_CONV = {
         'test_float': 5.4321,
         'test_efloat_small': 5.4321e-99,
         'test_efloat_huge': 5.4321e+99,
+        'test_bool': True,
     },
     'test_list': {
         'test_str': ['a', 'b', 'c', 'd', 'e'],
@@ -112,8 +114,7 @@ class TestRWConfig(unittest.TestCase):
         self.assertTrue(CONFIG_PATH.exists())
 
     def test_filepath_as_str(self):
-        cfg = RWConfig(str(CONFIG_PATH))
-        cfg.change_path(str(CONFIG_PATH))
+        RWConfig(str(CONFIG_PATH))
         self.assertTrue(CONFIG_PATH.exists())
 
     def test_write_single(self):

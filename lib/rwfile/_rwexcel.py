@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 from typing import overload, Any
 
-from ._rwf_exception import FilepathPatternError
+from ._rwf_utils import *
 
 import openpyxl as opxl
 from openpyxl.cell.cell import Cell
@@ -13,43 +13,39 @@ class RWExcel(object):
     FILENAME_PATTERN = re.compile('\w+.xlsx$')
 
     def __init__(self, filepath: Path | str, autosave: bool = False):
-        if isinstance(filepath, str):
-            filepath = Path(filepath)
-        if self.FILENAME_PATTERN.match(filepath.name) is None:
-            raise FilepathPatternError(
-                self.FILENAME_PATTERN, filepath)
-        if not filepath.parent.exists():
-            filepath.parent.mkdir(parents=True)
+        filepath = if_str2path(filepath)
+        check_filename(self.FILENAME_PATTERN, filepath)
+        create_dir_if_not_exists(filepath)
 
         self._filepath = filepath
         self._autosave = autosave
         self._xcl = opxl.open(self._filepath)
 
-    def change_active(self, sheet_name: str) -> None:
-        self._xcl.active = self._xcl[sheet_name]
+    def active_sheet(self, title: str) -> None:
+        self._xcl.active = self._xcl[title]
 
     def save(self) -> None:
         self._xcl.save(self._filepath)
 
     @classmethod
-    def create_empty(
+    def new_empty(
             cls,
             filepath: Path | str,
-            sheet_name: str = 'Sheet'
-    ) -> None:
-        if isinstance(filepath, str):
-            filepath = Path(filepath)
-        if cls.FILENAME_PATTERN.match(filepath.name) is None:
-            raise FilepathPatternError(
-                cls.FILENAME_PATTERN, filepath)
+            autosave: bool = False,
+            first_sheet: str = 'Sheet',
+    ):
+        filepath = if_str2path(filepath)
+        check_filename(cls.FILENAME_PATTERN, filepath)
+        create_dir_if_not_exists(filepath)
         if filepath.exists():
             raise FileExistsError('Excel file is already exists')
-        if not filepath.parent.exists():
-            filepath.parent.mkdir(parents=True)
 
         wb = opxl.Workbook()
-        wb.active.title = sheet_name
+        wb.active.title = first_sheet
         wb.save(filepath)
+        wb.close()
+
+        return cls(filepath, autosave=autosave)
 
     @overload
     def cell(self, cell_name: str, value: Any = None) -> Cell:

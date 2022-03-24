@@ -19,7 +19,7 @@ class TestRWExcel(unittest.TestCase):
 
     def setUp(self) -> None:
         if not EXCEL_PATH.exists():
-            RWExcel.create_empty(EXCEL_PATH, sheet_name='test_sheet')
+            RWExcel.new_empty(EXCEL_PATH, first_sheet='test_sheet')
 
     def test_init_wrong_path(self):
         with self.assertRaises(FilepathPatternError) as exc:
@@ -31,7 +31,7 @@ class TestRWExcel(unittest.TestCase):
 
     def test_create_empty_wrong_path(self):
         with self.assertRaises(FilepathPatternError) as exc:
-            RWExcel.create_empty(r'.\abrakaderbre')
+            RWExcel.new_empty(r'.\abrakaderbre')
         self.assertEqual(
             'The path does not lead to \'\\\\w+.xlsx$\' file',
             exc.exception.args[0]
@@ -39,11 +39,11 @@ class TestRWExcel(unittest.TestCase):
 
     def test_create_empty(self):
         self.tearDownClass()
-        RWExcel.create_empty(EXCEL_PATH, sheet_name='test_sheet')
+        RWExcel.new_empty(EXCEL_PATH, first_sheet='test_sheet')
 
     def test_create_empty_again(self):
         with self.assertRaises(FileExistsError) as exc:
-            RWExcel.create_empty(EXCEL_PATH)
+            RWExcel.new_empty(EXCEL_PATH)
         self.assertEqual(
             exc.exception.args[0],
             'Excel file is already exists'
@@ -51,7 +51,7 @@ class TestRWExcel(unittest.TestCase):
 
     def test_init(self):
         rwe = RWExcel(EXCEL_PATH)
-        self.assertEqual('test_sheet', rwe.excel.active.title)
+        self.assertEqual('test_sheet', rwe.excel.active_sheet.title)
 
     def test_cell_gs_cell(self):
         rwe = RWExcel(EXCEL_PATH, autosave=True)
