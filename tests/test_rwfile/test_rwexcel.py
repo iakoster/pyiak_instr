@@ -51,7 +51,7 @@ class TestRWExcel(unittest.TestCase):
 
     def test_init(self):
         rwe = RWExcel(EXCEL_PATH)
-        self.assertEqual('test_sheet', rwe.excel.active_sheet.title)
+        self.assertEqual('test_sheet', rwe.excel.active.title)
 
     def test_cell_gs_cell(self):
         rwe = RWExcel(EXCEL_PATH, autosave=True)
