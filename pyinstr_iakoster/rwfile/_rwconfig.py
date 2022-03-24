@@ -34,7 +34,7 @@ class RWConfig(object):
         :param filepath: path to .ini configfile
         """
         filepath = if_str2path(filepath)
-        check_filename(self.FILENAME_PATTERN, filepath)
+        match_filename(self.FILENAME_PATTERN, filepath)
         create_dir_if_not_exists(filepath)
 
         self._filepath = filepath

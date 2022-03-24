@@ -21,7 +21,7 @@ class RWExcel(object):
         :param autosave: boolean value, autosave after any changes
         """
         filepath = if_str2path(filepath)
-        check_filename(self.FILENAME_PATTERN, filepath)
+        match_filename(self.FILENAME_PATTERN, filepath)
         create_dir_if_not_exists(filepath)
 
         self._filepath = filepath
@@ -61,7 +61,7 @@ class RWExcel(object):
         :rtype: RWExcel
         """
         filepath = if_str2path(filepath)
-        check_filename(cls.FILENAME_PATTERN, filepath)
+        match_filename(cls.FILENAME_PATTERN, filepath)
         create_dir_if_not_exists(filepath)
         if filepath.exists():
             raise FileExistsError('Excel file is already exists')
