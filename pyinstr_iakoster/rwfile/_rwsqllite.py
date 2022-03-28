@@ -5,14 +5,19 @@ from pathlib import Path
 from ._rwf_utils import *
 
 
-class RWSimpleSqlLite(object):
+class RWSQLite3Simple(object):
     """
     Class for reading and writing to the database as *.db.
     """
 
     FILENAME_PATTERN = re.compile('\w+.db$')
 
-    def __init__(self, filepath: Path | str, autocommit: bool = True):
+    def __init__(
+            self,
+            filepath: Path | str,
+            autocommit: bool = True,
+            timeout: float = 5
+    ):
         """
         :param filepath: path to the database
         :param autocommit: commit after any changes
@@ -22,7 +27,7 @@ class RWSimpleSqlLite(object):
         create_dir_if_not_exists(filepath)
 
         self._filepath = filepath
-        self._conn = sqlite3.connect(filepath)
+        self._conn = sqlite3.connect(filepath, timeout=timeout)
         self._cur = self._conn.cursor()
         self._autocommit = autocommit
 
@@ -38,7 +43,7 @@ class RWSimpleSqlLite(object):
         :param table: table name
         :param col_pars: column parameters
         """
-        request = 'CREATE TABLE IF NOT EXISTS {} ({});'.format(
+        request = 'CREATE TABLE IF NOT EXISTS {}({});'.format(
             table,
             ', '.join(f'{col} {par}' for col, par in
                       col_pars.items()))
@@ -47,42 +52,65 @@ class RWSimpleSqlLite(object):
         if self._autocommit:
             self.commit()
 
-    def insert_into(self, into: str, values: tuple | list[tuple]) -> None:
+    def insert_into(
+            self, *,
+            into: str,
+            values: tuple | list[tuple],
+            columns: list[str] = None
+    ) -> None:
         """
         execute sql command 'INSERT INTO {table} VALUES({values});'.
         Can insert a list of rows
 
-        :param into: table name
-        :param values: tuple of cell values
+        :param into: where to insert
+        :param values: tuple of a cell values
+        :param columns: list of columns for insert values
         """
-        if isinstance(values, list):
-            cols_count = len(values[0])
-            operation = self._cur.executemany
-        else:
-            cols_count = len(values)
-            operation = self._cur.execute
+        if isinstance(values, tuple):
+            values = [values]
+        columns = '' if columns is None else \
+            '({})'.format(', '.join(columns))
+        val_marks = ', '.join(['?'] * len(values[0]))
 
-        request = 'INSERT INTO {} VALUES({});'.format(
-            into, ', '.join(['?'] * cols_count))
-        operation(request, values)
+        request = 'INSERT INTO {}{} VALUES ({});'.format(
+            into, columns, val_marks)
+        self._cur.executemany(request, values)
 
         if self._autocommit:
             self.commit()
 
-    def select(self, select: str = '*', from_: str = '*', fetch: int | str = None):
+    def delete_from(self, *, from_: str) -> None:
+        """
+        execute sql command 'DELETE FROM {table};
+
+        :param from_: from where to delete
+        """
+        request = 'DELETE FROM %s;' % from_
+        self._cur.execute(request)
+
+        if self._autocommit:
+            self.commit()
+
+    def select(
+            self, *, from_: str, select: str = '*',
+            fetch: int | str = None, where: str = None):
         """
         execute sql command 'SELECT {select} FROM {from_}'
+
+        Append 'WHERE {where}' to the request if where is not None
 
         On the result can be applyed method
         fetchmany if fetch is integer and fetch > 0 or
         fetchall if fetch == 'all'.
 
-        :param select: what will be selected
-        :param from_: from where will be selected
+        :param select: what to be select
+        :param from_: from where to be select
         :param fetch: fetch result and how or not
-        :return: result of a operation
+        :param where: where statement in the request
+        :return: result of an operation
         """
-        request = 'SELECT {} FROM {};'.format(select, from_)
+        where = '' if where is None else f' WHERE {where}'
+        request = 'SELECT {} FROM {}{};'.format(select, from_, where)
         result = self._cur.execute(request)
 
         if fetch is None:
@@ -94,13 +122,69 @@ class RWSimpleSqlLite(object):
         elif fetch == 'all':
             return result.fetchall()
         else:
-            raise ValueError('unknown fetch variabe %r' % fetch)
+            raise ValueError('unknown fetch variable %r' % fetch)
+
+    def table_columns(self, table: str) -> list[str]:
+        """
+        :param table: table name
+        :return: list of a column names in the table
+        """
+        self._cur.execute('SELECT * FROM %s;' % table)
+        return list(map(lambda x: x[0], self._cur.description))
+
+    def table_rows_count(self, table: str) -> int:
+        """
+        :param table: table name
+        :return: rows count in the table
+        """
+        return self._cur.execute('SELECT COUNT(*) FROM %s;' % table).fetchall()[0][0]
 
     def commit(self) -> None:
         """
         commit changes
         """
         self._conn.commit()
+
+    def close(self) -> None:
+        """
+        close cursor and connection
+        """
+        try:
+            self._cur.close()
+        except sqlite3.ProgrammingError as err:
+            if err.args[0] != 'Cannot operate on a closed database.':
+                raise
+        try:
+            self._conn.close()
+        except sqlite3.ProgrammingError as err:
+            if err.args[0] != 'Cannot operate on a closed database.':
+                raise
+
+    @property
+    def tables(self) -> list[str]:
+        """
+        :return: list of tables in the database
+        """
+        return list(map(lambda el: el[0], self.select(
+            select='name', from_='sqlite_master',
+            where='type=\'table\'', fetch='all')))
+
+    @property
+    def columns(self) -> dict[str, list[str]]:
+        """
+        :return: list of columns in all tables
+        """
+        columns = {}
+        for table in self.tables:
+            columns[table] = self.table_columns(table)
+        return columns
+
+    @property
+    def rows_count(self) -> dict[str, int]:
+        rows_count = {}
+        for table in self.tables:
+            rows_count[table] = self.table_rows_count(table)
+        return rows_count
 
     @property
     def connection(self):
@@ -124,5 +208,4 @@ class RWSimpleSqlLite(object):
         return self._filepath
 
     def __del__(self):
-        self._cur.close()
-        self._conn.close()
+        self.close()
