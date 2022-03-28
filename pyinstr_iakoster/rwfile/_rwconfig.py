@@ -26,7 +26,7 @@ class RWConfig(object):
     FLOAT_PATTERN = re.compile('^\d+\.\d+$')
     EFLOAT_PATTERN = re.compile('^\d\.\d+[eE][+-]\d+$')
 
-    FILENAME_PATTERN = re.compile('\w+.ini$')
+    FILENAME_PATTERN = re.compile('\S+.ini$')
 
     def __init__(self, filepath: Path | str):
         """

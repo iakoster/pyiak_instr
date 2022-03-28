@@ -15,7 +15,7 @@ class RWSQLite3Simple(object):
     Class for reading and writing to the database as *.db.
     """
 
-    FILENAME_PATTERN = re.compile('\w+.db$')
+    FILENAME_PATTERN = re.compile('\S+.db$')
 
     def __init__(
             self,

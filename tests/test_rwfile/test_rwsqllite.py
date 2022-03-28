@@ -23,6 +23,9 @@ class TestRWSimpleSqlLite(unittest.TestCase):
     def tearDown(self) -> None:
         self.rws.close()
 
+    def test_0a_create_table_new(self):
+        RWSQLite3Simple(DATA_TEST_DIR / 'test.database_aa-lol.db', timeout=0.5)
+
     def test_a_create_table(self):
         self.rws.create_table(
             self.table,

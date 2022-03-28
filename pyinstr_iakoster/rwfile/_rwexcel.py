@@ -16,7 +16,7 @@ class RWExcel(object):
     Class for reading and writing to the excel file as *.xlsx.
     """
 
-    FILENAME_PATTERN = re.compile('\w+.xlsx$')
+    FILENAME_PATTERN = re.compile('\S+.xlsx$')
 
     def __init__(self, filepath: Path | str, autosave: bool = False):
         """
