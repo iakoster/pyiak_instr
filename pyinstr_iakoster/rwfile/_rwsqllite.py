@@ -2,6 +2,8 @@ import re
 import sqlite3
 from pathlib import Path
 
+import pandas as pd
+
 from ._rwf_utils import *
 
 
@@ -123,6 +125,49 @@ class RWSQLite3Simple(object):
             return result.fetchall()
         else:
             raise ValueError('unknown fetch variable %r' % fetch)
+
+    def to_dataframe(
+            self, *, from_: str, select: str = '*',
+            where: str = None, index_col=None
+    ) -> pd.DataFrame:
+        """
+        execute sql command 'SELECT {select} FROM {from_}'
+
+        Append 'WHERE {where}' to the request if where is not None
+
+        :param select: what to be select
+        :param from_: from where to be select
+        :param where: where statement in the request
+        :param index_col: column(s) to set as index(MultiIndex).
+        :return: pandas dataframe
+        """
+        where = '' if where is None else f' WHERE {where}'
+        request = 'SELECT {} FROM {}{};'.format(select, from_, where)
+        return pd.read_sql_query(
+            request, self._conn, index_col=index_col)
+
+    def from_dataframe(
+            self, *,
+            df: pd.DataFrame, table: str,
+            if_exists: str = 'replace',
+            index: bool = True,
+            index_label=None
+    ) -> None:
+        """
+        export pandas dataframe to sql database
+
+        :param df: dataframe
+        :param table: table name
+        :param index: Write DataFrame index as a column.
+            Uses `index_label` as the column name in the table.
+        :param index_label: Column label for index column(s).
+            If None is given (default) and `index` is True,
+            then the index names are used.
+        :param if_exists: How to behave if the table already exists.
+        """
+        df.to_sql(
+            table, self._conn, if_exists=if_exists,
+            index=index, index_label=index_label)
 
     def table_columns(self, table: str) -> list[str]:
         """

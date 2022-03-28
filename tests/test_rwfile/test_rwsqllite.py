@@ -4,7 +4,6 @@ import unittest
 from tests.env_vars import DATA_TEST_DIR
 
 from pyinstr_iakoster.rwfile import RWSQLite3Simple
-from pyinstr_iakoster.rwfile import FilepathPatternError
 
 SQLLITE_NAME = 'test_sqllite.db'
 SQLLITE_PATH = DATA_TEST_DIR / SQLLITE_NAME
@@ -41,7 +40,9 @@ class TestRWSimpleSqlLite(unittest.TestCase):
             values=(0, 'first', 192.))
         self.assertTupleEqual(
             (0, 'first', 192.),
-            self.rws.cursor.execute('SELECT * FROM test_table WHERE id=0;').fetchall()[0]
+            self.rws.cursor.execute(
+                'SELECT * FROM test_table WHERE id=0;'
+            ).fetchall()[0]
         )
 
     def test_c_insert_into_many(self):
@@ -52,7 +53,9 @@ class TestRWSimpleSqlLite(unittest.TestCase):
             ])
         self.assertListEqual(
             [(1, 'second', 92.8), (2, 'third', 47.0)],
-            self.rws.cursor.execute('SELECT * FROM test_table WHERE id IN (1, 2);').fetchall()
+            self.rws.cursor.execute(
+                'SELECT * FROM test_table WHERE id IN (1, 2);'
+            ).fetchall()
         )
 
     def test_d_select(self):
@@ -76,19 +79,39 @@ class TestRWSimpleSqlLite(unittest.TestCase):
             result
         )
 
-    def test_f_tables(self):
+    def test_f_dataframe(self):
+        df = self.rws.to_dataframe(from_=self.table, index_col='id')
+        self.assertEqual(
+            192.0,
+            df[df['name'] == 'first']['price'][0]
+        )
+        df.loc[df['name'] == 'first', 'price'] = 192.9
+        self.assertEqual(
+            192.9,
+            df[df['name'] == 'first']['price'][0]
+        )
+        self.rws.from_dataframe(
+            df=df, table=self.table, index_label='id')
+        self.assertEqual(
+            192.9,
+            self.rws.cursor.execute(
+                'SELECT price FROM test_table WHERE name=\'first\''
+            ).fetchall()[0][0]
+        )
+
+    def test_w_tables(self):
         self.assertListEqual(
-            ['test_table', 'sqlite_sequence'],
+            ['sqlite_sequence', 'test_table'],
             self.rws.tables)
 
-    def test_g_columns(self):
+    def test_x_columns(self):
         self.assertDictEqual(
             {'test_table': ['id', 'name', 'price'], 'sqlite_sequence': ['name', 'seq']},
             self.rws.columns)
 
-    def test_h_rows_count(self):
+    def test_y_rows_count(self):
         self.assertDictEqual(
-            {'test_table': 5, 'sqlite_sequence': 1},
+            {'test_table': 5, 'sqlite_sequence': 0},
             self.rws.rows_count)
 
     def test_z_delete_from(self):
