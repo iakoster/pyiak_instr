@@ -7,6 +7,9 @@ import pandas as pd
 from ._rwf_utils import *
 
 
+__all__ = ['RWSQLite3Simple']
+
+
 class RWSQLite3Simple(object):
     """
     Class for reading and writing to the database as *.db.

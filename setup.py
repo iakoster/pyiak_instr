@@ -5,11 +5,14 @@ from pathlib import Path
 if (Path() / 'dist').exists():
     shutil.rmtree(Path() / 'dist')
 
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
+
 setuptools.setup(
     packages=setuptools.find_packages(
         exclude=['*tests*']
     ),
-    zip_file=False
+    install_requires=required
 )
 
 shutil.rmtree(Path() / 'build')
