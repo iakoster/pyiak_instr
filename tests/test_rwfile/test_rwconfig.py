@@ -22,6 +22,7 @@ TEST_DICT_STR = {
         'test_efloat_small': '5.4321e-99',
         'test_efloat_huge': '5.4321e+99',
         'test_bool': 'True',
+        'test_none': 'None'
     },
     'test_list': {
         'test_str': 'a,b,c,d,e',
@@ -55,6 +56,7 @@ TEST_DICT_CONV = {
         'test_efloat_small': 5.4321e-99,
         'test_efloat_huge': 5.4321e+99,
         'test_bool': True,
+        'test_none': None
     },
     'test_list': {
         'test_str': ['a', 'b', 'c', 'd', 'e'],
@@ -96,7 +98,7 @@ class TestRWConfig(unittest.TestCase):
         with self.assertRaises(FilepathPatternError) as err:
             RWConfig(test_path)
         self.assertEqual(
-            'The path does not lead to \'\\\\w+.ini$\' file',
+            'The path does not lead to \'\\\\S+.ini$\' file',
             err.exception.args[0]
         )
 
@@ -105,7 +107,7 @@ class TestRWConfig(unittest.TestCase):
         with self.assertRaises(FilepathPatternError) as err:
             RWConfig(test_path)
         self.assertEqual(
-            'The path does not lead to \'\\\\w+.ini$\' file',
+            'The path does not lead to \'\\\\S+.ini$\' file',
             err.exception.args[0]
         )
 

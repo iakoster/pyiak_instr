@@ -218,7 +218,7 @@ class RWConfig(object):
                   self.EFLOAT_PATTERN.match(val)) is not None:
                 return float(val)
 
-            elif val in ('True', 'False'):
+            elif val in ('True', 'False', 'None'):
                 return eval(val)
 
             else:

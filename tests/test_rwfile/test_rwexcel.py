@@ -25,7 +25,7 @@ class TestRWExcel(unittest.TestCase):
         with self.assertRaises(FilepathPatternError) as exc:
             RWExcel(r'.\abrakadabre')
         self.assertEqual(
-            'The path does not lead to \'\\\\w+.xlsx$\' file',
+            'The path does not lead to \'\\\\S+.xlsx$\' file',
             exc.exception.args[0]
         )
 
@@ -33,7 +33,7 @@ class TestRWExcel(unittest.TestCase):
         with self.assertRaises(FilepathPatternError) as exc:
             RWExcel.new_empty(r'.\abrakaderbre')
         self.assertEqual(
-            'The path does not lead to \'\\\\w+.xlsx$\' file',
+            'The path does not lead to \'\\\\S+.xlsx$\' file',
             exc.exception.args[0]
         )
 
