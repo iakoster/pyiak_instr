@@ -25,7 +25,6 @@ class TestLogUtilsMethods(unittest.TestCase):
                         with self.subTest(**lvl_names):
                             self.assertEqual(lvl, act_content)
 
-
         expected = {
             'version': 1,
             'disable_existing_loggers': False,
@@ -93,6 +92,3 @@ class TestLogUtilsMethods(unittest.TestCase):
         )
         compare_iter_dicts(expected, actual)
         compare_iter_dicts(actual, expected)
-
-
-        # self.assertDictEqual(settings, )
