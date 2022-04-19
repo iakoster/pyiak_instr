@@ -72,7 +72,7 @@ def get_logging_dict_config(
     """
     if critical_mail_handler and None in (
             mailhost, mail_from_addr, mail_to_addr):
-        raise ValueError('There is must be written mailhost and addresses')
+        raise ValueError('mailhost and addresses must be specified')
     handlers_names = []
     handlers = {}
 
