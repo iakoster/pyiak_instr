@@ -12,8 +12,8 @@ __all__ = [
 
 class CompletedWorkError(PyiError):
     """
-    Raised when the work function has already been called before and
-    cannot be called again
+    Raised when the work function has already been
+    called before and cannot be called again
     """
 
     def __init__(self, work_name: str):
@@ -126,9 +126,10 @@ class BlankWork(object):
     def add_substep(self, substep: str, result,
                     next_step: bool = False):
         """
-        Add new substep in current step. If next_step=True or
-        the number of steps is zero then a new step is added
-        without a title.
+        Add new substep in current step.
+
+        If next_step=True or the number of steps
+        is zero then a new step is added without a title.
 
         Parameters
         ----------
@@ -158,8 +159,9 @@ class BlankWork(object):
 
     def interrupt(self, reason):
         """
-        Set interrupt reason. This blocks .__call__,
-        .add_step, .add_substep methods.
+        Set interrupt reason.
+
+        This blocks .__call__, .add_step, .add_substep methods.
 
         Parameters
         ----------
@@ -181,7 +183,9 @@ class BlankWork(object):
 
     def report(self) -> str:
         """
-        Returns a work report that contains information about
+        Get a work report.
+
+        Report contains information about
         the work function (including arguments) and
         the work steps to be added by the user.
 
@@ -290,8 +294,7 @@ class BlankWork(object):
 
     def _fmt_steps(self):
         """
-        Format the steps for the report in
-        a user-readable form
+        Format the steps for the report in a user-readable form
 
         Returns
         -------
@@ -323,7 +326,9 @@ class BlankWork(object):
     @staticmethod
     def _get_func_path(func) -> str:
         """
-        Get full name of the func with module (if exists),
+        Get full name of the func.
+
+        Return value contains module (if exists),
         class name (if exisis and not equal 'module') and
         self name.
 
@@ -425,8 +430,10 @@ class BlankWork(object):
     @property
     def interrupt_reason(self) -> Exception | None:
         """
-        The reason for the interruption is specified
-        manually by the user. None means no interruption.
+        The reason for the interruption.
+
+        Reason is specified manually by the user.
+        None means no interruption.
 
         Returns
         -------
