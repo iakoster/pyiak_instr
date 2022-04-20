@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ._rwf_utils import *
+from ._utils import *
 
 
 __all__ = ['RWSQLite3Simple']

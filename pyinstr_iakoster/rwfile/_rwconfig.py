@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import overload, Any
 
 
-from ._rwf_utils import *
+from ._utils import *
 
 
 __all__ = ['RWConfig']

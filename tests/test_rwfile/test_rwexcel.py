@@ -26,7 +26,7 @@ class TestRWExcel(unittest.TestCase):
             RWExcel(r'.\abrakadabre')
         self.assertEqual(
             'The path does not lead to \'\\\\S+.xlsx$\' file',
-            exc.exception.args[0]
+            exc.exception.message
         )
 
     def test_create_empty_wrong_path(self):
@@ -34,7 +34,7 @@ class TestRWExcel(unittest.TestCase):
             RWExcel.new_empty(r'.\abrakaderbre')
         self.assertEqual(
             'The path does not lead to \'\\\\S+.xlsx$\' file',
-            exc.exception.args[0]
+            exc.exception.message
         )
 
     def test_create_empty(self):

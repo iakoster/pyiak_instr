@@ -12,7 +12,7 @@ from pyinstr_iakoster.log import (
 class TestBlankWork(unittest.TestCase):
 
     def test_work_name(self):
-        self.assertEqual('pyinstr_iakoster.log._log_work.NoWork',
+        self.assertEqual('pyinstr_iakoster.log._work.NoWork',
                          BlankWork().work_name)
         self.assertEqual('builtins.print',
                          BlankWork(print).work_name)
@@ -23,7 +23,7 @@ class TestBlankWork(unittest.TestCase):
         work = BlankWork()
         self.assertEqual(
             'Work report:\n'
-            'BlankWork(work=pyinstr_iakoster.log._log_work.NoWork, '
+            'BlankWork(work=pyinstr_iakoster.log._work.NoWork, '
             'args=(), additional_args=(), kwargs={}, '
             'additional_kwargs={}, iscalled=False)',
             work.report()
@@ -57,7 +57,7 @@ class TestBlankWork(unittest.TestCase):
         work.interrupt(KeyboardInterrupt('test'))
         self.assertEqual(
             'Work report:\n'
-            'BlankWork(work=pyinstr_iakoster.log._log_work.NoWork, '
+            'BlankWork(work=pyinstr_iakoster.log._work.NoWork, '
             'args=(), additional_args=(), kwargs={}, '
             'additional_kwargs={}, iscalled=True)\n'
             'Steps:\n1. step_1\n\tsubstep_1.1 result_1.1\n'
@@ -76,7 +76,7 @@ class TestBlankWork(unittest.TestCase):
         work.add_substep('substep_2', None)
         self.assertEqual(
             'Work report:\n'
-            'BlankWork(work=pyinstr_iakoster.log._log_work.NoWork, '
+            'BlankWork(work=pyinstr_iakoster.log._work.NoWork, '
             'args=(), additional_args=(), kwargs={}, '
             'additional_kwargs={}, iscalled=False)\n'
             'Steps:\n1.substep_1 result_1.1\n'
@@ -102,7 +102,7 @@ class TestBlankWork(unittest.TestCase):
             work()
         self.assertEqual(
             'Work report:\n'
-            'BlankWork(work=pyinstr_iakoster.log._log_work.NoWork, '
+            'BlankWork(work=pyinstr_iakoster.log._work.NoWork, '
             'args=(), additional_args=(), kwargs={}, '
             'additional_kwargs={}, iscalled=False)\n'
             'Steps:\n1.substep_1 result_1.1\n'
@@ -116,12 +116,12 @@ class TestBlankWork(unittest.TestCase):
         with self.assertRaises(CompletedWorkError) as exc:
             work()
         self.assertEqual(
-            'Work test_log_work.<lambda> is already done',
+            'Work tests.test_log.test_work.<lambda> is already done',
             exc.exception.message)
-        self.assertEqual('test_log_work.<lambda>', exc.exception.work_name)
+        self.assertEqual('tests.test_log.test_work.<lambda>', exc.exception.work_name)
         self.assertEqual(
             'Work report:\n'
-            'BlankWork(work=test_log_work.<lambda>, '
+            'BlankWork(work=tests.test_log.test_work.<lambda>, '
             'args=(123,), additional_args=(), kwargs={}, '
             'additional_kwargs={}, iscalled=True)',
             work.report()
@@ -150,7 +150,8 @@ class TestWork(unittest.TestCase):
         self.assertEqual(6, work())
         self.assertEqual(6, self.TEST_VAL)
         self.assertEqual(
-            'Work report:\nWork(work=test_log_work.test_func, '
+            'Work report:\n'
+            'Work(work=tests.test_log.test_work.test_func, '
             'args=(), additional_args=(), kwargs={}, '
             'additional_kwargs={}, iscalled=True)',
             work.report()

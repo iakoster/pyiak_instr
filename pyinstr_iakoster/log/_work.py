@@ -54,15 +54,6 @@ class BlankWork(object):
     multiple: bool
         if True, the work can be called multiply times.
 
-    Methods
-    -------
-    add_step(step=None)
-        add new step with or without (if step=None) title
-    add_substep(substep, result, next_step=False)
-        add new substep witn name and result
-    report()
-        get a report on the function's work
-
     Parameters
     ----------
     *args
@@ -71,6 +62,15 @@ class BlankWork(object):
         if True, the work can be called multiply times.
     **kwargs
         keyword arguments for a work function
+
+    Methods
+    -------
+    add_step(step=None)
+        add new step with or without (if step=None) title
+    add_substep(substep, result, next_step=False)
+        add new substep witn name and result
+    report()
+        get a report on the function's work
     """
 
     def __init__(

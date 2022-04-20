@@ -99,7 +99,7 @@ class TestRWConfig(unittest.TestCase):
             RWConfig(test_path)
         self.assertEqual(
             'The path does not lead to \'\\\\S+.ini$\' file',
-            err.exception.args[0]
+            err.exception.message
         )
 
     def test_wrong_fileformat(self):
@@ -108,7 +108,7 @@ class TestRWConfig(unittest.TestCase):
             RWConfig(test_path)
         self.assertEqual(
             'The path does not lead to \'\\\\S+.ini$\' file',
-            err.exception.args[0]
+            err.exception.message
         )
 
     def test_file_creation(self):

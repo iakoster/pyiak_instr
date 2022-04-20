@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 from typing import overload, Any
 
-from ._rwf_utils import *
+from ._utils import *
 
 import openpyxl as opxl
 from openpyxl.cell.cell import Cell
