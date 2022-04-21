@@ -9,12 +9,19 @@ __all__ = ['match_filename', 'if_str2path', 'create_dir_if_not_exists']
 
 def match_filename(pattern: Pattern, path: Path):
     """
-    checks the path by pattern using the match method.
+    Checks the path by pattern via match method.
 
-    :param pattern: file name pattern
-    :param path: path to the file
-    :raise FilepathPatternError: if the pattern is not match
-        in the path (file name)
+    Parameters
+    ----------
+    pattern: re.Pattern
+        file name pattern.
+    path: Path
+        path to the file.
+
+    Raises
+    ------
+    FilepathPatternError:
+        if the pattern is not match in the path (file name).
     """
     if pattern.match(path.name) is None:
         raise FilepathPatternError(pattern.pattern, path)
@@ -22,12 +29,18 @@ def match_filename(pattern: Pattern, path: Path):
 
 def if_str2path(path: Path | str) -> Path:
     """
-    convert the path into a Path instance if
-    the path is a string
+    Convert the path-like str into a Path instance or
+    return path as is.
 
-    :param path: some path
-    :return: path
-    :rtype: Path
+    Parameters
+    ----------
+    path: Path or path-like str
+        some path.
+
+    Returns
+    -------
+    Path
+        some path in Path instance
     """
     if isinstance(path, str):
         path = Path(path)
@@ -36,10 +49,14 @@ def if_str2path(path: Path | str) -> Path:
 
 def create_dir_if_not_exists(path: Path, to_file: bool = True):
     """
-    create a directory if it does not exists
+    Create a directory if it does not exists.
 
-    :param path: path to a file or a directory
-    :param to_file: indicates that the path points to the file or not
+    Parameters
+    ----------
+    path: Path
+        path to a file or a directory.
+    to_file: bool, default=True
+        indicates that the path points to the file.
     """
     if to_file:
         path = path.parent

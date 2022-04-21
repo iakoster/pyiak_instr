@@ -8,26 +8,30 @@ __all__ = [
 
 class DataSpace(object):
     """
-    class for data storing
+    Class for data storage and structured access to stored values.
 
-        Protected attributes:
-        ---------------------
-        _mul_rules : dict[Any, tuple[str]]
-            The dictionary rules that if the reference
-            to the argument of the class matches the key,
-            then it returns multiple attributes
+    Does not require initialization.
     """
 
     _mul_rules: dict[Any, tuple[str]] = {}
+    """The dictionary rules that if the reference 
+    to the argument of the class matches the key,
+    then it returns multiple attributes"""
 
     @staticmethod
     def _remove_protected(attrs: dict[str, Any] | set[str]):
         """
-        remove strings starts with '_'
+        Remove strings starts with '_'.
 
-        :param attrs: dict or set
-            (usually __annotations__ or __dict__)
-        :return: clear iterable object
+        Parameters
+        ----------
+        attrs: dict of {str: Any} or set of str
+            usually __annotations__ or __dict__.
+
+        Returns
+        -------
+        dict of {str: Any} or set of str
+            attrs without protected attributes.
         """
         if isinstance(attrs, dict):
             cleared = {}
@@ -47,18 +51,44 @@ class DataSpace(object):
         return cleared
 
     @classmethod
-    def _public_annotations(cls):
+    def _public_annotations(cls) -> dict[str, type]:
+        """
+        Returns
+        -------
+        dict of {str: type}
+            annotations for public attributes.
+        """
         return cls._remove_protected(cls.__annotations__)
 
     @classmethod
-    def _public_dict(cls):
+    def _public_dict(cls) -> dict[str, Any]:
+        """
+        Returns
+        -------
+        dict of {str: Any}
+            class dict with public attributes.
+        """
         return cls._remove_protected(dict(cls.__dict__))
 
     @classmethod
     def _apply_mul_rule(cls, name):
         """
-        :param name: rule key
-        :return: tuple with several attributes
+        Get attributes by ._mul_rules.
+
+        Parameters
+        ----------
+        name: Any
+            rule key.
+
+        Returns
+        -------
+        tuple of Any
+            tuple with several attributes.
+
+        See Also
+        --------
+        _mul_rules: access to the values of
+            several attributes with a single key
         """
         attrs = []
         for attr in cls._mul_rules[name]:
@@ -68,10 +98,19 @@ class DataSpace(object):
     @classmethod
     def var(cls, name) -> Any | tuple[Any]:
         """
-        :param name: attribute or rule name
-        :return: value of an attribute or
-            tuple of attributes
+        Get attribute by name.
+
+        Parameters
+        ----------
+        name: Any
+            attribute name or rule name.
+
+        Returns
+        -------
+        Any or tuple of Any
+            attribute or tuple of attributes
         """
+
         if name not in cls.vars() and name in cls._mul_rules:
             return cls._apply_mul_rule(name)
         return object.__getattribute__(cls, name)
@@ -79,7 +118,12 @@ class DataSpace(object):
     @classmethod
     def vars(cls) -> set[str]:
         """
-        :return: set with attributes names
+        Get public variables.
+
+        Returns
+        -------
+        set of str
+            attributes names
         """
         return set(cls._public_annotations())\
             .union(set(cls._public_dict()))
@@ -87,24 +131,32 @@ class DataSpace(object):
     @classmethod
     def mul_rules(cls) -> dict[Any, tuple[str]]:
         """
-        :return: dict of rules
+        Returns
+        -------
+        dict of {Any: tuple of str}
+            multiple rules.
         """
         return cls._mul_rules
 
 
 class DataSpaceTemplate(DataSpace):
     """
-    class of data spaсe template
+    Class for data storage and structured access to stored values.
 
-        Protected attributes:
-        ---------------------
-        _redirects : dict[Any, str]
-            Dictionary of rules, where if the reference
-            to the argument of the class matches the key,
-            then the attribute specified in the value
+    Parameters
+    ----------
+    **variables
+        vars to be set in format {name: value}.
+
+    See Also
+    --------
+    DataSpace: parent class.
     """
 
     _redirect_rules: dict[Any, str] = {}
+    """Dictionary of rules, where if the reference 
+    to the argument of the class matches the key,
+    then the attribute specified in the value"""
 
     def __init__(self, **variables):
         all_vars = self.vars()
@@ -130,10 +182,17 @@ class DataSpaceTemplate(DataSpace):
 
     def _var_exists(self, name: str) -> bool:
         """
-        check name in the rules
+        Check name exists in the rules.
 
-        :param name: attribute name
-        :return: exists or not
+        Parameters
+        ----------
+        name: str
+            attribute name or rule key.
+
+        Returns
+        -------
+        bool
+            name exists in rules.
         """
         return name not in self.vars() and (
                 name in self._mul_rules or
@@ -141,8 +200,22 @@ class DataSpaceTemplate(DataSpace):
 
     def _apply_mul_rule(self, name):
         """
-        :param name: attribute name in rules
-        :return: tuple of attributes
+        Get attributes by ._mul_rules.
+
+        Parameters
+        ----------
+        name: Any
+            rule key.
+
+        Returns
+        -------
+        tuple of Any
+            tuple with several attributes.
+
+        See Also
+        --------
+        _mul_rules: access to the values of
+            several attributes with a single key.
         """
         attrs = []
         for attr in self._mul_rules[name]:
@@ -151,15 +224,33 @@ class DataSpaceTemplate(DataSpace):
 
     def _redirect(self, name):
         """
-        :param name: key name in redirect rules
-        :return: attribute value
+        Get attribute by ._redirects.
+
+        Parameters
+        ----------
+        name: Any
+            key in redirect rules.
+
+        Returns
+        -------
+        Any
+            attribute.
         """
         return self.var(self._redirect_rules[name])
 
     def var(self, name) -> Any | tuple[Any]:
         """
-        :param name: attribute name
-        :return: attribute value or tuple of attributes
+        Get attribute by name.
+
+        Parameters
+        ----------
+        name: Any
+            attribute name or rule name.
+
+        Returns
+        -------
+        Any or tuple of Any
+            attribute or tuple of attributes.
         """
         if self._var_exists(name):
             if name in self._mul_rules:
@@ -171,7 +262,10 @@ class DataSpaceTemplate(DataSpace):
 
     def redirect_rules(self) -> dict[Any, str]:
         """
-        :return: dict of redirect rules
+        Returns
+        -------
+        dict of {Any: str}
+            redirect rules.
         """
         return self._redirect_rules
 

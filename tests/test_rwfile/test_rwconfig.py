@@ -112,6 +112,7 @@ class TestRWConfig(unittest.TestCase):
         )
 
     def test_file_creation(self):
+        print(RWConfig(CONFIG_PATH).__class__.LIST_PATTERN.__doc__)
         RWConfig(CONFIG_PATH)
         self.assertTrue(CONFIG_PATH.exists())
 

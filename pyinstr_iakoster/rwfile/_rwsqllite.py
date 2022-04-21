@@ -13,6 +13,18 @@ __all__ = ['RWSQLite3Simple']
 class RWSQLite3Simple(object):
     """
     Class for reading and writing to the database as *.db.
+
+    The timeout specifies how long the connection should
+    wait for the lock to go away until raising an exception.
+
+    Parameters
+    ----------
+    filepath: Path or path-like str
+        path to the database.
+    autocommit: bool, default=True
+        commit after any changes.
+    timeout: int, default=5
+        database response timeout.
     """
 
     FILENAME_PATTERN = re.compile('\S+.db$')
@@ -23,10 +35,6 @@ class RWSQLite3Simple(object):
             autocommit: bool = True,
             timeout: float = 5
     ):
-        """
-        :param filepath: path to the database
-        :param autocommit: commit after any changes
-        """
         filepath = if_str2path(filepath)
         match_filename(self.FILENAME_PATTERN, filepath)
         create_dir_if_not_exists(filepath)
@@ -38,16 +46,21 @@ class RWSQLite3Simple(object):
 
     def create_table(self, table: str, **col_pars: str) -> None:
         """
-        execute sql command 'CREATE TABLE IF NOT EXISTS {table}
-        ({col_pars});'.
+        Execute sql command
+        'CREATE TABLE IF NOT EXISTS {table} ({col_pars});'.
 
         Column parameters forming from the dict as 'key value',
         where key is a column name and value is column parameters
-        (e.g. 'TEXT' or 'INT PRIMARY KEY')
+        (e.g. 'TEXT' or 'INT PRIMARY KEY').
 
-        :param table: table name
-        :param col_pars: column parameters
+        Parameters
+        ----------
+        table: str
+            table name.
+        **col_pars: str
+            column parameters in format {column: parameters}
         """
+
         request = 'CREATE TABLE IF NOT EXISTS {}({});'.format(
             table,
             ', '.join(f'{col} {par}' for col, par in
@@ -64,12 +77,22 @@ class RWSQLite3Simple(object):
             columns: list[str] = None
     ) -> None:
         """
-        execute sql command 'INSERT INTO {table} VALUES({values});'.
-        Can insert a list of rows
+        Execute sql command
+        'INSERT INTO {TABLE} VALUES({values});'.
+        Can insert a list of rows.
 
-        :param into: where to insert
-        :param values: tuple of a cell values
-        :param columns: list of columns for insert values
+        The values parameter must be represents as
+        tuple or list of tuples, where each tuple must
+        have the same len as a selected row.
+
+        Parameters
+        ----------
+        into: str
+            where to insert.
+        values: tuple or list of tuple
+            cell values.
+        columns: list of str, default=None
+            selected columns to insert.
         """
         if isinstance(values, tuple):
             values = [values]
@@ -86,9 +109,12 @@ class RWSQLite3Simple(object):
 
     def delete_from(self, *, from_: str) -> None:
         """
-        execute sql command 'DELETE FROM {table};
+        Execute sql command 'DELETE FROM {table};'.
 
-        :param from_: from where to delete
+        Parameters
+        ----------
+        from_: str
+            from where to delete.
         """
         request = 'DELETE FROM %s;' % from_
         self._cur.execute(request)
@@ -100,20 +126,40 @@ class RWSQLite3Simple(object):
             self, *, from_: str, select: str = '*',
             fetch: int | str = None, where: str = None):
         """
-        execute sql command 'SELECT {select} FROM {from_}'
+        Execute sql command 'SELECT {select} FROM {from_};'.
 
-        Append 'WHERE {where}' to the request if where is not None
+        Append 'WHERE {where}' to the request if
+        where parameter is not None.
 
-        On the result can be applyed method
-        fetchmany if fetch is integer and fetch > 0 or
+        On the result can be applyed method fetchmany
+        if fetch is integer and fetch > 0 or
         fetchall if fetch == 'all'.
 
-        :param select: what to be select
-        :param from_: from where to be select
-        :param fetch: fetch result and how or not
-        :param where: where statement in the request
-        :return: result of an operation
+        Parameters
+        ----------
+        from_: str
+            from where to be select.
+        select: str, default='*'
+            what to be select.
+        fetch: int or str, optional
+            fetch result and how or not.
+        where: str, optional
+            where statement in the request.
+
+        Returns
+        -------
+        sqlite3.Cursor or list of Any
+            result of an operation.
+
+        Raises
+        ------
+        ValueError
+            if fetch is instance of int and less than one.
+        ValueError
+            if fetch is not instance of int, not None or
+            not equal 'all'.
         """
+
         where = '' if where is None else f' WHERE {where}'
         request = 'SELECT {} FROM {}{};'.format(select, from_, where)
         result = self._cur.execute(request)
@@ -134,16 +180,28 @@ class RWSQLite3Simple(object):
             where: str = None, index_col=None
     ) -> pd.DataFrame:
         """
-        execute sql command 'SELECT {select} FROM {from_}'
+        Execute sql command 'SELECT {select} FROM {from_};'.
 
-        Append 'WHERE {where}' to the request if where is not None
+        Append 'WHERE {where}' to the request if
+        where parameter is not None.
 
-        :param select: what to be select
-        :param from_: from where to be select
-        :param where: where statement in the request
-        :param index_col: column(s) to set as index(MultiIndex).
-        :return: pandas dataframe
+        Parameters
+        ----------
+        from_: str
+            from where to be select.
+        select: str, default='*'
+            what to be select.
+        where: str, optional
+            where statement in the request
+        index_col: str or list of str, optional
+            column(s) to set as index(MultiIndex).
+
+        Returns
+        -------
+        pd.DataFrame
+            sql table as a pandas DataFrame.
         """
+
         where = '' if where is None else f' WHERE {where}'
         request = 'SELECT {} FROM {}{};'.format(select, from_, where)
         return pd.read_sql_query(
@@ -157,46 +215,69 @@ class RWSQLite3Simple(object):
             index_label=None
     ) -> None:
         """
-        export pandas dataframe to sql database
+        Export pandas dataframe to sql database.
 
-        :param df: dataframe
-        :param table: table name
-        :param index: Write DataFrame index as a column.
+        Parameters
+        ----------
+        df: pd.DataFrame,
+            dataframe.
+        table: str
+            table name.
+        if_exists: str, default='replace'
+            How to behave if the table already exists.
+        index: bool, default=True
+            Write DataFrame index as a column.
             Uses `index_label` as the column name in the table.
-        :param index_label: Column label for index column(s).
+        index_label: str or sequence, default=None
+            Column label for index column(s).
             If None is given (default) and `index` is True,
             then the index names are used.
-        :param if_exists: How to behave if the table already exists.
         """
+
         df.to_sql(
             table, self._conn, if_exists=if_exists,
             index=index, index_label=index_label)
 
     def table_columns(self, table: str) -> list[str]:
         """
-        :param table: table name
-        :return: list of a column names in the table
+        Get column names in the table.
+
+        Parameters
+        ----------
+        table: str
+            table name.
+
+        Returns
+        -------
+        list of str
+            list of a column names in the table
         """
+
         self._cur.execute('SELECT * FROM %s;' % table)
         return list(map(lambda x: x[0], self._cur.description))
 
     def table_rows_count(self, table: str) -> int:
         """
-        :param table: table name
-        :return: rows count in the table
+        Get rows count in the table.
+
+        Parameters
+        ----------
+        table: str
+            table name.
+
+        Returns
+        -------
+        int
+            rows count in the table.
         """
         return self._cur.execute('SELECT COUNT(*) FROM %s;' % table).fetchall()[0][0]
 
     def commit(self) -> None:
-        """
-        commit changes
-        """
+        """Commit changes."""
         self._conn.commit()
 
     def close(self) -> None:
-        """
-        close cursor and connection
-        """
+        """Close cursor and connection."""
         try:
             self._cur.close()
         except sqlite3.ProgrammingError as err:
@@ -211,7 +292,15 @@ class RWSQLite3Simple(object):
     @property
     def tables(self) -> list[str]:
         """
-        :return: list of tables in the database
+        List of table names in the database.
+
+        The table names are taken from
+        the 'sqlite_master' table.
+
+        Returns
+        -------
+        list of str
+            table names in the database.
         """
         return list(map(lambda el: el[0], self.select(
             select='name', from_='sqlite_master',
@@ -220,7 +309,13 @@ class RWSQLite3Simple(object):
     @property
     def columns(self) -> dict[str, list[str]]:
         """
-        :return: list of columns in all tables
+        The column names in the each table.
+        Presented in format {table: [column, ...]}.
+
+        Returns
+        -------
+        dict of {str: list of str}
+            list of columns in all tables.
         """
         columns = {}
         for table in self.tables:
@@ -229,6 +324,14 @@ class RWSQLite3Simple(object):
 
     @property
     def rows_count(self) -> dict[str, int]:
+        """
+        The count of rows in each table in the database.
+
+        Returns
+        -------
+        dict of {str: int}
+            row count in each table in format {table: rows count}.
+        """
         rows_count = {}
         for table in self.tables:
             rows_count[table] = self.table_rows_count(table)
@@ -237,21 +340,30 @@ class RWSQLite3Simple(object):
     @property
     def connection(self):
         """
-        :return: sqllite connection to the database
+        Returns
+        -------
+        sqlite3.Connection
+            SQLite connection to the database.
         """
         return self._conn
 
     @property
     def cursor(self):
         """
-        :return: cursor of the connection
+        Returns
+        -------
+        sqlite3.Cursor
+            cursor of the SQLite connection.
         """
         return self._cur
 
     @property
     def filepath(self):
         """
-        :return: path to the sql database
+        Returns
+        -------
+        Path
+            path to the SQL database
         """
         return self._filepath
 

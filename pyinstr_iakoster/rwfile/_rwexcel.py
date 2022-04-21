@@ -14,15 +14,25 @@ __all__ = ['RWExcel']
 class RWExcel(object):
     """
     Class for reading and writing to the excel file as *.xlsx.
+
+    In the class used a `openpyxl` library.
+
+    Parameters
+    ----------
+    filepath: Path or path-like str
+        path to the *.xlsx excel file.
+    autosave: bool, default=False
+        if True save to file after any changes.
+
+    Raises
+    ------
+    FilepathPatternError:
+        if the filepath does not lead to the *.xlsx file.
     """
 
     FILENAME_PATTERN = re.compile('\S+.xlsx$')
 
     def __init__(self, filepath: Path | str, autosave: bool = False):
-        """
-        :param filepath: path to the excel file
-        :param autosave: boolean value, autosave after any changes
-        """
         filepath = if_str2path(filepath)
         match_filename(self.FILENAME_PATTERN, filepath)
         create_dir_if_not_exists(filepath)
@@ -33,15 +43,18 @@ class RWExcel(object):
 
     def active_sheet(self, title: str) -> None:
         """
-        change active sheet by name
+        Change active sheet by name.
 
-        :param title: sheet name
+        Parameters
+        ----------
+        title: str
+            sheet name.
         """
         self._xcl.active = self._xcl[title]
 
     def save(self) -> None:
         """
-        save excel parser to the excel file
+        Save excel parser to the excel file.
         """
         self._xcl.save(self._filepath)
 
@@ -53,15 +66,26 @@ class RWExcel(object):
             first_sheet: str = 'Sheet',
     ):
         """
-        create new excel file to the filepath with the first sheet.
+        Create new excel file to the filepath with the first sheet.
 
-        Rise error if excel file to the path is already exists.
+        Parameters
+        ----------
+        filepath: Path or path-like str
+            path to the *.xlsx excel file.
+        autosave: bool, default=False
+            if True save to file after any changes.
+        first_sheet: str, default='Sheet'
+            name of the first sheet.
 
-        :param filepath: path to the excel file
-        :param autosave: boolean value, autosave after any changes
-        :param first_sheet: name of the first sheet
-        :return: new instance of RWExcel
-        :rtype: RWExcel
+        Returns
+        -------
+        RWExcel
+            new instance of the RWExcel.
+
+        Raises
+        ------
+        FilepathPatternError:
+            if the filepath does not lead to the *.xlsx file.
         """
         filepath = if_str2path(filepath)
         match_filename(cls.FILENAME_PATTERN, filepath)
@@ -79,35 +103,62 @@ class RWExcel(object):
     @overload
     def cell(self, cell_name: str, value: Any = None) -> Cell:
         """
-        :param cell_name: cell name string in excel format
-        :param value: value to be set in the cell
-        :return: excel cell
+        Parameters
+        ----------
+        cell_name: str
+            cell name in excel format (e.g. 'A1' or 'A1:B2').
+        value: Any, default=None
+            value to be set in the cell.
+
+        Returns
+        -------
+        Cell
+            excel cell
         """
         ...
 
     @overload
     def cell(self, row: int, col: int, value: Any = None) -> Cell:
         """
-        :param row: row index
-        :param col: col index
-        :param value: value to be set in the cell
-        :return: excel cell
+        Parameters
+        ----------
+        row: int
+            row index.
+        col: int
+            column index.
+        value: Any
+            Value to be set in the cell.
+
+        Returns
+        -------
+        Cell
+            excel cell.
         """
         ...
 
     def cell(self, *coords, **kwargs) -> Cell:
         """
-        coords can be represented as a string or
-        as a tuple of string and column indices
+        Coords can be represented as a string or
+        as a tuple of strings and column indices.
 
-        The row and col indexes start from 0
+        The row and column indexes start from 0.
 
         It is not guaranteed to work correctly
-        when trying to get multiple cells
+        when trying to get multiple cells.
 
-        :param coords: cell coordinates
-        :param kwargs: kwargs
-        :return: excel cell
+        Parameters
+        ----------
+        *coords
+            cell coordinates.
+        **kwargs
+            At this point,only the 'value' key
+            can be included. The others will be
+            ignored.
+
+        Returns
+        -------
+        Cell
+            excel cell.
         """
 
         match coords:
@@ -126,26 +177,45 @@ class RWExcel(object):
     @property
     def filepath(self):
         """
-        :return: path to the excel file
+        Returns
+        -------
+        Path
+            path to the excel file
         """
         return self._filepath
 
     @property
     def excel(self):
         """
-        :return: excel parser
+        Returns
+        -------
+        openpyxl.Workbook
+            excel parser
         """
         return self._xcl
 
     def __getitem__(self, *coords: str | tuple[int, int]) -> Cell:
         """
-        coords can be represented as a string or
-        as a tuple of string and column indices
+        Call .cell method with *coords.
 
-        The row and col indexes start from 0
+        Parameters
+        ----------
+        *coords
+            cell coordinates.
 
-        :param coords: cell coordinates
-        :return: excel cell
+        Returns
+        -------
+        Cell
+            excel cell.
+
+        Raises
+        ------
+        AssertionError
+            if .cell method return not a Cell instance
+
+        See Also
+        --------
+        .cell: get excel cell.
         """
         match coords:
             case ((int(), int()),):
