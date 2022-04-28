@@ -1,3 +1,5 @@
+from typing import Iterable
+
 import numpy as np
 
 
@@ -41,6 +43,15 @@ class BitVector(object):
     def values(self) -> np.ndarray:
         """Array of the values in the vector"""
         return self._vals
+
+    @values.setter
+    def values(self, new_values: np.ndarray | Iterable | int):
+        values = np.array(new_values, dtype=np.uint8)
+        if values.shape != self._vals.shape:
+            raise ValueError(
+                'Invalid shape of the new values: '
+                f'{values.shape} != {self._vals.shape}')
+        self._vals = values
 
     @property
     def bit_count(self) -> int:

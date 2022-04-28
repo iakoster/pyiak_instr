@@ -8,10 +8,18 @@ from pyinstr_iakoster.store import BitVector
 class TestBitVector(unittest.TestCase):
 
     @staticmethod
-    def get_bv(bits_count: int = 10):
+    def get_bv(bits_count: int = 50):
         return BitVector(bits_count)
 
-    def compare_arrays(self, array_exp, array_act: np.ndarray):
+    def compare_arrays(
+            self, array_act: np.ndarray | BitVector,
+            array_exp=None
+    ):
+        if array_exp is None:
+            array_exp = self.bit_vector.values
+        if isinstance(array_act, BitVector):
+            array_act = array_act.values
+
         if len(array_exp) != len(array_act):
             raise AssertionError(
                 f'Different length\nExpected: {len(array_exp)}\n'
@@ -20,16 +28,11 @@ class TestBitVector(unittest.TestCase):
             self.assertEqual(val, array_act[i])
 
     def setUp(self) -> None:
-        self.bv = self.get_bv()
+        self.bit_vector = self.get_bv()
 
     def test_init_len(self):
         def compare_arrays(expected):
-            if len(expected) != len(bv.values):
-                raise AssertionError(
-                    f'Different length\nExpected: {len(expected)}\n'
-                    f'Actual: {len(bv.values)}')
-            for i, val in enumerate(expected):
-                self.assertEqual(val, bv.values[i])
+            self.compare_arrays(bv, expected)
 
         with self.assertRaises(ValueError) as exc:
             bv = self.get_bv(0)
@@ -44,3 +47,16 @@ class TestBitVector(unittest.TestCase):
         compare_arrays([0])
         bv = self.get_bv(9)
         compare_arrays([0, 0])
+
+    def test_values_setter(self):
+        self.compare_arrays([0] * 7)
+        self.bit_vector.values = [1] * 7
+        self.compare_arrays([1] * 7)
+
+    def test_values_setter_wrong_shape(self):
+        with self.assertRaises(ValueError) as exc:
+            self.bit_vector.values = [1] * 6
+        self.assertEqual(
+            'Invalid shape of the new values: (6,) != (7,)',
+            exc.exception.args[0]
+        )
