@@ -17,7 +17,8 @@ class BitVector(object):
     Parameters
     ----------
     bit_count: int
-        length of the vector in bits.
+        length of the vector in bits (count of valid
+        bits in the vector).
 
     Raises
     ------
@@ -33,19 +34,20 @@ class BitVector(object):
                 'The number of bits cannot be less than 1, '
                 'got %d' % bit_count)
 
-        vals_count = bit_count // self.VALUE_CAPACITY
+        self._vals_c = bit_count // self.VALUE_CAPACITY
         if bit_count % self.VALUE_CAPACITY:
-            vals_count += 1
+            self._vals_c += 1
         self._bit_c = bit_count
-        self._vals = np.zeros(vals_count, dtype=np.uint8)
+        self._vals = np.zeros(self._vals_c, dtype=np.uint8)
 
     @property
     def values(self) -> np.ndarray:
-        """Array of the values in the vector"""
+        """Array of the values in the vector."""
         return self._vals
 
     @values.setter
     def values(self, new_values: np.ndarray | Iterable | int):
+        """Set new values to the vector."""
         values = np.array(new_values, dtype=np.uint8)
         if values.shape != self._vals.shape:
             raise ValueError(
@@ -55,5 +57,35 @@ class BitVector(object):
 
     @property
     def bit_count(self) -> int:
-        """length of the vector in bits"""
+        """Length of the vector in bits."""
         return self._bit_c
+
+    @bit_count.setter
+    def bit_count(self, count: int):
+        """Set new bit count in the vector"""
+        if count < 1:
+            raise ValueError(
+                'The number of bits cannot be less than 1, '
+                'got %d' % count)
+
+        vals_c = count // self.VALUE_CAPACITY
+        vals_c_mod = count % self.VALUE_CAPACITY
+        print(vals_c_mod)
+        if vals_c_mod:
+            vals_c += 1
+
+        vals_diff = vals_c - self._vals_c
+        if vals_diff > 0:
+            self._vals = np.hstack(
+                ([0] * vals_diff, self._vals))
+        elif vals_diff < 0:
+            vals_diff = np.abs(vals_diff)
+            self._vals = self._vals[vals_diff:]
+            if vals_c_mod:
+                self._vals[0] &= 0xff >> vals_c_mod
+        elif vals_diff == 0:
+            if vals_c_mod:
+                print(vals_c_mod)
+                self._vals[0] &= 0xff >> vals_c_mod
+        self._bit_c = count
+        self._vals_c = vals_c
