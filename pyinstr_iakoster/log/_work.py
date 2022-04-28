@@ -2,38 +2,12 @@ from typing import Any, Callable
 
 import numpy as np
 
-from ..exceptions import PyiError
+from ..exceptions import CompletedWorkError, InterruptedWorkError
 
 __all__ = [
     'NoWork', 'BlankWork', 'Work',
     'CompletedWorkError', 'InterruptedWorkError'
 ]
-
-
-class CompletedWorkError(PyiError):
-    """
-    Raised when the work function has already been
-    called before and cannot be called again
-    """
-
-    def __init__(self, work_name: str):
-        PyiError.__init__(
-            self, 'Work %s is already done' % work_name)
-        self.work_name = work_name
-        self.args = (work_name,)
-
-
-class InterruptedWorkError(PyiError):
-    """
-    Raised when the interruption reason is indicated and
-    an attempt is made to change the steps or call the work
-    """
-
-    def __init__(self, reason):
-        PyiError.__init__(
-            self, 'Work was interrupted by %r' % reason)
-        self.reason = reason
-        self.args = (reason,)
 
 
 class NoWork(object):

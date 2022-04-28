@@ -4,8 +4,6 @@ import configparser
 from pathlib import Path
 from typing import overload, Any
 
-import pandas as pd
-
 from ._utils import *
 
 

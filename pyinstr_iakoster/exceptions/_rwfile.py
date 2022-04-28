@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ..exceptions import PyiError
+from ._base import PyiError
 
 
 __all__ = ['FilepathPatternError']

@@ -1,7 +1,7 @@
 from re import Pattern
 from pathlib import Path
 
-from ._exception import FilepathPatternError
+from ..exceptions import FilepathPatternError
 
 
 __all__ = ['match_filename', 'if_str2path', 'create_dir_if_not_exists']
