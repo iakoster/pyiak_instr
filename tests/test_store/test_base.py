@@ -11,18 +11,18 @@ class TestBitVector(unittest.TestCase):
     def get_bv(bits_count: int = 50):
         return BitVector(bits_count)
 
-    def compare_arrays(self, array_act, array_exp=None):
-        if array_exp is None:
-            array_exp = self.bit_vector.values
-        if isinstance(array_act, BitVector):
-            array_act = array_act.values
+    def compare_arrays(self, array_exp, array_act=None):
+        if array_act is None:
+            array_act = self.bit_vector.values
+        if isinstance(array_exp, BitVector):
+            array_exp = array_exp.values
 
-        if len(array_exp) != len(array_act):
+        if len(array_act) != len(array_exp):
             raise AssertionError(
-                f'Different length\nExpected: {len(array_exp)}\n'
-                f'Actual: {len(array_act)}')
-        for i, val in enumerate(array_exp):
-            self.assertEqual(val, array_act[i])
+                f'Different length\nExpected: {len(array_act)}\n'
+                f'Actual: {len(array_exp)}')
+        for i, val in enumerate(array_act):
+            self.assertEqual(array_exp[i], val, f'invalid {i} value')
 
     def setUp(self) -> None:
         self.bit_vector = self.get_bv()
@@ -47,8 +47,12 @@ class TestBitVector(unittest.TestCase):
 
     def test_values_setter(self):
         self.compare_arrays([0] * 7)
-        self.bit_vector.values = [1] * 7
-        self.compare_arrays([1] * 7)
+        vals = ([1] * 7, [255] * 7)
+        exp = ([1] * 7, [3] + [255] * 6)
+        for i_test, (values, result) in enumerate(zip(vals, exp)):
+            with self.subTest(test=i_test):
+                self.bit_vector.values = values
+                self.compare_arrays(result)
 
     def test_values_setter_wrong_shape(self):
         with self.assertRaises(ValueError) as exc:
@@ -58,22 +62,21 @@ class TestBitVector(unittest.TestCase):
             exc.exception.args[0])
 
     def test_bit_count_setter(self):
+        self.bit_vector.values = [255] * 7
+
+        bit_counts = (50, 24, 25, 23, 20, 24, 1, 1000)
+        exp = ([3] + [255] * 6, [255] * 3, [0] + [255] * 3,
+               [127] + [255] * 2, [15] + [255] * 2,
+               [15] + [255] * 2, [1], [0] * 124 + [1])
+        for i_test, (bit_count, result) in \
+                enumerate(zip(bit_counts, exp)):
+            with self.subTest(test=i_test):
+                self.bit_vector.bit_count = bit_count
+                self.compare_arrays(result)
+
+    def test_bit_count_setter_wrong_count(self):
         with self.assertRaises(ValueError) as exc:
             self.bit_vector.bit_count = -1
         self.assertEqual(
             'The number of bits cannot be less than 1, got -1',
             exc.exception.args[0])
-
-        self.bit_vector.values = list(range(7))
-        self.assertTrue(
-            (self.bit_vector.values == [0, 1, 2, 3, 4, 5, 6]).all())
-
-        self.bit_vector.bit_count = 16
-        self.assertTrue((self.bit_vector.values == [5, 6]).all())
-        self.bit_vector.bit_count = 9
-        print(self.bit_vector.values)
-        self.bit_vector.bit_count = 16
-        self.assertTrue((self.bit_vector.values == [5, 6]).all())
-        self.bit_vector.bit_count = 17
-        self.assertTrue((self.bit_vector.values == [0, 5, 6]).all())
-        #self.assertTrue((self.bit_vector.values == [0, 5, 6]).all())

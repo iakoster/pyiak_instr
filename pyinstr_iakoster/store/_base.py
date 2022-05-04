@@ -26,7 +26,7 @@ class BitVector(object):
         if bit_count is less than 1.
     """
 
-    VALUE_CAPACITY = 8
+    VALUE_BITS_COUNT = 8
 
     def __init__(self, bit_count: int):
         if bit_count < 1:
@@ -34,8 +34,8 @@ class BitVector(object):
                 'The number of bits cannot be less than 1, '
                 'got %d' % bit_count)
 
-        self._vals_c = bit_count // self.VALUE_CAPACITY
-        if bit_count % self.VALUE_CAPACITY:
+        self._vals_c = bit_count // self.VALUE_BITS_COUNT
+        if bit_count % self.VALUE_BITS_COUNT:
             self._vals_c += 1
         self._bit_c = bit_count
         self._vals = np.zeros(self._vals_c, dtype=np.uint8)
@@ -53,6 +53,9 @@ class BitVector(object):
             raise ValueError(
                 'Invalid shape of the new values: '
                 f'{values.shape} != {self._vals.shape}')
+        bits_mod = self._bit_c % self.VALUE_BITS_COUNT
+        if bits_mod:
+            values[0] &= 0xff >> self.VALUE_BITS_COUNT - bits_mod
         self._vals = values
 
     @property
@@ -68,9 +71,8 @@ class BitVector(object):
                 'The number of bits cannot be less than 1, '
                 'got %d' % count)
 
-        vals_c = count // self.VALUE_CAPACITY
-        vals_c_mod = count % self.VALUE_CAPACITY
-        print(vals_c_mod)
+        vals_c = count // self.VALUE_BITS_COUNT
+        vals_c_mod = count % self.VALUE_BITS_COUNT
         if vals_c_mod:
             vals_c += 1
 
@@ -78,14 +80,10 @@ class BitVector(object):
         if vals_diff > 0:
             self._vals = np.hstack(
                 ([0] * vals_diff, self._vals))
-        elif vals_diff < 0:
-            vals_diff = np.abs(vals_diff)
-            self._vals = self._vals[vals_diff:]
+        elif vals_diff <= 0:
+            self._vals = self._vals[np.abs(vals_diff):]
             if vals_c_mod:
-                self._vals[0] &= 0xff >> vals_c_mod
-        elif vals_diff == 0:
-            if vals_c_mod:
-                print(vals_c_mod)
-                self._vals[0] &= 0xff >> vals_c_mod
+                self._vals[0] &= \
+                    0xff >> self.VALUE_BITS_COUNT - vals_c_mod
         self._bit_c = count
         self._vals_c = vals_c
