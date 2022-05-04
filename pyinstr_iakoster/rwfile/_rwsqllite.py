@@ -2,6 +2,7 @@ import re
 import sqlite3
 from pathlib import Path
 
+import deprecation
 import pandas as pd
 
 from ._utils import *
@@ -107,6 +108,9 @@ class RWSQLite3Simple(object):
         if self._autocommit:
             self.commit()
 
+    @deprecation.deprecated(
+        deprecated_in='0.0.4', removed_in='0.0.6',
+        details='it is redundant function')
     def delete_from(self, *, from_: str) -> None:
         """
         Execute sql command 'DELETE FROM {table};'.
@@ -122,6 +126,9 @@ class RWSQLite3Simple(object):
         if self._autocommit:
             self.commit()
 
+    @deprecation.deprecated(
+        deprecated_in='0.0.4', removed_in='0.0.6',
+        details='it is redundant function')
     def select(
             self, *, from_: str, select: str = '*',
             fetch: int | str = None, where: str = None):
@@ -175,6 +182,9 @@ class RWSQLite3Simple(object):
         else:
             raise ValueError('unknown fetch variable %r' % fetch)
 
+    @deprecation.deprecated(
+        deprecated_in='0.0.4', removed_in='0.0.6',
+        details='it is redundant function')
     def to_dataframe(
             self, *, from_: str, select: str = '*',
             where: str = None, index_col=None
@@ -207,6 +217,9 @@ class RWSQLite3Simple(object):
         return pd.read_sql_query(
             request, self._conn, index_col=index_col)
 
+    @deprecation.deprecated(
+        deprecated_in='0.0.4', removed_in='0.0.6',
+        details='it is redundant function')
     def from_dataframe(
             self, *,
             df: pd.DataFrame, table: str,
@@ -270,7 +283,9 @@ class RWSQLite3Simple(object):
         int
             rows count in the table.
         """
-        return self._cur.execute('SELECT COUNT(*) FROM %s;' % table).fetchall()[0][0]
+        return self._cur.execute(
+            'SELECT COUNT(*) FROM %s;' % table
+        ).fetchone()[0]
 
     def commit(self) -> None:
         """Commit changes."""
