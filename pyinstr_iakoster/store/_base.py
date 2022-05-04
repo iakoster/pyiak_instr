@@ -26,7 +26,7 @@ class BitVector(object):
         if bit_count is less than 1.
     """
 
-    VALUE_BITS_COUNT = 8
+    BITS_IN_VALUE = 8
 
     def __init__(self, bit_count: int):
         if bit_count < 1:
@@ -34,11 +34,18 @@ class BitVector(object):
                 'The number of bits cannot be less than 1, '
                 'got %d' % bit_count)
 
-        self._vals_c = bit_count // self.VALUE_BITS_COUNT
-        if bit_count % self.VALUE_BITS_COUNT:
+        self._vals_c = bit_count // self.BITS_IN_VALUE
+        if bit_count % self.BITS_IN_VALUE:
             self._vals_c += 1
         self._bit_c = bit_count
         self._vals = np.zeros(self._vals_c, dtype=np.uint8)
+
+    def get_bit(self, index: int) -> int:
+        """Get the bit value by index"""
+        if index >= self._bit_c or index < -self._bit_c:
+            raise IndexError('bit index out of range')
+        i_val, i_bit = np.divmod(index, self.BITS_IN_VALUE)
+        return (self._vals[-i_val - 1] & 1 << i_bit) >> i_bit
 
     @property
     def values(self) -> np.ndarray:
@@ -53,9 +60,9 @@ class BitVector(object):
             raise ValueError(
                 'Invalid shape of the new values: '
                 f'{values.shape} != {self._vals.shape}')
-        bits_mod = self._bit_c % self.VALUE_BITS_COUNT
+        bits_mod = self._bit_c % self.BITS_IN_VALUE
         if bits_mod:
-            values[0] &= 0xff >> self.VALUE_BITS_COUNT - bits_mod
+            values[0] &= 0xff >> self.BITS_IN_VALUE - bits_mod
         self._vals = values
 
     @property
@@ -71,8 +78,8 @@ class BitVector(object):
                 'The number of bits cannot be less than 1, '
                 'got %d' % count)
 
-        vals_c = count // self.VALUE_BITS_COUNT
-        vals_c_mod = count % self.VALUE_BITS_COUNT
+        vals_c = count // self.BITS_IN_VALUE
+        vals_c_mod = count % self.BITS_IN_VALUE
         if vals_c_mod:
             vals_c += 1
 
@@ -84,6 +91,6 @@ class BitVector(object):
             self._vals = self._vals[np.abs(vals_diff):]
             if vals_c_mod:
                 self._vals[0] &= \
-                    0xff >> self.VALUE_BITS_COUNT - vals_c_mod
+                    0xff >> self.BITS_IN_VALUE - vals_c_mod
         self._bit_c = count
         self._vals_c = vals_c

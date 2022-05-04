@@ -80,3 +80,36 @@ class TestBitVector(unittest.TestCase):
         self.assertEqual(
             'The number of bits cannot be less than 1, got -1',
             exc.exception.args[0])
+
+    def test_get_bit_small(self):
+        self.bit_vector.bit_count = 16
+        self.bit_vector.values = [103, 220]
+        bit_array = np.unpackbits(
+            np.array([103, 220], dtype=np.uint8), bitorder='big')[::-1]
+        for i_test, index in enumerate(range(16)):
+            with self.subTest(test=i_test, index=index):
+                self.assertEqual(
+                    bit_array[index],
+                    self.bit_vector.get_bit(index))
+
+    def test_get_bit(self):
+        self.bit_vector.bit_count = 64
+        values = np.uint8(np.random.uniform(0, 255, size=8))
+        self.bit_vector.values = values
+        bit_array = np.unpackbits(values)[::-1]
+        bit_indexes = np.uint8(np.round(np.random.uniform(0, 63, size=50)))
+        for i_test, index in enumerate(bit_indexes):
+            with self.subTest(test=i_test, index=index):
+                self.assertEqual(
+                    bit_array[index],
+                    self.bit_vector.get_bit(index))
+
+    def test_get_bit_index_error(self):
+        with self.assertRaises(IndexError):
+            self.bit_vector.get_bit(50)
+        with self.assertRaises(IndexError) as exc:
+            self.bit_vector.get_bit(-51)
+        self.bit_vector.get_bit(-50)
+        self.assertEqual(
+            'bit index out of range',
+            exc.exception.args[0])
