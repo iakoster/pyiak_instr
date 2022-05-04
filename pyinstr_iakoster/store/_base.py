@@ -45,7 +45,7 @@ class BitVector(object):
         if index >= self._bit_c or index < -self._bit_c:
             raise IndexError('bit index out of range')
         i_val, i_bit = np.divmod(index, self.BITS_IN_VALUE)
-        return (self._vals[-i_val - 1] & 1 << i_bit) >> i_bit
+        return self._vals[-i_val - 1] >> i_bit & 1
 
     def get_flag(self, index: int) -> bool:
         """Get the bit flag by index"""
