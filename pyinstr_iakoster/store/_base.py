@@ -73,11 +73,13 @@ class BitVector(object):
 
     def raise_flag(self, index: int) -> None:
         """Set True flag to bit by index"""
-        self.set_flag(index, True)
+        i_val, i_bit = self._get_coords(index)
+        self._vals[i_val] |= 1 << i_bit
 
     def lower_flag(self, index: int) -> None:
         """Set False flag to bit by index"""
-        self.set_flag(index, False)
+        i_val, i_bit = self._get_coords(index)
+        self._vals[i_val] &= ~(1 << i_bit)
 
     @property
     def values(self) -> np.ndarray:
