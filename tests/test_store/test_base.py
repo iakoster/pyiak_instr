@@ -163,3 +163,24 @@ class TestBitVector(unittest.TestCase):
         self.bit_vector.values = [255, 255]
         self.bit_vector.lower_flag(5)
         self.assertEqual(223, self.bit_vector.values[-1])
+
+    def test_getitem(self):
+        self.bit_vector.bit_count = 16
+        self.bit_vector.values = [230, 72]
+        bit_array = np.bool_(np.unpackbits(
+            np.array([230, 72], dtype=np.uint8), bitorder='big'))[::-1]
+        for i_test, index in enumerate(range(16)):
+            with self.subTest(test=i_test, index=index):
+                result = bit_array[index] ^ self.bit_vector[index]
+                self.assertIsInstance(result, (bool, np.bool_))
+                self.assertFalse(result)
+        self.compare_arrays([230, 72])
+
+    def test_setitem(self):
+        self.bit_vector.bit_count = 16
+        self.bit_vector.values = [0, 0]
+        bit_array = np.bool_(np.unpackbits(
+            np.array([230, 72], dtype=np.uint8), bitorder='big'))[::-1]
+        for index in range(16):
+            self.bit_vector[index] = bit_array[index]
+        self.compare_arrays([230, 72])

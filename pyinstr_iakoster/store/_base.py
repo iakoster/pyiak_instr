@@ -126,3 +126,9 @@ class BitVector(object):
                     0xff >> self.BITS_IN_VALUE - vals_c_mod
         self._bit_c = count
         self._vals_c = vals_c
+
+    def __getitem__(self, index: int) -> bool:
+        return self.get_flag(index)
+
+    def __setitem__(self, index: int, flag: bool) -> None:
+        self.set_flag(index, flag)
