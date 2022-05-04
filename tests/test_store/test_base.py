@@ -125,3 +125,41 @@ class TestBitVector(unittest.TestCase):
                          self.bit_vector.get_flag(index)
                 self.assertIsInstance(result, (bool, np.bool_))
                 self.assertFalse(result)
+
+    def test_set_bit_small(self):
+        self.bit_vector.bit_count = 16
+        self.bit_vector.values = [0, 0]
+        bit_array = np.unpackbits(
+            np.array([103, 220], dtype=np.uint8), bitorder='big')[::-1]
+        for index in range(16):
+            self.bit_vector.set_bit(index, bit_array[index])
+        self.compare_arrays([103, 220])
+
+    def test_set_bit_invalid_value(self):
+        with self.assertRaises(ValueError) as exc:
+            self.bit_vector.set_bit(0, 2)
+        self.assertEqual(
+            'invalid bit value, expected only one '
+            'of {0, 1, False, True}',
+            exc.exception.args[0])
+
+    def test_set_flag_small(self):
+        self.bit_vector.bit_count = 16
+        self.bit_vector.values = [0, 0]
+        bit_array = np.bool_(np.unpackbits(
+            np.array([103, 220], dtype=np.uint8), bitorder='big'))[::-1]
+        for index in range(16):
+            self.bit_vector.set_bit(index, bit_array[index])
+        self.compare_arrays([103, 220])
+
+    def test_raise_flag(self):
+        self.bit_vector.bit_count = 16
+        self.bit_vector.values = [0, 0]
+        self.bit_vector.raise_flag(5)
+        self.assertEqual(32, self.bit_vector.values[-1])
+
+    def test_lower_flag(self):
+        self.bit_vector.bit_count = 16
+        self.bit_vector.values = [255, 255]
+        self.bit_vector.lower_flag(5)
+        self.assertEqual(223, self.bit_vector.values[-1])

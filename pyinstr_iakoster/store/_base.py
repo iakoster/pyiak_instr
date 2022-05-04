@@ -51,6 +51,30 @@ class BitVector(object):
         """Get the bit flag by index"""
         return bool(self.get_bit(index))
 
+    def set_bit(self, index: int, bit: int | bool) -> None:
+        """Set new bit value by index"""
+        if bit not in (0, 1, False, True):
+            raise ValueError(
+                'invalid bit value, expected only one '
+                'of {0, 1, False, True}')
+        if index >= self._bit_c or index < -self._bit_c:
+            raise IndexError('bit index out of range')
+        i_val, i_bit = np.divmod(index, self.BITS_IN_VALUE)
+        self._vals[-i_val - 1] = (self._vals[-i_val - 1] &
+                                  ~(1 << i_bit)) | (bit << i_bit)
+
+    def set_flag(self, index: int, flag: bool) -> None:
+        """Set new bit flag by index"""
+        self.set_bit(index, flag)
+
+    def raise_flag(self, index: int) -> None:
+        """Set True flag to bit by index"""
+        self.set_flag(index, True)
+
+    def lower_flag(self, index: int) -> None:
+        """Set False flag to bit by index"""
+        self.set_flag(index, False)
+
     @property
     def values(self) -> np.ndarray:
         """Array of the values in the vector."""
