@@ -47,6 +47,10 @@ class BitVector(object):
         i_val, i_bit = np.divmod(index, self.BITS_IN_VALUE)
         return (self._vals[-i_val - 1] & 1 << i_bit) >> i_bit
 
+    def get_flag(self, index: int) -> bool:
+        """Get the bit flag by index"""
+        return bool(self.get_bit(index))
+
     @property
     def values(self) -> np.ndarray:
         """Array of the values in the vector."""

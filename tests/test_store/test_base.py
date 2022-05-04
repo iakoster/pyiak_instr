@@ -113,3 +113,15 @@ class TestBitVector(unittest.TestCase):
         self.assertEqual(
             'bit index out of range',
             exc.exception.args[0])
+
+    def test_get_flag_small(self):
+        self.bit_vector.bit_count = 16
+        self.bit_vector.values = [103, 220]
+        bit_array = np.bool_(np.unpackbits(
+            np.array([103, 220], dtype=np.uint8), bitorder='big'))[::-1]
+        for i_test, index in enumerate(range(16)):
+            with self.subTest(test=i_test, index=index):
+                result = bit_array[index] ^ \
+                         self.bit_vector.get_flag(index)
+                self.assertIsInstance(result, (bool, np.bool_))
+                self.assertFalse(result)
