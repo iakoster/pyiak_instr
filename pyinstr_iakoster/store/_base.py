@@ -40,12 +40,18 @@ class BitVector(object):
         self._bit_c = bit_count
         self._vals = np.zeros(self._vals_c, dtype=np.uint8)
 
-    def get_bit(self, index: int) -> int:
-        """Get the bit value by index"""
+    def _get_coords(self, index: int) -> tuple[int, int]:
+        """Get indexes of value and bit"""
         if index >= self._bit_c or index < -self._bit_c:
             raise IndexError('bit index out of range')
-        i_val, i_bit = np.divmod(index, self.BITS_IN_VALUE)
-        return self._vals[-i_val - 1] >> i_bit & 1
+        i_val, i_bit = divmod(index, self.BITS_IN_VALUE)
+        i_val = -i_val - 1
+        return i_val, i_bit
+
+    def get_bit(self, index: int) -> int:
+        """Get the bit value by index"""
+        i_val, i_bit = self._get_coords(index)
+        return self._vals[i_val] >> i_bit & 1
 
     def get_flag(self, index: int) -> bool:
         """Get the bit flag by index"""
@@ -57,11 +63,9 @@ class BitVector(object):
             raise ValueError(
                 'invalid bit value, expected only one '
                 'of {0, 1, False, True}')
-        if index >= self._bit_c or index < -self._bit_c:
-            raise IndexError('bit index out of range')
-        i_val, i_bit = np.divmod(index, self.BITS_IN_VALUE)
-        self._vals[-i_val - 1] = (self._vals[-i_val - 1] &
-                                  ~(1 << i_bit)) | (bit << i_bit)
+        i_val, i_bit = self._get_coords(index)
+        self._vals[i_val] = (self._vals[i_val] &
+                             ~(1 << i_bit)) | (bit << i_bit)
 
     def set_flag(self, index: int, flag: bool) -> None:
         """Set new bit flag by index"""
