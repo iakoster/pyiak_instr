@@ -1,6 +1,7 @@
 import re
 import sqlite3
 from pathlib import Path
+from typing import Iterable
 
 import deprecation
 import pandas as pd
@@ -45,6 +46,36 @@ class RWSQLite3Simple(object):
         self._cur = self._conn.cursor()
         self._autocommit = autocommit
 
+    def request(
+            self, request: str,
+            many: list[tuple] | tuple = None
+    ) -> sqlite3.Cursor:
+        """
+        Execute command and return resulting cursor.
+
+        Parameters
+        ----------
+        request: str
+            sql command.
+        many: list of tuples or tuple
+            execute parameters or list of parameters.
+
+        Returns
+        -------
+        sqlite3.Cursor
+            sql cursor.
+        """
+        if many is None:
+            result = self._cur.execute(request)
+        elif isinstance(many, tuple):
+            result = self._cur.execute(request, many)
+        else:
+            result = self._cur.executemany(request, many)
+
+        if self._autocommit:
+            self.commit()
+        return result
+
     def create_table(self, table: str, **col_pars: str) -> None:
         """
         Execute sql command
@@ -62,33 +93,30 @@ class RWSQLite3Simple(object):
             column parameters in format {column: parameters}
         """
 
-        request = 'CREATE TABLE IF NOT EXISTS {}({});'.format(
-            table,
-            ', '.join(f'{col} {par}' for col, par in
-                      col_pars.items()))
-        self._cur.execute(request)
+        self.request('CREATE TABLE IF NOT EXISTS {}({});'.format(
+            table, ', '.join(f'{k} {v}' for k, v in col_pars.items())))
 
         if self._autocommit:
             self.commit()
 
     def insert_into(
             self, *,
-            into: str,
+            insert_into: str,
             values: tuple | list[tuple],
             columns: list[str] = None
     ) -> None:
         """
         Execute sql command
-        'INSERT INTO {TABLE} VALUES({values});'.
+        'INSERT INTO {TABLE} VALUES(?, ?, ...);'.
         Can insert a list of rows.
 
-        The values parameter must be represents as
+        The values parameter must be represented as
         tuple or list of tuples, where each tuple must
         have the same len as a selected row.
 
         Parameters
         ----------
-        into: str
+        insert_into: str
             where to insert.
         values: tuple or list of tuple
             cell values.
@@ -96,17 +124,14 @@ class RWSQLite3Simple(object):
             selected columns to insert.
         """
         if isinstance(values, tuple):
-            values = [values]
+            val_marks = ', '.join(['?'] * len(values))
+        else:
+            val_marks = ', '.join(['?'] * len(values[0]))
         columns = '' if columns is None else \
             '({})'.format(', '.join(columns))
-        val_marks = ', '.join(['?'] * len(values[0]))
 
-        request = 'INSERT INTO {}{} VALUES ({});'.format(
-            into, columns, val_marks)
-        self._cur.executemany(request, values)
-
-        if self._autocommit:
-            self.commit()
+        self.request('INSERT INTO {}{} VALUES ({});'.format(
+            insert_into, columns, val_marks), values)
 
     @deprecation.deprecated(
         deprecated_in='0.0.4', removed_in='0.0.6',
@@ -265,11 +290,10 @@ class RWSQLite3Simple(object):
         list of str
             list of a column names in the table
         """
+        self.request('SELECT * FROM %s;' % table)
+        return [el[0] for el in self._cur.description]
 
-        self._cur.execute('SELECT * FROM %s;' % table)
-        return list(map(lambda x: x[0], self._cur.description))
-
-    def table_rows_count(self, table: str) -> int:
+    def table_rows(self, table: str) -> int:
         """
         Get rows count in the table.
 
@@ -283,7 +307,7 @@ class RWSQLite3Simple(object):
         int
             rows count in the table.
         """
-        return self._cur.execute(
+        return self.request(
             'SELECT COUNT(*) FROM %s;' % table
         ).fetchone()[0]
 
@@ -317,9 +341,9 @@ class RWSQLite3Simple(object):
         list of str
             table names in the database.
         """
-        return list(map(lambda el: el[0], self.select(
-            select='name', from_='sqlite_master',
-            where='type=\'table\'', fetch='all')))
+        return [el[0] for el in self.request(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()]
 
     @property
     def columns(self) -> dict[str, list[str]]:
@@ -332,13 +356,11 @@ class RWSQLite3Simple(object):
         dict of {str: list of str}
             list of columns in all tables.
         """
-        columns = {}
-        for table in self.tables:
-            columns[table] = self.table_columns(table)
-        return columns
+        return {table: self.table_columns(table)
+                for table in self.tables}
 
     @property
-    def rows_count(self) -> dict[str, int]:
+    def rows(self) -> dict[str, int]:
         """
         The count of rows in each table in the database.
 
@@ -347,10 +369,8 @@ class RWSQLite3Simple(object):
         dict of {str: int}
             row count in each table in format {table: rows count}.
         """
-        rows_count = {}
-        for table in self.tables:
-            rows_count[table] = self.table_rows_count(table)
-        return rows_count
+        return {table: self.table_rows(table)
+                for table in self.tables}
 
     @property
     def connection(self):
