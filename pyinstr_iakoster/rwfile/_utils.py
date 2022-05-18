@@ -7,7 +7,7 @@ from ..exceptions import FilepathPatternError
 __all__ = ['match_filename', 'if_str2path', 'create_dir_if_not_exists']
 
 
-def match_filename(pattern: Pattern, path: Path):
+def match_filename(pattern: Pattern, path: Path) -> None:
     """
     Checks the path by pattern via match method.
 
@@ -47,7 +47,7 @@ def if_str2path(path: Path | str) -> Path:
     return path
 
 
-def create_dir_if_not_exists(path: Path, to_file: bool = True):
+def create_dir_if_not_exists(path: Path, to_file: bool = True) -> None:
     """
     Create a directory if it does not exists.
 
