@@ -18,10 +18,10 @@ __all__ = [
 
 class RWNoSqlTable(Table):
 
-    def insert_rwf(self, **doc_fields: Any) -> int:
+    def rwf_insert(self, **doc_fields: Any) -> int:
         return Table.insert(self, doc_fields)
 
-    def update_rwf(
+    def rwf_update(
             self,
             cond: QueryLike = None,
             doc_ids: Iterable[int] | int = None,
@@ -31,7 +31,7 @@ class RWNoSqlTable(Table):
             doc_ids = (doc_ids,)
         return Table.update(self, fields, cond=cond, doc_ids=doc_ids)
 
-    def upsert_rwf(self, cond: QueryLike = None, **fields) -> list[int]:
+    def rwf_upsert(self, cond: QueryLike = None, **fields) -> list[int]:
         return Table.upsert(self, fields, cond=cond)
 
 
@@ -49,9 +49,9 @@ class RWNoSqlJsonDatabase(TinyDB):
 
         super().__init__(filepath, *args, **kwargs)
 
-    insert_rwf = RWNoSqlTable.insert_rwf
-    update_rwf = RWNoSqlTable.update_rwf
-    upsert_rwf = RWNoSqlTable.upsert_rwf
+    rwf_insert = RWNoSqlTable.rwf_insert
+    rwf_update = RWNoSqlTable.rwf_update
+    rwf_upsert = RWNoSqlTable.rwf_upsert
 
     def table(self, name: str, **kwargs: Any) -> table_class:
         if name in self._tables:

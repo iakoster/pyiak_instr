@@ -29,18 +29,18 @@ class TestRWNoSql(unittest.TestCase):
 
     def test_ab_insert(self):
         self.assertEqual(
-            self.rwns.insert_rwf(name="test_ab_1", value=1000, type="a"), 1
+            self.rwns.rwf_insert(name="test_ab_1", value=1000, type="a"), 1
         )
         self.assertEqual(
-            self.rwns.insert_rwf(name="test_ab_2", value=-100, type="b"), 2
+            self.rwns.rwf_insert(name="test_ab_2", value=-100, type="b"), 2
         )
         self.assertEqual(self.rwns.count(Query()["name"].exists()), 2)
 
     def test_ac_update(self):
         self.assertEqual(self.rwns.get(doc_id=1)["value"], 1000)
-        self.rwns.insert_rwf(name="test_ab_1", value=0, type="c")
+        self.rwns.rwf_insert(name="test_ab_1", value=0, type="c")
         self.assertListEqual(
-            self.rwns.update_rwf(
+            self.rwns.rwf_update(
                 Query()["name"] == "test_ab_1", value=250, type="a"
             ),
             [1, 3]
@@ -49,18 +49,18 @@ class TestRWNoSql(unittest.TestCase):
         self.assertEqual(self.rwns.get(doc_id=3)["type"], "a")
         self.assertEqual(self.rwns.get(doc_id=2)["value"], -100)
         self.assertListEqual(
-            self.rwns.update_rwf(doc_ids=2, value=-120), [2]
+            self.rwns.rwf_update(doc_ids=2, value=-120), [2]
         )
         self.assertEqual(self.rwns.get(doc_id=2)["value"], -120)
 
     def test_ad_upsert(self):
         self.assertListEqual(
-            self.rwns.upsert_rwf(
+            self.rwns.rwf_upsert(
                 Query()["name"] == "test_ab_2", name="test_ab_2", value=0
             ), [2]
         )
         self.assertListEqual(
-            self.rwns.upsert_rwf(
+            self.rwns.rwf_upsert(
                 Query()["name"] == "test_ad_upsert",
                 name="test_ad_upsert",
                 value=0
@@ -68,5 +68,5 @@ class TestRWNoSql(unittest.TestCase):
         )
 
     def test_ae_table(self):
-        self.rwns["test_table"].insert_rwf(name="test", value=10)
+        self.rwns["test_table"].rwf_insert(name="test", value=10)
         self.assertIn("test_table", self.rwns.tables())
