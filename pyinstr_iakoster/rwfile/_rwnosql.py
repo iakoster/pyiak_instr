@@ -3,16 +3,16 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from tinydb import TinyDB, Query
-from tinydb.table import (
-    Table, Document, QueryLike
-)
+from tinydb.table import Table, Document, QueryLike
 
-from ._utils import *
+from ._utils import if_str2path, create_dir_if_not_exists, match_filename
 
 
 __all__ = [
-    "RWNoSqlJsonDatabase", "RWNoSqlTable",
-    "Query", "Document"
+    "RWNoSqlJsonDatabase",
+    "RWNoSqlTable",
+    "Query",
+    "Document",
 ]
 
 
