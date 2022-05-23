@@ -1,7 +1,5 @@
 import struct
-from copy import deepcopy
-from typing import Any, Sized, Iterable, overload, Type, NewType, SupportsBytes
-from collections import namedtuple
+from typing import Any, Iterable, SupportsBytes, Generator
 
 import numpy as np
 import numpy.typing as npt
@@ -14,7 +12,7 @@ from ..exceptions import (
 
 
 __all__ = [
-    "FieldBase"
+    "Field"
 ]
 
 
@@ -26,18 +24,26 @@ Content = (
 
 class FieldBase(object):
     """
-    Represents a single field of a Message
+    Represents a basic class for single field of a Message.
 
     Parameters
     ----------
-    :param package_format: имя формата пакетов
-    :param module_name: имя модуля
-    :param name: имя поля
-    :param start_byte: стартовый байт поля в сообщении
-    :param expected: ожидаемое количество слов в поле
-        (если == -1, то от стартового байта и до конца сообщения)
-    :param fmt: формат содержания поля
-    :param content: соержание поля
+    format_name: str
+        the name of package format to which the field belongs.
+    name: str
+        the name of the field.
+    info: dict of {str, Any}
+        additional info about a field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    expected: int
+        expected number of words in the field. If equal to -1, from
+        the start byte to the end of the message.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    content: bytes
+        field content in bytes.
     """
 
     def __init__(
@@ -49,7 +55,7 @@ class FieldBase(object):
             start_byte: int,
             expected: int,
             fmt: str,
-            content: Content
+            content: bytes
     ):
         self._fmt_name = format_name
         self._name = name
@@ -57,7 +63,7 @@ class FieldBase(object):
         self._st_byte = start_byte
         self._exp = expected
         self._fmt = fmt
-        self._content = b''
+        self._content = content
 
         self._word_bsize = struct.calcsize(self._fmt)
         if expected > 0:
@@ -69,7 +75,139 @@ class FieldBase(object):
             self._end_byte = np.inf
             self._slice = slice(start_byte, None)
 
-        self.set_content(content)
+    @property
+    def bytesize(self) -> int:
+        """The length of the one word in bytes."""
+        return self._word_bsize
+
+    @property
+    def content(self) -> bytes:
+        """The field content."""
+        return self._content
+
+    @property
+    def end_byte(self) -> int | np.inf:
+        """The number of byte in the message from which the field starts."""
+        return
+
+    @property
+    def expected(self) -> int:
+        """The expected count of words."""
+        return self._exp
+
+    @property
+    def field_class(self):
+        """The field class."""
+        return self.__class__
+
+    @property
+    def finite(self):
+        return self._fin
+
+    @property
+    def fmt(self) -> str:
+        """The converion format."""
+        return self._fmt
+
+    @property
+    def info(self) -> dict[str, Any]:
+        """Additional information about the field."""
+        return self._info
+
+    @property
+    def name(self) -> str:
+        """The name of the massage field."""
+        return self._name
+
+    @property
+    def package_format(self) -> str:
+        """The name of package format to which the field belongs."""
+        return self._fmt_name
+
+    @property
+    def slice(self):
+        """The range of bytes from the message belonging to the field"""
+        return self._slice
+
+    @property
+    def start_byte(self) -> int:
+        """The number of byte in the message from which the field starts."""
+        return self._st_byte
+
+    @property
+    def words_count(self) -> int:
+        """The length of the field in words."""
+        return len(self._content) // self._word_bsize
+
+    def __bytes__(self) -> bytes:
+        """Returns field content"""
+        return self._content
+
+    def __len__(self) -> int:
+        """Returns the length of the content in bytes"""
+        return len(self._content)
+
+
+class Field(FieldBase):
+
+    def __init__(
+            self,
+            format_name: str,
+            name: str,
+            info: dict[str, Any],
+            start_byte: int,
+            expected: int,
+            fmt: str,
+            content: Content = b""
+    ):
+        FieldBase.__init__(
+            self,
+            format_name,
+            name,
+            info,
+            start_byte=start_byte,
+            expected=expected,
+            fmt=fmt,
+            content=self._validate_content(self._convert_content(content))
+        )
+
+    def set_content(self, content: Content) -> None:
+        """
+        Set the field content.
+
+        If the received content is not of type bytes, then there will be
+        an attempt to convert the received variable into type bytes,
+        otherwise an exception will be raised.
+
+        Parameters
+        ----------
+        content: Content type
+            new field content.
+
+        See Also
+        --------
+        _validate_content: method of validating new content.
+        """
+        self._content = self._validate_content(self._convert_content(content))
+
+    def extract_from(self, message: bytes) -> None:
+        """
+        Extract new content from a message in range self.slice.
+
+        Extracts a field from start_byte to bytesize * expected from
+        the message received in the method. If expected < 1, it writes
+        everything from start_byte to the end of the received message.
+
+        Parameters
+        ----------
+        message: bytes
+            incoming message.
+
+        See Also
+        --------
+        set_content: method of setting new field content.
+        """
+        self.set_content(message[self._slice])
 
     def _convert_content(self, content: Content) -> bytes:
         """
@@ -103,15 +241,31 @@ class FieldBase(object):
 
     def _validate_content(self, content: bytes = None) -> bytes:
         """
-        Проверить на корректность количество слов в байтах
+        Validate field content.
 
-        :param content: содержание поля
-        :return: None
+        If the content is None, checks the content from the class instance.
+
+        Parameters
+        ----------
+        content: bytes, default=None
+            content for validating.
+
+        Returns
+        -------
+        bytes
+            content.
+
+        Raises
+        ------
+        FloatWordsCountError
+            if the number of words in the content is not an integer.
+        PartialFieldError
+            if the length of the content is less than expected.
         """
         if content is None:
             content = self._content
         if content == b"":
-            return b""
+            return content
 
         if len(content) % self._word_bsize != 0:
             raise FloatWordsCountError(
@@ -128,152 +282,83 @@ class FieldBase(object):
 
         return content
 
-    def set_content(self, content: Content) -> None:
+    def unpack(self, fmt: str = None) -> npt.NDArray:
         """
-        Установить содержание поля
+        Returns the contents of the field unpacked in fmt.
 
-        :param content: содержание поля. Если аргумент не является типом bytes,
-            то происходит преобразование в bytes согласно аттрибуту fmt
-        :return: None
-        """
+        Parameters
+        ----------
+        fmt: str
+            format for unpacking. If None, fmt is taken from
+            an instance of the class.
 
-        if not isinstance(content, bytes):
-            content = self._convert_content(content)
-        self._content = self._validate_content(content=content)
-
-    def extract_from(self, message: bytes) -> None:
-        """
-        Извлекает из принятого в метод сообщения поле
-        от start_byte до word_length * word_count.
-
-        Если word_count < 1, то в поле записывается все от
-        start_byte до конца принятого сообщения
-
-        :param message: сообщение, из которого извлечь поле
-        :return: None
-        """
-        self._content = self._validate_content(message[self._slice])
-
-    def unpack(self, fmt: str = None) -> list[int | float]:
-        """
-        Возвращает содержание поля, представленное как fmt
-
-        :param fmt: формат представления. Если аргумент == None,
-            то fmt берется из аттрибута класса, указанного
-            при создании
-        :return: list, где каждое значение есть слово
+        Returns
+        -------
+        NDArray
+            an array of words
         """
         if fmt is None:
             fmt = self._fmt
-        return [word for word, in struct.iter_unpack(fmt, self._content)]
+        return np.array(self._content, dtype=fmt)
 
     def hex(self, sep: str = ' ', sep_step: int = None) -> str:
         """
-        Перевести bytes в hex-строку
+        Create a string of hexadecimal numbers from the content.
 
-        :param sep: разделитель между каждым байтом
-        :param sep_step: шаг разделителя в байтах
+        Parameters
+        ----------
+        sep: str
+            separator between bytes.
+        sep_step: int
+            separator step. If None equals bytesize.
+
+        Returns
+        -------
+        str
+            hex string.
         """
         if sep_step is None:
             sep_step = self._word_bsize
         return self._content.hex(sep=sep, bytes_per_sep=sep_step)
 
-    @property
-    def package_format(self) -> str:
-        """Returns the name of package format to which the field belongs."""
-        return self._fmt_name
-
-    @property
-    def name(self) -> str:
-        """Returns the name of the massage field."""
-        return self._name
-
-    @property
-    def start_byte(self) -> int:
-        """Returns the number of byte in the message from which
-        the field starts."""
-        return self._st_byte
-
-    @property
-    def bytesize(self) -> int:
-        """Returns the length of the one word in bytes."""
-        return self._word_bsize
-
-    @property
-    def expected(self) -> int:
-        """Returns the expected count of words."""
-        return self._exp
-
-    @property
-    def words_count(self) -> int:
-        """Returns the length of the field in words."""
-        return len(self._content) // self._word_bsize
-
-    @property
-    def fmt(self) -> str:
-        """Returns the converion format from bytes to number."""
-        return self._fmt
-
-    @property
-    def content(self) -> bytes:
-        """Returns field content."""
-        return self._content
-
-    @property
-    def field_class(self):
-        """Returns field class."""
-        return self.__class__
-
-    def __bytes__(self) -> bytes:
+    def __getitem__(self, word_index: int | slice) -> int | float:
         """
-        :return: содержание поля
-        """
-        return self._content
+        Returns from the field a word or a slice of words unpacked in fmt.
 
-    def __getitem__(self, word_index):
-        """
-        Возвращает из поля слово или срез слов,
-        распакованных заданным при инициализации
-        форматом
+        Parameters
+        ----------
+        word_index: int or slice
+            requared word(s).
+
+        Returns
+        -------
+        int of float
+            unpacked word(s).
         """
         return self.unpack()[word_index]
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[int | float, None, None]:
         """
-        Итерирование по словам, преобразованным согласно fmt
+        Iterating over words unpacked in fmt.
 
-        :return: слово
+        Yields
+        ------
+        int or float
+            unpacked word.
         """
         for word in self.unpack():
             yield word
 
-    def __len__(self) -> int:
+    def __str__(self) -> str:
         """
-        :return: длина содержания
+        Returns a string representing the content in a readable format.
+
+        When converting, left insignificant zeros are removed and
+        a space separator between words.
+
+        Returns
+        -------
+        str
+            content as readable string.
         """
-        return len(self._content)
-
-    def __str__(self):
-        """
-        Возвращает строку, с представлением содержания
-        в читаемом формате.
-
-        При конвертации убираются левые незначащие нули
-        и устанавливается разделителем пробел через каждый
-        байт
-
-        :return: hex-строка содержания
-        """
-
-        hex_words = []
-        for i_byte in range(
-                0, int(self.words_count * self._word_bytesize),
-                self._word_bytesize):
-
-            val = self._content[i_byte:i_byte + self._word_bytesize] \
-                .hex().lstrip('0')
-            if len(val) == 0:
-                val = '0'
-            hex_words.append(val)
-
-        return ' '.join(hex_words)
+        return " ".join("%X" % word for word in self)
