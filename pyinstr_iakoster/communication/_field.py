@@ -12,7 +12,9 @@ from ..exceptions import (
 
 
 __all__ = [
-    "Field"
+    "Field",
+    "FloatWordsCountError",
+    "PartialFieldError",
 ]
 
 
@@ -86,9 +88,9 @@ class FieldBase(object):
         return self._content
 
     @property
-    def end_byte(self) -> int | np.inf:
+    def end_byte(self) -> int | float:
         """The number of byte in the message from which the field starts."""
-        return
+        return self._end_byte
 
     @property
     def expected(self) -> int:
@@ -147,19 +149,54 @@ class FieldBase(object):
         """Returns the length of the content in bytes"""
         return len(self._content)
 
+    def __repr__(self) -> str:
+        """Returns string representation of the field instance"""
+        words_count = self.words_count
+        if words_count > 16:
+            self_str = "{} ...({})".format(
+                " ".join(str(self).split(" ")[:8]), words_count - 8
+            )
+        else:
+            self_str = str(self)
+        return f"<{self.__class__.__name__}({self_str}, fmt='{self._fmt}')>"
+
 
 class Field(FieldBase):
+    """
+    Represents a general field of a Message.
+
+    Parameters
+    ----------
+    format_name: str
+        the name of package format to which the field belongs.
+    name: str
+        the name of the field.
+    info: dict of {str, Any}
+        additional info about a field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    expected: int
+        expected number of words in the field. If equal to -1, from
+        the start byte to the end of the message.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    content: Content
+        field content in bytes.
+    """
 
     def __init__(
             self,
             format_name: str,
             name: str,
-            info: dict[str, Any],
             start_byte: int,
             expected: int,
             fmt: str,
-            content: Content = b""
+            content: Content = b"",
+            info: dict[str, Any] = None,
     ):
+        if info is None:
+            info = {}
         FieldBase.__init__(
             self,
             format_name,
@@ -168,8 +205,10 @@ class Field(FieldBase):
             start_byte=start_byte,
             expected=expected,
             fmt=fmt,
-            content=self._validate_content(self._convert_content(content))
+            content=b""
         )
+        if content != b"":
+            self.set_content(content)
 
     def set_content(self, content: Content) -> None:
         """
@@ -203,10 +242,19 @@ class Field(FieldBase):
         message: bytes
             incoming message.
 
+        Raises
+        ------
+        ValueError
+            if message is empty.
+
         See Also
         --------
         set_content: method of setting new field content.
         """
+        if len(message) == 0:
+            raise ValueError(
+                "Unable to extract because the incoming message is empty"
+            )
         self.set_content(message[self._slice])
 
     def _convert_content(self, content: Content) -> bytes:
@@ -228,7 +276,7 @@ class Field(FieldBase):
             converted = content
         elif isinstance(content, bytearray):
             converted = bytes(content)
-        elif isinstance(content, npt.NDArray):
+        elif isinstance(content, np.ndarray):
             converted = content.astype(self._fmt).tobytes()
         elif isinstance(content, Iterable):
             converted = np.array(content, dtype=self._fmt).tobytes()
@@ -274,10 +322,11 @@ class Field(FieldBase):
                 len(content) / self._word_bsize
             )
 
-        # Similary to self._exp > 0 and len(content) / self._exp != 1
-        if 0 < self._exp != len(content) / self._exp:
+        # Similary to self._exp > 0 and
+        # len(content) / self._word_bsize != self._exp
+        if 0 < self._exp != len(content) / self._word_bsize:
             raise PartialFieldError(
-                self.__class__.__name__, len(content) / self._exp
+                self.__class__.__name__, len(content) / (self._exp * self._word_bsize)
             )
 
         return content
@@ -299,7 +348,7 @@ class Field(FieldBase):
         """
         if fmt is None:
             fmt = self._fmt
-        return np.array(self._content, dtype=fmt)
+        return np.frombuffer(self._content, dtype=fmt)
 
     def hex(self, sep: str = ' ', sep_step: int = None) -> str:
         """
@@ -321,7 +370,7 @@ class Field(FieldBase):
             sep_step = self._word_bsize
         return self._content.hex(sep=sep, bytes_per_sep=sep_step)
 
-    def __getitem__(self, word_index: int | slice) -> int | float:
+    def __getitem__(self, word_index: int | slice) -> int | float | npt.NDArray:
         """
         Returns from the field a word or a slice of words unpacked in fmt.
 

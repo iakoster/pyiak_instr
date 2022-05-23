@@ -1,4 +1,5 @@
 from ._base import PyiError
+import configparser
 
 
 __all__ = [
@@ -21,8 +22,8 @@ class FloatWordsCountError(FieldError):
     def __init__(self, field: str, expected: int, got: int | float):
         FieldError.__init__(
             self,
-            f"not integer count of words in the {field}. "
-            f"Expected {expected}, got {got:.1f}",
+            f"not integer count of words in the {field} "
+            f"(expected {expected}, got {got:.1f})",
             field, expected, got
         )
         self.expected = expected
@@ -34,7 +35,7 @@ class PartialFieldError(FieldError):
     def __init__(self, field: str, occup: int | float):
         FieldError.__init__(
             self,
-            f"The {field} is incomplete. The field is filled to {occup:.1f}",
+            f"the {field} is incomplete (filled to {occup:.1f})",
             field, occup
         )
         self.occupancy = occup
