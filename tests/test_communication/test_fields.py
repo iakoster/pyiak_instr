@@ -1,12 +1,32 @@
 import unittest
+from typing import Any
 
 import numpy as np
 
 from pyinstr_iakoster.communication import (
     Field,
+    FieldSingle,
     FloatWordsCountError,
     PartialFieldError
 )
+
+
+def compare_fields_base(
+        test_case: unittest.TestCase,
+        field: Field,
+        attributes: dict[str, Any],
+        slice_start: int | None,
+        slice_end: int | None,
+        class_instance: type
+):
+    for name, val in attributes.items():
+        with test_case.subTest(name=name):
+            test_case.assertEqual(val, field.__getattribute__(name))
+    with test_case.subTest(name="slice"):
+        test_case.assertEqual(slice_start, field.slice.start)
+        test_case.assertEqual(slice_end, field.slice.stop)
+    with test_case.subTest(name="field_class"):
+        test_case.assertIs(class_instance, field.field_class)
 
 
 class TestField(unittest.TestCase):
@@ -15,56 +35,42 @@ class TestField(unittest.TestCase):
         self.tf = Field("f", "n", 1, -1, ">H")
 
     def test_base_init(self):
-        tf = Field(
-            "format",
-            "name",
-            1,
-            4,
-            ">B",
-            info={"info": True},
-            content=b"\x01\x02\x03\x04"
+        compare_fields_base(
+            self, Field(
+                "format",
+                "name",
+                1,
+                4,
+                ">B",
+                info={"info": True},
+                content=b"\x01\x02\x03\x04"
+            ), dict(
+                package_format="format",
+                name="name",
+                info={"info": True},
+                start_byte=1,
+                end_byte=5,
+                expected=4,
+                finite=True,
+                fmt=">B",
+                bytesize=1,
+                content=b"\x01\x02\x03\x04",
+                words_count=4,
+            ), 1, 5, Field
         )
-        attributes = dict(
-            package_format="format",
-            name="name",
-            info={"info": True},
-            start_byte=1,
-            end_byte=5,
-            expected=4,
-            finite=True,
-            fmt=">B",
-            bytesize=1,
-            content=b"\x01\x02\x03\x04",
-            words_count=4,
-        )
-
-        for name, val in attributes.items():
-            with self.subTest(name=name):
-                self.assertEqual(val, tf.__getattribute__(name))
-        with self.subTest(name="slice"):
-            self.assertEqual(1, tf.slice.start)
-            self.assertEqual(5, tf.slice.stop)
-        with self.subTest(name="field_class"):
-            self.assertIs(Field, tf.field_class)
 
     def test_base_init_infinite(self):
-        tf = Field(
-            "format", "name", 1, -1, ">B", content=b"\x01\x02\x03\x04"
+        compare_fields_base(
+            self, Field(
+                "format", "name", 1, -1, ">B", content=b"\x01\x02\x03\x04"
+            ), dict(
+                info={},
+                start_byte=1,
+                end_byte=np.inf,
+                expected=-1,
+                finite=False,
+            ), 1, None, Field
         )
-        attributes = dict(
-            info={},
-            start_byte=1,
-            end_byte=np.inf,
-            expected=-1,
-            finite=False,
-        )
-
-        for name, val in attributes.items():
-            with self.subTest(name=name):
-                self.assertEqual(val, tf.__getattribute__(name))
-        with self.subTest(name="slice"):
-            self.assertEqual(1, tf.slice.start)
-            self.assertEqual(None, tf.slice.stop)
 
     def test_base_magic_basic(self):
         tf = Field("format", "name", 1, 4, ">B", content=b"\x01\x02\x03\x04")
@@ -203,3 +209,50 @@ class TestField(unittest.TestCase):
     def test_magic_str(self):
         self.tf.set_content([0x23, 0xff12, 0x521, 0x12])
         self.assertEqual("23 FF12 521 12", str(self.tf))
+
+
+class TestFieldSingle(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.tf = FieldSingle("f", "n", 0, ">H")
+
+    def test_base_init(self):
+        compare_fields_base(
+            self,
+            FieldSingle(
+                "format",
+                "name",
+                1,
+                ">H",
+                info={"info": True},
+                content=0xfa1c
+            ), dict(
+                package_format="format",
+                name="name",
+                info={"info": True},
+                start_byte=1,
+                end_byte=3,
+                expected=1,
+                finite=True,
+                fmt=">H",
+                bytesize=2,
+                content=b"\xfa\x1c",
+                words_count=1,
+            ), 1, 3, FieldSingle
+        )
+
+    def test_unpack(self):
+        self.tf.set_content(0x123)
+        self.assertEqual(0x123, self.tf.unpack())
+
+    def test_iter(self):
+        self.tf.set_content(0xfa12)
+        self.assertListEqual([0xfa12], [i for i in self.tf])
+
+    def test_getitem(self):
+        with self.assertRaises(AttributeError) as exc:
+            a = self.tf[0]
+        self.assertEqual(
+            "unreadable attribute '__getitem__'",
+            exc.exception.args[0]
+        )

@@ -12,7 +12,9 @@ from ..exceptions import (
 
 
 __all__ = [
+    "Content",
     "Field",
+    "FieldSingle",
     "FloatWordsCountError",
     "PartialFieldError",
 ]
@@ -183,6 +185,10 @@ class Field(FieldBase):
         is calculated from the format.
     content: Content
         field content in bytes.
+
+    See Also
+    --------
+    FieldBase: parent class.
     """
 
     def __init__(
@@ -333,7 +339,7 @@ class Field(FieldBase):
 
     def unpack(self, fmt: str = None) -> npt.NDArray:
         """
-        Returns the contents of the field unpacked in fmt.
+        Returns the content of the field unpacked in fmt.
 
         Parameters
         ----------
@@ -411,3 +417,84 @@ class Field(FieldBase):
             content as readable string.
         """
         return " ".join("%X" % word for word in self)
+
+
+class FieldSingle(Field):
+    """
+    Represents a field of a Message with single word.
+
+    Parameters
+    ----------
+    format_name: str
+        the name of package format to which the field belongs.
+    name: str
+        the name of the field.
+    info: dict of {str, Any}
+        additional info about a field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    content: Content
+        field content in bytes.
+
+    Notes
+    -----
+    The __getitem__ method was disallowed because only one word is expected.
+
+    See Also
+    --------
+    Field: parent class.
+    """
+
+    def __init__(
+            self,
+            format_name: str,
+            name: str,
+            start_byte: int,
+            fmt: str,
+            content: Content = b"",
+            info: dict[str, Any] = None,
+    ):
+        Field.__init__(
+            self,
+            format_name,
+            name,
+            start_byte,
+            1,
+            fmt,
+            content=content,
+            info=info,
+        )
+
+    def unpack(self, fmt: str = None) -> int | float | None:
+        """
+        Returns the content of the field unpacked in fmt.
+
+        Parameters
+        ----------
+        fmt: str
+            format for unpacking. If None, fmt is taken from
+            an instance of the class.
+
+        Returns
+        -------
+        int, float or None
+            unpacked value or none if content is empty
+        """
+        unpacked = Field.unpack(self, fmt=fmt)
+        return unpacked[0] if len(unpacked) else None
+
+    def __iter__(self):
+        """
+        Yield one word unpacked in fmt.
+
+        Yields
+        ------
+        int or float
+            unpacked word.
+        """
+        yield Field.unpack(self)
+
+    __getitem__ = property(doc="(!) Disallowed inherited")
