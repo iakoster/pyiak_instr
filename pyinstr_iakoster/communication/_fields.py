@@ -587,12 +587,17 @@ class FieldAddress(FieldSingle):
             format_name: str,
             start_byte: int,
             fmt: str,
-            content: Content,
+            content: Content = b"",
             info: dict[str, Any] | None = None
     ):
         FieldSingle.__init__(
-            self, format_name, "address", start_byte, fmt,
-            content=content, info=info
+            self,
+            format_name,
+            "address",
+            start_byte,
+            fmt,
+            content=content,
+            info=info
         )
 
 
@@ -625,7 +630,7 @@ class FieldData(Field):
             start_byte: int,
             expected: int,
             fmt: str,
-            content: Content,
+            content: Content = b"",
             info: dict[str, Any] | None = None
     ):
         Field.__init__(
@@ -680,8 +685,8 @@ class FieldDataLength(FieldSingle):
             format_name: str,
             start_byte: int,
             fmt: str,
-            content: Content,
-            units: int = WORDS,
+            content: Content = b"",
+            units: int = BYTES,
             additive: int = 0,
             info: dict[str, Any] | None = None
     ):
@@ -689,7 +694,8 @@ class FieldDataLength(FieldSingle):
             raise ValueError("invalid units: %d" % units)
         if additive < 0 or not isinstance(additive, int):
             raise ValueError(
-                f"additive number must be integer and positive: {additive}"
+                "additive number must be integer and positive, "
+                f"got {additive}"
             )
 
         FieldSingle.__init__(
@@ -699,13 +705,13 @@ class FieldDataLength(FieldSingle):
         self._units = units
         self._add = additive
 
-    def update(self, field: FieldData) -> None:
+    def update(self, field) -> None:
         """
         Update data length content via data field.
 
         Parameters
         ----------
-        field: FieldData
+        field: FieldData or MessageType
             data field.
 
         Raises
@@ -713,6 +719,9 @@ class FieldDataLength(FieldSingle):
         ValueError
             if units not in {BYTES, WORDS}.
         """
+        if isinstance(field, MessageType):
+            field = field.data
+
         if self._units == self.BYTES:
             self.set(len(field) + self._add)
         elif self._units == self.WORDS:
@@ -786,15 +795,15 @@ class FieldOperation(FieldSingle):
             format_name: str,
             start_byte: int,
             fmt: str,
-            content: Content | str,
             desc_dict: dict[str, int] = None,
+            content: Content | str = b"",
             info: dict[str, Any] | None = None
     ):
         if desc_dict is None:
             self._desc_dict = {"r": 0, "w": 1, "e": 2}
         else:
             self._desc_dict = desc_dict
-        self._desc_dict_rev = {v: k for k, v in desc_dict.items()}
+        self._desc_dict_rev = {v: k for k, v in self._desc_dict.items()}
 
         if isinstance(content, str):
             c_value = desc_dict[content]
@@ -842,12 +851,16 @@ class FieldOperation(FieldSingle):
         elif isinstance(other, MessageType):
             base = other.operation.base
         else:
-            raise TypeError("invalid class for comparsion: %s" % other)
+            raise TypeError("invalid class for comparsion: %s" % type(other))
 
         return self.base == base
 
-    def set(self, content: Content) -> None:
-        FieldSingle.set(self, content)
+    def set(self, content: Content | str) -> None:
+        if isinstance(content, str):
+            c_value = self._desc_dict[content]
+        else:
+            c_value = content
+        FieldSingle.set(self, c_value)
         self.update_desc()
 
     @property
