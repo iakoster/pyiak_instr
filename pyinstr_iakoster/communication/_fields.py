@@ -1,5 +1,5 @@
 import struct
-from typing import Any, Iterable, SupportsBytes, Generator
+from typing import Any, Iterable, SupportsBytes, Generator, Protocol, runtime_checkable
 
 import numpy as np
 import numpy.typing as npt
@@ -15,6 +15,11 @@ __all__ = [
     "Content",
     "Field",
     "FieldSingle",
+    "FieldStatic",
+    "FieldAddress",
+    "FieldData",
+    "FieldDataLength",
+    "FieldOperation",
     "FloatWordsCountError",
     "PartialFieldError",
 ]
@@ -173,7 +178,7 @@ class Field(FieldBase):
         the name of package format to which the field belongs.
     name: str
         the name of the field.
-    info: dict of {str, Any}
+    info: dict of {str, Any}, optional
         additional info about a field.
     start_byte: int
         the number of bytes in the message from which the fields begin.
@@ -183,8 +188,8 @@ class Field(FieldBase):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    content: Content
-        field content in bytes.
+    content: Content, default=b""
+        field content.
 
     See Also
     --------
@@ -214,9 +219,9 @@ class Field(FieldBase):
             content=b""
         )
         if content != b"":
-            self.set_content(content)
+            self.set(content)
 
-    def set_content(self, content: Content) -> None:
+    def set(self, content: Content) -> None:
         """
         Set the field content.
 
@@ -261,7 +266,7 @@ class Field(FieldBase):
             raise ValueError(
                 "Unable to extract because the incoming message is empty"
             )
-        self.set_content(message[self._slice])
+        self.set(message[self._slice])
 
     def _convert_content(self, content: Content) -> bytes:
         """
@@ -429,15 +434,15 @@ class FieldSingle(Field):
         the name of package format to which the field belongs.
     name: str
         the name of the field.
-    info: dict of {str, Any}
+    info: dict of {str, Any}, optional
         additional info about a field.
     start_byte: int
         the number of bytes in the message from which the fields begin.
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    content: Content
-        field content in bytes.
+    content: Content, default=b""
+        field content.
 
     Notes
     -----
@@ -497,4 +502,420 @@ class FieldSingle(Field):
         """
         yield Field.unpack(self)
 
-    __getitem__ = property(doc="(!) Disallowed inherited")
+    def __getitem__(self, word_index: int | slice) -> None:
+        raise AttributeError("disallowed inherited")
+
+
+class FieldStatic(FieldSingle):
+    """
+    Represents a field of a Message with static single word (e.g. preamble).
+
+    Parameters
+    ----------
+    format_name: str
+        the name of package format to which the field belongs.
+    name: str
+        the name of the field.
+    info: dict of {str, Any}, optional
+        additional info about a field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    content: Content, default=b""
+        field content.
+
+    Notes
+    -----
+    The __getitem__ method was disallowed because only one word is expected.
+    The set method will be disallowed after initialization.
+
+    See Also
+    --------
+    FieldSingle: parent class.
+    """
+
+    def __init__(
+            self,
+            format_name: str,
+            name: str,
+            start_byte: int,
+            fmt: str,
+            content: Content,
+            info: dict[str, Any] | None = None
+    ):
+        FieldSingle.__init__(
+            self, format_name, name, start_byte, fmt,
+            content=content, info=info
+        )
+        self.set = self._set
+
+    def _set(self, content: Content):
+        raise AttributeError("disallowed inherited")
+
+
+class FieldAddress(FieldSingle):
+    """
+    Represents a field of a Message with address.
+
+    Parameters
+    ----------
+    format_name: str
+        the name of package format to which the field belongs.
+    info: dict of {str, Any}, optional
+        additional info about a field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    content: Content, default=b""
+        field content.
+
+    Notes
+    -----
+    The __getitem__ method was disallowed because only one word is expected.
+
+    See Also
+    --------
+    FieldSingle: parent class.
+    """
+
+    def __init__(
+            self,
+            format_name: str,
+            start_byte: int,
+            fmt: str,
+            content: Content,
+            info: dict[str, Any] | None = None
+    ):
+        FieldSingle.__init__(
+            self, format_name, "address", start_byte, fmt,
+            content=content, info=info
+        )
+
+
+class FieldData(Field):
+    """
+    Represents a field of a Message with data.
+
+    Parameters
+    ----------
+    format_name: str
+        the name of package format to which the field belongs.
+    info: dict of {str, Any}, optional
+        additional info about a field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    content: Content, default=b""
+        field content.
+
+    See Also
+    --------
+    Field: parent class.
+    """
+
+    def __init__(
+            self,
+            format_name: str,
+            start_byte: int,
+            expected: int,
+            fmt: str,
+            content: Content,
+            info: dict[str, Any] | None = None
+    ):
+        Field.__init__(
+            self, format_name, "data", start_byte, expected, fmt,
+            content=content, info=info
+        )
+
+
+class FieldDataLength(FieldSingle):
+    """
+    Represents a field of a Message with data length.
+
+    Parameters
+    ----------
+    format_name: str
+        the name of package format to which the field belongs.
+    info: dict of {str, Any}, optional
+        additional info about a field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    units: int
+        data length units. Data can be measured in bytes or words.
+    additive: int
+        additional value to the length of the data.
+    content: Content, default=b""
+        field content.
+
+    Raises
+    ------
+    ValueError
+        if units not in {BYTES, WORDS}.
+    ValueError
+        if additive value is not integer or negative.
+
+    Notes
+    -----
+    The __getitem__ method was disallowed because only one word is expected.
+
+    See Also
+    --------
+    FieldSingle: parent class.
+    """
+
+    BYTES = 0x10
+    WORDS = 0x11
+
+    def __init__(
+            self,
+            format_name: str,
+            start_byte: int,
+            fmt: str,
+            content: Content,
+            units: int = WORDS,
+            additive: int = 0,
+            info: dict[str, Any] | None = None
+    ):
+        if units not in (self.BYTES, self.WORDS):
+            raise ValueError("invalid units: %d" % units)
+        if additive < 0 or not isinstance(additive, int):
+            raise ValueError(
+                f"additive number must be integer and positive: {additive}"
+            )
+
+        FieldSingle.__init__(
+            self, format_name, "data_length", start_byte, fmt,
+            content=content, info=info
+        )
+        self._units = units
+        self._add = additive
+
+    def update(self, field: FieldData) -> None:
+        """
+        Update data length content via data field.
+
+        Parameters
+        ----------
+        field: FieldData
+            data field.
+
+        Raises
+        ------
+        ValueError
+            if units not in {BYTES, WORDS}.
+        """
+        if self._units == self.BYTES:
+            self.set(len(field) + self._add)
+        elif self._units == self.WORDS:
+            self.set(field.words_count + self._add)
+        else:
+            raise ValueError("invalid units: %d" % self._units)
+
+    @property
+    def units(self) -> int:
+        """Data length units."""
+        return self._units
+
+    @property
+    def additive(self) -> int:
+        """Additional value to the data length."""
+        return self._add
+
+
+class FieldOperation(FieldSingle):
+    """
+    Represents a field of a Message with operation (e.g. read).
+
+    Field operation contains operation codes:
+        * READ = "r" -- read operation;
+        * WRITE = "w" -- write operation;
+        * ERROR = "e" -- error operation.
+    Operation codes are needed to compare the base of the operation
+    (the first letter of desc) when receiving a message and
+    generally to understand what operation is written in the message.
+
+    To work correctly, the first letter of keys in desc_dict must be
+    one of {'r', 'w', 'e'} (see examples). If the dictionary is None,
+    the standard value will be assigned {'r': 0, 'w': 1, 'e': 2}.
+
+    Parameters
+    ----------
+    format_name: str
+        the name of package format to which the field belongs.
+    info: dict of {str, Any}, optional
+        additional info about a field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    desc_dict: dict of {str, int}, optional
+        dictionary of correspondence between the operation base and
+        the value in the content.
+    content: Content, default=b""
+        field content.
+
+    Notes
+    -----
+    The __getitem__ method was disallowed because only one word is expected.
+
+    See Also
+    --------
+    FieldSingle: parent class.
+
+    Examples
+    --------
+    Example of po
+    """
+
+    READ = "r"
+    WRITE = "w"
+    ERROR = "e"
+
+    def __init__(
+            self,
+            format_name: str,
+            start_byte: int,
+            fmt: str,
+            content: Content | str,
+            desc_dict: dict[str, int] = None,
+            info: dict[str, Any] | None = None
+    ):
+        if desc_dict is None:
+            self._desc_dict = {"r": 0, "w": 1, "e": 2}
+        else:
+            self._desc_dict = desc_dict
+        self._desc_dict_rev = {v: k for k, v in desc_dict.items()}
+
+        if isinstance(content, str):
+            c_value = desc_dict[content]
+        else:
+            c_value = content
+
+        FieldSingle.__init__(
+            self, format_name, "operation", start_byte, fmt,
+            content=c_value, info=info
+        )
+        self._desc = ""
+        self.update_desc()
+
+    def update_desc(self) -> None:
+        """Update desc by desc dict where key is a content value."""
+        c_value = self.unpack()
+        if c_value is not None:
+            self._desc = self._desc_dict_rev[c_value]
+        else:
+            self._desc = ""
+
+    def compare(self, other) -> bool:
+        """
+        Compare operations between self and other.
+
+        Parameters
+        ----------
+        other: str, FieldOperation or MessageType
+            object for comparsion.
+
+        Returns
+        -------
+        bool
+            result of comparsion using == operator.
+
+        Raises
+        ------
+        TypeError:
+            if other is not instanse string, FieldOperation or MessageType.
+        """
+        if isinstance(other, str):
+            base = other[0]
+        elif isinstance(other, FieldOperation):
+            base = other.base
+        elif isinstance(other, MessageType):
+            base = other.operation.base
+        else:
+            raise TypeError("invalid class for comparsion: %s" % other)
+
+        return self.base == base
+
+    def set(self, content: Content) -> None:
+        FieldSingle.set(self, content)
+        self.update_desc()
+
+    @property
+    def base(self) -> str:
+        """Operation base (fisrt letter of desc) or
+        empty if content is empty."""
+        return self._desc[0] if len(self._desc) else ""
+
+    @property
+    def desc(self) -> str:
+        """Operation description. Can contain several letters."""
+        return self._desc
+
+    @property
+    def desc_dict(self) -> dict[str, int]:
+        """Dictionary of correspondence between the base content value."""
+        return self._desc_dict
+
+    @property
+    def desc_dict_rev(self) -> dict[int, str]:
+        """Reversed desc_dict."""
+        return self._desc_dict_rev
+
+    def __eq__(self, other) -> bool:
+        """
+        Compare operations between self and other.
+
+        Parameters
+        ----------
+        other: str, FieldOperation or MessageType
+            object for comparsion.
+
+        Returns
+        -------
+        bool
+            result of comparsion using == operator.
+
+        See Also
+        --------
+        compare: comparsion method.
+        """
+        return self.compare(other)
+
+    def __ne__(self, other) -> bool:
+        """
+        Compare operations between self and other.
+
+        Parameters
+        ----------
+        other: str, FieldOperation or MessageType
+            object for comparsion.
+
+        Returns
+        -------
+        bool
+            result of comparsion using != operator.
+
+        See Also
+        --------
+        compare: comparsion method.
+        """
+        return not self.compare(other)
+
+
+@runtime_checkable
+class MessageType(Protocol):
+    address: FieldAddress
+    data: FieldData
+    data_length: FieldDataLength
+    operation: FieldOperation
+
