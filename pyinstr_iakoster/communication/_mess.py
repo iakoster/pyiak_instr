@@ -17,48 +17,54 @@ class FieldSetter(object):
         self.kwargs = kwargs
 
     @classmethod
-    def field(
+    @overload
+    def specific(
             cls,
-            name: str,
             expected: int,
             fmt: str,
             content: Content = b"",
             info: dict[str, Any] = None,
     ):
-        return cls(name, expected, fmt, content=content, info=info)
+        """For classical field"""
+        ...
 
     @classmethod
-    def static(
+    @overload
+    def specific(
             cls,
-            name: str,
-            start_byte: int,
             fmt: str,
             content: Content,
             info: dict[str, Any] | None = None
     ):
-        return cls(name, start_byte, fmt, content, info=info)
+        """For static field"""
+        ...
 
     @classmethod
-    def address(
+    @overload
+    def specific(
             cls,
             fmt: str,
-            content: Content = b"",
+            content: Content,
             info: dict[str, Any] | None = None
     ):
-        return cls(fmt, content=content, info=info)
+        """For address field"""
+        ...
 
     @classmethod
-    def data(
+    @overload
+    def specific(
             cls,
             expected: int,
             fmt: str,
             content: Content = b"",
             info: dict[str, Any] | None = None
     ):
-        return cls(expected, fmt, content=content, info=info)
+        """For address field"""
+        ...
 
     @classmethod
-    def data_length(
+    @overload
+    def specific(
             cls,
             fmt: str,
             content: Content = b"",
@@ -66,31 +72,24 @@ class FieldSetter(object):
             additive: int = 0,
             info: dict[str, Any] | None = None
     ):
-        return cls(
-            fmt,
-            content=content,
-            units=units,
-            additive=additive,
-            info=info
-        )
+        """For data length field"""
+        ...
 
     @classmethod
-    def operation(
+    @overload
+    def specific(
             cls,
             fmt: str,
             desc_dict: dict[str, int] = None,
             content: Content | str = b"",
             info: dict[str, Any] | None = None
     ):
-        return cls(fmt, desc_dict=desc_dict, content=content, info=info)
+        """For operation field"""
+        ...
 
-    @property
-    def a(self):
-        return self.args
-
-    @property
-    def kw(self):
-        return self.kwargs
+    @classmethod
+    def specific(cls, *args, **kwargs):
+        return cls(*args, **kwargs)
 
 
 class Message(object):
@@ -102,8 +101,10 @@ class Message(object):
     _oper: FieldOperation
 
     def __init__(
-            self
+            self,
+            format_name: str = "default"
     ):
+        self._fmt_name = format_name
         self._fields: dict[str, Field] = {}
         self._configured = False
 
@@ -127,8 +128,37 @@ class Message(object):
             )
         del fields_diff
 
+        next_start_byte = 0
+        self._fields.clear()
+
+        for name, setter in fields.items():
+            field = self._get_field(name, next_start_byte, setter)
+            self._fields[name] = field
+            if name in self.REQ_FIELDS:
+                object.__setattr__(self, name, field)
+
+            if field.expected <= 0:
+                break
+            next_start_byte = field.start_byte + \
+                field.expected * field.bytesize
+
         self._configured = True
         return self
+
+    def _get_field(
+            self, name: str, start_byte: int, setter: FieldSetter
+    ) -> Field:
+        if name in self.REQ_FIELDS:
+            ...
+        else:
+            return Field(
+                self._fmt_name,
+                name,
+                start_byte,
+                *setter.args,
+                **setter.kwargs
+            )
+
 
     @property
     def address(self) -> FieldAddress:
@@ -141,6 +171,10 @@ class Message(object):
     @property
     def data_length(self) -> FieldDataLength:
         return self._dlen
+
+    @property
+    def format_name(self) -> str:
+        return self._fmt_name
 
     @property
     def operation(self) -> FieldOperation:
