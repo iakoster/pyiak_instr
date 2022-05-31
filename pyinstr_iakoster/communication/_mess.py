@@ -3,6 +3,8 @@ from typing import Any, overload
 from ._fields import (
     Content,
     Field,
+    FieldSingle,
+    FieldStatic,
     FieldAddress,
     FieldData,
     FieldDataLength,
@@ -12,8 +14,13 @@ from ._fields import (
 
 class FieldSetter(object):
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(
+            self,
+            *args: Any,
+            static_field: bool = False,
+        **kwargs: Any):
         self.args = args
+        self.static_field = static_field
         self.kwargs = kwargs
 
     @classmethod
@@ -34,7 +41,8 @@ class FieldSetter(object):
             cls,
             fmt: str,
             content: Content,
-            info: dict[str, Any] | None = None
+            static: bool = False,
+            info: dict[str, Any] | None = None,
     ):
         """For static field"""
         ...
@@ -149,7 +157,42 @@ class Message(object):
             self, name: str, start_byte: int, setter: FieldSetter
     ) -> Field:
         if name in self.REQ_FIELDS:
-            ...
+            if name == "address":
+                return FieldAddress(
+                    self._fmt_name,
+                    start_byte,
+                    *setter.args,
+                    **setter.kwargs
+                )
+            elif name == "data":
+                return FieldData(
+                    self._fmt_name,
+                    start_byte,
+                    *setter.args,
+                    **setter.kwargs
+                )
+            elif name == "data_length":
+                return FieldDataLength(
+                    self._fmt_name,
+                    start_byte,
+                    *setter.args,
+                    **setter.kwargs
+                )
+            elif name == "operation":
+                return FieldOperation(
+                    self._fmt_name,
+                    start_byte,
+                    *setter.args,
+                    **setter.kwargs
+                )
+        elif setter.static_field:
+            return FieldStatic(
+                self._fmt_name,
+                name,
+                start_byte,
+                *setter.args,
+                **setter.kwargs
+            )
         else:
             return Field(
                 self._fmt_name,
@@ -158,7 +201,6 @@ class Message(object):
                 *setter.args,
                 **setter.kwargs
             )
-
 
     @property
     def address(self) -> FieldAddress:
