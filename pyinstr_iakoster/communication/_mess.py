@@ -28,6 +28,17 @@ class FieldSetter(object):
         return cls(name, expected, fmt, content=content, info=info)
 
     @classmethod
+    def static(
+            cls,
+            name: str,
+            start_byte: int,
+            fmt: str,
+            content: Content,
+            info: dict[str, Any] | None = None
+    ):
+        return cls(name, start_byte, fmt, content, info=info)
+
+    @classmethod
     def address(
             cls,
             fmt: str,
