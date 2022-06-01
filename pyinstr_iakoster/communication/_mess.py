@@ -12,20 +12,26 @@ from ._fields import (
 )
 
 
+__all__ = [
+    "FieldSetter",
+    "Message"
+]
+
+
 class FieldSetter(object):
 
     def __init__(
             self,
             *args: Any,
-            static_field: bool = False,
-        **kwargs: Any):
+            special: str = None,
+            **kwargs: Any,
+    ):
         self.args = args
-        self.static_field = static_field
+        self.special = special
         self.kwargs = kwargs
 
     @classmethod
-    @overload
-    def specific(
+    def base(
             cls,
             expected: int,
             fmt: str,
@@ -33,46 +39,47 @@ class FieldSetter(object):
             info: dict[str, Any] = None,
     ):
         """For classical field"""
-        ...
+        return cls(expected, fmt, content=content, info=info)
 
     @classmethod
-    @overload
-    def specific(
+    def single(
+            cls,
+            fmt: str,
+            content: Content = b"",
+            info: dict[str, Any] = None
+    ):
+        return cls(fmt, special="single", content=content, info=info)
+
+    @classmethod
+    def static(
             cls,
             fmt: str,
             content: Content,
-            static: bool = False,
             info: dict[str, Any] | None = None,
     ):
-        """For static field"""
-        ...
+        return cls(fmt, content, special="static", info=info)
 
     @classmethod
-    @overload
-    def specific(
+    def address(
             cls,
             fmt: str,
-            content: Content,
+            content: Content = b"",
             info: dict[str, Any] | None = None
     ):
-        """For address field"""
-        ...
+        return cls(fmt, content=content, info=info)
 
     @classmethod
-    @overload
-    def specific(
+    def data(
             cls,
             expected: int,
             fmt: str,
             content: Content = b"",
             info: dict[str, Any] | None = None
     ):
-        """For address field"""
-        ...
+        return cls(expected, fmt, content=content, info=info)
 
     @classmethod
-    @overload
-    def specific(
+    def data_length(
             cls,
             fmt: str,
             content: Content = b"",
@@ -80,24 +87,19 @@ class FieldSetter(object):
             additive: int = 0,
             info: dict[str, Any] | None = None
     ):
-        """For data length field"""
-        ...
+        return cls(
+            fmt, content=content, units=units, additive=additive, info=info
+        )
 
     @classmethod
-    @overload
-    def specific(
+    def operation(
             cls,
             fmt: str,
             desc_dict: dict[str, int] = None,
             content: Content | str = b"",
             info: dict[str, Any] | None = None
     ):
-        """For operation field"""
-        ...
-
-    @classmethod
-    def specific(cls, *args, **kwargs):
-        return cls(*args, **kwargs)
+        return cls(fmt, desc_dict=desc_dict, content=content, info=info)
 
 
 class Message(object):

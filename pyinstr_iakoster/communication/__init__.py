@@ -9,6 +9,10 @@ from ._fields import (
     FloatWordsCountError,
     PartialFieldError,
 )
+from ._mess import (
+    FieldSetter,
+    Message
+)
 
 __all__ = [
     "Field",
@@ -18,6 +22,8 @@ __all__ = [
     "FieldData",
     "FieldDataLength",
     "FieldOperation",
+    "FieldSetter",
+    "Message",
     "FloatWordsCountError",
-    "PartialFieldError"
+    "PartialFieldError",
 ]
