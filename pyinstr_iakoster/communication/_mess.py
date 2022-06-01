@@ -104,7 +104,16 @@ class FieldSetter(object):
 
 class Message(object):
 
-    REQ_FIELDS = ("address", "data", "data_length", "operation")
+    REQ_FIELDS = {
+        "address": FieldAddress,
+        "data": FieldData,
+        "data_length": FieldDataLength,
+        "operation": FieldOperation,
+    }
+    SPECIAL_FIELDS = {
+        "single": FieldSingle,
+        "static": FieldStatic,
+    }
     _addr: FieldAddress
     _data: FieldData
     _dlen: FieldDataLength
@@ -159,50 +168,19 @@ class Message(object):
             self, name: str, start_byte: int, setter: FieldSetter
     ) -> Field:
         if name in self.REQ_FIELDS:
-            if name == "address":
-                return FieldAddress(
-                    self._fmt_name,
-                    start_byte,
-                    *setter.args,
-                    **setter.kwargs
-                )
-            elif name == "data":
-                return FieldData(
-                    self._fmt_name,
-                    start_byte,
-                    *setter.args,
-                    **setter.kwargs
-                )
-            elif name == "data_length":
-                return FieldDataLength(
-                    self._fmt_name,
-                    start_byte,
-                    *setter.args,
-                    **setter.kwargs
-                )
-            elif name == "operation":
-                return FieldOperation(
-                    self._fmt_name,
-                    start_byte,
-                    *setter.args,
-                    **setter.kwargs
-                )
-        elif setter.static_field:
-            return FieldStatic(
+            return self.REQ_FIELDS[name](
                 self._fmt_name,
-                name,
                 start_byte,
                 *setter.args,
                 **setter.kwargs
             )
-        else:
-            return Field(
-                self._fmt_name,
-                name,
-                start_byte,
-                *setter.args,
-                **setter.kwargs
-            )
+        return self.SPECIAL_FIELDS.get(setter.special, default=Field)(
+            self._fmt_name,
+            name,
+            start_byte,
+            *setter.args,
+            **setter.kwargs
+        )
 
     @property
     def address(self) -> FieldAddress:
