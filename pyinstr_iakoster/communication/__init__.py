@@ -1,4 +1,6 @@
-from ._fields import (
+from ._mess import (
+    Message,
+    FieldSetter,
     Field,
     FieldSingle,
     FieldStatic,
@@ -6,15 +8,14 @@ from ._fields import (
     FieldData,
     FieldDataLength,
     FieldOperation,
+    Content,
     FloatWordsCountError,
     PartialFieldError,
 )
-from ._mess import (
-    FieldSetter,
-    Message
-)
 
 __all__ = [
+    "Message",
+    "FieldSetter",
     "Field",
     "FieldSingle",
     "FieldStatic",
@@ -22,8 +23,7 @@ __all__ = [
     "FieldData",
     "FieldDataLength",
     "FieldOperation",
-    "FieldSetter",
-    "Message",
+    "Content",
     "FloatWordsCountError",
     "PartialFieldError",
 ]

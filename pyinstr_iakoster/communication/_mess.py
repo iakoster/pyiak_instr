@@ -9,12 +9,24 @@ from ._fields import (
     FieldData,
     FieldDataLength,
     FieldOperation,
+    FloatWordsCountError,
+    PartialFieldError,
 )
 
 
 __all__ = [
+    "Message",
     "FieldSetter",
-    "Message"
+    "Field",
+    "FieldSingle",
+    "FieldStatic",
+    "FieldAddress",
+    "FieldData",
+    "FieldDataLength",
+    "FieldOperation",
+    "Content",
+    "FloatWordsCountError",
+    "PartialFieldError",
 ]
 
 
@@ -130,10 +142,10 @@ class Message(object):
     @overload
     def configure(
             self,
-            addr: FieldSetter = None,
-            oper: FieldSetter = None,
-            data_len: FieldSetter = None,
+            address: FieldSetter = None,
             data: FieldSetter = None,
+            data_length: FieldSetter = None,
+            operation: FieldSetter = None,
             **fields: FieldSetter
     ):
         ...
@@ -147,6 +159,12 @@ class Message(object):
             )
         del fields_diff
 
+        req_attrs = {
+            "address": "_addr",
+            "data": "_data",
+            "data_length": "_dlen",
+            "operation": "_oper"
+        }
         next_start_byte = 0
         self._fields.clear()
 
@@ -154,7 +172,7 @@ class Message(object):
             field = self._get_field(name, next_start_byte, setter)
             self._fields[name] = field
             if name in self.REQ_FIELDS:
-                object.__setattr__(self, name, field)
+                object.__setattr__(self, req_attrs[name], field)
 
             if field.expected <= 0:
                 break
@@ -174,7 +192,7 @@ class Message(object):
                 *setter.args,
                 **setter.kwargs
             )
-        return self.SPECIAL_FIELDS.get(setter.special, default=Field)(
+        return self.SPECIAL_FIELDS.get(setter.special, Field)(
             self._fmt_name,
             name,
             start_byte,
@@ -201,6 +219,13 @@ class Message(object):
     @property
     def operation(self) -> FieldOperation:
         return self._oper
+
+    def __getitem__(self, name: str) -> Field:
+        return self._fields[name]
+
+    def __iter__(self):
+        for field in self._fields.values():
+            yield field
 
 
 # class Message(object):

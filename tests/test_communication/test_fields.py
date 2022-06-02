@@ -50,7 +50,7 @@ class TestField(unittest.TestCase):
                 info={"info": True},
                 content=b"\x01\x02\x03\x04"
             ), dict(
-                package_format="format",
+                format_name="format",
                 name="name",
                 info={"info": True},
                 start_byte=1,
@@ -232,7 +232,7 @@ class TestFieldSingle(unittest.TestCase):
                 info={"info": True},
                 content=0xfa1c
             ), dict(
-                package_format="format",
+                format_name="format",
                 name="name",
                 info={"info": True},
                 start_byte=1,
@@ -280,7 +280,7 @@ class TestFieldStatic(unittest.TestCase):
                 info={"info": True},
                 content=0xfa1c
             ), dict(
-                package_format="format",
+                format_name="format",
                 name="name",
                 info={"info": True},
                 start_byte=0,
@@ -314,7 +314,7 @@ class TestFieldAddress(unittest.TestCase):
                 ">I",
                 info={"info": True}
             ), dict(
-                package_format="format",
+                format_name="format",
                 name="address",
                 info={"info": True},
                 start_byte=0,
@@ -341,7 +341,7 @@ class TestFieldData(unittest.TestCase):
                 ">I",
                 info={"info": True}
             ), dict(
-                package_format="format",
+                format_name="format",
                 name="data",
                 info={"info": True},
                 start_byte=0,
@@ -375,7 +375,7 @@ class TestFieldDataLength(unittest.TestCase):
                 ">H",
                 additive=0,
             ), dict(
-                package_format="format",
+                format_name="format",
                 name="data_length",
                 info={},
                 start_byte=0,
@@ -401,7 +401,7 @@ class TestFieldDataLength(unittest.TestCase):
                 units=0x11,
                 additive=10,
             ), dict(
-                package_format="format",
+                format_name="format",
                 name="data_length",
                 info={},
                 start_byte=0,
@@ -471,7 +471,7 @@ class TestFieldOperation(unittest.TestCase):
                 ">H",
                 content=1
             ), dict(
-                package_format="format",
+                format_name="format",
                 name="operation",
                 info={},
                 start_byte=0,

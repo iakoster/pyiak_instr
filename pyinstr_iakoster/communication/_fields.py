@@ -129,7 +129,7 @@ class FieldBase(object):
         return self._name
 
     @property
-    def package_format(self) -> str:
+    def format_name(self) -> str:
         """The name of package format to which the field belongs."""
         return self._fmt_name
 
