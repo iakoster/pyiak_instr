@@ -174,16 +174,16 @@ class TestField(unittest.TestCase):
 
     def test_extract_from(self):
         tf = Field("format", "name", 2, -1, ">B")
-        tf.extract_from(b"\x01\x02\x03\x04\x05\x06")
+        tf.extract(b"\x01\x02\x03\x04\x05\x06")
         self.assertEqual(b"\x03\x04\x05\x06", tf.content)
 
         tf = Field("format", "name", 2, 2, ">B")
-        tf.extract_from(b"\x01\x02\x03\x04\x05\x06")
+        tf.extract(b"\x01\x02\x03\x04\x05\x06")
         self.assertEqual(b"\x03\x04", tf.content)
 
     def test_extract_from_empty(self):
         with self.assertRaises(ValueError) as exc:
-            self.tf.extract_from(b"")
+            self.tf.extract(b"")
         self.assertEqual(
             "Unable to extract because the incoming message is empty",
             exc.exception.args[0]

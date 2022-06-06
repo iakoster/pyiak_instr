@@ -240,7 +240,7 @@ class Field(FieldBase):
         """
         self._content = self._validate_content(self._convert_content(content))
 
-    def extract_from(self, message: bytes) -> None:
+    def extract(self, message: bytes) -> None:
         """
         Extract new content from a message in range self.slice.
 

@@ -12,6 +12,9 @@ from ._fields import (
     FloatWordsCountError,
     PartialFieldError,
 )
+from ..exceptions import (
+    NotConfiguredMessageError
+)
 
 
 __all__ = [
@@ -182,6 +185,77 @@ class Message(object):
         self._configured = True
         return self
 
+    @overload
+    def set_fields_content(
+            self,
+            address: Content,
+            data: Content,
+            data_length: Content,
+            operation: Content,
+            **fields: Content
+    ):
+        ...
+
+    def set_fields_content(self, **fields: Content):
+        """
+        Set field content by names.
+
+        Parameters
+        ----------
+        fields: Content
+            field content in format field_name=content.
+
+        Returns
+        -------
+        Message
+            self class instance.
+
+        Raises
+        ------
+        NotConfiguredMessageError
+            if Message has not been configured before.
+        """
+        if not self._configured:
+            raise NotConfiguredMessageError(self.__class__.__name__)
+
+        for name, content in fields:
+            self[name].set(content)
+        self._validate_content()
+        return self
+
+    def extract(self, message: bytes):
+        """
+        Extract fields content from a message.
+
+        May be uses for transform incoming message to a Message class.
+
+        Parameters
+        ----------
+        message: bytes
+            incoming message.
+
+        Returns
+        -------
+        Message
+            self class instance
+
+        Raises
+        ------
+        NotConfiguredMessageError
+            if Message has not been configured before.
+        """
+        if not self._configured:
+            raise NotConfiguredMessageError(self.__class__.__name__)
+
+        for field in self._fields.values():
+            field.extract(message)
+        self._validate_content()
+        return self
+
+    def _validate_content(self) -> None:
+        """Validate content."""
+        ...
+
     def _get_field(
             self, name: str, start_byte: int, setter: FieldSetter
     ) -> Field:
@@ -275,82 +349,6 @@ class Message(object):
 #         :return: новый экземпляр текущего класса.
 #         """
 #         return self.__class__(*self._init_args, **self._init_kwargs)
-#
-#     @overload
-#     def _setup_fields(
-#             self,
-#             addr: tuple[str] | tuple[str, _mf_content_types] = None,
-#             oper: tuple[str, dict[int | float, str]] |
-#                   tuple[str, dict[int | float, str], _mf_content_types] = None,
-#             data_len: tuple[str] | tuple[str, str, int] |
-#                       tuple[str, str, int, _mf_content_types] = None,
-#             data: tuple[int, str] | tuple[int, str, _mf_content_types] = None,
-#             **fields_kw: tuple[int, str] | tuple[int, str, _mf_content_types] | tuple[str, bytes]
-#     ) -> None:
-#         ...
-#
-#     def _setup_fields(self, **fields_kw) -> None:
-#         """
-#         Настройка полей сообщения. Инициирует поля и
-#         записывает в аттрибут _fields.
-#
-#         :param fields_kw: словарь с аргументами поля,
-#             где ключ указывает на имя поля.
-#         :return: None
-#         """
-#         if not set(self._req_fields_dict.keys()) \
-#                 .issubset(fields_kw):
-#             not_got_fields = ', '.join(sorted(
-#                 set(self._req_fields_dict.keys())
-#                     .difference(fields_kw)
-#             ))
-#             raise TypeError(
-#                 f'Message format do not contain all '
-#                 f'requarement fields, got without '
-#                 f'{not_got_fields}'
-#             )
-#
-#         next_start_byte = 0
-#         self._fields.clear()
-#
-#         for field_name, field_args in fields_kw.items():
-#             field = self._get_message_field(
-#                 field_name, next_start_byte, *field_args)
-#             self._fields[field_name] = field
-#             if field_name in self._req_fields_dict:
-#                 object.__setattr__(self, field_name, field)
-#
-#             if field.words_expected <= 0:
-#                 break
-#             next_start_byte = field.start_byte + \
-#                               field.words_expected * field.word_bytesize
-#
-#     def _get_message_field(
-#             self,
-#             field_name: str,
-#             start_byte: int,
-#             *field_args
-#     ) -> MessageField:
-#         """
-#         Сгенерировать поле сообщения
-#
-#         :param field_name: имя поля
-#         :param start_byte: стартовый байт
-#         :param field_args: арументы поля
-#         :return: экземпляр поля сообщения
-#         """
-#         if field_args[0] == "static":
-#             return MessageFieldStatic(
-#                 self._package_format, self._module_name,
-#                 field_name, start_byte, *field_args[1:]
-#             )
-#         elif field_name not in self._req_fields_dict:
-#             return MessageField(
-#                 self._package_format, self._module_name,
-#                 field_name, start_byte, *field_args)
-#         return self._req_fields_dict[field_name](
-#             self._package_format, self._module_name,
-#             start_byte, *field_args)
 #
 #     @overload
 #     def set_fields_content(
