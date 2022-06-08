@@ -104,6 +104,17 @@ class TestMessage(unittest.TestCase):
         with self.subTest(name="field_class"):
             self.assertIs(field_class, field.field_class)
 
+    def setUp(self) -> None:
+        self.msg = Message().configure(
+            preamble=FieldSetter.static(">H", 0x1aa5),
+            response=FieldSetter.single(">B"),
+            address=FieldSetter.address(">H"),
+            operation=FieldSetter.operation(">B"),
+            data_length=FieldSetter.data_length(">B"),
+            data=FieldSetter.data(1, ">I"),
+            crc=FieldSetter.base(1, ">H"),
+        )
+
     def test_init(self):
         msg = Message()
         self.assertEqual("default", msg.format_name)
@@ -241,3 +252,27 @@ class TestMessage(unittest.TestCase):
             start_byte=23,
             words_count=0,
         )
+
+    def test_extract(self):
+        msg: Message = Message(format_name="not_def").configure(
+            preamble=FieldSetter.static(">H", 0x1aa5),
+            response=FieldSetter.single(">B"),
+            address=FieldSetter.address(">H"),
+            operation=FieldSetter.operation(">B"),
+            data_length=FieldSetter.data_length(">B"),
+            data=FieldSetter.data(1, ">I"),
+            crc=FieldSetter.base(1, ">H"),
+        )
+        msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x01\xff\xff\xf1\xfe\xee\xdd")
+        for field, content in dict(
+                preamble=b"\x1a\xa5",
+                response=b"\x32",
+                address=b"\x01\x55",
+                operation=b"\x01",
+                data_length=b"\x01",
+                data=b"\xff\xff\xf1\xfe",
+                crc=b"\xee\xdd",
+        ).items():
+            with self.subTest(field=field):
+                self.assertEqual(content, msg[field].content)
+        self.assertEqual("w", msg.operation.desc)

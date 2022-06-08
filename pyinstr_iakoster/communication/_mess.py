@@ -237,7 +237,7 @@ class Message(object):
         Returns
         -------
         Message
-            self class instance
+            self class instance.
 
         Raises
         ------
@@ -349,37 +349,6 @@ class Message(object):
 #         :return: новый экземпляр текущего класса.
 #         """
 #         return self.__class__(*self._init_args, **self._init_kwargs)
-#
-#     @overload
-#     def set_fields_content(
-#             self, addr: _mf_content_types = None,
-#             oper: _mf_content_types = None,
-#             data_len: _mf_content_types = None,
-#             data: _mf_content_types = None,
-#             **kwargs: _mf_content_types
-#     ) -> None:
-#         ...
-#
-#     def set_fields_content(self, **kwargs: _mf_content_types):
-#         """
-#         Установить содержание полей
-#         """
-#         for field_name, field_value in kwargs.items():
-#             self[field_name].set_content(field_value)
-#         self._exc_if_none_in_field()
-#         return self
-#
-#     def extract_from(self, message: bytes) -> None:
-#         """
-#         Передает массив байт в поле, где происходит
-#         извлечение содержания
-#
-#         :param message: сообщение
-#         :return: None
-#         """
-#         for field in self._fields.values():
-#             field.extract_from(message)
-#         self._exc_if_none_in_field()
 #
 #     def _exc_if_none_in_field(self) -> None:
 #         """

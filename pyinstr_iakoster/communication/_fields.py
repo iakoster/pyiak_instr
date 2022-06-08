@@ -549,10 +549,15 @@ class FieldStatic(FieldSingle):
             self, format_name, name, start_byte, fmt,
             content=content, info=info
         )
-        self.set = self._set
 
-    def _set(self, content: Content):
-        raise AttributeError("disallowed inherited")
+    def set(self, content: Content) -> None:
+        content = self._convert_content(content)
+        if self._content != b"" and content != self._content:
+            raise ValueError(
+                "The current content of the static field is different from "
+                "the new content: %r != %r" % (self._content, content)
+            )
+        self._content = self._validate_content(content)
 
 
 class FieldAddress(FieldSingle):
