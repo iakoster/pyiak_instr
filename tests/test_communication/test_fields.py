@@ -308,13 +308,9 @@ class TestFieldStatic(unittest.TestCase):
         self.assertEqual(self.tf.content, b"\x12\x34")
 
     def test_set_empty(self):
-        with self.assertRaises(ValueError) as exc:
-            self.tf.set(b"")
-        self.assertEqual(
-            "The current content of the static field is different from "
-            r"the new content: b'\x124' != b''",
-            exc.exception.args[0]
-        )
+        self.tf.set(b"")
+        self.assertEqual(self.tf.content, b"\x12\x34")
+
 
 class TestFieldAddress(unittest.TestCase):
 
