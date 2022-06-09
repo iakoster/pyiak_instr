@@ -295,13 +295,26 @@ class TestFieldStatic(unittest.TestCase):
         )
 
     def test_set(self):
-        with self.assertRaises(AttributeError) as exc:
+        with self.assertRaises(ValueError) as exc:
             self.tf.set(0x4321)
         self.assertEqual(
-            "disallowed inherited",
+            "The current content of the static field is different from "
+            r"the new content: b'\x124' != b'C!'",
             exc.exception.args[0]
         )
 
+    def test_set_same(self):
+        self.tf.set(0x1234)
+        self.assertEqual(self.tf.content, b"\x12\x34")
+
+    def test_set_empty(self):
+        with self.assertRaises(ValueError) as exc:
+            self.tf.set(b"")
+        self.assertEqual(
+            "The current content of the static field is different from "
+            r"the new content: b'\x124' != b''",
+            exc.exception.args[0]
+        )
 
 class TestFieldAddress(unittest.TestCase):
 
