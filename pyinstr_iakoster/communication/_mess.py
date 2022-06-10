@@ -118,6 +118,14 @@ class FieldSetter(object):
 
 
 class Message(object):
+    """
+    Represents a message for communication between devices.
+
+    Parameters
+    ----------
+    format_name: str
+        name of the message format.
+    """
 
     REQ_FIELDS = {
         "address": FieldAddress,
@@ -154,6 +162,19 @@ class Message(object):
         ...
 
     def configure(self, **fields: FieldSetter):
+        """
+        Configure fields parameters in the message.
+
+        Parameters
+        ----------
+        **fields : FieldSetter
+            fields in format field_name=FieldSetter with field parameters.
+
+        Returns
+        -------
+        Message
+            object message instance.
+        """
         fields_diff = set(self.REQ_FIELDS) - set(fields)
         if len(fields_diff):
             raise ValueError(
@@ -259,6 +280,24 @@ class Message(object):
     def _get_field(
             self, name: str, start_byte: int, setter: FieldSetter
     ) -> Field:
+        """
+        Returns an instance of a field with specified parameters from
+        the setter.
+
+        Parameters
+        ----------
+        name : str
+            field name.
+        start_byte : int
+            start byte of the field in a message.
+        setter : FieldSetter
+            setter with field parameters.
+
+        Returns
+        -------
+        Field
+            field instance.
+        """
         if name in self.REQ_FIELDS:
             return self.REQ_FIELDS[name](
                 self._fmt_name,
@@ -276,28 +315,79 @@ class Message(object):
 
     @property
     def address(self) -> FieldAddress:
+        """
+        Returns
+        -------
+        FieldAddress
+            address field instance.
+        """
         return self._addr
 
     @property
     def data(self) -> FieldData:
+        """
+        Returns
+        -------
+        FieldData
+            data field instance.
+        """
         return self._data
 
     @property
     def data_length(self) -> FieldDataLength:
+        """
+        Returns
+        -------
+        FieldDataLength
+            data length field instance.
+        """
         return self._dlen
 
     @property
     def format_name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            name of the message format.
+        """
         return self._fmt_name
 
     @property
     def operation(self) -> FieldOperation:
+        """
+        Returns
+        -------
+        FieldOperation
+            operation field instance.
+        """
         return self._oper
 
     def __getitem__(self, name: str) -> Field:
+        """
+        Returns a field instance by field name.
+
+        Parameters
+        ----------
+        name : str
+            field name.
+
+        Returns
+        -------
+        Field
+            field instance.
+        """
         return self._fields[name]
 
     def __iter__(self):
+        """
+        Iteration by fields.
+
+        Yields
+        -------
+        Field
+            field instance.
+        """
         for field in self._fields.values():
             yield field
 
