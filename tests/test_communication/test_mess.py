@@ -276,3 +276,16 @@ class TestMessage(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertEqual(content, msg[field].content)
         self.assertEqual("w", msg.operation.desc)
+
+    def test_get_instance(self):
+        msg: Message = self.msg.get_instance(format_name="def")
+        self.assertEqual("def", msg.format_name)
+        for _ in msg:
+            self.assertFalse(True, "there is cannot be fields")
+
+    def test_get_same_instance(self):
+        msg: Message = self.msg.get_same_instance()
+        self.assertEqual("default", msg.format_name)
+        for ref, res in zip(self.msg, msg):
+            self.assertEqual(ref.name, res.name)
+            self.assertIn(str(res), ("1AA5", ""))

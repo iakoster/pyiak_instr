@@ -150,6 +150,12 @@ class Message(object):
         self._fields: dict[str, Field] = {}
         self._configured = False
 
+        self._args = ()
+        self._kwargs = dict(
+            format_name=format_name,
+        )
+        self._configured_fields: dict[str, FieldSetter] = {}
+
     @overload
     def configure(
             self,
@@ -203,8 +209,43 @@ class Message(object):
             next_start_byte = field.start_byte + \
                 field.expected * field.bytesize
 
+        self._configured_fields = fields
         self._configured = True
         return self
+
+    def get_instance(self, *args: Any, **kwargs: Any):
+        """
+        Get the same class as the current object, initialized with
+        the specified arguments.
+
+        Parameters
+        ----------
+        *args: Any
+            initial arguments.
+        **kwargs: Any
+            initial keywords arguments.
+
+        Returns
+        -------
+        Message
+            new class instance.
+        """
+        return self.__class__(*args, **kwargs)
+
+    def get_same_instance(self):
+        """
+        Get the same class as the current object, initialized with
+        the same arguments.
+
+        Also configure fields in the message, but with empty content.
+
+        Returns
+        -------
+        Message
+            new class instance.
+        """
+        return self.__class__(*self._args, **self._kwargs) \
+            .configure(**self._configured_fields)
 
     @overload
     def set_fields_content(
@@ -397,19 +438,9 @@ class Message(object):
 #     Родительский класс сообщения
 #     """
 #
-#     _req_fields_dict = {'addr': MessageFieldAddr,
-#                         'data_len': MessageFieldDataLen,
-#                         'oper': MessageFieldOper,
-#                         'data': MessageFieldData}
-#     _fields: dict[str, MessageField]
 #
 #     _max_data_len = 256
 #     _cuttable_data = True
-#
-#     addr: MessageFieldAddr
-#     data_len: MessageFieldDataLen
-#     oper: MessageFieldOper
-#     data: MessageFieldData
 #
 #     _package_format = ''
 #     _module_name = ''

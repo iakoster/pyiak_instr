@@ -500,7 +500,8 @@ class FieldSingle(Field):
         int or float
             unpacked word.
         """
-        yield Field.unpack(self)
+        for word in Field.unpack(self):
+            yield word
 
     def __getitem__(self, word_index: int | slice) -> None:
         raise AttributeError("disallowed inherited")
@@ -529,7 +530,6 @@ class FieldStatic(FieldSingle):
     Notes
     -----
     The __getitem__ method was disallowed because only one word is expected.
-    The set method will be disallowed after initialization.
 
     See Also
     --------
