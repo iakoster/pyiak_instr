@@ -354,6 +354,12 @@ class Message(object):
         return b"".join(bytes(field) for field in self)
 
     def unpack(self) -> npt.NDArray:
+        """
+        Returns
+        -------
+        npt.NDArray
+            unpacked joined fields content.
+        """
         unpacked = np.array([])
         for field in self:
             unpacked = np.append(unpacked, field.unpack())
