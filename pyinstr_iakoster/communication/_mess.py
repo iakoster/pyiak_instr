@@ -213,6 +213,35 @@ class Message(object):
         self._configured = True
         return self
 
+    def extract(self, message: bytes):
+        """
+        Extract fields content from a message.
+
+        May be uses for transform incoming message to a Message class.
+
+        Parameters
+        ----------
+        message: bytes
+            incoming message.
+
+        Returns
+        -------
+        Message
+            self class instance.
+
+        Raises
+        ------
+        NotConfiguredMessageError
+            if Message has not been configured before.
+        """
+        if not self._configured:
+            raise NotConfiguredMessageError(self.__class__.__name__)
+
+        for field in self._fields.values():
+            field.extract(message)
+        self._validate_content()
+        return self
+
     def get_instance(self, *args: Any, **kwargs: Any):
         """
         Get the same class as the current object, initialized with
@@ -312,34 +341,14 @@ class Message(object):
         self._validate_content()
         return self
 
-    def extract(self, message: bytes):
+    def to_bytes(self) -> bytes:
         """
-        Extract fields content from a message.
-
-        May be uses for transform incoming message to a Message class.
-
-        Parameters
-        ----------
-        message: bytes
-            incoming message.
-
         Returns
         -------
-        Message
-            self class instance.
-
-        Raises
-        ------
-        NotConfiguredMessageError
-            if Message has not been configured before.
+        bytes
+            joined fields contents.
         """
-        if not self._configured:
-            raise NotConfiguredMessageError(self.__class__.__name__)
-
-        for field in self._fields.values():
-            field.extract(message)
-        self._validate_content()
-        return self
+        return b"".join(bytes(field) for field in self)
 
     def _validate_content(self) -> None:
         """Validate content."""
@@ -430,6 +439,10 @@ class Message(object):
             operation field instance.
         """
         return self._oper
+
+    def __bytes__(self) -> bytes:
+        """Returns joined fields content."""
+        return self.to_bytes()
 
     def __getitem__(self, name: str) -> Field:
         """
@@ -545,20 +558,6 @@ class Message(object):
 #             msg_part.set_from_to_addresses(self._from_addr, self._to_addr)
 #
 #             yield msg_part
-#
-#     def hex(self, sep: str = ' ', sep_step: int = None) -> str:
-#         """
-#         Перевести bytes в hex-строку
-#
-#         :param sep: разделитель между каждым байтом
-#         :param sep_step: шаг разделителя в байтах
-#         :return: hex-строка
-#         """
-#         raw_hex = []
-#         for field in self._fields.values():
-#             raw_hex.append(field.hex(
-#                 sep=sep, sep_step=sep_step))
-#         return sep.join(raw_hex)
 #
 #     def set_from_to_addresses(self, from_, to) -> None:
 #         self.set_from_address(from_)

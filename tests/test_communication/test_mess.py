@@ -104,10 +104,10 @@ class TestMessage(unittest.TestCase):
         with self.subTest(name="field_class"):
             self.assertIs(field_class, field.field_class)
 
-    def fill_content(self):
-        self.msg.extract(
-            b"\x1a\xa5\x00\x00\xaa\x01\x04\xff\xee\xdd\xcc\x12\x54"
-        )
+    def fill_content(self) -> bytes:
+        content = b"\x1a\xa5\x00\x00\xaa\x01\x04\xff\xee\xdd\xcc\x12\x54"
+        self.msg.extract(content)
+        return content
 
     def setUp(self) -> None:
         self.msg = Message().configure(
@@ -298,3 +298,11 @@ class TestMessage(unittest.TestCase):
     def test_hex(self):
         self.fill_content()
         self.assertEqual("1aa5 00 00aa 01 04 ffeeddcc 1254", self.msg.hex())
+
+    def test_to_bytes(self):
+        content = self.fill_content()
+        self.assertEqual(content, self.msg.to_bytes())
+
+    def test_magic_bytes(self):
+        content = self.fill_content()
+        self.assertEqual(content, bytes(self.msg))
