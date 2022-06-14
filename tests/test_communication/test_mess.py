@@ -316,3 +316,19 @@ class TestMessage(unittest.TestCase):
     def test_magic_bytes(self):
         content = self.fill_content()
         self.assertEqual(content, bytes(self.msg))
+
+    def test_magic_str(self):
+        self.fill_content()
+        self.assertEqual("1AA5 0 AA 1 4 FFEEDDCC 1254", str(self.msg))
+
+    def test_magic_len(self):
+        content = self.fill_content()
+        self.assertEqual(len(content), len(self.msg))
+
+    def test_magic_repr(self):
+        self.fill_content()
+        self.assertEqual(
+            "<Message(preamble=1AA5, response=0, address=AA, operation=1, "
+            "data_length=4, data=FFEEDDCC, crc=1254)>",
+            repr(self.msg)
+        )

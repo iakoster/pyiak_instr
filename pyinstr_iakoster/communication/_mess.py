@@ -487,6 +487,25 @@ class Message(object):
         for field in self._fields.values():
             yield field
 
+    def __len__(self) -> int:
+        """Returns length of the message in bytes."""
+        return len(self.to_bytes())
+
+    def __repr__(self):
+        """Returns string representation of the message."""
+        fields_repr = []
+        for name, field in self._fields.items():
+            if field.words_count:
+                fields_repr.append((name, str(field))) # danger with huge fields
+            else:
+                fields_repr.append((name, "EMPTY"))
+        fields_repr = ", ".join(f"{name}={field}" for name, field in fields_repr)
+        return f"<{self.__class__.__name__}({fields_repr})>"
+
+    def __str__(self) -> str:
+        """Returns fields converted to string."""
+        return " ".join(str(field) for field in self if str(field) != "")
+
 
 # class Message(object):
 #     """
@@ -517,23 +536,6 @@ class Message(object):
 #         for field in self.fields:
 #             if field.content == b'' and field.name != 'data':
 #                 raise ValueError(f'field \'{field.name}\' is unfilled')
-#
-#     def inbytes(self) -> bytes:
-#         """
-#         :return: сообщение, преобразованное в тип bytes
-#         """
-#         return b''.join(
-#             bytes(field) for field in
-#             self._fields.values()
-#         )
-#
-#     def unpack(self) -> list[int]:
-#         """
-#         распаковать соодщение в слова
-#
-#         :return: список слов
-#         """
-#         return [word for field in self._fields.values() for word in field]
 #
 #     def split(self):
 #         """
@@ -593,29 +595,6 @@ class Message(object):
 #             return ':'.join(map(str, address))
 #         else:
 #             return str(address)
-#
-#     @property
-#     def package_format(self) -> str:
-#         """
-#         Returns the name of package format to which
-#         the message belongs
-#         """
-#         return self._package_format
-#
-#     @property
-#     def module_name(self) -> str:
-#         """
-#         Returns the name or str-code of device module
-#         to which the message belongs
-#         """
-#         return self._module_name
-#
-#     @property
-#     def fields(self) -> tuple[MessageField]:
-#         """
-#         :return: кортеж с текущими полями в сообщении
-#         """
-#         return tuple(self._fields.values())
 #
 #     @property
 #     def max_data_len(self) -> int:
@@ -683,45 +662,3 @@ class Message(object):
 #
 #         return self
 #
-#     def __bytes__(self) -> bytes:
-#         """
-#         :return: сообщение как массив байтов
-#         """
-#         return self.inbytes()
-#
-#     def __getitem__(self, field_name: str) -> MessageField:
-#         """
-#         :param field_name: имя поля
-#         :return: поле сообщения
-#         """
-#         return self._fields[field_name]
-#
-#     def __iter__(self):
-#         """
-#         Итерирует по словам в сообщении
-#
-#         :return: слово
-#         """
-#         for word in self.unpack():
-#             yield word
-#
-#     def __len__(self) -> int:
-#         """
-#         :return: количество байт в сообщении
-#         """
-#         return len(self.inbytes())
-#
-#     def __str__(self):
-#         """
-#         :return: hex-строка сообщения
-#         """
-#         return ' '.join(str(field) for field in self._fields.values())
-#
-#     def __repr__(self):
-#         fields_str = ', '.join(
-#             f'{name}={value}' for name, value in self._fields.items())
-#         from_to_str = '{}->{}'.format(
-#             self._fmt_address(self._from_addr),
-#             self._fmt_address(self._to_addr))
-#         return f'<{self.__class__.__name__}' \
-#                f'({fields_str}), from_to={from_to_str}>'
