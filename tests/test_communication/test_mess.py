@@ -104,6 +104,11 @@ class TestMessage(unittest.TestCase):
         with self.subTest(name="field_class"):
             self.assertIs(field_class, field.field_class)
 
+    def fill_content(self):
+        self.msg.extract(
+            b"\x1a\xa5\x00\x00\xaa\x01\x04\xff\xee\xdd\xcc\x12\x54"
+        )
+
     def setUp(self) -> None:
         self.msg = Message().configure(
             preamble=FieldSetter.static(">H", 0x1aa5),
@@ -289,3 +294,7 @@ class TestMessage(unittest.TestCase):
         for ref, res in zip(self.msg, msg):
             self.assertEqual(ref.name, res.name)
             self.assertIn(str(res), ("1AA5", ""))
+
+    def test_hex(self):
+        self.fill_content()
+        self.assertEqual("1aa5 00 00aa 01 04 ffeeddcc 1254", self.msg.hex())

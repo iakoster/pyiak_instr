@@ -247,6 +247,33 @@ class Message(object):
         return self.__class__(*self._args, **self._kwargs) \
             .configure(**self._configured_fields)
 
+    def hex(self, sep: str = " ", sep_step: int = None) -> str:
+        """
+        Returns a string of hexademical numbers from the fields content.
+
+        Parameters
+        ----------
+        sep: str
+            separator between bytes/words and fields.
+        sep_step: int
+            separator step.
+
+        Returns
+        -------
+        str
+            hex string.
+
+        See Also
+        --------
+        Field.hex: return field content hex string.
+        """
+        fields_hex = []
+        for field in self:
+            field_hex = field.hex(sep=sep, sep_step=sep_step)
+            if field_hex != "":
+                fields_hex.append(field_hex)
+        return sep.join(fields_hex)
+
     @overload
     def set_fields_content(
             self,
@@ -451,25 +478,6 @@ class Message(object):
 #         self._init_kwargs = kwagrs
 #         self._from_addr = None
 #         self._to_addr = None
-#
-#     def get_instance(self, *args, **kwargs):
-#         """
-#         Возвращает тот же класс, что и текущий.
-#
-#         :param args: аргументы нового экземпляра класса.
-#         :param kwargs: кварги нового экземпляра класса.
-#         :return: новый экземпляр текущего класса.
-#         """
-#         return self.__class__(*args, **kwargs)
-#
-#     def get_same_instance(self):
-#         """
-#         Возвращает тот же класс с теми же настройками,
-#         что и текущий.
-#
-#         :return: новый экземпляр текущего класса.
-#         """
-#         return self.__class__(*self._init_args, **self._init_kwargs)
 #
 #     def _exc_if_none_in_field(self) -> None:
 #         """

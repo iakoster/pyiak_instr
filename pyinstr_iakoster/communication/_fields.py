@@ -361,9 +361,9 @@ class Field(FieldBase):
             fmt = self._fmt
         return np.frombuffer(self._content, dtype=fmt)
 
-    def hex(self, sep: str = ' ', sep_step: int = None) -> str:
+    def hex(self, sep: str = " ", sep_step: int = None) -> str:
         """
-        Create a string of hexadecimal numbers from the content.
+        Returns a string of hexadecimal numbers from the content.
 
         Parameters
         ----------
