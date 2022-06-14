@@ -1,6 +1,8 @@
 import unittest
 from typing import Any
 
+import numpy as np
+
 from pyinstr_iakoster.communication import (
     Message,
     FieldSetter,
@@ -302,6 +304,14 @@ class TestMessage(unittest.TestCase):
     def test_to_bytes(self):
         content = self.fill_content()
         self.assertEqual(content, self.msg.to_bytes())
+
+    def test_unpack(self):
+        self.fill_content()
+
+        self.assertTrue(
+            (np.array([6821, 0, 170, 1, 4, 4293844428, 4692]) ==
+             self.msg.unpack()).all()
+        )
 
     def test_magic_bytes(self):
         content = self.fill_content()

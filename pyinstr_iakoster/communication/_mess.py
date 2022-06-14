@@ -1,5 +1,8 @@
 from typing import Any, overload
 
+import numpy as np
+import numpy.typing as npt
+
 from ._fields import (
     Content,
     Field,
@@ -349,6 +352,12 @@ class Message(object):
             joined fields contents.
         """
         return b"".join(bytes(field) for field in self)
+
+    def unpack(self) -> npt.NDArray:
+        unpacked = np.array([])
+        for field in self:
+            unpacked = np.append(unpacked, field.unpack())
+        return unpacked
 
     def _validate_content(self) -> None:
         """Validate content."""
