@@ -329,6 +329,13 @@ class TestMessage(unittest.TestCase):
         self.fill_content()
         self.assertEqual(
             "<Message(preamble=1AA5, response=0, address=AA, operation=1, "
-            "data_length=4, data=FFEEDDCC, crc=1254)>",
+            "data_length=4, data=FFEEDDCC, crc=1254), from=None, to=None>",
+            repr(self.msg)
+        )
+        self.msg.set_addresses(tx=("192.168.0.1", 3202), rx="COM4")
+        self.assertEqual(
+            "<Message(preamble=1AA5, response=0, address=AA, operation=1, "
+            "data_length=4, data=FFEEDDCC, crc=1254), "
+            "from=192.168.0.1:3202, to=COM4>",
             repr(self.msg)
         )

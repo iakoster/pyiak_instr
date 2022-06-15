@@ -152,12 +152,17 @@ class Message(object):
         self._fmt_name = format_name
         self._fields: dict[str, Field] = {}
         self._configured = False
+        self._tx, self._rx = None, None
 
         self._args = ()
         self._kwargs = dict(
             format_name=format_name,
         )
         self._configured_fields: dict[str, FieldSetter] = {}
+
+    def clear_addresses(self) -> None:
+        """Set addresses to None."""
+        self._tx, self._rx = None, None
 
     @overload
     def configure(
@@ -344,6 +349,33 @@ class Message(object):
         self._validate_content()
         return self
 
+    def set_addresses(self, tx: Any = None, rx: Any = None):
+        """
+        Set Tx and Rx addresses.
+
+        Addresses may differ depending on the type of connection used.
+            * Tx - is a source address;
+            * Rx - is a reciever address.
+        If address (Rx or Tx) is None that it will be ignored.
+
+        Parameters
+        ----------
+        tx: Any
+            source address.
+        rx: Any
+            reciever address.
+
+        Returns
+        -------
+        Message
+            object message instance.
+        """
+        if tx is not None:
+            self._tx = tx
+        if rx is not None:
+            self._rx = rx
+        return self
+
     def to_bytes(self) -> bytes:
         """
         Returns
@@ -364,10 +396,6 @@ class Message(object):
         for field in self:
             unpacked = np.append(unpacked, field.unpack())
         return unpacked
-
-    def _validate_content(self) -> None:
-        """Validate content."""
-        ...
 
     def _get_field(
             self, name: str, start_byte: int, setter: FieldSetter
@@ -404,6 +432,20 @@ class Message(object):
             *setter.args,
             **setter.kwargs
         )
+
+    def _validate_content(self) -> None:
+        """Validate content."""
+        ...
+
+    @staticmethod
+    def _format_address(address: Any) -> str:
+        match address:
+            case str():
+                return address
+            case (str() as ip, int() as port):
+                return f"{ip}:{port}"
+            case _:
+                return str(address)
 
     @property
     def address(self) -> FieldAddress:
@@ -455,6 +497,22 @@ class Message(object):
         """
         return self._oper
 
+    @property
+    def rx(self):
+        return self._rx
+
+    @property
+    def rx_str(self):
+        return self._format_address(self._rx)
+
+    @property
+    def tx(self):
+        return self._tx
+
+    @property
+    def tx_str(self):
+        return self._format_address(self._tx)
+
     def __bytes__(self) -> bytes:
         """Returns joined fields content."""
         return self.to_bytes()
@@ -500,7 +558,7 @@ class Message(object):
             else:
                 fields_repr.append((name, "EMPTY"))
         fields_repr = ", ".join(f"{name}={field}" for name, field in fields_repr)
-        return f"<{self.__class__.__name__}({fields_repr})>"
+        return f"<{self.__class__.__name__}({fields_repr}), from={self.tx_str}, to={self.rx_str}>"
 
     def __str__(self) -> str:
         """Returns fields converted to string."""
@@ -576,26 +634,6 @@ class Message(object):
 #
 #             yield msg_part
 #
-#     def set_from_to_addresses(self, from_, to) -> None:
-#         self.set_from_address(from_)
-#         self.set_to_address(to)
-#
-#     def set_from_address(self, address) -> None:
-#         self._from_addr = address
-#
-#     def set_to_address(self, address) -> None:
-#         self._to_addr = address
-#
-#     @staticmethod
-#     def _fmt_address(address) -> str:
-#         if isinstance(address, tuple | list) and len(address) == 1:
-#             address = address[0]
-#
-#         if isinstance(address, tuple | list):
-#             return ':'.join(map(str, address))
-#         else:
-#             return str(address)
-#
 #     @property
 #     def max_data_len(self) -> int:
 #         """
@@ -610,20 +648,6 @@ class Message(object):
 #         :return: указатель на то, можно ли делить данное сообщение
 #         """
 #         return self._cuttable_data
-#
-#     @property
-#     def from_address(self):
-#         """
-#         :return: адрес отправителя
-#         """
-#         return self._from_addr
-#
-#     @property
-#     def to_address(self):
-#         """
-#         :return: адрес получателя
-#         """
-#         return self._to_addr
 #
 #     def __add__(self, add_data):
 #         """
