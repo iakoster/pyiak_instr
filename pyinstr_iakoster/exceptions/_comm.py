@@ -50,6 +50,18 @@ class MessageError(PyiError):
         self.args = (self.message, message, *args)
 
 
+class MessageContentError(MessageError):
+
+    def __init__(self, message: str, field: str):
+        MessageError.__init__(
+            self,
+            "Content in %s field of %s message is incorrect" % (
+                message, field
+            ),
+            message, field
+        )
+
+
 class NotConfiguredMessageError(MessageError):
 
     def __init__(self, message: str):

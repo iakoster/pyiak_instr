@@ -339,3 +339,45 @@ class TestMessage(unittest.TestCase):
             "from=192.168.0.1:3202, to=COM4>",
             repr(self.msg)
         )
+
+    def test_magic_add_bytes(self):
+        self.fill_content()
+        self.msg += b"\x01\x02\x03\x04"
+        self.assertEqual(
+            b"\xff\xee\xdd\xcc\x01\x02\x03\x04", self.msg.data.content
+        )
+        self.assertEqual(2, self.msg.data.expected)
+        self.assertEqual(8, self.msg.data_length.unpack())
+
+    def test_magic_add_message(self):
+        self.fill_content()
+        msg = self.msg.get_same_instance()
+        msg.set_fields_content(
+            preamble=0x1aa5,
+            response=0,
+            address=0x1234,
+            operation=1,
+            data_length=2,
+            data=0x1234,
+            crc=255,
+        )
+        self.msg += msg
+        self.assertEqual(
+            b"\xff\xee\xdd\xcc\x00\x00\x12\x34", self.msg.data.content
+        )
+        self.assertEqual(2, self.msg.data.expected)
+        self.assertEqual(8, self.msg.data_length.unpack())
+
+    def test_madic_add_errors(self):
+        with self.assertRaises(TypeError) as exc:
+            self.msg += self.msg.get_instance(format_name="new")
+        self.assertEqual(
+            "messages have different formats: new != default",
+            exc.exception.args[0]
+        )
+
+        with self.assertRaises(TypeError) as exc:
+            self.msg += 1
+        self.assertIn(
+            "cannot be added to the message", exc.exception.args[0]
+        )

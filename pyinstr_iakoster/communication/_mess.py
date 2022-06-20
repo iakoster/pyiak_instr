@@ -344,7 +344,7 @@ class Message(object):
         if not self._configured:
             raise NotConfiguredMessageError(self.__class__.__name__)
 
-        for name, content in fields:
+        for name, content in fields.items():
             self[name].set(content)
         self._validate_content()
         return self
@@ -512,6 +512,51 @@ class Message(object):
     @property
     def tx_str(self):
         return self._format_address(self._tx)
+
+    def __add__(self, other):
+        """
+        Add new data to the data field.
+
+        If the passed argument is the bytes type, the passed argument
+        is added to the data field (right concatenation).
+
+        If the passed argument is an instance of the same class or is
+        a child, then a content and class validation.
+
+        In both cases it is checked before writing that the new data
+        will contain an integer number of words in the format of the current.
+        instance
+
+        Parameters
+        ----------
+        other: bytes or Message
+            additional data or message.
+
+        Returns
+        -------
+        Message
+            self instance.
+        """
+
+        match other:
+            case Message(_fmt_name=self._fmt_name):
+                other = other.data.content
+            case bytes():
+                pass
+            case Message():
+                raise TypeError(
+                    "messages have different formats: %s != %s" % (
+                        other.format_name, self._fmt_name
+                    )
+                )
+            case _:
+                raise TypeError(
+                    "%s cannot be added to the message" % type(other)
+                )
+
+        self._data.append(other)
+        self._dlen.update(self._data)
+        return self
 
     def __bytes__(self) -> bytes:
         """Returns joined fields content."""

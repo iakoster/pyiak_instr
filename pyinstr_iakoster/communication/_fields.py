@@ -646,6 +646,11 @@ class FieldData(Field):
             content=content, info=info
         )
 
+    def append(self, content: Content) -> None:
+        content = self._convert_content(content)
+        self._exp += len(content) // self._word_bsize # TODO: need check len now
+        self._content = self._validate_content(self._content + content)
+
 
 class FieldDataLength(FieldSingle):
     """
