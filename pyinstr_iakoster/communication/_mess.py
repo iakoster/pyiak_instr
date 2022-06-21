@@ -147,14 +147,17 @@ class Message(object):
 
     def __init__(
             self,
-            format_name: str = "default"
+            format_name: str = "default",
+            splitable: bool = False,
+            split_length: int = 1024
     ):
         self._fmt_name = format_name
+        self._splitable = splitable
+        self._split_length = split_length
         self._fields: dict[str, Field] = {}
         self._configured = False
         self._tx, self._rx = None, None
 
-        self._args = ()
         self._kwargs = dict(
             format_name=format_name,
         )
@@ -281,7 +284,7 @@ class Message(object):
         Message
             new class instance.
         """
-        return self.__class__(*self._args, **self._kwargs) \
+        return self.__class__(**self._kwargs) \
             .configure(**self._configured_fields)
 
     def hex(self, sep: str = " ", sep_step: int = None) -> str:
@@ -504,6 +507,14 @@ class Message(object):
     @property
     def rx_str(self):
         return self._format_address(self._rx)
+
+    @property
+    def split_length(self):
+        return self._split_length
+
+    @property
+    def splitable(self):
+        return self._splitable
 
     @property
     def tx(self):
