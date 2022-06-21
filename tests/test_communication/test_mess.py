@@ -358,7 +358,7 @@ class TestMessage(unittest.TestCase):
     def test_magic_add_message(self):
         self.fill_content()
         msg = self.msg.get_same_instance()
-        msg.set_fields_content(
+        msg.set(
             preamble=0x1aa5,
             response=0,
             address=0x1234,
@@ -397,7 +397,7 @@ class TestMessage(unittest.TestCase):
         )
         msg_2 = msg_1.get_same_instance()
         for msg in (msg_1, msg_2):
-            msg.set_fields_content(
+            msg.set(
                 address=0x1a,
                 operation=1,
                 data_length=1,

@@ -315,7 +315,7 @@ class Message(object):
         return sep.join(fields_hex)
 
     @overload
-    def set_fields_content(
+    def set(
             self,
             address: Content,
             data: Content,
@@ -325,7 +325,7 @@ class Message(object):
     ):
         ...
 
-    def set_fields_content(self, **fields: Content):
+    def set(self, **fields: Content):
         """
         Set field content by names.
 
