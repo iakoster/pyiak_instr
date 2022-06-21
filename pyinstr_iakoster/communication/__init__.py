@@ -11,6 +11,8 @@ from ._mess import (
     Content,
     FloatWordsCountError,
     PartialFieldError,
+    MessageContentError,
+    NotConfiguredMessageError,
 )
 
 __all__ = [
@@ -26,4 +28,6 @@ __all__ = [
     "Content",
     "FloatWordsCountError",
     "PartialFieldError",
+    "MessageContentError",
+    "NotConfiguredMessageError",
 ]

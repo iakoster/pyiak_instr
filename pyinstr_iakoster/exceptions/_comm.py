@@ -3,6 +3,7 @@ from ._base import PyiError
 
 __all__ = [
     "MessageError",
+    "MessageContentError",
     "NotConfiguredMessageError",
     "FieldError",
     "FloatWordsCountError",
@@ -52,14 +53,11 @@ class MessageError(PyiError):
 
 class MessageContentError(MessageError):
 
-    def __init__(self, message: str, field: str):
-        MessageError.__init__(
-            self,
-            "Content in %s field of %s message is incorrect" % (
-                message, field
-            ),
-            message, field
-        )
+    def __init__(self, message: str, field: str, clarification: str = None):
+        msg = "Error with %s in %s" % (field, message)
+        if clarification is not None:
+            msg += ": " + clarification
+        MessageError.__init__(self, msg, message, field)
 
 
 class NotConfiguredMessageError(MessageError):

@@ -748,6 +748,33 @@ class FieldDataLength(FieldSingle):
         self._units = units
         self._add = additive
 
+    def calculate(self, data: FieldData) -> int:
+        """
+        Calculate data length via data field.
+
+        Parameters
+        ----------
+        data: FieldData
+            data field.
+
+        Returns
+        -------
+        int
+            actual length of data field.
+
+        Raises
+        ------
+        ValueError
+            if units not in {BYTES, WORDS}.
+        """
+
+        if self._units == self.BYTES:
+            return len(data) + self._add
+        elif self._units == self.WORDS:
+            return data.words_count + self._add
+        else:
+            raise ValueError("invalid units: %d" % self._units)
+
     def update(self, field) -> None:
         """
         Update data length content via data field.
@@ -764,13 +791,7 @@ class FieldDataLength(FieldSingle):
         """
         if isinstance(field, MessageType):
             field = field.data
-
-        if self._units == self.BYTES:
-            self.set(len(field) + self._add)
-        elif self._units == self.WORDS:
-            self.set(field.words_count + self._add)
-        else:
-            raise ValueError("invalid units: %d" % self._units)
+        self.set(self.calculate(field))
 
     @property
     def units(self) -> int:

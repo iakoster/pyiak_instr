@@ -13,6 +13,7 @@ from pyinstr_iakoster.communication import (
     FieldData,
     FieldDataLength,
     FieldOperation,
+    MessageContentError
 )
 
 
@@ -128,7 +129,7 @@ class TestMessage(unittest.TestCase):
         return content
 
     def setUp(self) -> None:
-        self.msg = Message().configure(
+        self.msg: Message = Message().configure(
             preamble=FieldSetter.static(">H", 0x1aa5),
             response=FieldSetter.single(">B"),
             address=FieldSetter.address(">H"),
@@ -136,6 +137,14 @@ class TestMessage(unittest.TestCase):
             data_length=FieldSetter.data_length(">B"),
             data=FieldSetter.data(1, ">I"),
             crc=FieldSetter.base(1, ">H"),
+        )
+        self.simple_msg: Message = Message().configure(
+            address=FieldSetter.address(">H"),
+            operation=FieldSetter.operation(">B"),
+            data_length=FieldSetter.data_length(
+                ">B", units=FieldSetter.WORDS
+            ),
+            data=FieldSetter.data(-1, ">H")
         )
 
     def test_init(self):
@@ -286,13 +295,13 @@ class TestMessage(unittest.TestCase):
             data=FieldSetter.data(1, ">I"),
             crc=FieldSetter.base(1, ">H"),
         )
-        msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x01\xff\xff\xf1\xfe\xee\xdd")
+        msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x04\xff\xff\xf1\xfe\xee\xdd")
         for field, content in dict(
                 preamble=b"\x1a\xa5",
                 response=b"\x32",
                 address=b"\x01\x55",
                 operation=b"\x01",
-                data_length=b"\x01",
+                data_length=b"\x04",
                 data=b"\xff\xff\xf1\xfe",
                 crc=b"\xee\xdd",
         ).items():
@@ -328,6 +337,45 @@ class TestMessage(unittest.TestCase):
             (np.array([6821, 0, 170, 1, 4, 4293844428, 4692]) ==
              self.msg.unpack()).all()
         )
+
+    def test_validate_content(self):
+        with self.subTest(name="may_be_empty"):
+            self.simple_msg.set(
+                address=0x12,
+                operation=0x01,
+                data_length=2,
+                data=[0x12, 0x3456]
+            )
+            self.assertListEqual(
+                [0x12, 0x3456], list(self.simple_msg.data.unpack())
+            )
+            self.setUp()
+            self.simple_msg.set(
+                address=0x12,
+                operation=0x00,
+                data_length=2,
+                data=[]
+            )
+            self.assertListEqual(
+                [], list(self.simple_msg.data.unpack())
+            )
+            self.setUp()
+            with self.assertRaises(MessageContentError) as exc:
+                self.simple_msg.set(
+                    address=0, operation=b"", data_length=1, data=[0x11]
+                )
+            self.assertEqual("Error with operation in Message: field is empty", exc.exception.args[0])
+
+        with self.subTest(name="invalid data length"):
+            self.subTest()
+            with self.assertRaises(MessageContentError) as exc:
+                self.simple_msg.set(
+                    address=0, operation="w", data_length=1, data=[0, 1]
+                )
+            self.assertEqual(
+                "Error with data_length in Message: invalid length",
+                exc.exception.args[0]
+            )
 
     def test_magic_bytes(self):
         content = self.fill_content()
@@ -373,7 +421,7 @@ class TestMessage(unittest.TestCase):
             response=0,
             address=0x1234,
             operation=1,
-            data_length=2,
+            data_length=4,
             data=0x1234,
             crc=255,
         )

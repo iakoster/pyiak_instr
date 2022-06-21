@@ -12,11 +12,12 @@ from ._fields import (
     FieldData,
     FieldDataLength,
     FieldOperation,
-    FloatWordsCountError,
-    PartialFieldError,
 )
 from ..exceptions import (
-    NotConfiguredMessageError
+    MessageContentError,
+    NotConfiguredMessageError,
+    FloatWordsCountError,
+    PartialFieldError,
 )
 
 
@@ -31,6 +32,8 @@ __all__ = [
     "FieldDataLength",
     "FieldOperation",
     "Content",
+    "MessageContentError",
+    "NotConfiguredMessageError",
     "FloatWordsCountError",
     "PartialFieldError",
 ]
@@ -104,7 +107,7 @@ class FieldSetter(object):
             cls,
             fmt: str,
             content: Content = b"",
-            units: int = FieldDataLength.BYTES,
+            units: int = BYTES,
             additive: int = 0,
             info: dict[str, Any] | None = None
     ):
@@ -609,7 +612,17 @@ class Message(MessageView):
 
     def _validate_content(self) -> None:
         """Validate content."""
-        ...
+        for field in self:
+            if not (field.words_count or field.may_be_empty):
+                raise MessageContentError(
+                    self.__class__.__name__, field.name, "field is empty"
+                )
+
+        oper, dlen = self.operation, self.data_length
+        if oper.base == "w" and dlen.unpack() != dlen.calculate(self.data):
+            raise MessageContentError(
+                self.__class__.__name__, dlen.name, "invalid length"
+            )
 
     def __add__(self, other):
         """
@@ -675,17 +688,6 @@ class Message(MessageView):
 #         self._from_addr = None
 #         self._to_addr = None
 #
-#     def _exc_if_none_in_field(self) -> None:
-#         """
-#         Вызывает исключение, если какое-либо из полей
-#         (кроме поля data) пустое
-#
-#         :return: None
-#         """
-#         for field in self.fields:
-#             if field.content == b'' and field.name != 'data':
-#                 raise ValueError(f'field \'{field.name}\' is unfilled')
-#
 #     def split(self):
 #         """
 #         разделить сообщение на части, обусловленными максимальной
@@ -724,19 +726,4 @@ class Message(MessageView):
 #             msg_part.set_from_to_addresses(self._from_addr, self._to_addr)
 #
 #             yield msg_part
-#
-#     @property
-#     def max_data_len(self) -> int:
-#         """
-#         :return: максимальная длина данных в одиночном сообщении
-#         при разбиении
-#         """
-#         return self._max_data_len
-#
-#     @property
-#     def cuttable_data(self) -> bool:
-#         """
-#         :return: указатель на то, можно ли делить данное сообщение
-#         """
-#         return self._cuttable_data
 #
