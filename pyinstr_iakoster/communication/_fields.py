@@ -48,6 +48,8 @@ class FieldBase(object):
     expected: int
         expected number of words in the field. If equal to -1, from
         the start byte to the end of the message.
+    may_be_empty: bool
+        if True then field can be empty in a message.
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
@@ -63,6 +65,7 @@ class FieldBase(object):
             *,
             start_byte: int,
             expected: int,
+            may_be_empty: bool,
             fmt: str,
             content: bytes
     ):
@@ -71,6 +74,7 @@ class FieldBase(object):
         self._info = info
         self._st_byte = start_byte
         self._exp = expected
+        self._may_be_empty = may_be_empty
         self._fmt = fmt
         self._content = content
 
@@ -119,19 +123,24 @@ class FieldBase(object):
         return self._fmt
 
     @property
+    def format_name(self) -> str:
+        """The name of package format to which the field belongs."""
+        return self._fmt_name
+
+    @property
     def info(self) -> dict[str, Any]:
         """Additional information about the field."""
         return self._info
 
     @property
+    def may_be_empty(self) -> bool:
+        """May be empty content in the field"""
+        return self._may_be_empty
+
+    @property
     def name(self) -> str:
         """The name of the massage field."""
         return self._name
-
-    @property
-    def format_name(self) -> str:
-        """The name of package format to which the field belongs."""
-        return self._fmt_name
 
     @property
     def slice(self):
@@ -190,6 +199,8 @@ class Field(FieldBase):
         is calculated from the format.
     content: Content, default=b""
         field content.
+    may_be_empty: bool, default=False
+        if True then field can be empty in a message.
 
     See Also
     --------
@@ -205,6 +216,7 @@ class Field(FieldBase):
             fmt: str,
             content: Content = b"",
             info: dict[str, Any] = None,
+            may_be_empty: bool = False
     ):
         if info is None:
             info = {}
@@ -215,6 +227,7 @@ class Field(FieldBase):
             info,
             start_byte=start_byte,
             expected=expected,
+            may_be_empty=may_be_empty,
             fmt=fmt,
             content=b""
         )
@@ -443,6 +456,8 @@ class FieldSingle(Field):
         is calculated from the format.
     content: Content, default=b""
         field content.
+    may_be_empty: bool, default=False
+        if True then field can be empty in a message.
 
     Notes
     -----
@@ -461,6 +476,7 @@ class FieldSingle(Field):
             fmt: str,
             content: Content = b"",
             info: dict[str, Any] = None,
+            may_be_empty: bool = False,
     ):
         Field.__init__(
             self,
@@ -471,6 +487,7 @@ class FieldSingle(Field):
             fmt,
             content=content,
             info=info,
+            may_be_empty=may_be_empty
         )
 
     def unpack(self, fmt: str = None) -> int | float | None:
@@ -546,8 +563,13 @@ class FieldStatic(FieldSingle):
             info: dict[str, Any] | None = None
     ):
         FieldSingle.__init__(
-            self, format_name, name, start_byte, fmt,
-            content=content, info=info
+            self,
+            format_name,
+            name,
+            start_byte,
+            fmt,
+            content=content,
+            info=info
         )
 
     def set(self, content: Content) -> None:
@@ -642,8 +664,15 @@ class FieldData(Field):
             info: dict[str, Any] | None = None
     ):
         Field.__init__(
-            self, format_name, "data", start_byte, expected, fmt,
-            content=content, info=info
+            self,
+            format_name,
+            "data",
+            start_byte,
+            expected,
+            fmt,
+            content=content,
+            info=info,
+            may_be_empty=True
         )
 
     def append(self, content: Content) -> None:
