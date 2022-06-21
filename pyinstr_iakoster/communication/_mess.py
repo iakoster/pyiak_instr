@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any, overload
 
 import numpy as np
@@ -574,6 +575,53 @@ class Message(MessageView):
         self._validate_content()
         return self
 
+    def split(self):
+        """
+        Split data field on slices.
+
+        Yields
+        ------
+        Message
+            message part.
+
+        Raises
+        ------
+        TypeError
+            if message is not cutable by data.
+        """
+        if not self._splitable:
+            raise TypeError(
+                f"{self.__class__.__name__} cannot be cut into parts"
+            )
+
+        parts_count = int(np.ceil(
+            self.data_length.unpack() / self._split_length
+        ))
+        for i_part in range(parts_count):
+            if i_part == parts_count - 1:
+                data_len = self.data_length.unpack() - i_part * self._split_length
+            else:
+                data_len = self._split_length
+
+            msg = deepcopy(self)
+
+            if msg.operation.base == 'r':
+                msg.data_length.set(data_len)
+            elif msg.operation.base == 'w':
+                start = i_part * self._split_length
+                end = start + data_len
+                if self.data_length.units == FieldDataLength.WORDS:
+                    msg.data.set(self.data[start:end])
+                elif self.data_length.units == FieldDataLength.BYTES:
+                    msg.data.set(self.data.content[start:end])
+                else:
+                    raise TypeError('Unsuppoted data units')
+                msg.data_length.update(msg.data)
+            msg.address.set(
+                self.address.unpack() + i_part * self._split_length)
+            msg.set_addresses(self._tx, self._rx)
+            yield msg
+
     def _get_field(
             self, name: str, start_byte: int, setter: FieldSetter
     ) -> Field:
@@ -668,62 +716,3 @@ class Message(MessageView):
         self._data.append(other)
         self._dlen.update(self._data)
         return self
-
-# class Message(object):
-#     """
-#     Родительский класс сообщения
-#     """
-#
-#
-#     _max_data_len = 256
-#     _cuttable_data = True
-#
-#     _package_format = ''
-#     _module_name = ''
-#
-#     def __init__(self, *args, **kwagrs):
-#         self._fields = {}
-#         self._init_args = args
-#         self._init_kwargs = kwagrs
-#         self._from_addr = None
-#         self._to_addr = None
-#
-#     def split(self):
-#         """
-#         разделить сообщение на части, обусловленными максимальной
-#         длиной данных в одном сообщении (max_data_len)
-#
-#         :return: сообщение
-#         """
-#         if not self._cuttable_data:
-#             raise TypeError(
-#                 f'{self.__class__.__name__} cannot be split by data')
-#
-#         parts_count = int(np.ceil(
-#             self.data_len.unpack() / self._max_data_len))
-#         for i_part in range(parts_count):
-#             data_len = self.data_len.unpack() - i_part * self._max_data_len \
-#                 if i_part == parts_count - 1 else self._max_data_len
-#             msg_part = deepcopy(self)
-#
-#             if msg_part.oper.desc_base == 'r':
-#                 msg_part.data_len.set_content(data_len)
-#
-#             elif msg_part.oper.desc_base == 'w':
-#                 start = i_part * self._max_data_len
-#                 end = start + data_len
-#
-#                 if self.data_len.data_dim == 'words':
-#                     msg_part.data.set_content(self.data[start:end])
-#                 elif self.data_len.data_dim == 'bytes':
-#                     msg_part.data.set_content(self.data.content[start:end])
-#                 else:
-#                     raise TypeError('Unsuppoted data dimension')
-#                 msg_part.data_len.upd_content_by_data(msg_part.data)
-#
-#             msg_part.addr.set_content(
-#                 self.addr.unpack() + i_part * self._max_data_len)
-#             msg_part.set_from_to_addresses(self._from_addr, self._to_addr)
-#
-#             yield msg_part
-#

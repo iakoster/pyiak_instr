@@ -773,7 +773,7 @@ class FieldDataLength(FieldSingle):
         elif self._units == self.WORDS:
             return data.words_count + self._add
         else:
-            raise ValueError("invalid units: %d" % self._units)
+            raise ValueError(f"invalid units: {self._units}")
 
     def update(self, field) -> None:
         """

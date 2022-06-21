@@ -377,6 +377,70 @@ class TestMessage(unittest.TestCase):
                 exc.exception.args[0]
             )
 
+    def test_split(self):
+
+        def get_test_msg() -> Message:
+            new_msg = Message(splitable=True, split_length=64)
+            new_msg.configure(
+                preamble=FieldSetter.static(">H", b"\x01\x02"),
+                address=FieldSetter.address('>I'),
+                data_length=FieldSetter.data_length('>I'),
+                test_field=FieldSetter.base(1, '>B'),
+                operation=FieldSetter.operation('>I', desc_dict={"r": 0, "w": 1}),
+                data=FieldSetter.data(-1, '>I')
+            )
+            return new_msg
+
+        def get_mess(addr: int, oper: int, data_len: int,
+                     data=None, data_dim=FieldSetter.WORDS):
+            if data is None:
+                data = b''
+            new_msg = get_test_msg()
+            new_msg._max_data_len = 64
+            new_msg.data_length._units = data_dim
+            new_msg.set(
+                preamble=0x102, address=addr,
+                data_length=data_len, test_field=0xff,
+                operation=oper, data=data)
+            return new_msg
+
+        test = (
+            get_mess(0, 0, 34),
+            get_mess(0, 0, 64),
+            get_mess(0, 0, 128),
+            get_mess(0, 0, 127),
+            get_mess(0, 1, 34, range(34)),
+            get_mess(0, 1, 64, range(64)),
+            get_mess(0, 1, 128, range(128)),
+            get_mess(0, 1, 127, range(127)),
+            get_mess(0, 1, 124, range(31), data_dim=FieldSetter.BYTES),
+        )
+        expected = (
+            (get_mess(0, 0, 34),),
+            (get_mess(0, 0, 64),),
+            (get_mess(0, 0, 64), get_mess(64, 0, 64)),
+            (get_mess(0, 0, 64), get_mess(64, 0, 63)),
+            (get_mess(0, 1, 34, range(34)),),
+            (get_mess(0, 1, 64, range(64)),),
+            (
+                get_mess(0, 1, 64, range(64)),
+                get_mess(64, 1, 64, range(64, 128))
+            ), (
+                get_mess(0, 1, 64, range(64)),
+                get_mess(64, 1, 63, range(64, 127))
+            ), (
+                get_mess(0, 1, 64, range(16), data_dim=FieldSetter.BYTES),
+                get_mess(64, 1, 60, range(16, 31), data_dim=FieldSetter.BYTES)
+            ),
+        )
+        for i_mess, test_msg in enumerate(test):
+            for i_part, mess in enumerate(test_msg.split()):
+                with self.subTest(i_mess=i_mess, i_part=i_part):
+                    self.assertEqual(str(expected[i_mess][i_part]), str(mess))
+                    self.assertEqual(
+                        expected[i_mess][i_part].format_name, mess.format_name
+                    )
+
     def test_magic_bytes(self):
         content = self.fill_content()
         self.assertEqual(content, bytes(self.msg))
