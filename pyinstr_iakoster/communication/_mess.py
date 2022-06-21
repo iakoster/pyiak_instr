@@ -38,6 +38,9 @@ __all__ = [
 
 class FieldSetter(object):
 
+    BYTES = FieldDataLength.BYTES
+    WORDS = FieldDataLength.WORDS
+
     def __init__(
             self,
             *args: Any,
@@ -120,14 +123,9 @@ class FieldSetter(object):
         return cls(fmt, desc_dict=desc_dict, content=content, info=info)
 
 
-class Message(object):
+class MessageBase(object):
     """
-    Represents a message for communication between devices.
-
-    Parameters
-    ----------
-    format_name: str
-        name of the message format.
+    Base class of the Message with required methods.
     """
 
     REQ_FIELDS = {
@@ -160,12 +158,279 @@ class Message(object):
 
         self._kwargs = dict(
             format_name=format_name,
+            splitable=splitable,
+            split_length=split_length,
         )
         self._configured_fields: dict[str, FieldSetter] = {}
 
     def clear_addresses(self) -> None:
         """Set addresses to None."""
         self._tx, self._rx = None, None
+
+    def get_instance(self, *args: Any, **kwargs: Any):
+        """
+        Get the same class as the current object, initialized with
+        the specified arguments.
+
+        Parameters
+        ----------
+        *args: Any
+            initial arguments.
+        **kwargs: Any
+            initial keywords arguments.
+
+        Returns
+        -------
+        Message
+            new class instance.
+        """
+        return self.__class__(*args, **kwargs)
+
+    def set_addresses(self, tx: Any = None, rx: Any = None):
+        """
+        Set Tx and Rx addresses.
+
+        Addresses may differ depending on the type of connection used.
+            * Tx - is a source address;
+            * Rx - is a reciever address.
+        If address (Rx or Tx) is None that it will be ignored.
+
+        Parameters
+        ----------
+        tx: Any
+            source address.
+        rx: Any
+            reciever address.
+
+        Returns
+        -------
+        Message
+            object message instance.
+        """
+        if tx is not None:
+            self._tx = tx
+        if rx is not None:
+            self._rx = rx
+        return self
+
+    @property
+    def address(self) -> FieldAddress:
+        """
+        Returns
+        -------
+        FieldAddress
+            address field instance.
+        """
+        return self._addr
+
+    @property
+    def data(self) -> FieldData:
+        """
+        Returns
+        -------
+        FieldData
+            data field instance.
+        """
+        return self._data
+
+    @property
+    def data_length(self) -> FieldDataLength:
+        """
+        Returns
+        -------
+        FieldDataLength
+            data length field instance.
+        """
+        return self._dlen
+
+    @property
+    def format_name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            name of the message format.
+        """
+        return self._fmt_name
+
+    @property
+    def operation(self) -> FieldOperation:
+        """
+        Returns
+        -------
+        FieldOperation
+            operation field instance.
+        """
+        return self._oper
+
+    @property
+    def rx(self):
+        return self._rx
+
+    @property
+    def split_length(self):
+        return self._split_length
+
+    @property
+    def splitable(self):
+        return self._splitable
+
+    @property
+    def tx(self):
+        return self._tx
+
+
+class MessageView(MessageBase):
+
+    def hex(self, sep: str = " ", sep_step: int = None) -> str:
+        """
+        Returns a string of hexademical numbers from the fields content.
+
+        Parameters
+        ----------
+        sep: str
+            separator between bytes/words and fields.
+        sep_step: int
+            separator step.
+
+        Returns
+        -------
+        str
+            hex string.
+
+        See Also
+        --------
+        Field.hex: return field content hex string.
+        """
+        fields_hex = []
+        for field in self:
+            field_hex = field.hex(sep=sep, sep_step=sep_step)
+            if field_hex != "":
+                fields_hex.append(field_hex)
+        return sep.join(fields_hex)
+
+    def to_bytes(self) -> bytes:
+        """
+        Returns
+        -------
+        bytes
+            joined fields contents.
+        """
+        return b"".join(
+            bytes(field) for field in self._fields.values()
+        )
+
+    def unpack(self) -> npt.NDArray:
+        """
+        Returns
+        -------
+        npt.NDArray
+            unpacked joined fields content.
+        """
+        unpacked = np.array([])
+        for field in self:
+            unpacked = np.append(unpacked, field.unpack())
+        return unpacked
+
+    @staticmethod
+    def _format_address(address: Any) -> str:
+        match address:
+            case str():
+                return address
+            case (str() as ip, int() as port):
+                return f"{ip}:{port}"
+            case _:
+                return str(address)
+
+    @property
+    def rx_str(self):
+        return self._format_address(self._rx)
+
+    @property
+    def tx_str(self):
+        return self._format_address(self._tx)
+
+    def __bytes__(self) -> bytes:
+        """Returns joined fields content."""
+        return self.to_bytes()
+
+    def __getitem__(self, name: str) -> Field:
+        """
+        Returns a field instance by field name.
+
+        Parameters
+        ----------
+        name : str
+            field name.
+
+        Returns
+        -------
+        Field
+            field instance.
+        """
+        return self._fields[name]
+
+    def __iter__(self):
+        """
+        Iteration by fields.
+
+        Yields
+        -------
+        Field
+            field instance.
+        """
+        for field in self._fields.values():
+            yield field
+
+    def __len__(self) -> int:
+        """Returns length of the message in bytes."""
+        return len(self.to_bytes())
+
+    def __repr__(self):
+        """Returns string representation of the message."""
+        fields_repr = []
+        for name, field in self._fields.items():
+            if field.words_count:
+                fields_repr.append((name, str(field))) # danger with huge fields
+            else:
+                fields_repr.append((name, "EMPTY"))
+        fields_repr = ", ".join(
+            f"{name}={field}" for name, field in fields_repr
+        )
+        return f"<{self.__class__.__name__}({fields_repr}), " \
+               f"from={self.tx_str}, to={self.rx_str}>"
+
+    def __str__(self) -> str:
+        """Returns fields converted to string."""
+        return " ".join(str(field) for field in self if str(field) != "")
+
+
+class Message(MessageView):
+    """
+    Represents a message for communication between devices.
+
+    Parameters
+    ----------
+    format_name: str
+        name of the message format.
+    splitable: bool
+        shows that the message can be divided by the data.
+    split_length: int
+        max length of the data in one slice.
+    """
+
+    def __init__(
+            self,
+            format_name: str = "default",
+            splitable: bool = False,
+            split_length: int = 1024
+    ):
+        MessageBase.__init__(
+            self,
+            format_name=format_name,
+            splitable=splitable,
+            split_length=split_length
+        )
 
     @overload
     def configure(
@@ -253,25 +518,6 @@ class Message(object):
         self._validate_content()
         return self
 
-    def get_instance(self, *args: Any, **kwargs: Any):
-        """
-        Get the same class as the current object, initialized with
-        the specified arguments.
-
-        Parameters
-        ----------
-        *args: Any
-            initial arguments.
-        **kwargs: Any
-            initial keywords arguments.
-
-        Returns
-        -------
-        Message
-            new class instance.
-        """
-        return self.__class__(*args, **kwargs)
-
     def get_same_instance(self):
         """
         Get the same class as the current object, initialized with
@@ -286,33 +532,6 @@ class Message(object):
         """
         return self.__class__(**self._kwargs) \
             .configure(**self._configured_fields)
-
-    def hex(self, sep: str = " ", sep_step: int = None) -> str:
-        """
-        Returns a string of hexademical numbers from the fields content.
-
-        Parameters
-        ----------
-        sep: str
-            separator between bytes/words and fields.
-        sep_step: int
-            separator step.
-
-        Returns
-        -------
-        str
-            hex string.
-
-        See Also
-        --------
-        Field.hex: return field content hex string.
-        """
-        fields_hex = []
-        for field in self:
-            field_hex = field.hex(sep=sep, sep_step=sep_step)
-            if field_hex != "":
-                fields_hex.append(field_hex)
-        return sep.join(fields_hex)
 
     @overload
     def set(
@@ -351,54 +570,6 @@ class Message(object):
             self[name].set(content)
         self._validate_content()
         return self
-
-    def set_addresses(self, tx: Any = None, rx: Any = None):
-        """
-        Set Tx and Rx addresses.
-
-        Addresses may differ depending on the type of connection used.
-            * Tx - is a source address;
-            * Rx - is a reciever address.
-        If address (Rx or Tx) is None that it will be ignored.
-
-        Parameters
-        ----------
-        tx: Any
-            source address.
-        rx: Any
-            reciever address.
-
-        Returns
-        -------
-        Message
-            object message instance.
-        """
-        if tx is not None:
-            self._tx = tx
-        if rx is not None:
-            self._rx = rx
-        return self
-
-    def to_bytes(self) -> bytes:
-        """
-        Returns
-        -------
-        bytes
-            joined fields contents.
-        """
-        return b"".join(bytes(field) for field in self)
-
-    def unpack(self) -> npt.NDArray:
-        """
-        Returns
-        -------
-        npt.NDArray
-            unpacked joined fields content.
-        """
-        unpacked = np.array([])
-        for field in self:
-            unpacked = np.append(unpacked, field.unpack())
-        return unpacked
 
     def _get_field(
             self, name: str, start_byte: int, setter: FieldSetter
@@ -439,90 +610,6 @@ class Message(object):
     def _validate_content(self) -> None:
         """Validate content."""
         ...
-
-    @staticmethod
-    def _format_address(address: Any) -> str:
-        match address:
-            case str():
-                return address
-            case (str() as ip, int() as port):
-                return f"{ip}:{port}"
-            case _:
-                return str(address)
-
-    @property
-    def address(self) -> FieldAddress:
-        """
-        Returns
-        -------
-        FieldAddress
-            address field instance.
-        """
-        return self._addr
-
-    @property
-    def data(self) -> FieldData:
-        """
-        Returns
-        -------
-        FieldData
-            data field instance.
-        """
-        return self._data
-
-    @property
-    def data_length(self) -> FieldDataLength:
-        """
-        Returns
-        -------
-        FieldDataLength
-            data length field instance.
-        """
-        return self._dlen
-
-    @property
-    def format_name(self) -> str:
-        """
-        Returns
-        -------
-        str
-            name of the message format.
-        """
-        return self._fmt_name
-
-    @property
-    def operation(self) -> FieldOperation:
-        """
-        Returns
-        -------
-        FieldOperation
-            operation field instance.
-        """
-        return self._oper
-
-    @property
-    def rx(self):
-        return self._rx
-
-    @property
-    def rx_str(self):
-        return self._format_address(self._rx)
-
-    @property
-    def split_length(self):
-        return self._split_length
-
-    @property
-    def splitable(self):
-        return self._splitable
-
-    @property
-    def tx(self):
-        return self._tx
-
-    @property
-    def tx_str(self):
-        return self._format_address(self._tx)
 
     def __add__(self, other):
         """
@@ -568,58 +655,6 @@ class Message(object):
         self._data.append(other)
         self._dlen.update(self._data)
         return self
-
-    def __bytes__(self) -> bytes:
-        """Returns joined fields content."""
-        return self.to_bytes()
-
-    def __getitem__(self, name: str) -> Field:
-        """
-        Returns a field instance by field name.
-
-        Parameters
-        ----------
-        name : str
-            field name.
-
-        Returns
-        -------
-        Field
-            field instance.
-        """
-        return self._fields[name]
-
-    def __iter__(self):
-        """
-        Iteration by fields.
-
-        Yields
-        -------
-        Field
-            field instance.
-        """
-        for field in self._fields.values():
-            yield field
-
-    def __len__(self) -> int:
-        """Returns length of the message in bytes."""
-        return len(self.to_bytes())
-
-    def __repr__(self):
-        """Returns string representation of the message."""
-        fields_repr = []
-        for name, field in self._fields.items():
-            if field.words_count:
-                fields_repr.append((name, str(field))) # danger with huge fields
-            else:
-                fields_repr.append((name, "EMPTY"))
-        fields_repr = ", ".join(f"{name}={field}" for name, field in fields_repr)
-        return f"<{self.__class__.__name__}({fields_repr}), from={self.tx_str}, to={self.rx_str}>"
-
-    def __str__(self) -> str:
-        """Returns fields converted to string."""
-        return " ".join(str(field) for field in self if str(field) != "")
-
 
 # class Message(object):
 #     """

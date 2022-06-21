@@ -18,8 +18,18 @@ from pyinstr_iakoster.communication import (
 
 class AnotherMessage(Message):
 
-    def __init__(self, format_name: str = "new_def"):
-        Message.__init__(self, format_name=format_name)
+    def __init__(
+            self,
+            format_name: str = "new_def",
+            splitable: bool = False,
+            split_length: int = 1024
+    ):
+        Message.__init__(
+            self,
+            format_name=format_name,
+            splitable=splitable,
+            split_length=split_length
+        )
 
 
 class TestFieldSetter(unittest.TestCase):
