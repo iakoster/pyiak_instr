@@ -539,16 +539,16 @@ class Message(object):
         """
 
         match other:
-            case Message(_fmt_name=self._fmt_name):
+            case Message():
+                if other.format_name != self._fmt_name:
+                    raise TypeError(
+                        "messages have different formats: %s != %s" % (
+                            other.format_name, self._fmt_name
+                        )
+                    )
                 other = other.data.content
             case bytes():
                 pass
-            case Message():
-                raise TypeError(
-                    "messages have different formats: %s != %s" % (
-                        other.format_name, self._fmt_name
-                    )
-                )
             case _:
                 raise TypeError(
                     "%s cannot be added to the message" % type(other)
@@ -693,41 +693,4 @@ class Message(object):
 #         :return: указатель на то, можно ли делить данное сообщение
 #         """
 #         return self._cuttable_data
-#
-#     def __add__(self, add_data):
-#         """
-#         Если передаваемый аргумент есть тип bytes,
-#         то к полю data прибавляется переданный аргумент
-#         (конкатенация справа).
-#
-#         Если передаваемый аргумент является экземпляром
-#         того же класса, то проверяется идентичность
-#         имени формата пакетов и модуля и затем содержание
-#         поля data прибавляется к полю data текущего экземпляра.
-#
-#         В обоих случаях перед записью проверяется, что новые данные
-#         будут содержать целое количество слов в формате текущего
-#         экземпляра
-#
-#         :param add_data: сообщение класса Message или типа bytes
-#         :return: self
-#         """
-#         match add_data:
-#             case Message(_package_format=self._package_format,
-#                          _module_name=self._module_name):
-#                 add_data = add_data.data.content
-#             case bytes():
-#                 pass
-#             case Message() | bytes():
-#                 raise TypeError(
-#                     'there is a diffierens in package format or '
-#                     'module name between the terms')
-#             case _:
-#                 raise TypeError(
-#                     f'{type(add_data)} cannot be added to the message')
-#
-#         self.data.set_content(self.data.content + add_data)
-#         self.data_len.upd_content_by_data(self.data)
-#
-#         return self
 #

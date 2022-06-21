@@ -16,6 +16,12 @@ from pyinstr_iakoster.communication import (
 )
 
 
+class AnotherMessage(Message):
+
+    def __init__(self, format_name: str = "new_def"):
+        Message.__init__(self, format_name=format_name)
+
+
 class TestFieldSetter(unittest.TestCase):
 
     def validate_setter(
@@ -381,3 +387,24 @@ class TestMessage(unittest.TestCase):
         self.assertIn(
             "cannot be added to the message", exc.exception.args[0]
         )
+
+    def test_magic_add_class(self):
+        msg_1 = AnotherMessage().configure(
+            address=FieldSetter.address(">B"),
+            operation=FieldSetter.operation(">B"),
+            data_length=FieldSetter.data_length(">B"),
+            data=FieldSetter.data(-1, ">B"),
+        )
+        msg_2 = msg_1.get_same_instance()
+        for msg in (msg_1, msg_2):
+            msg.set_fields_content(
+                address=0x1a,
+                operation=1,
+                data_length=1,
+                data=0xee,
+            )
+
+        msg_1 += msg_2
+        self.assertEqual(b"\xee\xee", msg_1.data.content)
+        self.assertEqual(-1, msg_1.data.expected)
+        self.assertEqual(2, msg_1.data_length.unpack())
