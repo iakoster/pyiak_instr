@@ -6,6 +6,7 @@ import numpy.typing as npt
 
 from ._fields import (
     Content,
+    Fields,
     Field,
     FieldSingle,
     FieldStatic,
@@ -47,84 +48,98 @@ class FieldSetter(object):
 
     def __init__(
             self,
-            *args: Any,
             special: str = None,
             **kwargs: Any,
     ):
-        self.args = args
         self.special = special
         self.kwargs = kwargs
 
     @classmethod
     def base(
             cls,
+            *,
             expected: int,
             fmt: str,
-            content: Content = b"",
             info: dict[str, Any] = None,
+            may_be_empty: bool = False,
     ):
         """For classical field"""
-        return cls(expected, fmt, content=content, info=info)
+        return cls(
+            expected=expected,
+            fmt=fmt,
+            info=info,
+            may_be_empty=may_be_empty
+        )
 
     @classmethod
     def single(
             cls,
+            *,
             fmt: str,
-            content: Content = b"",
-            info: dict[str, Any] = None
+            info: dict[str, Any] = None,
+            may_be_empty: bool = False,
     ):
-        return cls(fmt, special="single", content=content, info=info)
+        return cls(
+            special="single",
+            fmt=fmt,
+            info=info,
+            may_be_empty=may_be_empty
+        )
 
     @classmethod
     def static(
             cls,
+            *,
             fmt: str,
             content: Content,
-            info: dict[str, Any] | None = None,
+            info: dict[str, Any] = None,
     ):
-        return cls(fmt, content, special="static", info=info)
+        return cls(
+            special="static",
+            fmt=fmt,
+            content=content,
+            info=info,
+        )
 
     @classmethod
     def address(
             cls,
+            *,
             fmt: str,
-            content: Content = b"",
             info: dict[str, Any] | None = None
     ):
-        return cls(fmt, content=content, info=info)
+        return cls(fmt=fmt, info=info)
 
     @classmethod
     def data(
             cls,
+            *,
             expected: int,
             fmt: str,
-            content: Content = b"",
             info: dict[str, Any] | None = None
     ):
-        return cls(expected, fmt, content=content, info=info)
+        return cls(expected=expected, fmt=fmt, info=info)
 
     @classmethod
     def data_length(
             cls,
+            *,
             fmt: str,
-            content: Content = b"",
             units: int = BYTES,
             additive: int = 0,
             info: dict[str, Any] | None = None
     ):
-        return cls(
-            fmt, content=content, units=units, additive=additive, info=info
-        )
+        return cls(fmt=fmt, units=units, additive=additive, info=info)
 
     @classmethod
     def operation(
             cls,
+            *,
             fmt: str,
             desc_dict: dict[str, int] = None,
-            content: Content | str = b"",
             info: dict[str, Any] | None = None
     ):
-        return cls(fmt, desc_dict=desc_dict, content=content, info=info)
+        return cls(fmt=fmt, desc_dict=desc_dict, info=info)
 
 
 class MessageBase(object):
@@ -142,28 +157,29 @@ class MessageBase(object):
         "single": FieldSingle,
         "static": FieldStatic,
     }
-    _addr: FieldAddress
-    _data: FieldData
-    _dlen: FieldDataLength
-    _oper: FieldOperation
+
+    # _addr: FieldAddress
+    # _data: FieldData
+    # _dlen: FieldDataLength
+    # _oper: FieldOperation
 
     def __init__(
             self,
             format_name: str = "default",
             splitable: bool = False,
-            split_length: int = 1024
+            slice_length: int = 1024
     ):
         self._fmt_name = format_name
         self._splitable = splitable
-        self._split_length = split_length
-        self._fields: dict[str, Field] = {}
+        self._slice_length = slice_length
+        self._fields: dict[str, Fields] = {}
         self._configured = False
         self._tx, self._rx = None, None
 
         self._kwargs = dict(
             format_name=format_name,
             splitable=splitable,
-            split_length=split_length,
+            slice_length=slice_length,
         )
         self._configured_fields: dict[str, FieldSetter] = {}
 
@@ -171,15 +187,13 @@ class MessageBase(object):
         """Set addresses to None."""
         self._tx, self._rx = None, None
 
-    def get_instance(self, *args: Any, **kwargs: Any):
+    def get_instance(self, **kwargs: Any):
         """
         Get the same class as the current object, initialized with
         the specified arguments.
 
         Parameters
         ----------
-        *args: Any
-            initial arguments.
         **kwargs: Any
             initial keywords arguments.
 
@@ -188,7 +202,7 @@ class MessageBase(object):
         Message
             new class instance.
         """
-        return self.__class__(*args, **kwargs)
+        return self.__class__(**kwargs)
 
     def set_addresses(self, tx: Any = None, rx: Any = None):
         """
@@ -225,7 +239,7 @@ class MessageBase(object):
         FieldAddress
             address field instance.
         """
-        return self._addr
+        return self._fields["address"]
 
     @property
     def data(self) -> FieldData:
@@ -235,7 +249,7 @@ class MessageBase(object):
         FieldData
             data field instance.
         """
-        return self._data
+        return self._fields["data"]
 
     @property
     def data_length(self) -> FieldDataLength:
@@ -245,7 +259,7 @@ class MessageBase(object):
         FieldDataLength
             data length field instance.
         """
-        return self._dlen
+        return self._fields["data_length"]
 
     @property
     def format_name(self) -> str:
@@ -265,15 +279,15 @@ class MessageBase(object):
         FieldOperation
             operation field instance.
         """
-        return self._oper
+        return self._fields["operation"]
 
     @property
     def rx(self):
         return self._rx
 
     @property
-    def split_length(self):
-        return self._split_length
+    def slice_length(self):
+        return self._slice_length
 
     @property
     def splitable(self):
@@ -419,7 +433,7 @@ class Message(MessageView):
         name of the message format.
     splitable: bool
         shows that the message can be divided by the data.
-    split_length: int
+    slice_length: int
         max length of the data in one slice.
     """
 
@@ -427,13 +441,13 @@ class Message(MessageView):
             self,
             format_name: str = "default",
             splitable: bool = False,
-            split_length: int = 1024
+            slice_length: int = 1024
     ):
-        MessageBase.__init__(
+        MessageView.__init__(
             self,
             format_name=format_name,
             splitable=splitable,
-            split_length=split_length
+            slice_length=slice_length
         )
 
     @overload
@@ -469,20 +483,12 @@ class Message(MessageView):
             )
         del fields_diff
 
-        req_attrs = {
-            "address": "_addr",
-            "data": "_data",
-            "data_length": "_dlen",
-            "operation": "_oper"
-        }
         next_start_byte = 0
         self._fields.clear()
 
         for name, setter in fields.items():
             field = self._get_field(name, next_start_byte, setter)
             self._fields[name] = field
-            if name in self.REQ_FIELDS:
-                object.__setattr__(self, req_attrs[name], field)
 
             if field.expected <= 0:
                 break
@@ -595,20 +601,20 @@ class Message(MessageView):
             )
 
         parts_count = int(np.ceil(
-            self.data_length.unpack() / self._split_length
+            self.data_length[0] / self._slice_length
         ))
         for i_part in range(parts_count):
             if i_part == parts_count - 1:
-                data_len = self.data_length.unpack() - i_part * self._split_length
+                data_len = self.data_length[0] - i_part * self._slice_length
             else:
-                data_len = self._split_length
+                data_len = self._slice_length
 
             msg = deepcopy(self)
 
             if msg.operation.base == 'r':
                 msg.data_length.set(data_len)
             elif msg.operation.base == 'w':
-                start = i_part * self._split_length
+                start = i_part * self._slice_length
                 end = start + data_len
                 if self.data_length.units == FieldDataLength.WORDS:
                     msg.data.set(self.data[start:end])
@@ -618,7 +624,7 @@ class Message(MessageView):
                     raise TypeError('Unsuppoted data units')
                 msg.data_length.update(msg.data)
             msg.address.set(
-                self.address.unpack() + i_part * self._split_length)
+                self.address[0] + i_part * self._slice_length)
             msg.set_addresses(self._tx, self._rx)
             yield msg
 
@@ -646,15 +652,13 @@ class Message(MessageView):
         if name in self.REQ_FIELDS:
             return self.REQ_FIELDS[name](
                 self._fmt_name,
-                start_byte,
-                *setter.args,
+                start_byte=start_byte,
                 **setter.kwargs
             )
         return self.SPECIAL_FIELDS.get(setter.special, Field)(
             self._fmt_name,
             name,
-            start_byte,
-            *setter.args,
+            start_byte=start_byte,
             **setter.kwargs
         )
 
@@ -667,7 +671,7 @@ class Message(MessageView):
                 )
 
         oper, dlen = self.operation, self.data_length
-        if oper.base == "w" and dlen.unpack() != dlen.calculate(self.data):
+        if oper.base == "w" and dlen[0] != dlen.calculate(self.data):
             raise MessageContentError(
                 self.__class__.__name__, dlen.name, "invalid length"
             )
@@ -713,6 +717,6 @@ class Message(MessageView):
                     "%s cannot be added to the message" % type(other)
                 )
 
-        self._data.append(other)
-        self._dlen.update(self._data)
+        self.data.append(other)
+        self.data_length.update(self.data)
         return self

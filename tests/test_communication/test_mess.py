@@ -23,13 +23,13 @@ class AnotherMessage(Message):
             self,
             format_name: str = "new_def",
             splitable: bool = False,
-            split_length: int = 1024
+            slice_length: int = 1024
     ):
         Message.__init__(
             self,
             format_name=format_name,
             splitable=splitable,
-            split_length=split_length
+            slice_length=slice_length
         )
 
 
@@ -38,70 +38,60 @@ class TestFieldSetter(unittest.TestCase):
     def validate_setter(
             self,
             fs: FieldSetter,
-            args: tuple,
             kwargs: dict,
             special: str = None
     ):
-        self.assertTupleEqual(args, fs.args)
         self.assertDictEqual(kwargs, fs.kwargs)
         self.assertEqual(special, fs.special)
 
     def test_init(self):
         self.validate_setter(
-            FieldSetter(1, 2, a=0, b=3),
-            (1, 2),
+            FieldSetter(a=0, b=3),
             {"a": 0, "b": 3}
         )
 
     def test_base(self):
         self.validate_setter(
-            FieldSetter.base(1, "i"),
-            (1, "i"),
-            {"content": b"", "info": None}
+            FieldSetter.base(expected=1, fmt="i"),
+            {"expected": 1, "fmt": "i", "info": None, 'may_be_empty': False}
         )
 
     def test_single(self):
         self.validate_setter(
-            FieldSetter.single("i"),
-            ("i",),
-            {"content": b"", "info": None},
+            FieldSetter.single(fmt="i"),
+            {"fmt": "i", "info": None, 'may_be_empty': False},
             special="single"
         )
 
     def test_static(self):
         self.validate_setter(
-            FieldSetter.static("i", b""),
-            ("i", b""),
-            {"info": None},
+            FieldSetter.static(fmt="i", content=b""),
+            {"fmt": "i", "content": b"", "info": None},
             special="static"
         )
 
     def test_address(self):
         self.validate_setter(
-            FieldSetter.address("i"),
-            ("i",),
-            {"content": b"", "info": None}
+            FieldSetter.address(fmt="i"),
+            {"fmt": "i", "info": None}
         )
 
     def test_data(self):
         self.validate_setter(
-            FieldSetter.data(3, "i"),
-            (3, "i"),
-            {"content": b"", "info": None}
+            FieldSetter.data(expected=3, fmt="i"),
+            {"expected": 3, "fmt": "i", "info": None}
         )
 
     def test_data_length(self):
         self.validate_setter(
-            FieldSetter.data_length("i"),
-            ("i",),
-            {"additive": 0, "content": b"", "info": None, "units": 16}
+            FieldSetter.data_length(fmt="i"),
+            {"fmt": "i", "additive": 0, "info": None, "units": 16}
         )
 
     def test_operation(self):
         self.validate_setter(
-            FieldSetter.operation("i"),
-            ("i",),
-            {"content": b"", "desc_dict": None, "info": None}
+            FieldSetter.operation(fmt="i"),
+            {"fmt": "i", "desc_dict": None, "info": None}
         )
 
 
@@ -130,41 +120,41 @@ class TestMessage(unittest.TestCase):
 
     def setUp(self) -> None:
         self.msg: Message = Message().configure(
-            preamble=FieldSetter.static(">H", 0x1aa5),
-            response=FieldSetter.single(">B"),
-            address=FieldSetter.address(">H"),
-            operation=FieldSetter.operation(">B"),
-            data_length=FieldSetter.data_length(">B"),
-            data=FieldSetter.data(1, ">I"),
-            crc=FieldSetter.base(1, ">H"),
+            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            response=FieldSetter.single(fmt=">B"),
+            address=FieldSetter.address(fmt=">H"),
+            operation=FieldSetter.operation(fmt=">B"),
+            data_length=FieldSetter.data_length(fmt=">B"),
+            data=FieldSetter.data(expected=1, fmt=">I"),
+            crc=FieldSetter.base(expected=1, fmt=">H"),
         )
         self.simple_msg: Message = Message().configure(
-            address=FieldSetter.address(">H"),
-            operation=FieldSetter.operation(">B"),
+            address=FieldSetter.address(fmt=">H"),
+            operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(
-                ">B", units=FieldSetter.WORDS
+                fmt=">B", units=FieldSetter.WORDS
             ),
-            data=FieldSetter.data(-1, ">H")
+            data=FieldSetter.data(expected=-1, fmt=">H")
         )
 
     def test_init(self):
         msg = Message()
         self.assertEqual("default", msg.format_name)
-        with self.assertRaises(AttributeError) as exc:
+        with self.assertRaises(KeyError) as exc:
             msg.data.unpack()
-        self.assertIn(
-            "'Message' object has no attribute", exc.exception.args[0]
+        self.assertEqual(
+            "data", exc.exception.args[0]
         )
 
     def test_configure(self):
         msg = Message(format_name="not_def").configure(
-            preamble=FieldSetter.static(">H", 0x1aa5),
-            response=FieldSetter.single(">B"),
-            address=FieldSetter.address(">H"),
-            operation=FieldSetter.operation(">B"),
-            data_length=FieldSetter.data_length(">B"),
-            data=FieldSetter.data(4, ">I"),
-            crc=FieldSetter.base(2, ">H"),
+            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            response=FieldSetter.single(fmt=">B"),
+            address=FieldSetter.address(fmt=">H"),
+            operation=FieldSetter.operation(fmt=">B"),
+            data_length=FieldSetter.data_length(fmt=">B"),
+            data=FieldSetter.data(expected=4, fmt=">I"),
+            crc=FieldSetter.base(expected=2, fmt=">H"),
         )
         self.validate_field(
             msg["preamble"],
@@ -287,13 +277,13 @@ class TestMessage(unittest.TestCase):
 
     def test_extract(self):
         msg: Message = Message(format_name="not_def").configure(
-            preamble=FieldSetter.static(">H", 0x1aa5),
-            response=FieldSetter.single(">B"),
-            address=FieldSetter.address(">H"),
-            operation=FieldSetter.operation(">B"),
-            data_length=FieldSetter.data_length(">B"),
-            data=FieldSetter.data(1, ">I"),
-            crc=FieldSetter.base(1, ">H"),
+            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            response=FieldSetter.single(fmt=">B"),
+            address=FieldSetter.address(fmt=">H"),
+            operation=FieldSetter.operation(fmt=">B"),
+            data_length=FieldSetter.data_length(fmt=">B"),
+            data=FieldSetter.data(expected=1, fmt=">I"),
+            crc=FieldSetter.base(expected=1, fmt=">H"),
         )
         msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x04\xff\xff\xf1\xfe\xee\xdd")
         for field, content in dict(
@@ -380,14 +370,14 @@ class TestMessage(unittest.TestCase):
     def test_split(self):
 
         def get_test_msg() -> Message:
-            new_msg = Message(splitable=True, split_length=64)
+            new_msg = Message(splitable=True, slice_length=64)
             new_msg.configure(
-                preamble=FieldSetter.static(">H", b"\x01\x02"),
-                address=FieldSetter.address('>I'),
-                data_length=FieldSetter.data_length('>I'),
-                test_field=FieldSetter.base(1, '>B'),
-                operation=FieldSetter.operation('>I', desc_dict={"r": 0, "w": 1}),
-                data=FieldSetter.data(-1, '>I')
+                preamble=FieldSetter.static(fmt=">H", content=b"\x01\x02"),
+                address=FieldSetter.address(fmt=">I"),
+                data_length=FieldSetter.data_length(fmt=">I"),
+                test_field=FieldSetter.base(expected=1, fmt=">B"),
+                operation=FieldSetter.operation(fmt=">I", desc_dict={"r": 0, "w": 1}),
+                data=FieldSetter.data(expected=-1, fmt=">I")
             )
             return new_msg
 
@@ -512,10 +502,10 @@ class TestMessage(unittest.TestCase):
 
     def test_magic_add_class(self):
         msg_1 = AnotherMessage().configure(
-            address=FieldSetter.address(">B"),
-            operation=FieldSetter.operation(">B"),
-            data_length=FieldSetter.data_length(">B"),
-            data=FieldSetter.data(-1, ">B"),
+            address=FieldSetter.address(fmt=">B"),
+            operation=FieldSetter.operation(fmt=">B"),
+            data_length=FieldSetter.data_length(fmt=">B"),
+            data=FieldSetter.data(expected=-1, fmt=">B"),
         )
         msg_2 = msg_1.get_same_instance()
         for msg in (msg_1, msg_2):

@@ -13,6 +13,7 @@ from ..exceptions import (
 
 __all__ = [
     "Content",
+    "Fields",
     "Field",
     "FieldSingle",
     "FieldStatic",
@@ -165,17 +166,6 @@ class FieldBase(object):
         """Returns the length of the content in bytes"""
         return len(self._content)
 
-    def __repr__(self) -> str:
-        """Returns string representation of the field instance"""
-        words_count = self.words_count
-        if words_count > 16:
-            self_str = "{} ...({})".format(
-                " ".join(str(self).split(" ")[:8]), words_count - 8
-            )
-        else:
-            self_str = str(self)
-        return f"<{self.__class__.__name__}({self_str}, fmt='{self._fmt}')>"
-
 
 class Field(FieldBase):
     """
@@ -211,6 +201,7 @@ class Field(FieldBase):
             self,
             format_name: str,
             name: str,
+            *,
             start_byte: int,
             expected: int,
             fmt: str,
@@ -311,7 +302,9 @@ class Field(FieldBase):
 
         return converted
 
-    def _validate_content(self, content: bytes = None) -> bytes:
+    def _validate_content(
+            self, content: bytes = None, exp: int = None
+    ) -> bytes:
         """
         Validate field content.
 
@@ -321,6 +314,8 @@ class Field(FieldBase):
         ----------
         content: bytes, default=None
             content for validating.
+        exp: int, default=None
+            expected words in content.
 
         Returns
         -------
@@ -338,19 +333,21 @@ class Field(FieldBase):
             content = self._content
         if content == b"":
             return content
+        if exp is None:
+            exp = self._exp
 
         if len(content) % self._word_bsize != 0:
             raise FloatWordsCountError(
                 self.__class__.__name__,
-                self._exp,
+                exp,
                 len(content) / self._word_bsize
             )
 
         # Similary to self._exp > 0 and
         # len(content) / self._word_bsize != self._exp
-        if 0 < self._exp != len(content) / self._word_bsize:
+        if 0 < exp != len(content) / self._word_bsize:
             raise PartialFieldError(
-                self.__class__.__name__, len(content) / (self._exp * self._word_bsize)
+                self.__class__.__name__, len(content) / (exp * self._word_bsize)
             )
 
         return content
@@ -436,6 +433,17 @@ class Field(FieldBase):
         """
         return " ".join("%X" % word for word in self)
 
+    def __repr__(self) -> str:
+        """Returns string representation of the field instance"""
+        words_count = self.words_count
+        if words_count > 16:
+            self_str = "{} ...({})".format(
+                " ".join(str(self).split(" ")[:8]), words_count - 8
+            )
+        else:
+            self_str = str(self)
+        return f"<{self.__class__.__name__}({self_str}, fmt='{self._fmt}')>"
+
 
 class FieldSingle(Field):
     """
@@ -472,6 +480,7 @@ class FieldSingle(Field):
             self,
             format_name: str,
             name: str,
+            *,
             start_byte: int,
             fmt: str,
             content: Content = b"",
@@ -482,46 +491,46 @@ class FieldSingle(Field):
             self,
             format_name,
             name,
-            start_byte,
-            1,
-            fmt,
+            start_byte=start_byte,
+            expected=1,
+            fmt=fmt,
             content=content,
             info=info,
             may_be_empty=may_be_empty
         )
 
-    def unpack(self, fmt: str = None) -> int | float | None:
-        """
-        Returns the content of the field unpacked in fmt.
+    # def unpack(self, fmt: str = None) -> int | float | None:
+    #     """
+    #     Returns the content of the field unpacked in fmt.
+    #
+    #     Parameters
+    #     ----------
+    #     fmt: str
+    #         format for unpacking. If None, fmt is taken from
+    #         an instance of the class.
+    #
+    #     Returns
+    #     -------
+    #     int, float or None
+    #         unpacked value or none if content is empty
+    #     """
+    #     unpacked = Field.unpack(self, fmt=fmt)
+    #     return unpacked[0] if len(unpacked) else None
 
-        Parameters
-        ----------
-        fmt: str
-            format for unpacking. If None, fmt is taken from
-            an instance of the class.
-
-        Returns
-        -------
-        int, float or None
-            unpacked value or none if content is empty
-        """
-        unpacked = Field.unpack(self, fmt=fmt)
-        return unpacked[0] if len(unpacked) else None
-
-    def __iter__(self):
-        """
-        Yield one word unpacked in fmt.
-
-        Yields
-        ------
-        int or float
-            unpacked word.
-        """
-        for word in Field.unpack(self):
-            yield word
-
-    def __getitem__(self, word_index: int | slice) -> None:
-        raise AttributeError("disallowed inherited")
+    # def __iter__(self):
+    #     """
+    #     Yield one word unpacked in fmt.
+    #
+    #     Yields
+    #     ------
+    #     int or float
+    #         unpacked word.
+    #     """
+    #     for word in Field.unpack(self):
+    #         yield word
+    #
+    # def __getitem__(self, word_index: int | slice) -> None:
+    #     raise AttributeError("disallowed inherited")
 
 
 class FieldStatic(FieldSingle):
@@ -557,6 +566,7 @@ class FieldStatic(FieldSingle):
             self,
             format_name: str,
             name: str,
+            *,
             start_byte: int,
             fmt: str,
             content: Content,
@@ -566,8 +576,8 @@ class FieldStatic(FieldSingle):
             self,
             format_name,
             name,
-            start_byte,
-            fmt,
+            start_byte=start_byte,
+            fmt=fmt,
             content=content,
             info=info
         )
@@ -615,6 +625,7 @@ class FieldAddress(FieldSingle):
     def __init__(
             self,
             format_name: str,
+            *,
             start_byte: int,
             fmt: str,
             content: Content = b"",
@@ -624,8 +635,8 @@ class FieldAddress(FieldSingle):
             self,
             format_name,
             "address",
-            start_byte,
-            fmt,
+            start_byte=start_byte,
+            fmt=fmt,
             content=content,
             info=info
         )
@@ -657,6 +668,7 @@ class FieldData(Field):
     def __init__(
             self,
             format_name: str,
+            *,
             start_byte: int,
             expected: int,
             fmt: str,
@@ -667,9 +679,9 @@ class FieldData(Field):
             self,
             format_name,
             "data",
-            start_byte,
-            expected,
-            fmt,
+            start_byte=start_byte,
+            expected=expected,
+            fmt=fmt,
             content=content,
             info=info,
             may_be_empty=True
@@ -678,8 +690,14 @@ class FieldData(Field):
     def append(self, content: Content) -> None:
         content = self._convert_content(content)
         if self._exp > 0:
-            self._exp += len(content) // self._word_bsize # TODO: need check len now
-        self._content = self._validate_content(self._content + content)
+            exp = self._exp + len(content) // self._word_bsize
+        else:
+            exp = None
+        self._content = self._validate_content(
+            self._content + content, exp=exp
+        )
+        if self._exp > 0:
+            self._exp = exp
 
 
 class FieldDataLength(FieldSingle):
@@ -726,6 +744,7 @@ class FieldDataLength(FieldSingle):
     def __init__(
             self,
             format_name: str,
+            *,
             start_byte: int,
             fmt: str,
             content: Content = b"",
@@ -742,8 +761,13 @@ class FieldDataLength(FieldSingle):
             )
 
         FieldSingle.__init__(
-            self, format_name, "data_length", start_byte, fmt,
-            content=content, info=info
+            self,
+            format_name,
+            "data_length",
+            start_byte=start_byte,
+            fmt=fmt,
+            content=content,
+            info=info
         )
         self._units = units
         self._add = additive
@@ -857,6 +881,7 @@ class FieldOperation(FieldSingle):
     def __init__(
             self,
             format_name: str,
+            *,
             start_byte: int,
             fmt: str,
             desc_dict: dict[str, int] = None,
@@ -875,8 +900,13 @@ class FieldOperation(FieldSingle):
             c_value = content
 
         FieldSingle.__init__(
-            self, format_name, "operation", start_byte, fmt,
-            content=c_value, info=info
+            self,
+            format_name,
+            "operation",
+            start_byte=start_byte,
+            fmt=fmt,
+            content=c_value,
+            info=info
         )
         self._desc = ""
         self.update_desc()
@@ -884,8 +914,8 @@ class FieldOperation(FieldSingle):
     def update_desc(self) -> None:
         """Update desc by desc dict where key is a content value."""
         c_value = self.unpack()
-        if c_value is not None:
-            self._desc = self._desc_dict_rev[c_value]
+        if len(c_value):
+            self._desc = self._desc_dict_rev[c_value[0]]
         else:
             self._desc = ""
 
@@ -995,4 +1025,15 @@ class MessageType(Protocol):
     data: FieldData
     data_length: FieldDataLength
     operation: FieldOperation
+
+
+Fields = (
+        Field |
+        FieldSingle |
+        FieldStatic |
+        FieldAddress |
+        FieldData |
+        FieldDataLength |
+        FieldOperation
+)
 

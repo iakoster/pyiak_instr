@@ -37,16 +37,18 @@ def compare_fields_base(
 class TestField(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.tf = Field("f", "n", 1, -1, ">H")
+        self.tf = Field(
+            "f", "n", start_byte=1, expected=-1, fmt=">H"
+        )
 
     def test_base_init(self):
         compare_fields_base(
             self, Field(
                 "format",
                 "name",
-                1,
-                4,
-                ">B",
+                start_byte=1,
+                expected=4,
+                fmt=">B",
                 info={"info": True},
                 content=b"\x01\x02\x03\x04"
             ), dict(
@@ -57,6 +59,7 @@ class TestField(unittest.TestCase):
                 end_byte=5,
                 expected=4,
                 finite=True,
+                may_be_empty=False,
                 fmt=">B",
                 bytesize=1,
                 content=b"\x01\x02\x03\x04",
@@ -67,7 +70,12 @@ class TestField(unittest.TestCase):
     def test_base_init_infinite(self):
         compare_fields_base(
             self, Field(
-                "format", "name", 1, -1, ">B", content=b"\x01\x02\x03\x04"
+                "format",
+                "name",
+                start_byte=1,
+                expected=-1,
+                fmt=">B",
+                content=b"\x01\x02\x03\x04"
             ), dict(
                 info={},
                 start_byte=1,
@@ -78,7 +86,14 @@ class TestField(unittest.TestCase):
         )
 
     def test_base_magic_basic(self):
-        tf = Field("format", "name", 1, 4, ">B", content=b"\x01\x02\x03\x04")
+        tf = Field(
+            "format",
+            "name",
+            start_byte=1,
+            expected=4,
+            fmt=">B",
+            content=b"\x01\x02\x03\x04"
+        )
         with self.subTest(method="bytes"):
             self.assertEqual(b"\x01\x02\x03\x04", bytes(tf))
         with self.subTest(method="len"):
@@ -87,7 +102,13 @@ class TestField(unittest.TestCase):
             self.assertEqual("<Field(1 2 3 4, fmt='>B')>", repr(tf))
 
     def test_base_magic_additional(self):
-        tf = Field("format", "name", 0, -1, ">H")
+        tf = Field(
+            "format",
+            "name",
+            start_byte=0,
+            expected=-1,
+            fmt=">H"
+        )
         tf.set(range(20))
         with self.subTest(method="repr"):
             self.assertEqual(
@@ -97,7 +118,12 @@ class TestField(unittest.TestCase):
     def test_init_exc_float(self):
         with self.assertRaises(FloatWordsCountError) as exc:
             Field(
-                "format", "name", 0, 2, ">H", content=b"\x01\x02\x03"
+                "format",
+                "name",
+                start_byte=0,
+                expected=2,
+                fmt=">H",
+                content=b"\x01\x02\x03"
             )
         self.assertEqual(
             "not integer count of words in the Field (expected 2, got 1.5)",
@@ -107,7 +133,12 @@ class TestField(unittest.TestCase):
     def test_init_exc_partial(self):
         with self.assertRaises(PartialFieldError) as exc:
             Field(
-                "format", "name", 0, 3, ">H", content=b"\x01\x02"
+                "format",
+                "name",
+                start_byte=0,
+                expected=3,
+                fmt=">H",
+                content=b"\x01\x02"
             )
         self.assertEqual(
             "the Field is incomplete (filled to 0.3)",
@@ -117,7 +148,12 @@ class TestField(unittest.TestCase):
     def test_init_exc_partial_more(self):
         with self.assertRaises(PartialFieldError) as exc:
             Field(
-                "format", "name", 0, 3, ">H", content=b"\x01\x02" * 5
+                "format",
+                "name",
+                start_byte=0,
+                expected=3,
+                fmt=">H",
+                content=b"\x01\x02" * 5
             )
         self.assertEqual(
             "the Field is incomplete (filled to 1.7)",
@@ -161,7 +197,13 @@ class TestField(unittest.TestCase):
                 self.assertEqual(bytes_, self.tf.content)
 
     def test_set_float(self):
-        tf = Field("format", "name", 0, -1, ">f")
+        tf = Field(
+            "format",
+            "name",
+            start_byte=0,
+            expected=-1,
+            fmt=">f"
+        )
         tf.set(1.263)
         self.assertEqual(
             b"\x3f\xa1\xa9\xfc",
@@ -173,11 +215,23 @@ class TestField(unittest.TestCase):
         self.assertEqual(b"", self.tf.content)
 
     def test_extract_from(self):
-        tf = Field("format", "name", 2, -1, ">B")
+        tf = Field(
+            "format",
+            "name",
+            start_byte=2,
+            expected=-1,
+            fmt=">B"
+        )
         tf.extract(b"\x01\x02\x03\x04\x05\x06")
         self.assertEqual(b"\x03\x04\x05\x06", tf.content)
 
-        tf = Field("format", "name", 2, 2, ">B")
+        tf = Field(
+            "format",
+            "name",
+            start_byte=2,
+            expected=2,
+            fmt=">B"
+        )
         tf.extract(b"\x01\x02\x03\x04\x05\x06")
         self.assertEqual(b"\x03\x04", tf.content)
 
@@ -219,7 +273,7 @@ class TestField(unittest.TestCase):
 class TestFieldSingle(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.tf = FieldSingle("f", "n", 0, ">H")
+        self.tf = FieldSingle("f", "n", start_byte=0, fmt=">H")
 
     def test_base_init(self):
         compare_fields_base(
@@ -227,8 +281,8 @@ class TestFieldSingle(unittest.TestCase):
             FieldSingle(
                 "format",
                 "name",
-                1,
-                ">H",
+                start_byte=1,
+                fmt=">H",
                 info={"info": True},
                 content=0xfa1c
             ), dict(
@@ -239,6 +293,7 @@ class TestFieldSingle(unittest.TestCase):
                 end_byte=3,
                 expected=1,
                 finite=True,
+                may_be_empty=False,
                 fmt=">H",
                 bytesize=2,
                 content=b"\xfa\x1c",
@@ -247,27 +302,21 @@ class TestFieldSingle(unittest.TestCase):
         )
 
     def test_unpack(self):
-        self.assertEqual(None, self.tf.unpack())
+        self.assertEqual(0, len(self.tf.unpack()))
         self.tf.set(0x123)
-        self.assertEqual(0x123, self.tf.unpack())
+        self.assertListEqual([0x123], list(self.tf.unpack()))
 
     def test_madic_iter(self):
         self.tf.set(0xfa12)
         self.assertListEqual([0xfa12], [i for i in self.tf])
 
-    def test_magic_getitem(self):
-        with self.assertRaises(AttributeError) as exc:
-            a = self.tf[0]
-        self.assertEqual(
-            "disallowed inherited",
-            exc.exception.args[0]
-        )
-
 
 class TestFieldStatic(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.tf = FieldStatic("f", "n", 0, ">H", content=0x1234)
+        self.tf = FieldStatic(
+            "f", "n", start_byte=0, fmt=">H", content=0x1234
+        )
 
     def test_base_init(self):
         compare_fields_base(
@@ -275,8 +324,8 @@ class TestFieldStatic(unittest.TestCase):
             FieldStatic(
                 "format",
                 "name",
-                0,
-                ">I",
+                start_byte=0,
+                fmt=">I",
                 info={"info": True},
                 content=0xfa1c
             ), dict(
@@ -287,6 +336,7 @@ class TestFieldStatic(unittest.TestCase):
                 end_byte=4,
                 expected=1,
                 finite=True,
+                may_be_empty=False,
                 fmt=">I",
                 bytesize=4,
                 content=b"\x00\x00\xfa\x1c",
@@ -319,8 +369,8 @@ class TestFieldAddress(unittest.TestCase):
             self,
             FieldAddress(
                 "format",
-                0,
-                ">I",
+                start_byte=0,
+                fmt=">I",
                 info={"info": True}
             ), dict(
                 format_name="format",
@@ -330,6 +380,7 @@ class TestFieldAddress(unittest.TestCase):
                 end_byte=4,
                 expected=1,
                 finite=True,
+                may_be_empty=False,
                 fmt=">I",
                 bytesize=4,
                 content=b"",
@@ -345,9 +396,9 @@ class TestFieldData(unittest.TestCase):
             self,
             FieldData(
                 "format",
-                0,
-                2,
-                ">I",
+                start_byte=0,
+                expected=2,
+                fmt=">I",
                 info={"info": True}
             ), dict(
                 format_name="format",
@@ -357,6 +408,7 @@ class TestFieldData(unittest.TestCase):
                 end_byte=8,
                 expected=2,
                 finite=True,
+                may_be_empty=True,
                 fmt=">I",
                 bytesize=4,
                 content=b"",
@@ -369,19 +421,23 @@ class TestFieldDataLength(unittest.TestCase):
 
     @staticmethod
     def get_tf(units: int, additive: int) -> FieldDataLength:
-        return FieldDataLength("f", 0, ">H", units=units, additive=additive)
+        return FieldDataLength(
+            "f", start_byte=0, fmt=">H", units=units, additive=additive
+        )
 
     @staticmethod
     def get_tf_data(content):
-        return FieldData("f", 0, 2, ">H", content)
+        return FieldData(
+            "f", start_byte=0, expected=2, fmt=">H", content=content
+        )
 
     def test_base_init(self):
         compare_fields_base(
             self,
             FieldDataLength(
                 "format",
-                0,
-                ">H",
+                start_byte=0,
+                fmt=">H",
                 additive=0,
             ), dict(
                 format_name="format",
@@ -391,6 +447,7 @@ class TestFieldDataLength(unittest.TestCase):
                 end_byte=2,
                 expected=1,
                 finite=True,
+                may_be_empty=False,
                 fmt=">H",
                 bytesize=2,
                 content=b"",
@@ -405,8 +462,8 @@ class TestFieldDataLength(unittest.TestCase):
             self,
             FieldDataLength(
                 "format",
-                0,
-                ">H",
+                start_byte=0,
+                fmt=">H",
                 units=0x11,
                 additive=10,
             ), dict(
@@ -417,6 +474,7 @@ class TestFieldDataLength(unittest.TestCase):
                 end_byte=2,
                 expected=1,
                 finite=True,
+                may_be_empty=False,
                 fmt=">H",
                 bytesize=2,
                 content=b"",
@@ -428,12 +486,16 @@ class TestFieldDataLength(unittest.TestCase):
 
     def test_init_wrong_oper_core(self):
         with self.assertRaises(ValueError) as exc:
-            FieldDataLength("f", 0, "b", units=0x12)
+            FieldDataLength(
+                "f", start_byte=0, fmt="b", units=0x12
+            )
         self.assertEqual("invalid units: 18", exc.exception.args[0])
 
     def test_init_wrong_additive(self):
         with self.assertRaises(ValueError) as exc:
-            FieldDataLength("f", 0, "b", additive=-1)
+            FieldDataLength(
+                "f", start_byte=0, fmt="b", additive=-1
+            )
         self.assertEqual(
             "additive number must be integer and positive, got -1",
             exc.exception.args[0]
@@ -469,15 +531,17 @@ class TestFieldOperation(unittest.TestCase):
 
     @staticmethod
     def get_tf(desc_dict=None) -> FieldOperation:
-        return FieldOperation("f", 0, ">H", desc_dict=desc_dict)
+        return FieldOperation(
+            "f", start_byte=0, fmt=">H", desc_dict=desc_dict
+        )
 
     def test_base_init(self):
         compare_fields_base(
             self,
             FieldOperation(
                 "format",
-                0,
-                ">H",
+                start_byte=0,
+                fmt=">H",
                 content=1
             ), dict(
                 format_name="format",
@@ -487,6 +551,7 @@ class TestFieldOperation(unittest.TestCase):
                 end_byte=2,
                 expected=1,
                 finite=True,
+                may_be_empty=False,
                 fmt=">H",
                 bytesize=2,
                 content=b"\x00\x01",
@@ -501,8 +566,8 @@ class TestFieldOperation(unittest.TestCase):
     def test_base_init_custom_desc_dict(self):
         tf = FieldOperation(
                 "format",
-                0,
-                ">H",
+                start_byte=0,
+                fmt=">H",
                 content="w1",
                 desc_dict={"r1": 0x2, "r2": 0xf1, "w1": 0xf}
             )
