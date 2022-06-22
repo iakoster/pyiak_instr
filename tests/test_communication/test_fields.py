@@ -19,19 +19,20 @@ from pyinstr_iakoster.communication import (
 def compare_fields_base(
         test_case: unittest.TestCase,
         field: Field,
-        attributes: dict[str, Any],
-        slice_start: int | None,
-        slice_end: int | None,
-        class_instance: type
+        class_instance: type = None,
+        slice_: slice = None,
+        **attributes: Any,
 ):
     for name, val in attributes.items():
         with test_case.subTest(name=name):
             test_case.assertEqual(val, field.__getattribute__(name))
-    with test_case.subTest(name="slice"):
-        test_case.assertEqual(slice_start, field.slice.start)
-        test_case.assertEqual(slice_end, field.slice.stop)
-    with test_case.subTest(name="field_class"):
-        test_case.assertIs(class_instance, field.field_class)
+    if slice_ is not None:
+        with test_case.subTest(name="slice"):
+            test_case.assertEqual(slice_.start, field.slice.start)
+            test_case.assertEqual(slice_.stop, field.slice.stop)
+    if class_instance is not None:
+        with test_case.subTest(name="field_class"):
+            test_case.assertIs(class_instance, field.field_class)
 
 
 class TestField(unittest.TestCase):
@@ -43,7 +44,8 @@ class TestField(unittest.TestCase):
 
     def test_base_init(self):
         compare_fields_base(
-            self, Field(
+            self,
+            Field(
                 "format",
                 "name",
                 start_byte=1,
@@ -51,38 +53,41 @@ class TestField(unittest.TestCase):
                 fmt=">B",
                 info={"info": True},
                 content=b"\x01\x02\x03\x04"
-            ), dict(
-                format_name="format",
-                name="name",
-                info={"info": True},
-                start_byte=1,
-                end_byte=5,
-                expected=4,
-                finite=True,
-                may_be_empty=False,
-                fmt=">B",
-                bytesize=1,
-                content=b"\x01\x02\x03\x04",
-                words_count=4,
-            ), 1, 5, Field
+            ),
+            slice_=slice(1, 5),
+            class_instance=Field,
+            format_name="format",
+            name="name",
+            info={"info": True},
+            start_byte=1,
+            end_byte=5,
+            expected=4,
+            finite=True,
+            may_be_empty=False,
+            fmt=">B",
+            bytesize=1,
+            content=b"\x01\x02\x03\x04",
+            words_count=4,
         )
 
     def test_base_init_infinite(self):
         compare_fields_base(
-            self, Field(
+            self,
+            Field(
                 "format",
                 "name",
                 start_byte=1,
                 expected=-1,
                 fmt=">B",
                 content=b"\x01\x02\x03\x04"
-            ), dict(
-                info={},
-                start_byte=1,
-                end_byte=np.inf,
-                expected=-1,
-                finite=False,
-            ), 1, None, Field
+            ),
+            slice_=slice(1, None),
+            class_instance=Field,
+            info={},
+            start_byte=1,
+            end_byte=np.inf,
+            expected=-1,
+            finite=False,
         )
 
     def test_base_magic_basic(self):
@@ -285,20 +290,21 @@ class TestFieldSingle(unittest.TestCase):
                 fmt=">H",
                 info={"info": True},
                 content=0xfa1c
-            ), dict(
-                format_name="format",
-                name="name",
-                info={"info": True},
-                start_byte=1,
-                end_byte=3,
-                expected=1,
-                finite=True,
-                may_be_empty=False,
-                fmt=">H",
-                bytesize=2,
-                content=b"\xfa\x1c",
-                words_count=1,
-            ), 1, 3, FieldSingle
+            ),
+            slice_=slice(1, 3),
+            class_instance=FieldSingle,
+            format_name="format",
+            name="name",
+            info={"info": True},
+            start_byte=1,
+            end_byte=3,
+            expected=1,
+            finite=True,
+            may_be_empty=False,
+            fmt=">H",
+            bytesize=2,
+            content=b"\xfa\x1c",
+            words_count=1,
         )
 
     def test_unpack(self):
@@ -328,20 +334,21 @@ class TestFieldStatic(unittest.TestCase):
                 fmt=">I",
                 info={"info": True},
                 content=0xfa1c
-            ), dict(
-                format_name="format",
-                name="name",
-                info={"info": True},
-                start_byte=0,
-                end_byte=4,
-                expected=1,
-                finite=True,
-                may_be_empty=False,
-                fmt=">I",
-                bytesize=4,
-                content=b"\x00\x00\xfa\x1c",
-                words_count=1,
-            ), 0, 4, FieldStatic
+            ),
+            slice_=slice(0, 4),
+            class_instance=FieldStatic,
+            format_name="format",
+            name="name",
+            info={"info": True},
+            start_byte=0,
+            end_byte=4,
+            expected=1,
+            finite=True,
+            may_be_empty=False,
+            fmt=">I",
+            bytesize=4,
+            content=b"\x00\x00\xfa\x1c",
+            words_count=1,
         )
 
     def test_set(self):
@@ -372,20 +379,21 @@ class TestFieldAddress(unittest.TestCase):
                 start_byte=0,
                 fmt=">I",
                 info={"info": True}
-            ), dict(
-                format_name="format",
-                name="address",
-                info={"info": True},
-                start_byte=0,
-                end_byte=4,
-                expected=1,
-                finite=True,
-                may_be_empty=False,
-                fmt=">I",
-                bytesize=4,
-                content=b"",
-                words_count=0,
-            ), 0, 4, FieldAddress
+            ),
+            slice_=slice(0, 4),
+            class_instance=FieldAddress,
+            format_name="format",
+            name="address",
+            info={"info": True},
+            start_byte=0,
+            end_byte=4,
+            expected=1,
+            finite=True,
+            may_be_empty=False,
+            fmt=">I",
+            bytesize=4,
+            content=b"",
+            words_count=0,
         )
 
 
@@ -400,20 +408,21 @@ class TestFieldData(unittest.TestCase):
                 expected=2,
                 fmt=">I",
                 info={"info": True}
-            ), dict(
-                format_name="format",
-                name="data",
-                info={"info": True},
-                start_byte=0,
-                end_byte=8,
-                expected=2,
-                finite=True,
-                may_be_empty=True,
-                fmt=">I",
-                bytesize=4,
-                content=b"",
-                words_count=0,
-            ), 0, 8, FieldData
+            ),
+            slice_=slice(0, 8),
+            class_instance=FieldData,
+            format_name="format",
+            name="data",
+            info={"info": True},
+            start_byte=0,
+            end_byte=8,
+            expected=2,
+            finite=True,
+            may_be_empty=True,
+            fmt=">I",
+            bytesize=4,
+            content=b"",
+            words_count=0,
         )
 
 
@@ -439,22 +448,23 @@ class TestFieldDataLength(unittest.TestCase):
                 start_byte=0,
                 fmt=">H",
                 additive=0,
-            ), dict(
-                format_name="format",
-                name="data_length",
-                info={},
-                start_byte=0,
-                end_byte=2,
-                expected=1,
-                finite=True,
-                may_be_empty=False,
-                fmt=">H",
-                bytesize=2,
-                content=b"",
-                words_count=0,
-                units=0x10,
-                additive=0,
-            ), 0, 2, FieldDataLength
+            ),
+            slice_=slice(0, 2),
+            class_instance=FieldDataLength,
+            format_name="format",
+            name="data_length",
+            info={},
+            start_byte=0,
+            end_byte=2,
+            expected=1,
+            finite=True,
+            may_be_empty=False,
+            fmt=">H",
+            bytesize=2,
+            content=b"",
+            words_count=0,
+            units=0x10,
+            additive=0,
         )
 
     def test_base_init_other(self):
@@ -466,22 +476,23 @@ class TestFieldDataLength(unittest.TestCase):
                 fmt=">H",
                 units=0x11,
                 additive=10,
-            ), dict(
-                format_name="format",
-                name="data_length",
-                info={},
-                start_byte=0,
-                end_byte=2,
-                expected=1,
-                finite=True,
-                may_be_empty=False,
-                fmt=">H",
-                bytesize=2,
-                content=b"",
-                words_count=0,
-                units=0x11,
-                additive=10,
-            ), 0, 2, FieldDataLength
+            ),
+            slice_=slice(0, 2),
+            class_instance=FieldDataLength,
+            format_name="format",
+            name="data_length",
+            info={},
+            start_byte=0,
+            end_byte=2,
+            expected=1,
+            finite=True,
+            may_be_empty=False,
+            fmt=">H",
+            bytesize=2,
+            content=b"",
+            words_count=0,
+            units=0x11,
+            additive=10,
         )
 
     def test_init_wrong_oper_core(self):
@@ -543,24 +554,25 @@ class TestFieldOperation(unittest.TestCase):
                 start_byte=0,
                 fmt=">H",
                 content=1
-            ), dict(
-                format_name="format",
-                name="operation",
-                info={},
-                start_byte=0,
-                end_byte=2,
-                expected=1,
-                finite=True,
-                may_be_empty=False,
-                fmt=">H",
-                bytesize=2,
-                content=b"\x00\x01",
-                words_count=1,
-                base="w",
-                desc="w",
-                desc_dict={'r': 0, 'w': 1, 'e': 2},
-                desc_dict_rev={0: 'r', 1: 'w', 2: 'e'},
-            ), 0, 2, FieldOperation
+            ),
+            slice_=slice(0, 2),
+            class_instance=FieldOperation,
+            format_name="format",
+            name="operation",
+            info={},
+            start_byte=0,
+            end_byte=2,
+            expected=1,
+            finite=True,
+            may_be_empty=False,
+            fmt=">H",
+            bytesize=2,
+            content=b"\x00\x01",
+            words_count=1,
+            base="w",
+            desc="w",
+            desc_dict={'r': 0, 'w': 1, 'e': 2},
+            desc_dict_rev={0: 'r', 1: 'w', 2: 'e'},
         )
 
     def test_base_init_custom_desc_dict(self):
@@ -572,14 +584,16 @@ class TestFieldOperation(unittest.TestCase):
                 desc_dict={"r1": 0x2, "r2": 0xf1, "w1": 0xf}
             )
         compare_fields_base(
-            self, tf, dict(
-                content=b"\x00\x0f",
-                words_count=1,
-                base="w",
-                desc="w1",
-                desc_dict={"r1": 0x2, "r2": 0xf1, "w1": 0x0f},
-                desc_dict_rev={0x2: "r1", 0xf1: "r2", 0x0f: "w1"},
-            ), 0, 2, FieldOperation
+            self,
+            tf,
+            slice_=slice(0, 2),
+            class_instance=FieldOperation,
+            content=b"\x00\x0f",
+            words_count=1,
+            base="w",
+            desc="w1",
+            desc_dict={"r1": 0x2, "r2": 0xf1, "w1": 0x0f},
+            desc_dict_rev={0x2: "r1", 0xf1: "r2", 0x0f: "w1"},
         )
         tf.set("r2")
         self.assertEqual(0xf1, tf.unpack())
