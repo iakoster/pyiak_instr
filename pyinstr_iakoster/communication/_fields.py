@@ -499,39 +499,6 @@ class FieldSingle(Field):
             may_be_empty=may_be_empty
         )
 
-    # def unpack(self, fmt: str = None) -> int | float | None:
-    #     """
-    #     Returns the content of the field unpacked in fmt.
-    #
-    #     Parameters
-    #     ----------
-    #     fmt: str
-    #         format for unpacking. If None, fmt is taken from
-    #         an instance of the class.
-    #
-    #     Returns
-    #     -------
-    #     int, float or None
-    #         unpacked value or none if content is empty
-    #     """
-    #     unpacked = Field.unpack(self, fmt=fmt)
-    #     return unpacked[0] if len(unpacked) else None
-
-    # def __iter__(self):
-    #     """
-    #     Yield one word unpacked in fmt.
-    #
-    #     Yields
-    #     ------
-    #     int or float
-    #         unpacked word.
-    #     """
-    #     for word in Field.unpack(self):
-    #         yield word
-    #
-    # def __getitem__(self, word_index: int | slice) -> None:
-    #     raise AttributeError("disallowed inherited")
-
 
 class FieldStatic(FieldSingle):
     """
@@ -1021,10 +988,27 @@ class FieldOperation(FieldSingle):
 
 @runtime_checkable
 class MessageType(Protocol):
-    address: FieldAddress
-    data: FieldData
-    data_length: FieldDataLength
-    operation: FieldOperation
+
+    @property
+    def address(self) -> FieldAddress:
+        return FieldAddress("", start_byte=0, fmt="i")
+
+    @property
+    def data(self) -> FieldData:
+        return FieldData(
+            "",
+            start_byte=0,
+            expected=-1,
+            fmt="i"
+        )
+
+    @property
+    def data_length(self) -> FieldDataLength:
+        return FieldDataLength("", start_byte=0, fmt="i")
+
+    @property
+    def operation(self):
+        return FieldOperation("", start_byte=0, fmt="i")
 
 
 Fields = (

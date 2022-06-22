@@ -219,6 +219,14 @@ class TestField(unittest.TestCase):
         self.tf.set(b"")
         self.assertEqual(b"", self.tf.content)
 
+    def test_set_not_supported(self):
+        with self.assertRaises(TypeError) as exc:
+            self.tf.set(type)
+        self.assertEqual(
+            "cannot convert 'type' object to bytes",
+            exc.exception.args[0]
+        )
+
     def test_extract_from(self):
         tf = Field(
             "format",

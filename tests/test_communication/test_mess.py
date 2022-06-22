@@ -520,3 +520,40 @@ class TestMessage(unittest.TestCase):
         self.assertEqual(b"\xee\xee", msg_1.data.content)
         self.assertEqual(-1, msg_1.data.expected)
         self.assertEqual(2, msg_1.data_length.unpack())
+
+
+class TestFields(unittest.TestCase):
+
+    def test_data_length_unpdate(self):
+        msg: Message = Message(format_name="not_def").configure(
+            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            response=FieldSetter.single(fmt=">B"),
+            address=FieldSetter.address(fmt=">H"),
+            operation=FieldSetter.operation(fmt=">B"),
+            data_length=FieldSetter.data_length(fmt=">B"),
+            data=FieldSetter.data(expected=1, fmt=">I"),
+            crc=FieldSetter.base(expected=1, fmt=">H"),
+        )
+        msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x04\xff\xff\xf1\xfe\xee\xdd")
+        dlen = FieldDataLength("def", start_byte=0, fmt=">H")
+        self.assertListEqual([], list(dlen.unpack()))
+        dlen.update(msg)
+        self.assertListEqual([4], list(dlen.unpack()))
+
+    def test_operation_compare(self):
+        msg: Message = Message(format_name="not_def").configure(
+            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            response=FieldSetter.single(fmt=">B"),
+            address=FieldSetter.address(fmt=">H"),
+            operation=FieldSetter.operation(fmt=">B"),
+            data_length=FieldSetter.data_length(fmt=">B"),
+            data=FieldSetter.data(expected=1, fmt=">I"),
+            crc=FieldSetter.base(expected=1, fmt=">H"),
+        )
+        msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x04\xff\xff\xf1\xfe\xee\xdd")
+        oper = FieldOperation("def", start_byte=0, fmt=">H")
+        self.assertFalse(oper.compare(msg))
+        oper.set("w")
+        self.assertTrue(oper.compare(msg))
+        oper.set("r")
+        self.assertFalse(oper.compare(msg))
