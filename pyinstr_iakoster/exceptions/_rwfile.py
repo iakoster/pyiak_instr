@@ -3,7 +3,9 @@ from pathlib import Path
 from ._base import PyiError
 
 
-__all__ = ['FilepathPatternError']
+__all__ = [
+    "FilepathPatternError"
+]
 
 
 class FilepathPatternError(PyiError):

@@ -1,5 +1,12 @@
 import struct
-from typing import Any, Iterable, SupportsBytes, Generator, Protocol, runtime_checkable
+from typing import (
+    Any,
+    Iterable,
+    SupportsBytes,
+    Generator,
+    Protocol,
+    runtime_checkable
+)
 
 import numpy as np
 import numpy.typing as npt
@@ -13,14 +20,14 @@ from ..exceptions import (
 
 __all__ = [
     "Content",
-    "Fields",
     "Field",
-    "FieldSingle",
-    "FieldStatic",
     "FieldAddress",
     "FieldData",
     "FieldDataLength",
     "FieldOperation",
+    "FieldSingle",
+    "FieldStatic",
+    "Fields",
     "FloatWordsCountError",
     "PartialFieldError",
 ]

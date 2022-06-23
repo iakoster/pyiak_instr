@@ -2,7 +2,8 @@ from ._base import PyiError
 
 
 __all__ = [
-    'CompletedWorkError', 'InterruptedWorkError'
+    "CompletedWorkError",
+    "InterruptedWorkError"
 ]
 
 

@@ -2,8 +2,8 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
-from tinydb import TinyDB, Query
-from tinydb.table import Table, Document, QueryLike
+from tinydb import TinyDB
+from tinydb.table import Table, QueryLike
 
 from ._utils import if_str2path, create_dir_if_not_exists, match_filename
 
@@ -11,8 +11,6 @@ from ._utils import if_str2path, create_dir_if_not_exists, match_filename
 __all__ = [
     "RWNoSqlJsonDatabase",
     "RWNoSqlTable",
-    "Query",
-    "Document",
 ]
 
 

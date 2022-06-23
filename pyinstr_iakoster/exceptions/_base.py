@@ -1,12 +1,12 @@
 
 
-__all__ = ['PyiError']
+__all__ = ["PyiError"]
 
 
 class PyiError(Exception):
     """Base class for pyinstr exceptions."""
 
-    def __init__(self, msg=''):
+    def __init__(self, msg=""):
         self.message = msg
         Exception.__init__(self, msg)
 

@@ -5,8 +5,11 @@ import numpy as np
 from ..exceptions import CompletedWorkError, InterruptedWorkError
 
 __all__ = [
-    'NoWork', 'BlankWork', 'Work',
-    'CompletedWorkError', 'InterruptedWorkError'
+    "NoWork",
+    "BlankWork",
+    "Work",
+    "CompletedWorkError",
+    "InterruptedWorkError"
 ]
 
 

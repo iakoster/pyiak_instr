@@ -2,7 +2,8 @@ from typing import Any, Type
 
 
 __all__ = [
-    'DataSpace', 'DataSpaceTemplate'
+    'DataSpace',
+    'DataSpaceTemplate'
 ]
 
 
