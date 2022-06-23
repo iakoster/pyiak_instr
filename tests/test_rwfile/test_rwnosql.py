@@ -1,9 +1,11 @@
 import shutil
 import unittest
 
+from tinydb import Query
+
 from tests.env_vars import DATA_TEST_DIR
 
-from pyinstr_iakoster.rwfile import RWNoSqlJsonDatabase, Query
+from pyinstr_iakoster.rwfile import RWNoSqlJsonDatabase
 
 
 NOSQL_NAME = 'test_nosql.json'
