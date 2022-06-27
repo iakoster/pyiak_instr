@@ -90,7 +90,7 @@ class TestBlankWork(unittest.TestCase):
         work.interrupt(KeyboardInterrupt('test'))
         with self.assertRaises(InterruptedWorkError) as exc:
             work.add_substep('', None)
-        self.assertIsInstance(exc.exception.args[0], KeyboardInterrupt)
+        self.assertIsInstance(exc.exception.args[1], KeyboardInterrupt)
         self.assertEqual(
             'Work was interrupted by KeyboardInterrupt(\'test\')',
             exc.exception.message)

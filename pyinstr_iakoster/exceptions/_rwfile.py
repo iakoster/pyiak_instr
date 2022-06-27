@@ -15,9 +15,12 @@ class FilepathPatternError(PyiError):
 
     def __init__(self, pattern: str, filepath: Path | str):
         PyiError.__init__(
-            self, 'The path does not lead to %r file' % pattern)
+            self,
+            "The path does not lead to %r file" % pattern,
+            pattern,
+            filepath
+        )
         if isinstance(filepath, str):
             filepath = Path(filepath)
         self.filepath = filepath
         self.pattern = pattern
-        self.args = (pattern, filepath)

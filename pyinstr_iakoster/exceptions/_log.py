@@ -15,9 +15,11 @@ class CompletedWorkError(PyiError):
 
     def __init__(self, work_name: str):
         PyiError.__init__(
-            self, 'Work %s is already done' % work_name)
+            self,
+            "Work %s is already done" % work_name,
+            work_name
+        )
         self.work_name = work_name
-        self.args = (work_name,)
 
 
 class InterruptedWorkError(PyiError):
@@ -28,6 +30,8 @@ class InterruptedWorkError(PyiError):
 
     def __init__(self, reason):
         PyiError.__init__(
-            self, 'Work was interrupted by %r' % reason)
+            self,
+            "Work was interrupted by %r" % reason,
+            reason
+        )
         self.reason = reason
-        self.args = (reason,)

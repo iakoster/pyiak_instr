@@ -1,3 +1,4 @@
+from typing import Any
 
 
 __all__ = ["PyiError"]
@@ -6,11 +7,12 @@ __all__ = ["PyiError"]
 class PyiError(Exception):
     """Base class for pyinstr exceptions."""
 
-    def __init__(self, msg=""):
+    def __init__(self, msg="", *args: Any):
         self.message = msg
-        Exception.__init__(self, msg)
+        Exception.__init__(self, msg, *args)
 
     def __repr__(self):
-        return self.message
+        return f"{self.__class__.__name__}: {self.message}"
 
-    __str__ = __repr__
+    def __str__(self):
+        return self.message
