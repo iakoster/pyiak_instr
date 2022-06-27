@@ -15,6 +15,7 @@ from ._mess import (
     NotConfiguredMessageError,
     PartialFieldError,
 )
+from ._pf import PackageFormat
 
 __all__ = [
     "Content",
@@ -31,5 +32,6 @@ __all__ = [
     "Message",
     "MessageContentError",
     "NotConfiguredMessageError",
+    "PackageFormat",
     "PartialFieldError",
 ]

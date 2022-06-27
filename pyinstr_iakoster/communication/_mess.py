@@ -159,11 +159,6 @@ class MessageBase(object):
         "static": FieldStatic,
     }
 
-    # _addr: FieldAddress
-    # _data: FieldData
-    # _dlen: FieldDataLength
-    # _oper: FieldOperation
-
     def __init__(
             self,
             format_name: str = "default",
