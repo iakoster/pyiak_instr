@@ -1,0 +1,90 @@
+import unittest
+
+import numpy as np
+
+from pyinstr_iakoster.utilities import StringConverter
+
+
+class TestStringConverter(unittest.TestCase):
+
+    DATA = dict(
+        empty_str=("/str\t", ""),
+        letter=("/str\ta", "a"),
+        word=("/str\tlol", "lol"),
+        sentence=("/str\tlol kek!!!", "lol kek!!!"),
+        int=("1", 1),
+        float=("5.4321", 5.4321),
+        efloat_small=("5.4321e-99", 5.4321e-99),
+        efloat_large=("5.4321e+99", 5.4321e+99),
+        true=("True", True),
+        false=("False", False),
+        none=("None", None),
+        list_empty=("/lst\t", []),
+        list_diff=(
+            "/lst\ta,1,1.1,1.1e-99,1.1e+99", ["a", 1, 1.1, 1.1e-99, 1.1e+99]
+        ),
+        tuple_empty=("/tpl\t", ()),
+        tuple_diff=(
+            "/tpl\ta,1,1.1,1.1e-99,1.1e+99", ("a", 1, 1.1, 1.1e-99, 1.1e+99)
+        ),
+        dict_empty=("/dct\t", {}),
+        dict_diff=(
+            "/dct\ta,1,1.1,1.1e-99,1.1e+99,1.1e+178",
+            {"a": 1, 1.1: 1.1e-99, 1.1e+99: np.float64(1.1e+178)}
+        ),
+        set_empty=("/set\t", set()),
+        set_int=("/set\t1,2,3", {1, 2, 3}),
+        array_empty=("/npa\t", np.array([])),
+        array_int=("/npa\t1,2", np.array([1, 2])),
+        array_float=("/npa\t1.1,2.2", np.array([1.1, 2.2])),
+        array_efloat=("/npa\t1.1e-99,2.2e+99", np.array([1.1e-99, 2.2e+99]))
+    )
+    DATA_FROM = dict(
+        from_list_with_pars=("/lst len=5\t1,2,3,4,5", [1, 2, 3, 4, 5])
+    )
+    DATA_CHAIN = dict(
+        ch1=("/dct\ta,/v(/dct\t1,1.1)", {"a": {1: 1.1}}),
+        ch2=("/dct\t0,/v(/lst\t),2,/v(/set\t1,2)", {0: [], 2: {1, 2}}),
+        ch3=(
+            "/lst\t0,1.1,/v(/npa\t),/v(/npa\t2),/v(/dct\t)",
+            [0, 1.1, np.array([]), np.array([2]), {}]
+        ),
+        ch4=("/npa\t/v(/npa\t0,1),/v(/npa\t2,3)", np.array([[0, 1], [2, 3]]))
+    )
+
+    def test_to_str(self):
+
+        for name, (true, src) in self.DATA.items():
+            with self.subTest(name=name, true=true):
+                self.assertEqual(
+                    true, StringConverter.to_str(src)
+                )
+        for name, (true, src) in self.DATA_CHAIN.items():
+            with self.subTest(type="chain", name=name, true=true):
+                self.assertEqual(
+                    true, StringConverter.to_str(src)
+                )
+
+    def test_from_str(self):
+
+        def check(result, true_value):
+            if isinstance(result, np.ndarray):
+                self.assertIsInstance(result, np.ndarray)
+                self.assertTrue(np.isclose(true_value, result).all())
+            else:
+                self.assertEqual(true_value, result)
+
+        for name, (src, true) in self.DATA.items():
+            with self.subTest(name=name, true=true):
+                check(StringConverter.from_str(src), true)
+        for name, (src, true) in self.DATA_FROM.items():
+            with self.subTest(name=name, true=true):
+                check(StringConverter.from_str(src), true)
+        for name, (src, true) in self.DATA_CHAIN.items():
+            with self.subTest(type="chain", name=name, true=true):
+                if name in ("ch3",):
+                    self.assertEqual(
+                        str(StringConverter.from_str(src)), str(true)
+                    )
+                else:
+                    check(StringConverter.from_str(src), true)
