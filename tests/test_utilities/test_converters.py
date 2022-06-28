@@ -44,12 +44,16 @@ class TestStringConverter(unittest.TestCase):
     )
     DATA_CHAIN = dict(
         ch1=("/dct\ta,/v(/dct\t1,1.1)", {"a": {1: 1.1}}),
-        ch2=("/dct\t0,/v(/lst\t),2,/v(/set\t1,2)", {0: [], 2: {1, 2}}),
+        ch2=("/dct\t0,/v(/lst\t),2,/v(/set\t1,2)", {0: [], 2: {1, 2}}), # todo add str mark if '0'
         ch3=(
             "/lst\t0,1.1,/v(/npa\t),/v(/npa\t2),/v(/dct\t)",
             [0, 1.1, np.array([]), np.array([2]), {}]
         ),
-        ch4=("/npa\t/v(/npa\t0,1),/v(/npa\t2,3)", np.array([[0, 1], [2, 3]]))
+        ch4=(
+            "/npa\t/v(/npa\t/v(/npa\t0,1),/v(/npa\t2,3)),"
+            "/v(/npa\t/v(/npa\t4,5),/v(/npa\t6,7))",
+            np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]]])
+        )
     )
 
     def test_to_str(self):

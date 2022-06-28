@@ -11,6 +11,7 @@ from ..rwfile import (
     match_filename,
     create_dir_if_not_exists
 )
+from ..utilities import StringConverter
 
 
 __all__ = [
@@ -48,13 +49,13 @@ class PackageFormat(PackageFormatBase):
         msg_sets = pd.DataFrame(columns=["name", "value"])
         for name, value in self._msg_sets.items():
             msg_sets.loc[msg_sets.shape[0]] = [
-                name, ... # todo: converter
+                name, StringConverter.to_str(value)
             ]
 
         setters = pd.DataFrame(columns=["name", "special", "kwargs"])
         for name, setter in self._setters.items():
             setters.loc[setters.shape[0]] = [
-                name, setter.special, ... # todo: converter
+                name, setter.special, StringConverter.to_str(setter.kwargs)
             ]
 
         fmt_name = self._msg_sets["format_name"]
