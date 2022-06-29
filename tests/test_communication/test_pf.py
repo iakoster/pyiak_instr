@@ -77,4 +77,7 @@ class TestPackageFormat(unittest.TestCase):
                 self.assertIn(name, self.pf.setters)
                 w_setter = self.pf.setters[name]
                 self.assertEqual(w_setter.special, r_setter.special)
-                self.assertDictEqual(w_setter.kwargs, r_setter.kwargs)
+                for k, v in w_setter.kwargs.items():
+                    if v is not None:
+                        with self.subTest(type="kwargs", key=k):
+                            self.assertEqual(v, r_setter.kwargs[k])
