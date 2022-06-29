@@ -142,6 +142,16 @@ class FieldSetter(object):
     ):
         return cls(fmt=fmt, desc_dict=desc_dict, info=info)
 
+    def __repr__(self) -> str:
+        cls_name = self.__class__.__name__
+        kwargs = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
+        if len(kwargs):
+            kwargs = ", " + kwargs
+        return f"<{cls_name}(special={self.special}{kwargs})>"
+
+    __str__ = __repr__
+
+
 
 class MessageBase(object):
     """
