@@ -25,21 +25,6 @@ class PackageFormatBase(object):
 
     FILENAME_PATTERN = re.compile("\S+.db$")
 
-    SQL_TYPES = {
-        "format_name": "TEXT",
-        "splittable": "BOOL",
-        "slice_length": "INT",
-        "name": "TEXT",
-        "special": "TEXT",
-        "fmt": "TEXT",
-        "content": "UNSIGNED INT",
-        "may_be_empty": "BOOL",
-        "units": "UNSIGNED INT",
-        "additive": "UNSIGNED INT",
-        "desc_dict": "TEXT",
-        "expected": "INT",
-    }
-
     def __init__(
             self,
             msg_settings: dict[str, Any],
