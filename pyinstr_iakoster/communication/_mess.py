@@ -152,7 +152,6 @@ class FieldSetter(object):
     __str__ = __repr__
 
 
-
 class MessageBase(object):
     """
     Base class of the Message with required methods.

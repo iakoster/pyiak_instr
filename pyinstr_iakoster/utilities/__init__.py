@@ -1,4 +1,4 @@
-from ._converters import StringConverter
+from ._converters import StringEncoder
 from ._nums import (
     num_sign,
     to_base,
@@ -7,7 +7,7 @@ from ._nums import (
 
 
 __all__ = [
-    "StringConverter",
+    "StringEncoder",
     "num_sign",
     "to_base",
     "from_base",

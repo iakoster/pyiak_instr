@@ -46,7 +46,8 @@ class RWSQLite3Simple(object):
         self._autocommit = autocommit
 
     def request(
-            self, request: str,
+            self,
+            request: str,
             many: list[tuple] | tuple = None
     ) -> sqlite3.Cursor:
         """

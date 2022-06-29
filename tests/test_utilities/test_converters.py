@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from pyinstr_iakoster.utilities import StringConverter
+from pyinstr_iakoster.utilities import StringEncoder
 
 
 class TestStringConverter(unittest.TestCase):
@@ -13,10 +13,13 @@ class TestStringConverter(unittest.TestCase):
         word=("lol", "lol"),
         sentence=("lol kek!!!", "lol kek!!!"),
         int=("1", 1),
-        inst_str=("/str\t3", "3"),
+        int_neg=("-1", -1),
+        int_str=("/str\t3", "3"),
         float=("5.4321", 5.4321),
+        float_neg=("-5.4321", -5.4321),
         float_str=("/str\t3.7", "3.7"),
         efloat_small=("5.4321e-99", 5.4321e-99),
+        efloat_small_neg=("-5.4321e-99", -5.4321e-99),
         efloat_int=("/str\t4.321e-107", "4.321e-107"),
         efloat_large=("5.4321e+99", 5.4321e+99),
         true=("True", True),
@@ -52,13 +55,13 @@ class TestStringConverter(unittest.TestCase):
         ch1=("/dct\ta,/v(/dct\t1,1.1)", {"a": {1: 1.1}}),
         ch2=("/dct\t0,/v(/lst\t),2,/v(/set\t1,2)", {0: [], 2: {1, 2}}), # todo add str mark if '0'
         ch3=(
-            "/lst\t0,1.1,/v(/npa\t),/v(/npa\t2),/v(/dct\t)",
-            [0, 1.1, np.array([]), np.array([2]), {}]
+            "/lst\t0,-1.1,/v(/npa\t),/v(/npa\t2),/v(/dct\t)",
+            [0, -1.1, np.array([]), np.array([2]), {}]
         ),
         ch4=(
-            "/npa\t/v(/npa\t/v(/npa\t0,1),/v(/npa\t2,3)),"
+            "/npa\t/v(/npa\t/v(/npa\t0,-1),/v(/npa\t2,3)),"
             "/v(/npa\t/v(/npa\t4,5),/v(/npa\t6,7))",
-            np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]]])
+            np.array([[[0, -1], [2, 3]], [[4, 5], [6, 7]]])
         )
     )
 
@@ -67,12 +70,12 @@ class TestStringConverter(unittest.TestCase):
         for name, (true, src) in self.DATA.items():
             with self.subTest(name=name, true=true):
                 self.assertEqual(
-                    true, StringConverter.to_str(src)
+                    true, StringEncoder.to_str(src)
                 )
         for name, (true, src) in self.DATA_CHAIN.items():
             with self.subTest(type="chain", name=name, true=true):
                 self.assertEqual(
-                    true, StringConverter.to_str(src)
+                    true, StringEncoder.to_str(src)
                 )
 
     def test_from_str(self):
@@ -94,7 +97,7 @@ class TestStringConverter(unittest.TestCase):
             with self.subTest(type="chain", name=name, true=true):
                 if name in ("ch3",):
                     self.assertEqual(
-                        str(StringConverter.from_str(src)), str(true)
+                        str(StringEncoder.from_str(src)), str(true)
                     )
                 else:
-                    check(StringConverter.from_str(src), true)
+                    check(StringEncoder.from_str(src), true)

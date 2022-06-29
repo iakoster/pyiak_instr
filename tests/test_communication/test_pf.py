@@ -67,5 +67,14 @@ class TestPackageFormat(unittest.TestCase):
                 exc.exception.args[0]
             )
 
-    def test_write_pf(self):
+    def test_write_read_pf(self):
         self.pf.write_pf(DATA_TEST_PATH)
+        pf = PackageFormat.read_pf(DATA_TEST_PATH, "def")
+        with self.subTest(type="msg_sets"):
+            self.assertDictEqual(self.pf.msg_settings, pf.msg_settings)
+        for name, r_setter in pf.setters.items():
+            with self.subTest(type="setters", name=name):
+                self.assertIn(name, self.pf.setters)
+                w_setter = self.pf.setters[name]
+                self.assertEqual(w_setter.special, r_setter.special)
+                self.assertDictEqual(w_setter.kwargs, r_setter.kwargs)

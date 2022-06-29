@@ -8,11 +8,11 @@ from ..core import Code
 
 
 __all__ = [
-    "StringConverter",
+    "StringEncoder",
 ]
 
 
-class StringConverter(object):
+class StringEncoder(object):
 
     SINGLE_TYPES = int | float | str | bool | None
     ITERS = dict | list | np.ndarray | set | tuple
@@ -20,9 +20,9 @@ class StringConverter(object):
     DELIMITER = ","
     PARAMETER = "="
 
-    INT = re.compile("^\d+$")
-    FLOAT = re.compile("^\d+\.\d+$")
-    EFLOAT = re.compile("^\d\.\d+[eE][+-]\d+$")
+    INT = re.compile("^[+-]?\d+$")
+    FLOAT = re.compile("^[+-]?\d+\.\d+$")
+    EFLOAT = re.compile("^[+-]?\d\.\d+[eE][+-]\d+$")
 
     SOH = "/"           # start of heading
     STX = "\t"          # start of text
