@@ -56,23 +56,23 @@ class StringConverter(object):
     @classmethod
     def from_str(cls, value: str) -> Any:
         """
-        Convert string value to any type.
+        Decode value from string to any type.
 
-        If there are no templates to convert, then returns
-        the value 'as is' as a string.
+        If conversion is not possible, it returns the string as is.
 
         Parameters
         ----------
         value: str
-            string value.
+            value encoded in the string.
 
         Returns
         -------
         Any
-            Converted value.
+            decoded value.
         """
 
-        def eoh_exists(string: str) -> bool:
+        def soh_exists(string: str) -> bool:
+            """Check that SOH exists in the string."""
             if len(string) < 5 or string[0] != cls.SOH:
                 return False
             if cls.STX not in string:
@@ -80,18 +80,20 @@ class StringConverter(object):
             return string[1:4] in cls.HEADERS
 
         def read_header(string: str):
+            """Read SOH and get code, parameters and clear string."""
             code_ = cls.HEADERS[string[1:4]]
             eoh_pos = string.find(cls.STX)
             assert eoh_pos != -1, "STX not found"
             return code_, {}, string[eoh_pos + 1:]
 
-        def chain_map(string: str):
+        def iterate_by_string(string: str):
+            """Iterate by string"""
             length, i_ch, raw = len(string), 0, ""
             while i_ch < length:
                 ch = string[i_ch]
                 if ch == cls.SOH:
                     assert not len(raw), "raw value not empty"
-                    end = find_value_end(string[i_ch:])
+                    end = find_eov(string[i_ch:])
                     yield cls.from_str(string[i_ch + 3:i_ch + end])
                     i_ch += end + 1
                 elif ch == cls.DELIMITER:
@@ -104,24 +106,27 @@ class StringConverter(object):
             if len(raw) and len(string):
                 yield raw
 
-        def find_value_end(val: str):
-            assert val[:3] == cls.SOV, "SOV not found"
+        def find_eov(string: str):
+            """Find the EOV for the SOV at the beginning of the string."""
+            assert string[:3] == cls.SOV, "SOV not found"
             opened_sov = 1
-            for i_ch in range(3, len(val)):
-                if val[i_ch:i_ch + 3] == cls.SOV:
+            for i_ch in range(3, len(string)):
+                if string[i_ch:i_ch + 3] == cls.SOV:
                     opened_sov += 1
-                elif val[i_ch] == cls.EOV:
+                elif string[i_ch] == cls.EOV:
                     opened_sov -= 1
                 if not opened_sov:
                     return i_ch
             raise ValueError("SOV not closed")
 
         def to_value(val: Any | str) -> Any:
+            """Convert the value from a string (if possible) or
+            return the value as is."""
             if not isinstance(val, str):
                 return val
 
             elif val[:3] == cls.SOV and len(val) < 9:
-                return cls.from_str(val[find_value_end(val)])
+                return cls.from_str(val[find_eov(val)])
 
             elif cls.INT.match(val) is not None:
                 return int(val)
@@ -135,45 +140,44 @@ class StringConverter(object):
             else:
                 return val
 
-        if eoh_exists(value):
+        if soh_exists(value):
             code, pars, value = read_header(value)
             if code is Code.STRING:
                 return value
-            #print(list(map(to_value, chain_map(value))))
-            return cls._CONVERTERS[code](map(to_value, chain_map(value)))
+            return cls._CONVERTERS[code](map(to_value, iterate_by_string(value)))
         return to_value(value)
 
     @classmethod
     def to_str(cls, value: Any) -> str:
         """
-        Convert any value to the string.
-
-        There is a specific rules for converting
-        dict, tuple and list.
+        Encode value to the string.
 
         Parameters
         ----------
         value: Any
-            value for converting.
+            value for ecoding.
 
         Returns
         -------
         str
-            value as str
+            encoded value.
         """
 
         def add_header(code_: Code, string: str, **pars: Any) -> str:
+            """Add header to the string."""
             code_key = cls._HEADERS_R[code_]
             assert not len(pars), "parameters is not supported yet"
             pars = ""
             return "{}{}{}{}{}".format(cls.SOH, code_key, pars, cls.STX, string)
 
         def to_string(val: Any) -> str:
+            """Convert value to string"""
             if isinstance(val, cls.ITERS):
                 return cls.SOV + cls.to_str(val) + cls.EOV
             return str(val)
 
         def prepare_value(val):
+            """Prepare value to encoding and get a Code."""
             if isinstance(val, dict):
                 val = itertools.chain.from_iterable(value.items())
             return cls._TYPES[type(value)], val
