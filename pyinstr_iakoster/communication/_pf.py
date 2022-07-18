@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import sqlalchemy.types as sqlt
 
-from ._mess import FieldSetter, Message
+from ._msg import FieldSetter, Message
 from ..rwfile import (
     RWSQLite3Simple,
     match_filename,

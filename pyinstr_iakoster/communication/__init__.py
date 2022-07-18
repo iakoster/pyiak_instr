@@ -1,4 +1,4 @@
-from ._mess import (
+from ._msg import (
     Content,
     Field,
     FieldAddress,
