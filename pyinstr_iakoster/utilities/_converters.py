@@ -20,9 +20,8 @@ class StringEncoder(object):
     DELIMITER = ","
     PARAMETER = "="
 
-    INT = re.compile("^[+-]?\d+$")
-    FLOAT = re.compile("^[+-]?\d+\.\d+$")
-    EFLOAT = re.compile("^[+-]?\d\.\d+[eE][+-]\d+$")
+    INT = re.compile("^-?\d+$")
+    FLOAT = re.compile("^-?\d\.\d+([eE][+-]\d+)?$")
 
     SOH = "/"           # start of heading
     STX = "\t"          # start of text
@@ -184,17 +183,16 @@ class StringEncoder(object):
     def _to_value(cls, val: Any | str) -> Any:
         """Convert the value from a string (if possible) or
         return the value as is."""
-        if not isinstance(val, str):
+        if not isinstance(val, str) or not len(val):
             return val
 
         elif val[:3] == cls.SOV and len(val) < 9:
-            print(val)
             return cls.from_str(val[3:cls._find_eov(val)])
 
         elif cls.INT.match(val) is not None:
             return int(val)
 
-        elif (cls.FLOAT.match(val) or cls.EFLOAT.match(val)) is not None:
+        elif cls.FLOAT.match(val) is not None:
             return float(val)
 
         elif val in ("True", "False", "None"):

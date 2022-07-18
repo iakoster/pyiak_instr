@@ -20,7 +20,7 @@ class TestStringConverter(unittest.TestCase):
         float_str=("/str\t3.7", "3.7"),
         efloat_small=("5.4321e-99", 5.4321e-99),
         efloat_small_neg=("-5.4321e-99", -5.4321e-99),
-        efloat_int=("/str\t4.321e-107", "4.321e-107"),
+        efloat_str=("/str\t4.321e-107", "4.321e-107"),
         efloat_large=("5.4321e+99", 5.4321e+99),
         true=("True", True),
         true_str=("/str\tTrue", "True"),
@@ -53,7 +53,7 @@ class TestStringConverter(unittest.TestCase):
     )
     DATA_CHAIN = dict(
         ch1=("/dct\ta,/v(/dct\t1,1.1)", {"a": {1: 1.1}}),
-        ch2=("/dct\t0,/v(/lst\t),2,/v(/set\t1,2)", {0: [], 2: {1, 2}}), # todo add str mark if '0'
+        ch2=("/dct\t0,/v(/lst\t),2,/v(/set\t1,2)", {0: [], 2: {1, 2}}), # todo add str mark if '0' (or number)
         ch3=(
             "/lst\t0,-1.1,/v(/npa\t),/v(/npa\t2),/v(/dct\t)",
             [0, -1.1, np.array([]), np.array([2]), {}]
@@ -87,12 +87,12 @@ class TestStringConverter(unittest.TestCase):
             else:
                 self.assertEqual(true_value, result)
 
-        # for name, (src, true) in self.DATA.items():
-        #     with self.subTest(name=name, true=true):
-        #         check(StringConverter.from_str(src), true)
-        # for name, (src, true) in self.DATA_FROM.items():
-        #     with self.subTest(name=name, true=true):
-        #         check(StringConverter.from_str(src), true)
+        for name, (src, true) in self.DATA.items():
+            with self.subTest(name=name, true=true):
+                check(StringEncoder.from_str(src), true)
+        for name, (src, true) in self.DATA_FROM.items():
+            with self.subTest(name=name, true=true):
+                check(StringEncoder.from_str(src), true)
         for name, (src, true) in self.DATA_CHAIN.items():
             with self.subTest(type="chain", name=name, true=true):
                 if name in ("ch3",):
