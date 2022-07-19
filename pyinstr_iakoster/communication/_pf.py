@@ -1,8 +1,4 @@
-import os
-import re
-import sqlite3
 import inspect
-import itertools
 from pathlib import Path
 from typing import Any
 
@@ -15,15 +11,11 @@ from ..rwfile import (
 
 
 __all__ = [
-    "PackageFormat"
+    "MessageFormat"
 ]
 
 
-class PackageFormatBase(object):
-
-    FILENAME_PATTERN = re.compile("\S+.db$")
-    SETTER_CLASS = FieldSetter
-    MESSAGE_CLASS = Message
+class MessageFormat(object):
 
     def __init__(
             self,
@@ -43,39 +35,6 @@ class PackageFormatBase(object):
                 f"not all requared setters were got: %s are missing" %
                 ", ".join(setters_diff)
             )
-
-    @property
-    def msg_args(self) -> list[str]:
-        return list(
-            inspect.getfullargspec(
-                self.MESSAGE_CLASS.__init__
-            ).annotations.keys()
-        )
-
-    @property
-    def message(self) -> dict[str, Any]:
-        return self._message
-
-    @property
-    def setters(self) -> dict[str, FieldSetter]:
-        return self._setters
-
-    @property
-    def fields_args(self) -> list[str]:
-        args = ["name", "special"]
-        for name, method in inspect.getmembers(
-                self.SETTER_CLASS(), predicate=inspect.ismethod
-        ):
-            if "of <class 'pyinstr" not in repr(method):
-                continue
-
-            for par in inspect.getfullargspec(method).annotations.keys():
-                if par not in args:
-                    args.append(par)
-        return args
-
-
-class PackageFormat(PackageFormatBase):
 
     def write_pf(self, path: Path) -> None:
 
@@ -118,3 +77,31 @@ class PackageFormat(PackageFormatBase):
                 setters[name] = FieldSetter(special=special, **field)
 
         return cls(**msg, **setters)
+
+    @property
+    def msg_args(self) -> list[str]:
+        return list(
+            inspect.getfullargspec(self.message.__init__).annotations.keys()
+        )
+
+    @property
+    def message(self) -> dict[str, Any]:
+        return self._message
+
+    @property
+    def setters(self) -> dict[str, FieldSetter]:
+        return self._setters
+
+    @property
+    def fields_args(self) -> list[str]:
+        args = ["name", "special"]
+        for name, method in inspect.getmembers(
+                FieldSetter(), predicate=inspect.ismethod
+        ):
+            if "of <class 'pyinstr" not in repr(method):
+                continue
+
+            for par in inspect.getfullargspec(method).annotations.keys():
+                if par not in args:
+                    args.append(par)
+        return args

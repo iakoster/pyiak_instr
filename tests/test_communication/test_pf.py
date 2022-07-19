@@ -7,7 +7,7 @@ import pandas as pd
 from tests.env_vars import DATA_TEST_DIR
 
 from pyinstr_iakoster.exceptions import FilepathPatternError
-from pyinstr_iakoster.communication import PackageFormat, FieldSetter
+from pyinstr_iakoster.communication import MessageFormat, FieldSetter
 
 
 DATA_TEST_PATH = DATA_TEST_DIR / "test.json"
@@ -16,7 +16,7 @@ DATA_TEST_PATH = DATA_TEST_DIR / "test.json"
 class TestPackageFormat(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.pf = PackageFormat(
+        self.pf = MessageFormat(
             format_name="def",
             splitable=False,
             slice_length=1024,
@@ -71,7 +71,7 @@ class TestPackageFormat(unittest.TestCase):
 
     def test_write_read_pf(self):
         self.pf.write_pf(DATA_TEST_PATH)
-        pf = PackageFormat.read_pf(DATA_TEST_PATH, "def")
+        pf = MessageFormat.read_pf(DATA_TEST_PATH, "def")
         with self.subTest(type="msg_sets"):
             self.assertDictEqual(self.pf.message, pf.message)
         for name, r_setter in pf.setters.items():
