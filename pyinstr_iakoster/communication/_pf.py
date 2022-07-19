@@ -33,13 +33,13 @@ class PackageFormatBase(object):
             self,
             **settings: FieldSetter | Any
     ):
-        self._settings = {}
+        self._message = {}
         self._setters = {}
         for k, v in settings.items():
             if isinstance(v, FieldSetter):
                 self._setters[k] = v
             else:
-                self._settings[k] = v
+                self._message[k] = v
 
         setters_diff = set(self._setters) - set(Message.REQ_FIELDS)
         if len(setters_diff):
@@ -57,8 +57,8 @@ class PackageFormatBase(object):
         )
 
     @property
-    def settings(self) -> dict[str, Any]:
-        return self._settings
+    def message(self) -> dict[str, Any]:
+        return self._message
 
     @property
     def setters(self) -> dict[str, FieldSetter]:
@@ -81,12 +81,12 @@ class PackageFormatBase(object):
 
 class PackageFormat(PackageFormatBase):
 
-    def write_pf(self, path: Path):
+    def write_pf(self, path: Path) -> None:
         match_filename(self.FILENAME_PATTERN, path)
         create_dir_if_not_exists(path)
-        fmt_name = self._settings["format_name"]
+        fmt_name = self._message["format_name"]
 
-        df_setters = self._get_empty_dataframe()
+        df_setters = pd.DataFrame(columns=self.fields_args)
         for i_set, (name, setter) in enumerate(self._setters.items()):
             for par, val in itertools.chain(
                 [("name", name), ("special", setter.special)],
@@ -99,35 +99,32 @@ class PackageFormat(PackageFormatBase):
 
         with sqlite3.connect(path) as con:
             pd.DataFrame(
-                columns=self.msg_args, data=[self._settings.values()]
+                columns=self.msg_args, data=[self._message.values()]
             ).to_sql(
-                f"{fmt_name}__settings",
+                f"{fmt_name}__message",
                 con,
                 if_exists="replace",
                 index=False,
             )
             df_setters.to_sql(
-                f"{fmt_name}__setters",
+                f"{fmt_name}__fields",
                 con,
                 if_exists="replace",
                 index=False
             )
 
-    def _get_empty_dataframe(self) -> pd.DataFrame:
-        return pd.DataFrame(columns=self.fields_args)
-
     @classmethod
-    def read_pf(cls, path: Path, fmt_name: str):
+    def read_pf(cls, path: Path, fmt_name: str) -> None:
 
         if not path.exists():
             raise FileExistsError("file %s not exists" % path)
         match_filename(cls.FILENAME_PATTERN, path)
         with sqlite3.connect(path) as con:
             msg_sets = pd.read_sql(
-                f"SELECT * FROM {fmt_name}__settings;", con
+                f"SELECT * FROM {fmt_name}__message;", con
             ).iloc[0].to_dict()
             df_setters = pd.read_sql(
-                f"SELECT * FROM {fmt_name}__setters;", con
+                f"SELECT * FROM {fmt_name}__fields;", con
             )
 
         setters = {}
