@@ -10,7 +10,7 @@ from pyinstr_iakoster.exceptions import FilepathPatternError
 from pyinstr_iakoster.communication import PackageFormat, FieldSetter
 
 
-DATA_TEST_PATH = DATA_TEST_DIR / "test.db"
+DATA_TEST_PATH = DATA_TEST_DIR / "test.json"
 
 
 class TestPackageFormat(unittest.TestCase):
@@ -65,7 +65,7 @@ class TestPackageFormat(unittest.TestCase):
             with self.assertRaises(FilepathPatternError) as exc:
                 self.pf.write_pf(DATA_TEST_DIR / "test.ini")
             self.assertEqual(
-                r"The path does not lead to '\\S+.db$' file",
+                r"The path does not lead to '\\S+.json$' file",
                 exc.exception.args[0]
             )
 

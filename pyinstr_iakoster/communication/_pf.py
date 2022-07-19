@@ -1,3 +1,4 @@
+import os
 import re
 import sqlite3
 import inspect
@@ -5,17 +6,12 @@ import itertools
 from pathlib import Path
 from typing import Any
 
-import numpy as np
-import pandas as pd
-import sqlalchemy.types as sqlt
+from tinydb.table import Document
 
 from ._msg import FieldSetter, Message
 from ..rwfile import (
-    RWSQLite3Simple,
-    match_filename,
-    create_dir_if_not_exists
+    RWNoSqlJsonDatabase,
 )
-from ..utilities import StringEncoder
 
 
 __all__ = [
@@ -82,61 +78,43 @@ class PackageFormatBase(object):
 class PackageFormat(PackageFormatBase):
 
     def write_pf(self, path: Path) -> None:
-        match_filename(self.FILENAME_PATTERN, path)
-        create_dir_if_not_exists(path)
-        fmt_name = self._message["format_name"]
 
-        df_setters = pd.DataFrame(columns=self.fields_args)
-        for i_set, (name, setter) in enumerate(self._setters.items()):
-            for par, val in itertools.chain(
-                [("name", name), ("special", setter.special)],
-                setter.kwargs.items()
-            ):
-                if isinstance(val, dict):
-                    val = StringEncoder.to_str(val)
-                if val is not None:
-                    df_setters.loc[i_set, par] = val
+        def drop_none(dict_: dict[Any]) -> Any:
+            new_dict = {}
+            for k, v in dict_.items():
+                if v is not None:
+                    new_dict[k] = v
+            return new_dict
 
-        with sqlite3.connect(path) as con:
-            pd.DataFrame(
-                columns=self.msg_args, data=[self._message.values()]
-            ).to_sql(
-                f"{fmt_name}__message",
-                con,
-                if_exists="replace",
-                index=False,
-            )
-            df_setters.to_sql(
-                f"{fmt_name}__fields",
-                con,
-                if_exists="replace",
-                index=False
-            )
+        with RWNoSqlJsonDatabase(path) as db:
+            table = db.table(self._message["format_name"])
+            table.truncate()
+            table.insert(Document(drop_none(self._message), doc_id=-1))
+
+            for i_setter, (name, setter) in enumerate(self.setters.items()):
+                field_pars = {"name": name}
+                if setter.special is not None:
+                    field_pars["special"] = setter.special
+                field_pars.update(drop_none(setter.kwargs))
+                table.insert(Document(field_pars, doc_id=i_setter))
 
     @classmethod
-    def read_pf(cls, path: Path, fmt_name: str) -> None:
+    def read_pf(cls, path: Path, fmt_name: str):
 
-        if not path.exists():
-            raise FileExistsError("file %s not exists" % path)
-        match_filename(cls.FILENAME_PATTERN, path)
-        with sqlite3.connect(path) as con:
-            msg_sets = pd.read_sql(
-                f"SELECT * FROM {fmt_name}__message;", con
-            ).iloc[0].to_dict()
-            df_setters = pd.read_sql(
-                f"SELECT * FROM {fmt_name}__fields;", con
-            )
+        with RWNoSqlJsonDatabase(path) as db:
+            if fmt_name not in db.tables():
+                raise ValueError(
+                    "The format not exists in the database: %s" % fmt_name
+                )
 
-        setters = {}
-        for i_row in range(len(df_setters)):
-            row: pd.Series = df_setters.iloc[i_row]
-            name, special = row["name"], row["special"]
-            row = row.drop(["name", "special"]).dropna()
+            table = db.table(fmt_name)
+            msg = dict(table.get(doc_id=-1))
 
-            str_mask = (row.apply(type) == str)
-            row[str_mask] = row[str_mask].apply(StringEncoder.from_str)
-            setters[name] = FieldSetter(special=special, **row.to_dict())
+            setters = {}
+            for field_id in range(len(table) - 1):
+                field = dict(table.get(doc_id=field_id))
+                name = field.pop("name")
+                special = field.pop("special") if "special" in field else None
+                setters[name] = FieldSetter(special=special, **field)
 
-        return cls(**msg_sets, **setters)
-
-
+        return cls(**msg, **setters)
