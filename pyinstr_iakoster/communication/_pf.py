@@ -1,4 +1,3 @@
-import inspect
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +20,9 @@ class MessageFormat(object):
             self,
             **settings: FieldSetter | Any
     ):
+        if "format_name" not in settings:
+            raise ValueError("format name is not specified")
+
         self._msg_args = {}
         self._setters = {}
         for k, v in settings.items():
@@ -28,6 +30,7 @@ class MessageFormat(object):
                 self._setters[k] = v
             else:
                 self._msg_args[k] = v
+        self._fmt_name = self._msg_args["format_name"]
 
         setters_diff = set(self._setters) - set(Message.REQ_FIELDS)
         if len(setters_diff):
@@ -46,7 +49,7 @@ class MessageFormat(object):
             return new_dict
 
         with RWNoSqlJsonDatabase(path) as db:
-            table = db.table(self._msg_args["format_name"])
+            table = db.table(self._fmt_name)
             table.truncate()
             table.insert(Document(drop_none(self._msg_args), doc_id=-1))
 
@@ -78,6 +81,10 @@ class MessageFormat(object):
                 setters[field.pop("name")] = FieldSetter(**field)
 
         return cls(**msg, **setters)
+
+    @property
+    def format_name(self) -> str:
+        return self._fmt_name
 
     @property
     def msg_args(self) -> dict[str, Any]:
