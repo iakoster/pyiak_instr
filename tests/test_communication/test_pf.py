@@ -63,15 +63,15 @@ class TestPackageFormat(unittest.TestCase):
     def test_write_pf_error(self):
         with self.subTest(type="not database"):
             with self.assertRaises(FilepathPatternError) as exc:
-                self.pf.write_pf(DATA_TEST_DIR / "test.ini")
+                self.pf.write(DATA_TEST_DIR / "test.ini")
             self.assertEqual(
                 r"The path does not lead to '\\S+.json$' file",
                 exc.exception.args[0]
             )
 
     def test_write_read_pf(self):
-        self.pf.write_pf(DATA_TEST_PATH)
-        pf = MessageFormat.read_pf(DATA_TEST_PATH, "def")
+        self.pf.write(DATA_TEST_PATH)
+        pf = MessageFormat.read(DATA_TEST_PATH, "def")
         with self.subTest(type="msg_sets"):
             self.assertDictEqual(self.pf.msg_args, pf.msg_args)
         for name, r_setter in pf.setters.items():

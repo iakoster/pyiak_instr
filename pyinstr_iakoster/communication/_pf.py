@@ -36,7 +36,7 @@ class MessageFormat(object):
                 ", ".join(setters_diff)
             )
 
-    def write_pf(self, path: Path) -> None:
+    def write(self, path: Path) -> None:
 
         def drop_none(dict_: dict[Any]) -> Any:
             new_dict = {}
@@ -57,8 +57,11 @@ class MessageFormat(object):
                 field_pars.update(drop_none(setter.kwargs))
                 table.insert(Document(field_pars, doc_id=i_setter))
 
+    def get(self) -> Message:
+        return Message(**self._msg_args).set(**self._setters)
+
     @classmethod
-    def read_pf(cls, path: Path, fmt_name: str):
+    def read(cls, path: Path, fmt_name: str):
 
         with RWNoSqlJsonDatabase(path) as db:
             if fmt_name not in db.tables():
