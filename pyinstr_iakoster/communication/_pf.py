@@ -21,13 +21,13 @@ class MessageFormat(object):
             self,
             **settings: FieldSetter | Any
     ):
-        self._message = {}
+        self._msg_args = {}
         self._setters = {}
         for k, v in settings.items():
             if isinstance(v, FieldSetter):
                 self._setters[k] = v
             else:
-                self._message[k] = v
+                self._msg_args[k] = v
 
         setters_diff = set(self._setters) - set(Message.REQ_FIELDS)
         if len(setters_diff):
@@ -46,9 +46,9 @@ class MessageFormat(object):
             return new_dict
 
         with RWNoSqlJsonDatabase(path) as db:
-            table = db.table(self._message["format_name"])
+            table = db.table(self._msg_args["format_name"])
             table.truncate()
-            table.insert(Document(drop_none(self._message), doc_id=-1))
+            table.insert(Document(drop_none(self._msg_args), doc_id=-1))
 
             for i_setter, (name, setter) in enumerate(self.setters.items()):
                 field_pars = {"name": name}
@@ -72,15 +72,13 @@ class MessageFormat(object):
             setters = {}
             for field_id in range(len(table) - 1):
                 field = dict(table.get(doc_id=field_id))
-                name = field.pop("name")
-                special = field.pop("special") if "special" in field else None
-                setters[name] = FieldSetter(special=special, **field)
+                setters[field.pop("name")] = FieldSetter(**field)
 
         return cls(**msg, **setters)
 
     @property
-    def message(self) -> dict[str, Any]:
-        return self._message
+    def msg_args(self) -> dict[str, Any]:
+        return self._msg_args
 
     @property
     def setters(self) -> dict[str, FieldSetter]:

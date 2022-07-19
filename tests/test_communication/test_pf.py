@@ -36,7 +36,7 @@ class TestPackageFormat(unittest.TestCase):
         with self.subTest(test="cls_settings"):
             self.assertDictEqual(
                 dict(format_name="def", splitable=False, slice_length=1024),
-                self.pf.message
+                self.pf.msg_args
             )
 
         setters = dict(
@@ -73,7 +73,7 @@ class TestPackageFormat(unittest.TestCase):
         self.pf.write_pf(DATA_TEST_PATH)
         pf = MessageFormat.read_pf(DATA_TEST_PATH, "def")
         with self.subTest(type="msg_sets"):
-            self.assertDictEqual(self.pf.message, pf.message)
+            self.assertDictEqual(self.pf.msg_args, pf.msg_args)
         for name, r_setter in pf.setters.items():
             with self.subTest(type="setters", name=name):
                 self.assertIn(name, self.pf.setters)
