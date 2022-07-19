@@ -79,29 +79,9 @@ class MessageFormat(object):
         return cls(**msg, **setters)
 
     @property
-    def msg_args(self) -> list[str]:
-        return list(
-            inspect.getfullargspec(self.message.__init__).annotations.keys()
-        )
-
-    @property
     def message(self) -> dict[str, Any]:
         return self._message
 
     @property
     def setters(self) -> dict[str, FieldSetter]:
         return self._setters
-
-    @property
-    def fields_args(self) -> list[str]:
-        args = ["name", "special"]
-        for name, method in inspect.getmembers(
-                FieldSetter(), predicate=inspect.ismethod
-        ):
-            if "of <class 'pyinstr" not in repr(method):
-                continue
-
-            for par in inspect.getfullargspec(method).annotations.keys():
-                if par not in args:
-                    args.append(par)
-        return args
