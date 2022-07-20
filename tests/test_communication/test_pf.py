@@ -6,8 +6,11 @@ import pandas as pd
 
 from tests.env_vars import DATA_TEST_DIR
 
-from pyinstr_iakoster.exceptions import FilepathPatternError
-from pyinstr_iakoster.communication import MessageFormat, FieldSetter
+from pyinstr_iakoster.communication import (
+    MessageFormat,
+    FieldSetter,
+    PackageFormat
+)
 
 
 DATA_TEST_PATH = DATA_TEST_DIR / "test.json"
@@ -123,4 +126,36 @@ class TestMessageFormat(unittest.TestCase):
                         )
                         self.assertDictEqual(
                             ref_setter["kwargs"], setter.kwargs
+                        )
+
+
+class TestPackageFormat(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.pf = PackageFormat(
+            asm=get_mf_asm(False),
+            kpm=get_mf_kpm(False)
+        )
+
+    def test_write_read(self):
+        self.pf.write(DATA_TEST_PATH)
+        pf = PackageFormat.read(DATA_TEST_PATH)
+        for name, ref_mf in self.pf.formats.items():
+            mf = pf[name]
+            with self.subTest(name=name):
+                self.assertEqual(ref_mf.msg_args, mf.msg_args)
+
+            with self.subTest(name=name, setter="all"):
+                self.assertEqual(len(ref_mf.setters), len(mf.setters))
+                for (ref_set_name, ref_setter), (set_name, setter) in zip(
+                    ref_mf.setters.items(), mf.setters.items()
+                ):
+                    with self.subTest(name=name, setter=name):
+                        self.assertEqual(name, name)
+                        self.assertEqual(ref_setter.special, setter.special)
+
+                        self.assertDictEqual(
+                            {k: v for k, v in ref_setter.kwargs.items()
+                             if v is not None},
+                            setter.kwargs
                         )

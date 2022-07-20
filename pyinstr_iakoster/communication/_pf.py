@@ -10,7 +10,8 @@ from ..rwfile import (
 
 
 __all__ = [
-    "MessageFormat"
+    "MessageFormat",
+    "PackageFormat",
 ]
 
 
@@ -45,6 +46,11 @@ class MessageFormat(object):
                     new_dict[k] = v
             return new_dict # todo dict comprehetion
 
+        def remove_if_doc_id_exists(doc_id: int) -> None:
+            if format_table.contains(doc_id=doc_id):
+                format_table.remove(doc_ids=(doc_id,))
+
+        remove_if_doc_id_exists(-1)
         format_table.insert(Document(drop_none(self._msg_args), doc_id=-1))
 
         for i_setter, (name, setter) in enumerate(self.setters.items()):
@@ -52,6 +58,7 @@ class MessageFormat(object):
             if setter.special is not None:
                 field_pars["special"] = setter.special
             field_pars.update(drop_none(setter.kwargs))
+            remove_if_doc_id_exists(i_setter)
             format_table.insert(Document(field_pars, doc_id=i_setter))
 
     def get(self) -> Message:
@@ -95,7 +102,7 @@ class PackageFormat(object):
 
     def write(self, database: Path) -> None:
         with RWNoSqlJsonDatabase(database) as db:
-            db.truncate()
+            db.drop_tables()
             for name, format_ in self._formats.items():
                 format_.write(db.table(name))
 
@@ -103,7 +110,15 @@ class PackageFormat(object):
     def read(cls, database: Path):
         formats = {}
         with RWNoSqlJsonDatabase(database) as db:
-            print(db.tables())
+            for table_name in db.tables():
+                table = db.table(table_name)
+                msg_args = table.get(doc_id=-1)
+                setters = {}
+                for i_setter in range(len(table) - 1):
+                    setter_args = table.get(doc_id=i_setter)
+                    name = setter_args.pop("name")
+                    setters[name] = FieldSetter(**setter_args)
+                formats[table_name] = MessageFormat(**msg_args, **setters)
         return cls(**formats)
 
     def get(self, format_name: str) -> Message:
