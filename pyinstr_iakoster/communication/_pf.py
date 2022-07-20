@@ -20,8 +20,6 @@ class MessageFormat(object):
             self,
             **settings: FieldSetter | Any
     ):
-        if "format_name" not in settings:
-            raise ValueError("format name is not specified")
 
         self._msg_args = {}
         self._setters = {}
@@ -30,7 +28,6 @@ class MessageFormat(object):
                 self._setters[k] = v
             else:
                 self._msg_args[k] = v
-        self._fmt_name = self._msg_args["format_name"]
 
         setters_diff = set(self._setters) - set(Message.REQ_FIELDS)
         if len(setters_diff):
@@ -39,26 +36,23 @@ class MessageFormat(object):
                 ", ".join(setters_diff)
             )
 
-    def write(self, path: Path) -> None:
+    def write(self, format_table: RWNoSqlJsonDatabase.table_class) -> None:
 
         def drop_none(dict_: dict[Any]) -> Any:
             new_dict = {}
             for k, v in dict_.items():
                 if v is not None:
                     new_dict[k] = v
-            return new_dict
+            return new_dict # todo dict comprehetion
 
-        with RWNoSqlJsonDatabase(path) as db:
-            table = db.table(self._fmt_name)
-            table.truncate()
-            table.insert(Document(drop_none(self._msg_args), doc_id=-1))
+        format_table.insert(Document(drop_none(self._msg_args), doc_id=-1))
 
-            for i_setter, (name, setter) in enumerate(self.setters.items()):
-                field_pars = {"name": name}
-                if setter.special is not None:
-                    field_pars["special"] = setter.special
-                field_pars.update(drop_none(setter.kwargs))
-                table.insert(Document(field_pars, doc_id=i_setter))
+        for i_setter, (name, setter) in enumerate(self.setters.items()):
+            field_pars = {"name": name}
+            if setter.special is not None:
+                field_pars["special"] = setter.special
+            field_pars.update(drop_none(setter.kwargs))
+            format_table.insert(Document(field_pars, doc_id=i_setter))
 
     def get(self) -> Message:
         return Message(**self._msg_args).set(**self._setters)
@@ -83,13 +77,41 @@ class MessageFormat(object):
         return cls(**msg, **setters)
 
     @property
-    def format_name(self) -> str:
-        return self._fmt_name
-
-    @property
     def msg_args(self) -> dict[str, Any]:
         return self._msg_args
 
     @property
     def setters(self) -> dict[str, FieldSetter]:
         return self._setters
+
+
+class PackageFormat(object):
+
+    def __init__(
+            self,
+            **formats: MessageFormat
+    ):
+        self._formats = formats
+
+    def write(self, database: Path) -> None:
+        with RWNoSqlJsonDatabase(database) as db:
+            db.truncate()
+            for name, format_ in self._formats.items():
+                format_.write(db.table(name))
+
+    @classmethod
+    def read(cls, database: Path):
+        formats = {}
+        with RWNoSqlJsonDatabase(database) as db:
+            print(db.tables())
+        return cls(**formats)
+
+    def get(self, format_name: str) -> Message:
+        return self[format_name].get()
+
+    @property
+    def formats(self) -> dict[str, MessageFormat]:
+        return self._formats
+
+    def __getitem__(self, format_name: str) -> MessageFormat:
+        return self._formats[format_name]
