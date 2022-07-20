@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 
-class MessageFormat(object):
+class MessageFormat(object):  # nodesc
 
     def __init__(
             self,
@@ -97,7 +97,7 @@ class MessageFormat(object):
         return self._setters
 
 
-class PackageFormat(object):
+class PackageFormat(object):  # nodesc
 
     def __init__(
             self,

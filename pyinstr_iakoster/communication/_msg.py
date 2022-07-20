@@ -177,6 +177,8 @@ class MessageBase(object):
         self._fmt_name = format_name
         self._splitable = splitable
         self._slice_length = slice_length
+
+        self._have_infinite = False
         self._fields: dict[str, FieldType] = {}
         self._configured = False
         self._tx, self._rx = None, None
@@ -275,6 +277,14 @@ class MessageBase(object):
             name of the message format.
         """
         return self._fmt_name
+
+    @property
+    def have_infinite(self) -> bool:  # nodesc
+        return self._have_infinite
+
+    @have_infinite.setter
+    def have_infinite(self, value: bool) -> None:  # nodesc
+        self._have_infinite = value
 
     @property
     def operation(self) -> FieldOperation:
@@ -490,15 +500,27 @@ class Message(MessageView):
 
         next_start_byte = 0
         self._fields.clear()
+        footers, infinite = {}, None
+        selected = self._fields
 
         for name, setter in fields.items():
             field = self._get_field(name, next_start_byte, setter)
-            self._fields[name] = field
+            if field.finite:
+                selected[name] = field
+            elif self._have_infinite:
+                raise MessageContentError(
+                    self.__class__.__name__, name, "second infinite field"
+                )
+            else:
+                selected, infinite = footers, field
+                self.have_infinite = True
 
-            if field.expected <= 0:
-                break
             next_start_byte = field.start_byte + \
                 field.expected * field.bytesize
+
+        if self._have_infinite:
+            self._fields[infinite.name] = infinite
+            self._fields.update(footers)
 
         self._configured_fields = fields
         self._configured = True
