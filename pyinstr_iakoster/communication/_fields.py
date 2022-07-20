@@ -27,7 +27,7 @@ __all__ = [
     "FieldOperation",
     "FieldSingle",
     "FieldStatic",
-    "Fields",
+    "FieldType",
     "FloatWordsCountError",
     "PartialFieldError",
 ]
@@ -1018,7 +1018,7 @@ class MessageType(Protocol):
         return FieldOperation("", start_byte=0, fmt="i")
 
 
-Fields = (
+FieldType = (
         Field |
         FieldSingle |
         FieldStatic |

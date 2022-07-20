@@ -7,8 +7,9 @@ import pandas as pd
 from tests.env_vars import DATA_TEST_DIR
 
 from pyinstr_iakoster.communication import (
-    MessageFormat,
     FieldSetter,
+    Message,
+    MessageFormat,
     PackageFormat
 )
 
@@ -159,3 +160,60 @@ class TestPackageFormat(unittest.TestCase):
                              if v is not None},
                             setter.kwargs
                         )
+
+    def test_get_asm_basic(self):
+        asm_msg: Message = Message(
+            format_name="asm", splitable=True
+        ).configure(
+            address=FieldSetter.address(fmt=">I"),
+            data_length=FieldSetter.data_length(
+                fmt=">I", units=FieldSetter.WORDS
+            ),
+            operation=FieldSetter.operation(
+                fmt=">I", desc_dict={"w": 0, "r": 1}
+            ),
+            data=FieldSetter.data(expected=-1, fmt=">I")
+        ).set(
+            address=0x01020304,
+            data_length=2,
+            operation="w",
+            data=[34, 52]
+        )
+        message = self.pf.get("asm").extract(
+            b"\x01\x02\x03\x04\x00\x00\x00\x02\x00\x00\x00\x00"
+            b"\x00\x00\x00\x22\x00\x00\x00\x34"
+        )
+        self.assertEqual(asm_msg.to_bytes(), message.to_bytes())
+        for ref_field, field in zip(asm_msg, message):
+            with self.subTest(ref=ref_field.name):
+                self.assertEqual(ref_field.name, field.name)
+                self.assertEqual(ref_field.content, field.content)
+
+    def test_get_kpm_basic(self):
+        kpm_msg: Message = Message(format_name="kpm").configure(
+            preamble=FieldSetter.static(fmt=">H", content=0xaa55),
+            operation=FieldSetter.operation(
+                fmt=">B", desc_dict={
+                    "wp": 1, "rp": 2, "wn": 3, "rn": 4
+                }
+            ),
+            response=FieldSetter.single(fmt=">B"),
+            address=FieldSetter.address(fmt=">H"),
+            data_length=FieldSetter.data_length(fmt=">H"),
+            data=FieldSetter.data(expected=-1, fmt=">b"),
+            crc=FieldSetter.single(fmt=">H")
+        ).set(
+            operation="wp",
+            response=0,
+            address=0x33,
+            data_length=2,
+            data=[17, 32],
+            crc=32
+        )
+        message = self.pf.get("kpm", data={"fmt": ">b"}).extract(
+            b"\xaa\x55\x01\x00\x00\x33\x00\x02\x11\x20\x00\x20"
+        )
+        self.assertEqual(bytes(kpm_msg), bytes(message))
+        for ref_field, field in zip(kpm_msg, message):
+            self.assertEqual(ref_field.name, field.name)
+            self.assertEqual(ref_field.content, field.content)

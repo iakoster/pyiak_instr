@@ -13,7 +13,7 @@ from ._fields import (
     FieldOperation,
     FieldSingle,
     FieldStatic,
-    Fields,
+    FieldType,
 )
 from ..exceptions import (
     FloatWordsCountError,
@@ -33,7 +33,7 @@ __all__ = [
     "FieldSetter",
     "FieldSingle",
     "FieldStatic",
-    "Fields",
+    "FieldType",
     "FloatWordsCountError",
     "Message",
     "MessageContentError",
@@ -177,7 +177,7 @@ class MessageBase(object):
         self._fmt_name = format_name
         self._splitable = splitable
         self._slice_length = slice_length
-        self._fields: dict[str, Fields] = {}
+        self._fields: dict[str, FieldType] = {}
         self._configured = False
         self._tx, self._rx = None, None
 
