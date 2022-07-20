@@ -1,3 +1,4 @@
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -61,8 +62,12 @@ class MessageFormat(object):
             remove_if_doc_id_exists(i_setter)
             format_table.insert(Document(field_pars, doc_id=i_setter))
 
-    def get(self) -> Message:
-        return Message(**self._msg_args).set(**self._setters)
+    def get(self, **update: dict[str, Any]) -> Message:
+        setters = deepcopy(self._setters)
+        if len(update):
+            for setter_name, fields in update.items():
+                setters[setter_name].kwargs.update(fields)
+        return Message(**self._msg_args).set(**setters)
 
     @classmethod
     def read(cls, path: Path, fmt_name: str):
@@ -106,6 +111,9 @@ class PackageFormat(object):
             for name, format_ in self._formats.items():
                 format_.write(db.table(name))
 
+    def get(self, format_name: str, **update: dict[str, Any]) -> Message:
+        return self[format_name].get(**update)
+
     @classmethod
     def read(cls, database: Path):
         formats = {}
@@ -120,9 +128,6 @@ class PackageFormat(object):
                     setters[name] = FieldSetter(**setter_args)
                 formats[table_name] = MessageFormat(**msg_args, **setters)
         return cls(**formats)
-
-    def get(self, format_name: str) -> Message:
-        return self[format_name].get()
 
     @property
     def formats(self) -> dict[str, MessageFormat]:
