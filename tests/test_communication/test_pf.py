@@ -13,73 +13,114 @@ from pyinstr_iakoster.communication import MessageFormat, FieldSetter
 DATA_TEST_PATH = DATA_TEST_DIR / "test.json"
 
 
-class TestPackageFormat(unittest.TestCase):
+def get_mf_asm(reference: bool = True):
 
-    def setUp(self) -> None:
-        self.pf = MessageFormat(
-            format_name="def",
-            splitable=False,
-            slice_length=1024,
-            preamble=FieldSetter.static(fmt=">H", content=0xaa55),
-            response=FieldSetter.single(fmt=">B"),
-            address=FieldSetter.address(fmt=">I"),
-            data_length=FieldSetter.data_length(
-                fmt=">I", units=FieldSetter.WORDS
+    mf = MessageFormat(
+        format_name="asm",
+        splitable=True,
+        slice_length=1024,
+        address=FieldSetter.address(fmt=">I"),
+        data_length=FieldSetter.data_length(
+            fmt=">I", units=FieldSetter.WORDS
+        ),
+        operation=FieldSetter.operation(
+            fmt=">I", desc_dict={"w": 0, "r": 1}
+        ),
+        data=FieldSetter.data(expected=-1, fmt=">I")
+    )
+
+    if reference:
+        return mf, dict(
+            msg_args=dict(
+                format_name="asm", splitable=True, slice_length=1024
             ),
-            operation=FieldSetter.operation(
-                fmt=">I", desc_dict={"w": 0, "r": 1}
-            ),
-            data=FieldSetter.data(expected=-1, fmt=">I")
+            setters=dict(
+                address=dict(special=None, kwargs=dict(fmt=">I", info=None)),
+                data_length=dict(special=None, kwargs=dict(
+                    fmt=">I", units=0x11, info=None, additive=0,
+                )),
+                operation=dict(special=None, kwargs=dict(
+                    fmt=">I", desc_dict={"w": 0, "r": 1}, info=None
+                )),
+                data=dict(special=None, kwargs=dict(
+                    expected=-1, fmt=">I", info=None
+                ))
+            )
         )
+    return mf
+
+
+def get_mf_kpm(reference: bool = True):
+
+    mf = MessageFormat(
+        format_name="kpm",
+        splitable=False,
+        slice_length=1024,
+        preamble=FieldSetter.static(fmt=">H", content=0xaa55),
+        operation=FieldSetter.operation(
+            fmt=">B", desc_dict={
+                "wp": 1, "rp": 2, "wn": 3, "rn": 4
+            }
+        ),
+        response=FieldSetter.single(fmt=">B"),
+        address=FieldSetter.address(fmt=">H"),
+        data_length=FieldSetter.data_length(fmt=">H"),
+        data=FieldSetter.data(expected=-1, fmt=">f"),
+        crc=FieldSetter.single(fmt=">H")
+    )
+
+    if reference:
+        return mf, dict(
+            msg_args=dict(
+                format_name="kpm", splitable=False, slice_length=1024
+            ),
+            setters=dict(
+                preamble=dict(special="static", kwargs=dict(
+                    fmt=">H", content=0xaa55, info=None
+                )),
+                operation=dict(special=None, kwargs=dict(
+                    fmt=">B",
+                    desc_dict={"wp": 1, "rp": 2, "wn": 3, "rn": 4},
+                    info=None
+                )),
+                response=dict(special="single", kwargs=dict(
+                    fmt=">B", info=None, may_be_empty=False,
+                )),
+                address=dict(special=None, kwargs=dict(fmt=">H", info=None)),
+                data_length=dict(special=None, kwargs=dict(
+                    fmt=">H", units=0x10, info=None, additive=0,
+                )),
+                data=dict(special=None, kwargs=dict(
+                    expected=-1, fmt=">f", info=None
+                )),
+                crc=dict(special="single", kwargs=dict(
+                    fmt=">H", info=None, may_be_empty=False
+                ))
+            )
+        )
+    return mf
+
+
+class TestMessageFormat(unittest.TestCase):
 
     def test_init(self):
-        with self.subTest(test="cls_settings"):
-            self.assertDictEqual(
-                dict(format_name="def", splitable=False, slice_length=1024),
-                self.pf.msg_args
-            )
 
-        setters = dict(
-            preamble=FieldSetter.static(fmt=">H", content=0xaa55),
-            response=FieldSetter.single(fmt=">B"),
-            address=FieldSetter.address(fmt=">I"),
-            data_length=FieldSetter.data_length(
-                fmt=">I", units=FieldSetter.WORDS
-            ),
-            operation=FieldSetter.operation(
-                fmt=">I", desc_dict={"w": 0, "r": 1}
-            ),
-            data=FieldSetter.data(expected=-1, fmt=">I")
-        )
-        for name, setter in setters.items():
-            with self.subTest(test="fields", name=name):
-                self.assertEqual(
-                    setter.special, self.pf.setters[name].special
-                )
-                self.assertDictEqual(
-                    setter.kwargs, self.pf.setters[name].kwargs
-                )
+        for mf, ref_data in (get_mf_asm(), get_mf_kpm()):
+            format_name = mf.msg_args["format_name"]
 
-    def test_write_pf_error(self):
-        with self.subTest(type="not database"):
-            with self.assertRaises(FilepathPatternError) as exc:
-                self.pf.write(DATA_TEST_DIR / "test.ini")
-            self.assertEqual(
-                r"The path does not lead to '\\S+.json$' file",
-                exc.exception.args[0]
-            )
+            with self.subTest(format_name=format_name):
+                self.assertDictEqual(ref_data["msg_args"], mf.msg_args)
 
-    def test_write_read_pf(self):
-        self.pf.write(DATA_TEST_PATH)
-        pf = MessageFormat.read(DATA_TEST_PATH, "def")
-        with self.subTest(type="msg_sets"):
-            self.assertDictEqual(self.pf.msg_args, pf.msg_args)
-        for name, r_setter in pf.setters.items():
-            with self.subTest(type="setters", name=name):
-                self.assertIn(name, self.pf.setters)
-                w_setter = self.pf.setters[name]
-                self.assertEqual(w_setter.special, r_setter.special)
-                for k, v in w_setter.kwargs.items():
-                    if v is not None:
-                        with self.subTest(type="kwargs", key=k):
-                            self.assertEqual(v, r_setter.kwargs[k])
+            with self.subTest(format_name=format_name, setter="all"):
+                self.assertEqual(len(ref_data["setters"]), len(mf.setters))
+                for (ref_name, ref_setter), (name, setter) in zip(
+                    ref_data["setters"].items(), mf.setters.items()
+                ):
+                    with self.subTest(format_name=format_name, setter=name):
+                        self.assertEqual(ref_name, name)
+                        self.assertEqual(
+                            ref_setter["special"], setter.special
+                        )
+                        self.assertDictEqual(
+                            ref_setter["kwargs"], setter.kwargs
+                        )
