@@ -111,6 +111,11 @@ class FieldBase(object):
         """The number of byte in the message from which the field starts."""
         return self._end_byte
 
+    @end_byte.setter
+    def end_byte(self, stop: int | None) -> None: # nodesc
+        self._end_byte = stop
+        self._slice = slice(self._st_byte, stop)
+
     @property
     def expected(self) -> int:
         """The expected count of words."""
@@ -160,6 +165,11 @@ class FieldBase(object):
         """The number of byte in the message from which the field starts."""
         return self._st_byte
 
+    @start_byte.setter
+    def start_byte(self, start: int | None) -> None: # nodesc
+        self._st_byte = start
+        self._slice = slice(start, self._end_byte)
+
     @property
     def words_count(self) -> int:
         """The length of the field in words."""
@@ -174,7 +184,7 @@ class FieldBase(object):
         return len(self._content)
 
 
-class Field(FieldBase):
+class Field(FieldBase):  # todo: content can be setted only by method (not __init__)
     """
     Represents a general field of a Message.
 

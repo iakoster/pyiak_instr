@@ -105,12 +105,14 @@ class TestMessage(unittest.TestCase):
             **attributes: Any
     ):
         for name, val in attributes.items():
-            with self.subTest(name=name):
+            with self.subTest(class_=field.__class__.__name__, name=name):
                 self.assertEqual(val, field.__getattribute__(name))
-        with self.subTest(name="slice"):
+        with self.subTest(class_=field.__class__.__name__, name="slice"):
             self.assertEqual(slice_.start, field.slice.start)
             self.assertEqual(slice_.stop, field.slice.stop)
-        with self.subTest(name="field_class"):
+        with self.subTest(
+                class_=field.__class__.__name__, name="field_class"
+        ):
             self.assertIs(field_class, field.field_class)
 
     def fill_content(self) -> bytes:
@@ -275,6 +277,105 @@ class TestMessage(unittest.TestCase):
             words_count=0,
         )
 
+    def test_configure_middle_infinite(self):
+        msg = Message(format_name="inf").configure(
+            operation=FieldSetter.operation(fmt=">B"),
+            data_length=FieldSetter.data_length(fmt=">B"),
+            data=FieldSetter.data(expected=-1, fmt=">H"),
+            address=FieldSetter.address(fmt=">H"),
+            footer=FieldSetter.single(fmt=">H")
+        ).set(
+            operation=1,
+            data_length=6,
+            data=[1, 23, 4],
+            address=0xaa55,
+            footer=0x42
+        )
+        self.validate_field(
+            msg["operation"],
+            slice(0, 1),
+            FieldOperation,
+            bytesize=1,
+            content=b"\x01",
+            end_byte=1,
+            expected=1,
+            finite=True,
+            fmt=">B",
+            info={},
+            name="operation",
+            format_name="inf",
+            start_byte=0,
+            words_count=1
+        )
+        self.validate_field(
+            msg["data_length"],
+            slice(1, 2),
+            FieldDataLength,
+            bytesize=1,
+            content=b"\x06",
+            end_byte=2,
+            expected=1,
+            finite=True,
+            fmt=">B",
+            info={},
+            name="data_length",
+            format_name="inf",
+            start_byte=1,
+            words_count=1
+        )
+        self.validate_field(
+            msg["data"],
+            slice(2, -4),
+            FieldData,
+            bytesize=2,
+            content=b"\x00\x01\x00\x17\x00\x04",
+            end_byte=-4,
+            expected=-1,
+            finite=False,
+            fmt=">H",
+            info={},
+            name="data",
+            format_name="inf",
+            start_byte=2,
+            words_count=3
+        )
+        self.validate_field(
+            msg["address"],
+            slice(-4, -2),
+            FieldAddress,
+            bytesize=2,
+            content=b"\xaa\x55",
+            end_byte=-2,
+            expected=1,
+            finite=True,
+            fmt=">H",
+            info={},
+            name="address",
+            format_name="inf",
+            start_byte=-4,
+            words_count=1
+        )
+        self.validate_field(
+            msg["footer"],
+            slice(-2, None),
+            FieldSingle,
+            bytesize=2,
+            content=b"\x00\x42",
+            end_byte=None,
+            expected=1,
+            finite=True,
+            fmt=">H",
+            info={},
+            name="footer",
+            format_name="inf",
+            start_byte=-2,
+            words_count=1
+        )
+        self.assertEqual(
+            b"\x01\x06\x00\x01\x00\x17\x00\x04\xaa\x55\x00\x42",
+            msg.to_bytes()
+        )
+
     def test_extract(self):
         msg: Message = Message(format_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
@@ -298,6 +399,36 @@ class TestMessage(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertEqual(content, msg[field].content)
         self.assertEqual("w", msg.operation.desc)
+
+    def test_extract_middle_infinite(self):
+        msg: Message = Message(format_name="not_def").configure(
+            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            response=FieldSetter.single(fmt=">B"),
+            data_length=FieldSetter.data_length(fmt=">B"),
+            data=FieldSetter.data(expected=-1, fmt=">I"),
+            address=FieldSetter.address(fmt=">H"),
+            operation=FieldSetter.operation(fmt=">B"),
+            crc=FieldSetter.base(expected=1, fmt=">H"),
+        )
+        msg.extract(
+            b"\x1a\xa5\x32\x04\xff\xff\xf1\xfexAf3\x01\x55\x00\xee\xdd"
+        )
+        for field, content in dict(
+                preamble=b"\x1a\xa5",
+                response=b"\x32",
+                address=b"\x01\x55",
+                operation=b"\x00",
+                data_length=b"\x04",
+                data=b"\xff\xff\xf1\xfexAf3",
+                crc=b"\xee\xdd",
+        ).items():
+            with self.subTest(field=field):
+                self.assertEqual(content, msg[field].content)
+        self.assertEqual("r", msg.operation.desc)
+        self.assertEqual(
+            b"\x1a\xa5\x32\x04\xff\xff\xf1\xfexAf3\x01\x55\x00\xee\xdd",
+            msg.to_bytes()
+        )
 
     def test_get_instance(self):
         msg: Message = self.msg.get_instance(format_name="def")

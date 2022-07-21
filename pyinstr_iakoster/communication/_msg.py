@@ -438,7 +438,7 @@ class MessageView(MessageBase):
         return " ".join(str(field) for field in self if str(field) != "")
 
 
-class Message(MessageView):
+class Message(MessageView): # todo: add parent to the fields
     """
     Represents a message for communication between devices.
 
@@ -476,7 +476,7 @@ class Message(MessageView):
     ):
         ...
 
-    def configure(self, **fields: FieldSetter):
+    def configure(self, **fields: FieldSetter): # todo: add automatic calculate of the data_length
         """
         Configure fields parameters in the message.
 
@@ -498,29 +498,56 @@ class Message(MessageView):
             )
         del fields_diff
 
-        next_start_byte = 0
+        def get_setters():
+            last_name = ""
+            for setter_name, setter_ in fields.items():
+                if self.have_infinite:
+                    break
+                yield setter_name, setter_
+                last_name = setter_name
+
+            if len(last_name) and self.have_infinite:
+                for setter_name, setter_ in list(fields.items())[::-1]:
+                    if setter_name == last_name:
+                        break
+                    yield setter_name, setter_
+
         self._fields.clear()
+        next_start_byte = 0
         footers, infinite = {}, None
         selected = self._fields
 
-        for name, setter in fields.items():
+        for name, setter in get_setters():
             field = self._get_field(name, next_start_byte, setter)
             if field.finite:
                 selected[name] = field
+
+                offset = field.expected * field.bytesize
+                if self._have_infinite:
+                    offset *= -1
+                next_start_byte += offset
+                if self._have_infinite:
+                    field.start_byte = next_start_byte
+                    field.end_byte += offset
+
             elif self._have_infinite:
                 raise MessageContentError(
                     self.__class__.__name__, name, "second infinite field"
                 )
             else:
+                next_start_byte = 0
                 selected, infinite = footers, field
                 self.have_infinite = True
 
-            next_start_byte = field.start_byte + \
-                field.expected * field.bytesize
-
         if self._have_infinite:
             self._fields[infinite.name] = infinite
-            self._fields.update(footers)
+
+            for i_field, (name, field) in enumerate(list(footers.items())[::-1]):
+                if i_field == 0:
+                    infinite.end_byte = field.start_byte
+                elif i_field == len(footers) - 1:
+                    field.end_byte = None
+                self._fields[name] = field
 
         self._configured_fields = fields
         self._configured = True
