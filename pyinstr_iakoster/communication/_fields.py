@@ -63,6 +63,8 @@ class BaseField(object):
         is calculated from the format.
     content: bytes
         field content in bytes.
+    parent: MessageType or None
+        parent message.
     """
 
     def __init__(
@@ -75,7 +77,8 @@ class BaseField(object):
             expected: int,
             may_be_empty: bool,
             fmt: str,
-            content: bytes
+            content: bytes,
+            parent,
     ):
         self._fmt_name = format_name
         self._name = name
@@ -85,6 +88,7 @@ class BaseField(object):
         self._may_be_empty = may_be_empty
         self._fmt = fmt
         self._content = content
+        self._parent = parent
 
         self._word_bsize = struct.calcsize(self._fmt)
         self._fin = expected > 0
@@ -152,6 +156,10 @@ class BaseField(object):
         return self._name
 
     @property
+    def parent(self):
+        return self._parent
+
+    @property
     def slice(self):
         """The range of bytes from the message belonging to the field"""
         return self._slice
@@ -180,7 +188,7 @@ class BaseField(object):
         return len(self._content)
 
 
-class Field(BaseField):  # todo: content can be setted only by method (not __init__)
+class Field(BaseField):
     """
     Represents a general field of a Message.
 
@@ -219,7 +227,8 @@ class Field(BaseField):  # todo: content can be setted only by method (not __ini
             expected: int,
             fmt: str,
             info: dict[str, Any] = None,
-            may_be_empty: bool = False
+            may_be_empty: bool = False,
+            parent=None,
     ):
         if info is None:
             info = {}
@@ -232,7 +241,8 @@ class Field(BaseField):  # todo: content can be setted only by method (not __ini
             expected=expected,
             may_be_empty=may_be_empty,
             fmt=fmt,
-            content=b""
+            content=b"",
+            parent=parent
         )
 
     def set(self, content: Content) -> None:
@@ -472,10 +482,10 @@ class SingleField(Field):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    content: Content, default=b""
-        field content.
     may_be_empty: bool, default=False
         if True then field can be empty in a message.
+    parent: MessageType or None
+        parent message.
 
     Notes
     -----
@@ -495,6 +505,7 @@ class SingleField(Field):
             fmt: str,
             info: dict[str, Any] = None,
             may_be_empty: bool = False,
+            parent=None,
     ):
         Field.__init__(
             self,
@@ -504,7 +515,8 @@ class SingleField(Field):
             expected=1,
             fmt=fmt,
             info=info,
-            may_be_empty=may_be_empty
+            may_be_empty=may_be_empty,
+            parent=parent
         )
 
 
@@ -527,6 +539,8 @@ class StaticField(SingleField):
         is calculated from the format.
     content: Content, default=b""
         field content.
+    parent: MessageType or None
+        parent message.
 
     Notes
     -----
@@ -545,7 +559,8 @@ class StaticField(SingleField):
             start_byte: int,
             fmt: str,
             content: Content,
-            info: dict[str, Any] | None = None
+            info: dict[str, Any] | None = None,
+            parent=None,
     ):
         SingleField.__init__(
             self,
@@ -553,7 +568,8 @@ class StaticField(SingleField):
             name,
             start_byte=start_byte,
             fmt=fmt,
-            info=info
+            info=info,
+            parent=parent
         )
         self.set(content)
 
@@ -585,12 +601,8 @@ class AddressField(SingleField):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    content: Content, default=b""
-        field content.
-
-    Notes
-    -----
-    The __getitem__ method was disallowed because only one word is expected.
+    parent: MessageType or None
+        parent message.
 
     See Also
     --------
@@ -603,7 +615,8 @@ class AddressField(SingleField):
             *,
             start_byte: int,
             fmt: str,
-            info: dict[str, Any] | None = None
+            info: dict[str, Any] | None = None,
+            parent=None,
     ):
         SingleField.__init__(
             self,
@@ -611,7 +624,8 @@ class AddressField(SingleField):
             "address",
             start_byte=start_byte,
             fmt=fmt,
-            info=info
+            info=info,
+            parent=parent
         )
 
 
@@ -630,8 +644,8 @@ class DataField(Field):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    content: Content, default=b""
-        field content.
+    parent: MessageType or None
+        parent message.
 
     See Also
     --------
@@ -645,7 +659,8 @@ class DataField(Field):
             start_byte: int,
             expected: int,
             fmt: str,
-            info: dict[str, Any] | None = None
+            info: dict[str, Any] | None = None,
+            parent=None
     ):
         Field.__init__(
             self,
@@ -655,7 +670,8 @@ class DataField(Field):
             expected=expected,
             fmt=fmt,
             info=info,
-            may_be_empty=True
+            may_be_empty=True,
+            parent=parent
         )
 
     def append(self, content: Content) -> None:
@@ -690,8 +706,8 @@ class DataLengthField(SingleField):
         data length units. Data can be measured in bytes or words.
     additive: int
         additional value to the length of the data.
-    content: Content, default=b""
-        field content.
+    parent: MessageType or None
+        parent message.
 
     Raises
     ------
@@ -700,13 +716,9 @@ class DataLengthField(SingleField):
     ValueError
         if additive value is not integer or negative.
 
-    Notes
-    -----
-    The __getitem__ method was disallowed because only one word is expected.
-
     See Also
     --------
-    FieldSingle: parent class.
+    SingleField: parent class.
     """
 
     BYTES = 0x10
@@ -720,7 +732,8 @@ class DataLengthField(SingleField):
             fmt: str,
             units: int = BYTES,
             additive: int = 0,
-            info: dict[str, Any] | None = None
+            info: dict[str, Any] | None = None,
+            parent=None
     ):
         if units not in (self.BYTES, self.WORDS):
             raise ValueError("invalid units: %d" % units)
@@ -736,7 +749,8 @@ class DataLengthField(SingleField):
             "data_length",
             start_byte=start_byte,
             fmt=fmt,
-            info=info
+            info=info,
+            parent=parent
         )
         self._units = units
         self._add = additive
@@ -768,23 +782,18 @@ class DataLengthField(SingleField):
         else:
             raise ValueError(f"invalid units: {self._units}")
 
-    def update(self, field) -> None:
+    def update(self) -> None:
         """
-        Update data length content via data field.
-
-        Parameters
-        ----------
-        field: DataField or MessageType
-            data field.
+        Update data length content via parent message.
 
         Raises
         ------
         ValueError
             if units not in {BYTES, WORDS}.
         """
-        if isinstance(field, MessageType):
-            field = field.data
-        self.set(self.calculate(field))
+        if self._parent is None:
+            raise ValueError("There is no parent message")
+        self.set(self.calculate(self._parent.data))
 
     @property
     def units(self) -> int:
@@ -827,8 +836,8 @@ class OperationField(SingleField):
     desc_dict: dict of {str, int}, optional
         dictionary of correspondence between the operation base and
         the value in the content.
-    content: Content, default=b""
-        field content.
+    parent: MessageType or None
+        parent message.
 
     Notes
     -----
@@ -854,13 +863,14 @@ class OperationField(SingleField):
             start_byte: int,
             fmt: str,
             desc_dict: dict[str, int] = None,
-            info: dict[str, Any] | None = None
+            info: dict[str, Any] | None = None,
+            parent=None,
     ):
         if desc_dict is None:
             self._desc_dict = {"r": 0, "w": 1, "e": 2}
         else:
             self._desc_dict = desc_dict
-        self._desc_dict_rev = {v: k for k, v in self._desc_dict.items()}
+        self._desc_dict_r = {v: k for k, v in self._desc_dict.items()}
 
         SingleField.__init__(
             self,
@@ -868,16 +878,16 @@ class OperationField(SingleField):
             "operation",
             start_byte=start_byte,
             fmt=fmt,
-            info=info
+            info=info,
+            parent=parent
         )
         self._desc = ""
-        self.update_desc()
 
     def update_desc(self) -> None:
         """Update desc by desc dict where key is a content value."""
         c_value = self.unpack()
         if len(c_value):
-            self._desc = self._desc_dict_rev[c_value[0]]
+            self._desc = self._desc_dict_r[c_value[0]]
         else:
             self._desc = ""
 
@@ -887,7 +897,7 @@ class OperationField(SingleField):
 
         Parameters
         ----------
-        other: str, FieldOperation or MessageType
+        other: str or OperationField or MessageType
             object for comparsion.
 
         Returns
@@ -936,9 +946,9 @@ class OperationField(SingleField):
         return self._desc_dict
 
     @property
-    def desc_dict_rev(self) -> dict[int, str]:
+    def desc_dict_r(self) -> dict[int, str]:
         """Reversed desc_dict."""
-        return self._desc_dict_rev
+        return self._desc_dict_r
 
     def __eq__(self, other) -> bool:
         """

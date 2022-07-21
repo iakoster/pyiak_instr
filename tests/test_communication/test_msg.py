@@ -224,7 +224,7 @@ class TestMessage(unittest.TestCase):
             base="",
             desc="",
             desc_dict={"r": 0, "w": 1, "e": 2},
-            desc_dict_rev={0: "r", 1: "w", 2: "e"},
+            desc_dict_r={0: "r", 1: "w", 2: "e"},
         )
         self.validate_field(
             msg["data_length"],
@@ -668,7 +668,7 @@ class TestFields(unittest.TestCase):
         msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x04\xff\xff\xf1\xfe\xee\xdd")
         dlen = DataLengthField("def", start_byte=0, fmt=">H")
         self.assertListEqual([], list(dlen.unpack()))
-        dlen.update(msg)
+        dlen.set(dlen.calculate(msg.data))
         self.assertListEqual([4], list(dlen.unpack()))
 
     def test_operation_compare(self):

@@ -676,7 +676,7 @@ class Message(MessageView): # todo: add parent to the fields
                     msg.data.set(self.data.content[start:end])
                 else:
                     raise TypeError('Unsuppoted data units')
-                msg.data_length.update(msg.data)
+                msg.data_length.update()
             msg.address.set(
                 self.address[0] + i_part * self._slice_length)
             msg.set_addresses(self._tx, self._rx)
@@ -707,6 +707,7 @@ class Message(MessageView): # todo: add parent to the fields
             return self.REQ_FIELDS[name](
                 self._fmt_name,
                 start_byte=start_byte,
+                parent=self,
                 **setter.kwargs
             )
         return self.SPECIAL_FIELDS.get(setter.special, Field)(
@@ -772,5 +773,5 @@ class Message(MessageView): # todo: add parent to the fields
                 )
 
         self.data.append(other)
-        self.data_length.update(self.data)
+        self.data_length.update()
         return self

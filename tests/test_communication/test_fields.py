@@ -527,17 +527,17 @@ class TestFieldDataLength(unittest.TestCase):
         for i_test, (args, result) in enumerate(zip(init_args, results)):
             with self.subTest(i_test=i_test):
                 tf = self.get_tf(*args)
-                tf.update(tf_data)
+                tf.set(tf.calculate(tf_data))
                 self.assertEqual(
                     result,
                     tf.unpack()
                 )
 
-    def test_update_invalid_units(self):
+    def test_calculate_invalid_units(self):
         tf = self.get_tf(0x10, 0)
         tf._units = 0
         with self.assertRaises(ValueError) as exc:
-            tf.update(self.get_tf_data([0, 1]))
+            tf.calculate(self.get_tf_data([0, 1]))
         self.assertEqual("invalid units: 0", exc.exception.args[0])
 
 
@@ -576,7 +576,7 @@ class TestFieldOperation(unittest.TestCase):
             base="w",
             desc="w",
             desc_dict={'r': 0, 'w': 1, 'e': 2},
-            desc_dict_rev={0: 'r', 1: 'w', 2: 'e'},
+            desc_dict_r={0: 'r', 1: 'w', 2: 'e'},
         )
 
     def test_base_init_custom_desc_dict(self):
@@ -597,7 +597,7 @@ class TestFieldOperation(unittest.TestCase):
             base="w",
             desc="w1",
             desc_dict={"r1": 0x2, "r2": 0xf1, "w1": 0x0f},
-            desc_dict_rev={0x2: "r1", 0xf1: "r2", 0x0f: "w1"},
+            desc_dict_r={0x2: "r1", 0xf1: "r2", 0x0f: "w1"},
         )
         tf.set("r2")
         self.assertEqual(0xf1, tf.unpack())
