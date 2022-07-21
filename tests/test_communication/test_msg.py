@@ -7,12 +7,12 @@ from pyinstr_iakoster.communication import (
     Message,
     FieldSetter,
     Field,
-    FieldSingle,
-    FieldStatic,
-    FieldAddress,
-    FieldData,
-    FieldDataLength,
-    FieldOperation,
+    SingleField,
+    StaticField,
+    AddressField,
+    DataField,
+    DataLengthField,
+    OperationField,
     MessageContentError
 )
 
@@ -161,7 +161,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["preamble"],
             slice(0, 2),
-            FieldStatic,
+            StaticField,
             bytesize=2,
             content=b"\x1a\xa5",
             end_byte=2,
@@ -177,7 +177,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["response"],
             slice(2, 3),
-            FieldSingle,
+            SingleField,
             bytesize=1,
             content=b"",
             end_byte=3,
@@ -193,7 +193,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["address"],
             slice(3, 5),
-            FieldAddress,
+            AddressField,
             bytesize=2,
             content=b"",
             end_byte=5,
@@ -209,7 +209,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["operation"],
             slice(5, 6),
-            FieldOperation,
+            OperationField,
             bytesize=1,
             content=b"",
             end_byte=6,
@@ -229,7 +229,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["data_length"],
             slice(6, 7),
-            FieldDataLength,
+            DataLengthField,
             bytesize=1,
             content=b"",
             end_byte=7,
@@ -247,7 +247,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["data"],
             slice(7, 23),
-            FieldData,
+            DataField,
             bytesize=4,
             content=b"",
             end_byte=23,
@@ -294,7 +294,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["operation"],
             slice(0, 1),
-            FieldOperation,
+            OperationField,
             bytesize=1,
             content=b"\x01",
             end_byte=1,
@@ -310,7 +310,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["data_length"],
             slice(1, 2),
-            FieldDataLength,
+            DataLengthField,
             bytesize=1,
             content=b"\x06",
             end_byte=2,
@@ -326,7 +326,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["data"],
             slice(2, -4),
-            FieldData,
+            DataField,
             bytesize=2,
             content=b"\x00\x01\x00\x17\x00\x04",
             end_byte=-4,
@@ -342,7 +342,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["address"],
             slice(-4, -2),
-            FieldAddress,
+            AddressField,
             bytesize=2,
             content=b"\xaa\x55",
             end_byte=-2,
@@ -358,7 +358,7 @@ class TestMessage(unittest.TestCase):
         self.validate_field(
             msg["footer"],
             slice(-2, None),
-            FieldSingle,
+            SingleField,
             bytesize=2,
             content=b"\x00\x42",
             end_byte=None,
@@ -666,7 +666,7 @@ class TestFields(unittest.TestCase):
             crc=FieldSetter.base(expected=1, fmt=">H"),
         )
         msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x04\xff\xff\xf1\xfe\xee\xdd")
-        dlen = FieldDataLength("def", start_byte=0, fmt=">H")
+        dlen = DataLengthField("def", start_byte=0, fmt=">H")
         self.assertListEqual([], list(dlen.unpack()))
         dlen.update(msg)
         self.assertListEqual([4], list(dlen.unpack()))
@@ -682,7 +682,7 @@ class TestFields(unittest.TestCase):
             crc=FieldSetter.base(expected=1, fmt=">H"),
         )
         msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x04\xff\xff\xf1\xfe\xee\xdd")
-        oper = FieldOperation("def", start_byte=0, fmt=">H")
+        oper = OperationField("def", start_byte=0, fmt=">H")
         self.assertFalse(oper.compare(msg))
         oper.set("w")
         self.assertTrue(oper.compare(msg))

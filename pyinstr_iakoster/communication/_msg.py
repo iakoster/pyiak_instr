@@ -7,12 +7,12 @@ import numpy.typing as npt
 from ._fields import (
     Content,
     Field,
-    FieldAddress,
-    FieldData,
-    FieldDataLength,
-    FieldOperation,
-    FieldSingle,
-    FieldStatic,
+    AddressField,
+    DataField,
+    DataLengthField,
+    OperationField,
+    SingleField,
+    StaticField,
     FieldType,
 )
 from ..exceptions import (
@@ -26,13 +26,13 @@ from ..exceptions import (
 __all__ = [
     "Content",
     "Field",
-    "FieldAddress",
-    "FieldData",
-    "FieldDataLength",
-    "FieldOperation",
+    "AddressField",
+    "DataField",
+    "DataLengthField",
+    "OperationField",
     "FieldSetter",
-    "FieldSingle",
-    "FieldStatic",
+    "SingleField",
+    "StaticField",
     "FieldType",
     "FloatWordsCountError",
     "Message",
@@ -44,8 +44,8 @@ __all__ = [
 
 class FieldSetter(object):
 
-    BYTES = FieldDataLength.BYTES
-    WORDS = FieldDataLength.WORDS
+    BYTES = DataLengthField.BYTES
+    WORDS = DataLengthField.WORDS
 
     def __init__(
             self,
@@ -158,14 +158,14 @@ class MessageBase(object):
     """
 
     REQ_FIELDS = {
-        "address": FieldAddress,
-        "data": FieldData,
-        "data_length": FieldDataLength,
-        "operation": FieldOperation,
+        "address": AddressField,
+        "data": DataField,
+        "data_length": DataLengthField,
+        "operation": OperationField,
     }
     SPECIAL_FIELDS = {
-        "single": FieldSingle,
-        "static": FieldStatic,
+        "single": SingleField,
+        "static": StaticField,
     }
 
     def __init__(
@@ -239,31 +239,31 @@ class MessageBase(object):
         return self
 
     @property
-    def address(self) -> FieldAddress:
+    def address(self) -> AddressField:
         """
         Returns
         -------
-        FieldAddress
+        AddressField
             address field instance.
         """
         return self._fields["address"]
 
     @property
-    def data(self) -> FieldData:
+    def data(self) -> DataField:
         """
         Returns
         -------
-        FieldData
+        DataField
             data field instance.
         """
         return self._fields["data"]
 
     @property
-    def data_length(self) -> FieldDataLength:
+    def data_length(self) -> DataLengthField:
         """
         Returns
         -------
-        FieldDataLength
+        DataLengthField
             data length field instance.
         """
         return self._fields["data_length"]
@@ -287,11 +287,11 @@ class MessageBase(object):
         self._have_infinite = value
 
     @property
-    def operation(self) -> FieldOperation:
+    def operation(self) -> OperationField:
         """
         Returns
         -------
-        FieldOperation
+        OperationField
             operation field instance.
         """
         return self._fields["operation"]
@@ -670,9 +670,9 @@ class Message(MessageView): # todo: add parent to the fields
             elif msg.operation.base == 'w':
                 start = i_part * self._slice_length
                 end = start + data_len
-                if self.data_length.units == FieldDataLength.WORDS:
+                if self.data_length.units == DataLengthField.WORDS:
                     msg.data.set(self.data[start:end])
-                elif self.data_length.units == FieldDataLength.BYTES:
+                elif self.data_length.units == DataLengthField.BYTES:
                     msg.data.set(self.data.content[start:end])
                 else:
                     raise TypeError('Unsuppoted data units')

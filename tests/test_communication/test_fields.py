@@ -5,12 +5,12 @@ import numpy as np
 
 from pyinstr_iakoster.communication import (
     Field,
-    FieldSingle,
-    FieldStatic,
-    FieldAddress,
-    FieldData,
-    FieldDataLength,
-    FieldOperation,
+    SingleField,
+    StaticField,
+    AddressField,
+    DataField,
+    DataLengthField,
+    OperationField,
     FloatWordsCountError,
     PartialFieldError
 )
@@ -286,12 +286,12 @@ class TestField(unittest.TestCase):
 class TestFieldSingle(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.tf = FieldSingle("f", "n", start_byte=0, fmt=">H")
+        self.tf = SingleField("f", "n", start_byte=0, fmt=">H")
 
     def test_base_init(self):
         compare_fields_base(
             self,
-            FieldSingle(
+            SingleField(
                 "format",
                 "name",
                 start_byte=1,
@@ -300,7 +300,7 @@ class TestFieldSingle(unittest.TestCase):
                 content=0xfa1c
             ),
             slice_=slice(1, 3),
-            class_instance=FieldSingle,
+            class_instance=SingleField,
             format_name="format",
             name="name",
             info={"info": True},
@@ -328,14 +328,14 @@ class TestFieldSingle(unittest.TestCase):
 class TestFieldStatic(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.tf = FieldStatic(
+        self.tf = StaticField(
             "f", "n", start_byte=0, fmt=">H", content=0x1234
         )
 
     def test_base_init(self):
         compare_fields_base(
             self,
-            FieldStatic(
+            StaticField(
                 "format",
                 "name",
                 start_byte=0,
@@ -344,7 +344,7 @@ class TestFieldStatic(unittest.TestCase):
                 content=0xfa1c
             ),
             slice_=slice(0, 4),
-            class_instance=FieldStatic,
+            class_instance=StaticField,
             format_name="format",
             name="name",
             info={"info": True},
@@ -382,14 +382,14 @@ class TestFieldAddress(unittest.TestCase):
     def test_base_init(self):
         compare_fields_base(
             self,
-            FieldAddress(
+            AddressField(
                 "format",
                 start_byte=0,
                 fmt=">I",
                 info={"info": True}
             ),
             slice_=slice(0, 4),
-            class_instance=FieldAddress,
+            class_instance=AddressField,
             format_name="format",
             name="address",
             info={"info": True},
@@ -410,7 +410,7 @@ class TestFieldData(unittest.TestCase):
     def test_base_init(self):
         compare_fields_base(
             self,
-            FieldData(
+            DataField(
                 "format",
                 start_byte=0,
                 expected=2,
@@ -418,7 +418,7 @@ class TestFieldData(unittest.TestCase):
                 info={"info": True}
             ),
             slice_=slice(0, 8),
-            class_instance=FieldData,
+            class_instance=DataField,
             format_name="format",
             name="data",
             info={"info": True},
@@ -437,28 +437,28 @@ class TestFieldData(unittest.TestCase):
 class TestFieldDataLength(unittest.TestCase):
 
     @staticmethod
-    def get_tf(units: int, additive: int) -> FieldDataLength:
-        return FieldDataLength(
+    def get_tf(units: int, additive: int) -> DataLengthField:
+        return DataLengthField(
             "f", start_byte=0, fmt=">H", units=units, additive=additive
         )
 
     @staticmethod
     def get_tf_data(content):
-        return FieldData(
+        return DataField(
             "f", start_byte=0, expected=2, fmt=">H", content=content
         )
 
     def test_base_init(self):
         compare_fields_base(
             self,
-            FieldDataLength(
+            DataLengthField(
                 "format",
                 start_byte=0,
                 fmt=">H",
                 additive=0,
             ),
             slice_=slice(0, 2),
-            class_instance=FieldDataLength,
+            class_instance=DataLengthField,
             format_name="format",
             name="data_length",
             info={},
@@ -478,7 +478,7 @@ class TestFieldDataLength(unittest.TestCase):
     def test_base_init_other(self):
         compare_fields_base(
             self,
-            FieldDataLength(
+            DataLengthField(
                 "format",
                 start_byte=0,
                 fmt=">H",
@@ -486,7 +486,7 @@ class TestFieldDataLength(unittest.TestCase):
                 additive=10,
             ),
             slice_=slice(0, 2),
-            class_instance=FieldDataLength,
+            class_instance=DataLengthField,
             format_name="format",
             name="data_length",
             info={},
@@ -505,14 +505,14 @@ class TestFieldDataLength(unittest.TestCase):
 
     def test_init_wrong_oper_core(self):
         with self.assertRaises(ValueError) as exc:
-            FieldDataLength(
+            DataLengthField(
                 "f", start_byte=0, fmt="b", units=0x12
             )
         self.assertEqual("invalid units: 18", exc.exception.args[0])
 
     def test_init_wrong_additive(self):
         with self.assertRaises(ValueError) as exc:
-            FieldDataLength(
+            DataLengthField(
                 "f", start_byte=0, fmt="b", additive=-1
             )
         self.assertEqual(
@@ -523,10 +523,10 @@ class TestFieldDataLength(unittest.TestCase):
     def test_update(self):
         tf_data = self.get_tf_data([0x12, 0x14])
         init_args = (
-            (FieldDataLength.BYTES, 0),
-            (FieldDataLength.BYTES, 4),
-            (FieldDataLength.WORDS, 0),
-            (FieldDataLength.WORDS, 7)
+            (DataLengthField.BYTES, 0),
+            (DataLengthField.BYTES, 4),
+            (DataLengthField.WORDS, 0),
+            (DataLengthField.WORDS, 7)
         )
         results = (4, 8, 2, 9)
         for i_test, (args, result) in enumerate(zip(init_args, results)):
@@ -549,22 +549,22 @@ class TestFieldDataLength(unittest.TestCase):
 class TestFieldOperation(unittest.TestCase):
 
     @staticmethod
-    def get_tf(desc_dict=None) -> FieldOperation:
-        return FieldOperation(
+    def get_tf(desc_dict=None) -> OperationField:
+        return OperationField(
             "f", start_byte=0, fmt=">H", desc_dict=desc_dict
         )
 
     def test_base_init(self):
         compare_fields_base(
             self,
-            FieldOperation(
+            OperationField(
                 "format",
                 start_byte=0,
                 fmt=">H",
                 content=1
             ),
             slice_=slice(0, 2),
-            class_instance=FieldOperation,
+            class_instance=OperationField,
             format_name="format",
             name="operation",
             info={},
@@ -584,7 +584,7 @@ class TestFieldOperation(unittest.TestCase):
         )
 
     def test_base_init_custom_desc_dict(self):
-        tf = FieldOperation(
+        tf = OperationField(
                 "format",
                 start_byte=0,
                 fmt=">H",
@@ -595,7 +595,7 @@ class TestFieldOperation(unittest.TestCase):
             self,
             tf,
             slice_=slice(0, 2),
-            class_instance=FieldOperation,
+            class_instance=OperationField,
             content=b"\x00\x0f",
             words_count=1,
             base="w",

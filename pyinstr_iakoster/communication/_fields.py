@@ -21,12 +21,12 @@ from ..exceptions import (
 __all__ = [
     "Content",
     "Field",
-    "FieldAddress",
-    "FieldData",
-    "FieldDataLength",
-    "FieldOperation",
-    "FieldSingle",
-    "FieldStatic",
+    "AddressField",
+    "DataField",
+    "DataLengthField",
+    "OperationField",
+    "SingleField",
+    "StaticField",
     "FieldType",
     "FloatWordsCountError",
     "PartialFieldError",
@@ -39,7 +39,7 @@ Content = (
 )
 
 
-class FieldBase(object):
+class BaseField(object):
     """
     Represents a basic class for single field of a Message.
 
@@ -180,7 +180,7 @@ class FieldBase(object):
         return len(self._content)
 
 
-class Field(FieldBase):  # todo: content can be setted only by method (not __init__)
+class Field(BaseField):  # todo: content can be setted only by method (not __init__)
     """
     Represents a general field of a Message.
 
@@ -224,7 +224,7 @@ class Field(FieldBase):  # todo: content can be setted only by method (not __ini
     ):
         if info is None:
             info = {}
-        FieldBase.__init__(
+        BaseField.__init__(
             self,
             format_name,
             name,
@@ -458,7 +458,7 @@ class Field(FieldBase):  # todo: content can be setted only by method (not __ini
         return f"<{self.__class__.__name__}({self_str}, fmt='{self._fmt}')>"
 
 
-class FieldSingle(Field):
+class SingleField(Field):
     """
     Represents a field of a Message with single word.
 
@@ -513,7 +513,7 @@ class FieldSingle(Field):
         )
 
 
-class FieldStatic(FieldSingle):
+class StaticField(SingleField):
     """
     Represents a field of a Message with static single word (e.g. preamble).
 
@@ -552,7 +552,7 @@ class FieldStatic(FieldSingle):
             content: Content,
             info: dict[str, Any] | None = None
     ):
-        FieldSingle.__init__(
+        SingleField.__init__(
             self,
             format_name,
             name,
@@ -575,7 +575,7 @@ class FieldStatic(FieldSingle):
             self._content = self._validate_content(content)
 
 
-class FieldAddress(FieldSingle):
+class AddressField(SingleField):
     """
     Represents a field of a Message with address.
 
@@ -611,7 +611,7 @@ class FieldAddress(FieldSingle):
             content: Content = b"",
             info: dict[str, Any] | None = None
     ):
-        FieldSingle.__init__(
+        SingleField.__init__(
             self,
             format_name,
             "address",
@@ -622,7 +622,7 @@ class FieldAddress(FieldSingle):
         )
 
 
-class FieldData(Field):
+class DataField(Field):
     """
     Represents a field of a Message with data.
 
@@ -680,7 +680,7 @@ class FieldData(Field):
             self._exp = exp
 
 
-class FieldDataLength(FieldSingle):
+class DataLengthField(SingleField):
     """
     Represents a field of a Message with data length.
 
@@ -740,7 +740,7 @@ class FieldDataLength(FieldSingle):
                 f"got {additive}"
             )
 
-        FieldSingle.__init__(
+        SingleField.__init__(
             self,
             format_name,
             "data_length",
@@ -752,13 +752,13 @@ class FieldDataLength(FieldSingle):
         self._units = units
         self._add = additive
 
-    def calculate(self, data: FieldData) -> int:
+    def calculate(self, data: DataField) -> int:
         """
         Calculate data length via data field.
 
         Parameters
         ----------
-        data: FieldData
+        data: DataField
             data field.
 
         Returns
@@ -785,7 +785,7 @@ class FieldDataLength(FieldSingle):
 
         Parameters
         ----------
-        field: FieldData or MessageType
+        field: DataField or MessageType
             data field.
 
         Raises
@@ -808,7 +808,7 @@ class FieldDataLength(FieldSingle):
         return self._add
 
 
-class FieldOperation(FieldSingle):
+class OperationField(SingleField):
     """
     Represents a field of a Message with operation (e.g. read).
 
@@ -879,7 +879,7 @@ class FieldOperation(FieldSingle):
         else:
             c_value = content
 
-        FieldSingle.__init__(
+        SingleField.__init__(
             self,
             format_name,
             "operation",
@@ -920,7 +920,7 @@ class FieldOperation(FieldSingle):
         """
         if isinstance(other, str):
             base = other[0]
-        elif isinstance(other, FieldOperation):
+        elif isinstance(other, OperationField):
             base = other.base
         elif isinstance(other, MessageType):
             base = other.operation.base
@@ -934,7 +934,7 @@ class FieldOperation(FieldSingle):
             c_value = self._desc_dict[content]
         else:
             c_value = content
-        FieldSingle.set(self, c_value)
+        SingleField.set(self, c_value)
         self.update_desc()
 
     @property
@@ -1003,12 +1003,12 @@ class FieldOperation(FieldSingle):
 class MessageType(Protocol):
 
     @property
-    def address(self) -> FieldAddress:
-        return FieldAddress("", start_byte=0, fmt="i")
+    def address(self) -> AddressField:
+        return AddressField("", start_byte=0, fmt="i")
 
     @property
-    def data(self) -> FieldData:
-        return FieldData(
+    def data(self) -> DataField:
+        return DataField(
             "",
             start_byte=0,
             expected=-1,
@@ -1016,21 +1016,21 @@ class MessageType(Protocol):
         )
 
     @property
-    def data_length(self) -> FieldDataLength:
-        return FieldDataLength("", start_byte=0, fmt="i")
+    def data_length(self) -> DataLengthField:
+        return DataLengthField("", start_byte=0, fmt="i")
 
     @property
     def operation(self):
-        return FieldOperation("", start_byte=0, fmt="i")
+        return OperationField("", start_byte=0, fmt="i")
 
 
 FieldType = (
         Field |
-        FieldSingle |
-        FieldStatic |
-        FieldAddress |
-        FieldData |
-        FieldDataLength |
-        FieldOperation
+        SingleField |
+        StaticField |
+        AddressField |
+        DataField |
+        DataLengthField |
+        OperationField
 )
 
