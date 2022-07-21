@@ -104,6 +104,8 @@ class PackageFormat(object):  # nodesc
             **formats: MessageFormat
     ):
         self._formats = formats
+        for name, mf in self._formats.items():
+            self._formats[name].msg_args["format_name"] = name
 
     def write(self, database: Path) -> None:
         with RWNoSqlJsonDatabase(database) as db:
