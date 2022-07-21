@@ -87,14 +87,10 @@ class FieldBase(object):
         self._content = content
 
         self._word_bsize = struct.calcsize(self._fmt)
-        if expected > 0:
-            self._fin = True
-            self._end_byte = start_byte + self._word_bsize * expected
-            self._slice = slice(start_byte, self._end_byte)
-        else:
-            self._fin = False
-            self._end_byte = np.inf
-            self._slice = slice(start_byte, None)
+        self._fin = expected > 0
+        self._end_byte = start_byte + self._word_bsize * expected \
+            if self._fin else None
+        self._slice = slice(start_byte, self._end_byte)
 
     @property
     def bytesize(self) -> int:
@@ -107,7 +103,7 @@ class FieldBase(object):
         return self._content
 
     @property
-    def end_byte(self) -> int | float:
+    def end_byte(self) -> int | None:
         """The number of byte in the message from which the field starts."""
         return self._end_byte
 

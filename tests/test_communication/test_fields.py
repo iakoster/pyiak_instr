@@ -85,7 +85,7 @@ class TestField(unittest.TestCase):
             class_instance=Field,
             info={},
             start_byte=1,
-            end_byte=np.inf,
+            end_byte=None,
             expected=-1,
             finite=False,
         )
