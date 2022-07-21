@@ -545,7 +545,7 @@ class Message(MessageView): # todo: add parent to the fields
             for i_field, (name, field) in enumerate(list(footers.items())[::-1]):
                 if i_field == 0:
                     infinite.end_byte = field.start_byte
-                elif i_field == len(footers) - 1:
+                if i_field == len(footers) - 1:
                     field.end_byte = None
                 self._fields[name] = field
 
