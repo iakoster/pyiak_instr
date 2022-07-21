@@ -211,7 +211,6 @@ class TestPackageFormat(unittest.TestCase):
             crc=32
         )
         message = self.pf.get("kpm", data={"fmt": ">b"})
-        print(repr(message["crc"].slice))
         message.extract(
             b"\xaa\x55\x01\x00\x00\x33\x00\x02\x11\x20\x00\x20"
         )

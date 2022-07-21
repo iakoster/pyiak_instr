@@ -51,8 +51,7 @@ class TestField(unittest.TestCase):
                 start_byte=1,
                 expected=4,
                 fmt=">B",
-                info={"info": True},
-                content=b"\x01\x02\x03\x04"
+                info={"info": True}
             ),
             slice_=slice(1, 5),
             class_instance=Field,
@@ -66,8 +65,7 @@ class TestField(unittest.TestCase):
             may_be_empty=False,
             fmt=">B",
             bytesize=1,
-            content=b"\x01\x02\x03\x04",
-            words_count=4,
+            words_count=0,
         )
 
     def test_base_init_infinite(self):
@@ -79,7 +77,6 @@ class TestField(unittest.TestCase):
                 start_byte=1,
                 expected=-1,
                 fmt=">B",
-                content=b"\x01\x02\x03\x04"
             ),
             slice_=slice(1, None),
             class_instance=Field,
@@ -97,8 +94,8 @@ class TestField(unittest.TestCase):
             start_byte=1,
             expected=4,
             fmt=">B",
-            content=b"\x01\x02\x03\x04"
         )
+        tf.set(b"\x01\x02\x03\x04")
         with self.subTest(method="bytes"):
             self.assertEqual(b"\x01\x02\x03\x04", bytes(tf))
         with self.subTest(method="len"):
@@ -128,8 +125,7 @@ class TestField(unittest.TestCase):
                 start_byte=0,
                 expected=2,
                 fmt=">H",
-                content=b"\x01\x02\x03"
-            )
+            ).set(b"\x01\x02\x03")
         self.assertEqual(
             "not integer count of words in the Field (expected 2, got 1.5)",
             exc.exception.args[0]
@@ -143,8 +139,7 @@ class TestField(unittest.TestCase):
                 start_byte=0,
                 expected=3,
                 fmt=">H",
-                content=b"\x01\x02"
-            )
+            ).set(b"\x01\x02")
         self.assertEqual(
             "the Field is incomplete (filled to 0.3)",
             exc.exception.args[0]
@@ -158,8 +153,7 @@ class TestField(unittest.TestCase):
                 start_byte=0,
                 expected=3,
                 fmt=">H",
-                content=b"\x01\x02" * 5
-            )
+            ).set(b"\x01\x02" * 5)
         self.assertEqual(
             "the Field is incomplete (filled to 1.7)",
             exc.exception.args[0]
@@ -297,7 +291,6 @@ class TestFieldSingle(unittest.TestCase):
                 start_byte=1,
                 fmt=">H",
                 info={"info": True},
-                content=0xfa1c
             ),
             slice_=slice(1, 3),
             class_instance=SingleField,
@@ -311,8 +304,8 @@ class TestFieldSingle(unittest.TestCase):
             may_be_empty=False,
             fmt=">H",
             bytesize=2,
-            content=b"\xfa\x1c",
-            words_count=1,
+            content=b"",
+            words_count=0,
         )
 
     def test_unpack(self):
@@ -444,9 +437,11 @@ class TestFieldDataLength(unittest.TestCase):
 
     @staticmethod
     def get_tf_data(content):
-        return DataField(
-            "f", start_byte=0, expected=2, fmt=">H", content=content
+        tf = DataField(
+            "f", start_byte=0, expected=2, fmt=">H"
         )
+        tf.set(content)
+        return tf
 
     def test_base_init(self):
         compare_fields_base(
@@ -555,14 +550,15 @@ class TestFieldOperation(unittest.TestCase):
         )
 
     def test_base_init(self):
-        compare_fields_base(
-            self,
-            OperationField(
+        tf = OperationField(
                 "format",
                 start_byte=0,
-                fmt=">H",
-                content=1
-            ),
+                fmt=">H"
+            )
+        tf.set(1)
+        compare_fields_base(
+            self,
+            tf,
             slice_=slice(0, 2),
             class_instance=OperationField,
             format_name="format",
@@ -588,9 +584,9 @@ class TestFieldOperation(unittest.TestCase):
                 "format",
                 start_byte=0,
                 fmt=">H",
-                content="w1",
                 desc_dict={"r1": 0x2, "r2": 0xf1, "w1": 0xf}
             )
+        tf.set("w1")
         compare_fields_base(
             self,
             tf,

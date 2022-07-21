@@ -218,7 +218,6 @@ class Field(BaseField):  # todo: content can be setted only by method (not __ini
             start_byte: int,
             expected: int,
             fmt: str,
-            content: Content = b"",
             info: dict[str, Any] = None,
             may_be_empty: bool = False
     ):
@@ -235,8 +234,6 @@ class Field(BaseField):  # todo: content can be setted only by method (not __ini
             fmt=fmt,
             content=b""
         )
-        if content != b"":
-            self.set(content)
 
     def set(self, content: Content) -> None:
         """
@@ -496,7 +493,6 @@ class SingleField(Field):
             *,
             start_byte: int,
             fmt: str,
-            content: Content = b"",
             info: dict[str, Any] = None,
             may_be_empty: bool = False,
     ):
@@ -507,7 +503,6 @@ class SingleField(Field):
             start_byte=start_byte,
             expected=1,
             fmt=fmt,
-            content=content,
             info=info,
             may_be_empty=may_be_empty
         )
@@ -558,9 +553,9 @@ class StaticField(SingleField):
             name,
             start_byte=start_byte,
             fmt=fmt,
-            content=content,
             info=info
         )
+        self.set(content)
 
     def set(self, content: Content) -> None:
         content = self._convert_content(content)
@@ -608,7 +603,6 @@ class AddressField(SingleField):
             *,
             start_byte: int,
             fmt: str,
-            content: Content = b"",
             info: dict[str, Any] | None = None
     ):
         SingleField.__init__(
@@ -617,7 +611,6 @@ class AddressField(SingleField):
             "address",
             start_byte=start_byte,
             fmt=fmt,
-            content=content,
             info=info
         )
 
@@ -652,7 +645,6 @@ class DataField(Field):
             start_byte: int,
             expected: int,
             fmt: str,
-            content: Content = b"",
             info: dict[str, Any] | None = None
     ):
         Field.__init__(
@@ -662,7 +654,6 @@ class DataField(Field):
             start_byte=start_byte,
             expected=expected,
             fmt=fmt,
-            content=content,
             info=info,
             may_be_empty=True
         )
@@ -727,7 +718,6 @@ class DataLengthField(SingleField):
             *,
             start_byte: int,
             fmt: str,
-            content: Content = b"",
             units: int = BYTES,
             additive: int = 0,
             info: dict[str, Any] | None = None
@@ -746,7 +736,6 @@ class DataLengthField(SingleField):
             "data_length",
             start_byte=start_byte,
             fmt=fmt,
-            content=content,
             info=info
         )
         self._units = units
@@ -865,7 +854,6 @@ class OperationField(SingleField):
             start_byte: int,
             fmt: str,
             desc_dict: dict[str, int] = None,
-            content: Content | str = b"",
             info: dict[str, Any] | None = None
     ):
         if desc_dict is None:
@@ -874,18 +862,12 @@ class OperationField(SingleField):
             self._desc_dict = desc_dict
         self._desc_dict_rev = {v: k for k, v in self._desc_dict.items()}
 
-        if isinstance(content, str):
-            c_value = desc_dict[content]
-        else:
-            c_value = content
-
         SingleField.__init__(
             self,
             format_name,
             "operation",
             start_byte=start_byte,
             fmt=fmt,
-            content=c_value,
             info=info
         )
         self._desc = ""
