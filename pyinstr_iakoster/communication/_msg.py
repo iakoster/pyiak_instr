@@ -71,7 +71,6 @@ class MessageBase(object):
 
         self._have_infinite = False
         self._fields: dict[str, FieldType] = {}
-        self._configured = False
         self._tx, self._rx = None, None
 
         self._kwargs = dict(
@@ -79,7 +78,6 @@ class MessageBase(object):
             splitable=splitable,
             slice_length=slice_length,
         )
-        self._configured_fields: dict[str, FieldSetter] = {}
 
     def clear_addresses(self) -> None:
         """Set addresses to None."""
@@ -172,10 +170,6 @@ class MessageBase(object):
     @property
     def have_infinite(self) -> bool:  # nodesc
         return self._have_infinite
-
-    @have_infinite.setter
-    def have_infinite(self, value: bool) -> None:  # nodesc
-        self._have_infinite = value
 
     @property
     def operation(self) -> OperationField:
@@ -428,7 +422,7 @@ class Message(MessageView): # todo: add parent to the fields
             else:
                 next_start_byte = 0
                 selected, infinite = footers, field
-                self.have_infinite = True
+                self._have_infinite = True
 
         if self._have_infinite:
             self._fields[infinite.name] = infinite
@@ -440,8 +434,6 @@ class Message(MessageView): # todo: add parent to the fields
                     field.end_byte = None
                 self._fields[name] = field
 
-        self._configured_fields = fields
-        self._configured = True
         return self
 
     def extract(self, message: bytes):
@@ -465,7 +457,7 @@ class Message(MessageView): # todo: add parent to the fields
         NotConfiguredMessageError
             if Message has not been configured before.
         """
-        if not self._configured:
+        if not len(self._fields):
             raise NotConfiguredMessageError(self.__class__.__name__)
 
         for field in self._fields.values():
@@ -486,7 +478,7 @@ class Message(MessageView): # todo: add parent to the fields
             new class instance.
         """
         return self.__class__(**self._kwargs) \
-            .configure(**self._configured_fields)
+            .configure(**{n: f.get_setter() for n, f in self._fields.items()})
 
     @overload
     def set(
@@ -518,7 +510,7 @@ class Message(MessageView): # todo: add parent to the fields
         NotConfiguredMessageError
             if Message has not been configured before.
         """
-        if not self._configured:
+        if not len(self._fields):
             raise NotConfiguredMessageError(self.__class__.__name__)
 
         for name, content in fields.items():

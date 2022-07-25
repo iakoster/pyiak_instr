@@ -254,9 +254,18 @@ class Field(BaseField):
             default=b"",
             parent=parent
         )
-        if default != b"":
+        if not isinstance(default, bytes) or len(default):
             self.set(default)
-            self._def = default
+            self._def = self._content
+
+    def get_setter(self): # nodesc
+        return FieldSetter.base(
+            expected=self._exp,
+            fmt=self._fmt,
+            default=self.unpack_default(),
+            info=self._info,
+            may_be_empty=self._may_be_empty
+        )
 
     def set(self, content: ContentType) -> None:
         """
@@ -540,6 +549,14 @@ class SingleField(Field):
             parent=parent
         )
 
+    def get_setter(self): # nodesc
+        return FieldSetter.single(
+            fmt=self._fmt,
+            default=self.unpack_default(),
+            info=self._info,
+            may_be_empty=self._may_be_empty
+        )
+
 
 class StaticField(SingleField):
     """
@@ -594,6 +611,13 @@ class StaticField(SingleField):
         )
         self.set(default)
 
+    def get_setter(self): # nodesc
+        return FieldSetter.static(
+            fmt=self._fmt,
+            default=self.unpack_default(),
+            info=self._info,
+        )
+
     def set(self, content: ContentType) -> None:
         content = self._convert_content(content)
         if content == b"":
@@ -647,6 +671,12 @@ class AddressField(SingleField):
             fmt=fmt,
             info=info,
             parent=parent
+        )
+
+    def get_setter(self): # nodesc
+        return FieldSetter.address(
+            fmt=self._fmt,
+            info=self._info,
         )
 
 
@@ -706,6 +736,13 @@ class DataField(Field):
         )
         if self._exp > 0:
             self._exp = exp
+
+    def get_setter(self): # nodesc
+        return FieldSetter.data(
+            expected=self._exp,
+            fmt=self._fmt,
+            info=self._info,
+        )
 
 
 class DataLengthField(SingleField):
@@ -802,6 +839,14 @@ class DataLengthField(SingleField):
             return data.words_count + self._add
         else:
             raise ValueError(f"invalid units: {self._units}")
+
+    def get_setter(self): # nodesc
+        return FieldSetter.data_length(
+            fmt=self._fmt,
+            units=self._units,
+            additive=self._add,
+            info=self._info,
+        )
 
     def update(self) -> None:
         """
@@ -903,6 +948,13 @@ class OperationField(SingleField):
             parent=parent
         )
         self._desc = ""
+
+    def get_setter(self): # nodesc
+        return FieldSetter.operation(
+            fmt=self._fmt,
+            desc_dict=self._desc_dict,
+            info=self._info,
+        )
 
     def update_desc(self) -> None:
         """Update desc by desc dict where key is a content value."""
