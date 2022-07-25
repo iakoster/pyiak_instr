@@ -70,7 +70,7 @@ def get_mf_kpm(reference: bool = True):
         address=FieldSetter.address(fmt=">H"),
         data_length=FieldSetter.data_length(fmt=">H"),
         data=FieldSetter.data(expected=-1, fmt=">f"),
-        crc=FieldSetter.single(fmt=">H")
+        crc=FieldSetter.crc(fmt=">H")
     )
 
     if reference:
@@ -97,8 +97,8 @@ def get_mf_kpm(reference: bool = True):
                 data=dict(special=None, kwargs=dict(
                     expected=-1, fmt=">f", info=None
                 )),
-                crc=dict(special="single", kwargs=dict(
-                    fmt=">H", default=[], info=None, may_be_empty=False
+                crc=dict(special="crc", kwargs=dict(
+                    fmt=">H", algorithm_name="crc16-CCITT XMODEM", info=None
                 ))
             )
         )
@@ -208,11 +208,11 @@ class TestPackageFormat(unittest.TestCase):
             address=0x33,
             data_length=2,
             data=[17, 32],
-            crc=32
+            crc=0xedbc
         )
         message = self.pf.get("kpm", data={"fmt": ">b"})
         message.extract(
-            b"\xaa\x55\x01\x00\x00\x33\x00\x02\x11\x20\x00\x20"
+            b"\xaa\x55\x01\x00\x00\x33\x00\x02\x11\x20\xed\xbc"
         )
         self.assertEqual(bytes(kpm_msg), bytes(message))
         for ref_field, field in zip(kpm_msg, message):
