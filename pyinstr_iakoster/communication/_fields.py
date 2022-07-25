@@ -305,6 +305,46 @@ class Field(BaseField):
             )
         self.set(message[self._slice])
 
+    def unpack(self, fmt: str = None) -> npt.NDArray:
+        """
+        Returns the content of the field unpacked in fmt.
+
+        Parameters
+        ----------
+        fmt: str
+            format for unpacking. If None, fmt is taken from
+            an instance of the class.
+
+        Returns
+        -------
+        NDArray
+            an array of words
+        """
+        return self._unpack_bytes(self._content, fmt=fmt)
+
+    def unpack_default(self, fmt: str = None) -> npt.NDArray: # nodesc
+        return self._unpack_bytes(self._def, fmt=fmt)
+
+    def hex(self, sep: str = " ", sep_step: int = None) -> str:
+        """
+        Returns a string of hexadecimal numbers from the content.
+
+        Parameters
+        ----------
+        sep: str
+            separator between bytes.
+        sep_step: int
+            separator step. If None equals bytesize.
+
+        Returns
+        -------
+        str
+            hex string.
+        """
+        if sep_step is None:
+            sep_step = self._word_bsize
+        return self._content.hex(sep=sep, bytes_per_sep=sep_step)
+
     def _convert_content(self, content: ContentType) -> bytes:
         """
         Convert content to bytes via `fmt` or `__bytes__`.
@@ -334,6 +374,11 @@ class Field(BaseField):
             converted = bytes(content)
 
         return converted
+
+    def _unpack_bytes(self, bytes_: bytes, fmt: str = None) -> npt.NDArray: # nodesc
+        if fmt is None:
+            fmt = self._fmt
+        return np.frombuffer(bytes_, dtype=fmt)
 
     def _validate_content(
             self, content: bytes = None, exp: int = None
@@ -384,51 +429,6 @@ class Field(BaseField):
             )
 
         return content
-
-    def unpack(self, fmt: str = None) -> npt.NDArray:
-        """
-        Returns the content of the field unpacked in fmt.
-
-        Parameters
-        ----------
-        fmt: str
-            format for unpacking. If None, fmt is taken from
-            an instance of the class.
-
-        Returns
-        -------
-        NDArray
-            an array of words
-        """
-        return self._unpack_bytes(self._content, fmt=fmt)
-
-    def unpack_default(self, fmt: str = None) -> npt.NDArray: # nodesc
-        return self._unpack_bytes(self._def, fmt=fmt)
-
-    def hex(self, sep: str = " ", sep_step: int = None) -> str:
-        """
-        Returns a string of hexadecimal numbers from the content.
-
-        Parameters
-        ----------
-        sep: str
-            separator between bytes.
-        sep_step: int
-            separator step. If None equals bytesize.
-
-        Returns
-        -------
-        str
-            hex string.
-        """
-        if sep_step is None:
-            sep_step = self._word_bsize
-        return self._content.hex(sep=sep, bytes_per_sep=sep_step)
-
-    def _unpack_bytes(self, bytes_: bytes, fmt: str = None) -> npt.NDArray: # nodesc
-        if fmt is None:
-            fmt = self._fmt
-        return np.frombuffer(bytes_, dtype=fmt)
 
     def __getitem__(self, word_index: int | slice) -> int | float | npt.NDArray:
         """
