@@ -5,7 +5,7 @@ import numpy as np
 import numpy.typing as npt
 
 from ._fields import (
-    Content,
+    ContentType,
     Field,
     AddressField,
     DataField,
@@ -24,7 +24,7 @@ from ..exceptions import (
 
 
 __all__ = [
-    "Content",
+    "ContentType",
     "Field",
     "AddressField",
     "DataField",
@@ -92,7 +92,7 @@ class FieldSetter(object):
             cls,
             *,
             fmt: str,
-            content: Content,
+            content: ContentType,
             info: dict[str, Any] = None,
     ):
         return cls(
@@ -600,15 +600,15 @@ class Message(MessageView): # todo: add parent to the fields
     @overload
     def set(
             self,
-            address: Content,
-            data: Content,
-            data_length: Content,
-            operation: Content,
-            **fields: Content
+            address: ContentType,
+            data: ContentType,
+            data_length: ContentType,
+            operation: ContentType,
+            **fields: ContentType
     ):
         ...
 
-    def set(self, **fields: Content):
+    def set(self, **fields: ContentType):
         """
         Set field content by names.
 

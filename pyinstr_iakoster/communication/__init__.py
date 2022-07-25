@@ -1,5 +1,5 @@
 from ._msg import (
-    Content,
+    ContentType,
     Field,
     AddressField,
     DataField,
@@ -18,7 +18,7 @@ from ._msg import (
 from ._pf import MessageFormat, PackageFormat
 
 __all__ = [
-    "Content",
+    "ContentType",
     "Field",
     "AddressField",
     "DataField",

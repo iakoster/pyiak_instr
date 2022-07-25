@@ -19,7 +19,7 @@ from ..exceptions import (
 
 
 __all__ = [
-    "Content",
+    "ContentType",
     "Field",
     "AddressField",
     "DataField",
@@ -33,7 +33,7 @@ __all__ = [
 ]
 
 
-Content = (
+ContentType = (
         bytes | bytearray | int | float | Iterable |
         SupportsBytes | np.number | npt.NDArray
 )
@@ -71,12 +71,12 @@ class BaseField(object):
             self,
             format_name: str,
             name: str,
-            info: dict[str, Any],
             *,
             start_byte: int,
             expected: int,
             may_be_empty: bool,
             fmt: str,
+            info: dict[str, Any],
             content: bytes,
             parent,
     ):
@@ -227,6 +227,7 @@ class Field(BaseField):
             expected: int,
             fmt: str,
             info: dict[str, Any] = None,
+            content: ContentType = b"",
             may_be_empty: bool = False,
             parent=None,
     ):
@@ -236,16 +237,18 @@ class Field(BaseField):
             self,
             format_name,
             name,
-            info,
             start_byte=start_byte,
             expected=expected,
             may_be_empty=may_be_empty,
             fmt=fmt,
+            info=info,
             content=b"",
             parent=parent
         )
+        if content != b"":
+            self.set(content)
 
-    def set(self, content: Content) -> None:
+    def set(self, content: ContentType) -> None:
         """
         Set the field content.
 
@@ -292,7 +295,7 @@ class Field(BaseField):
             )
         self.set(message[self._slice])
 
-    def _convert_content(self, content: Content) -> bytes:
+    def _convert_content(self, content: ContentType) -> bytes:
         """
         Convert content to bytes via `fmt` or `__bytes__`.
 
@@ -504,6 +507,7 @@ class SingleField(Field):
             start_byte: int,
             fmt: str,
             info: dict[str, Any] = None,
+            content: ContentType = b"",
             may_be_empty: bool = False,
             parent=None,
     ):
@@ -515,6 +519,7 @@ class SingleField(Field):
             expected=1,
             fmt=fmt,
             info=info,
+            content=content,
             may_be_empty=may_be_empty,
             parent=parent
         )
@@ -558,7 +563,7 @@ class StaticField(SingleField):
             *,
             start_byte: int,
             fmt: str,
-            content: Content,
+            content: ContentType,
             info: dict[str, Any] | None = None,
             parent=None,
     ):
@@ -573,7 +578,7 @@ class StaticField(SingleField):
         )
         self.set(content)
 
-    def set(self, content: Content) -> None:
+    def set(self, content: ContentType) -> None:
         content = self._convert_content(content)
         if content == b"":
             pass
@@ -674,7 +679,7 @@ class DataField(Field):
             parent=parent
         )
 
-    def append(self, content: Content) -> None:
+    def append(self, content: ContentType) -> None:
         content = self._convert_content(content)
         if self._exp > 0:
             exp = self._exp + len(content) // self._word_bsize
@@ -921,7 +926,7 @@ class OperationField(SingleField):
 
         return self.base == base
 
-    def set(self, content: Content | str) -> None:
+    def set(self, content: ContentType | str) -> None:
         if isinstance(content, str):
             c_value = self._desc_dict[content]
         else:
