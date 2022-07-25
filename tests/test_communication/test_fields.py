@@ -402,13 +402,14 @@ class TestFieldAddress(unittest.TestCase):
 class TestCrcField(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.tf = CrcField("test", start_byte=0, fmt=">H")
+        self.tf = CrcField("test", "crc", start_byte=0, fmt=">H")
 
     def test_base_init(self):
         compare_fields_base(
             self,
             CrcField(
                 "format",
+                "crc",
                 start_byte=0,
                 fmt=">H",
                 info={"info": True}

@@ -57,6 +57,7 @@ class MessageBase(object):
         "operation": OperationField,
     }
     SPECIAL_FIELDS = {
+        "crc": CrcField,
         "single": SingleField,
         "static": StaticField,
     }
@@ -274,7 +275,7 @@ class MessageView(MessageBase):
         """Returns joined fields content."""
         return self.to_bytes()
 
-    def __getitem__(self, name: str) -> Field:
+    def __getitem__(self, name: str) -> FieldType:
         """
         Returns a field instance by field name.
 
@@ -285,7 +286,7 @@ class MessageView(MessageBase):
 
         Returns
         -------
-        Field
+        FieldType
             field instance.
         """
         return self._fields[name]
@@ -296,7 +297,7 @@ class MessageView(MessageBase):
 
         Yields
         -------
-        Field
+        FieldType
             field instance.
         """
         for field in self._fields.values():
@@ -325,7 +326,7 @@ class MessageView(MessageBase):
         return " ".join(str(field) for field in self if str(field) != "")
 
 
-class Message(MessageView): # todo: add parent to the fields
+class Message(MessageView):
     """
     Represents a message for communication between devices.
 
@@ -486,9 +487,9 @@ class Message(MessageView): # todo: add parent to the fields
     def set(
             self,
             address: ContentType,
-            data: ContentType,
-            data_length: ContentType,
             operation: ContentType,
+            data: ContentType = b"",
+            data_length: ContentType = b"",
             **fields: ContentType
     ):
         ...
@@ -517,6 +518,11 @@ class Message(MessageView): # todo: add parent to the fields
 
         for name, content in fields.items():
             self[name].set(content)
+        if "data_length" not in fields:
+            self.data_length.update()
+        if "crc" not in fields and "crc" in self._fields \
+                and isinstance(self["crc"], CrcField):
+            self["crc"].update()
         self._validate_content()
         return self
 
@@ -569,7 +575,7 @@ class Message(MessageView): # todo: add parent to the fields
 
     def _get_field(
             self, name: str, start_byte: int, setter: FieldSetter
-    ) -> Field:
+    ) -> FieldType:
         """
         Returns an instance of a field with specified parameters from
         the setter.
@@ -585,7 +591,7 @@ class Message(MessageView): # todo: add parent to the fields
 
         Returns
         -------
-        Field
+        FieldType
             field instance.
         """
         if name in self.REQ_FIELDS:
@@ -615,6 +621,16 @@ class Message(MessageView): # todo: add parent to the fields
             raise MessageContentError(
                 self.__class__.__name__, dlen.name, "invalid length"
             )
+
+        if "crc" in self._fields and isinstance(self["crc"], CrcField):
+            crc: CrcField = self["crc"]
+            res_crc, ref_crc = crc.calculate(self), crc.unpack()[0]
+            if ref_crc != res_crc:
+                raise MessageContentError(
+                    self.__class__.__name__,
+                    crc.name,
+                    "invalid crc value, '%x' != '%x'" % (ref_crc, res_crc)
+                )
 
     def __add__(self, other):
         """

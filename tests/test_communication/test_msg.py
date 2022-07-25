@@ -127,7 +127,7 @@ class TestMessage(unittest.TestCase):
             self.assertIs(field_class, field.field_class)
 
     def fill_content(self) -> bytes:
-        content = b"\x1a\xa5\x00\x00\xaa\x01\x04\xff\xee\xdd\xcc\x12\x54"
+        content = b"\x1a\xa5\x00\x00\xaa\x01\x04\xff\xee\xdd\xcc\x39\x86"
         self.msg.extract(content)
         return content
 
@@ -139,7 +139,7 @@ class TestMessage(unittest.TestCase):
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
             data=FieldSetter.data(expected=1, fmt=">I"),
-            crc=FieldSetter.base(expected=1, fmt=">H"),
+            crc=FieldSetter.crc(fmt=">H"),
         )
         self.simple_msg: Message = Message().configure(
             address=FieldSetter.address(fmt=">H"),
@@ -456,7 +456,7 @@ class TestMessage(unittest.TestCase):
 
     def test_hex(self):
         self.fill_content()
-        self.assertEqual("1aa5 00 00aa 01 04 ffeeddcc 1254", self.msg.hex())
+        self.assertEqual("1aa5 00 00aa 01 04 ffeeddcc 3986", self.msg.hex())
 
     def test_to_bytes(self):
         content = self.fill_content()
@@ -466,7 +466,7 @@ class TestMessage(unittest.TestCase):
         self.fill_content()
 
         self.assertTrue(
-            (np.array([6821, 0, 170, 1, 4, 4293844428, 4692]) ==
+            (np.array([6821, 0, 170, 1, 4, 4293844428, 14726]) ==
              self.msg.unpack()).all()
         )
 
@@ -499,7 +499,6 @@ class TestMessage(unittest.TestCase):
             self.assertEqual("Error with operation in Message: field is empty", exc.exception.args[0])
 
         with self.subTest(name="invalid data length"):
-            self.subTest()
             with self.assertRaises(MessageContentError) as exc:
                 self.simple_msg.set(
                     address=0, operation="w", data_length=1, data=[0, 1]
@@ -508,6 +507,21 @@ class TestMessage(unittest.TestCase):
                 "Error with data_length in Message: invalid length",
                 exc.exception.args[0]
             )
+
+        with self.subTest(name="invalid crc"):
+            with self.assertRaises(MessageContentError) as exc:
+                self.msg.set(
+                    preamble=0x1aa5,
+                    response=0,
+                    address=0x10,
+                    operation="w",
+                    crc=10,
+                )
+            self.assertIn(
+                "Error with crc in Message: invalid crc value, ",
+                exc.exception.args[0]
+            )
+
 
     def test_split(self):
 
@@ -579,7 +593,7 @@ class TestMessage(unittest.TestCase):
 
     def test_magic_str(self):
         self.fill_content()
-        self.assertEqual("1AA5 0 AA 1 4 FFEEDDCC 1254", str(self.msg))
+        self.assertEqual("1AA5 0 AA 1 4 FFEEDDCC 3986", str(self.msg))
 
     def test_magic_len(self):
         content = self.fill_content()
@@ -589,13 +603,13 @@ class TestMessage(unittest.TestCase):
         self.fill_content()
         self.assertEqual(
             "<Message(preamble=1AA5, response=0, address=AA, operation=1, "
-            "data_length=4, data=FFEEDDCC, crc=1254), from=None, to=None>",
+            "data_length=4, data=FFEEDDCC, crc=3986), from=None, to=None>",
             repr(self.msg)
         )
         self.msg.set_addresses(tx=("192.168.0.1", 3202), rx="COM4")
         self.assertEqual(
             "<Message(preamble=1AA5, response=0, address=AA, operation=1, "
-            "data_length=4, data=FFEEDDCC, crc=1254), "
+            "data_length=4, data=FFEEDDCC, crc=3986), "
             "from=192.168.0.1:3202, to=COM4>",
             repr(self.msg)
         )

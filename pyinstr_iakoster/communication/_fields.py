@@ -689,6 +689,7 @@ class CrcField(SingleField): # nodesc
     def __init__(
             self,
             format_name: str,
+            name: str,
             *,
             start_byte: int,
             fmt: str,
@@ -702,7 +703,7 @@ class CrcField(SingleField): # nodesc
         SingleField.__init__(
             self,
             format_name,
-            "crc",
+            name,
             start_byte=start_byte,
             fmt=fmt,
             info=info,
@@ -713,7 +714,7 @@ class CrcField(SingleField): # nodesc
 
     def calculate(self, msg) -> int: # nodesc
         return self._alg(
-            b"".join(msg[name].content for name in msg if name != self._name)
+            b"".join(field.content for field in msg if field is not self)
         )
 
     def update(self) -> None: # nodesc
