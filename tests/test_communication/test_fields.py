@@ -322,7 +322,7 @@ class TestFieldStatic(unittest.TestCase):
 
     def setUp(self) -> None:
         self.tf = StaticField(
-            "f", "n", start_byte=0, fmt=">H", content=0x1234
+            "f", "n", start_byte=0, fmt=">H", default=0x1234
         )
 
     def test_base_init(self):
@@ -334,7 +334,7 @@ class TestFieldStatic(unittest.TestCase):
                 start_byte=0,
                 fmt=">I",
                 info={"info": True},
-                content=0xfa1c
+                default=0xfa1c
             ),
             slice_=slice(0, 4),
             class_instance=StaticField,

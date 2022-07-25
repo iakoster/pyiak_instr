@@ -60,7 +60,7 @@ def get_mf_kpm(reference: bool = True):
         format_name="kpm",
         splitable=False,
         slice_length=1024,
-        preamble=FieldSetter.static(fmt=">H", content=0xaa55),
+        preamble=FieldSetter.static(fmt=">H", default=0xaa55),
         operation=FieldSetter.operation(
             fmt=">B", desc_dict={
                 "wp": 1, "rp": 2, "wn": 3, "rn": 4
@@ -80,7 +80,7 @@ def get_mf_kpm(reference: bool = True):
             ),
             setters=dict(
                 preamble=dict(special="static", kwargs=dict(
-                    fmt=">H", content=0xaa55, info=None
+                    fmt=">H", default=0xaa55, info=None
                 )),
                 operation=dict(special=None, kwargs=dict(
                     fmt=">B",
@@ -88,7 +88,7 @@ def get_mf_kpm(reference: bool = True):
                     info=None
                 )),
                 response=dict(special="single", kwargs=dict(
-                    fmt=">B", info=None, may_be_empty=False,
+                    fmt=">B", default=[], info=None, may_be_empty=False,
                 )),
                 address=dict(special=None, kwargs=dict(fmt=">H", info=None)),
                 data_length=dict(special=None, kwargs=dict(
@@ -98,7 +98,7 @@ def get_mf_kpm(reference: bool = True):
                     expected=-1, fmt=">f", info=None
                 )),
                 crc=dict(special="single", kwargs=dict(
-                    fmt=">H", info=None, may_be_empty=False
+                    fmt=">H", default=[], info=None, may_be_empty=False
                 ))
             )
         )
@@ -191,7 +191,7 @@ class TestPackageFormat(unittest.TestCase):
 
     def test_get_kpm_basic(self):
         kpm_msg: Message = Message(format_name="kpm").configure(
-            preamble=FieldSetter.static(fmt=">H", content=0xaa55),
+            preamble=FieldSetter.static(fmt=">H", default=0xaa55),
             operation=FieldSetter.operation(
                 fmt=">B", desc_dict={
                     "wp": 1, "rp": 2, "wn": 3, "rn": 4

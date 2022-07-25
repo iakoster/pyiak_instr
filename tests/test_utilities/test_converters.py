@@ -12,6 +12,7 @@ class TestStringConverter(unittest.TestCase):
         letter=("a", "a"),
         word=("lol", "lol"),
         sentence=("lol kek!!!", "lol kek!!!"),
+        bytes=("/bts\t1,3,255,50,120", b"\x01\x03\xff\x32\x78"),
         int=("1", 1),
         int_neg=("-1", -1),
         int_str=("/str\t3", "3"),

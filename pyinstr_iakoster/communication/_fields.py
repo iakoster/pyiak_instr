@@ -21,6 +21,7 @@ from ..exceptions import (
 __all__ = [
     "ContentType",
     "Field",
+    "FieldSetter",
     "AddressField",
     "DataField",
     "DataLengthField",
@@ -78,6 +79,7 @@ class BaseField(object):
             fmt: str,
             info: dict[str, Any],
             content: bytes,
+            default: ContentType,
             parent,
     ):
         self._fmt_name = format_name
@@ -88,6 +90,7 @@ class BaseField(object):
         self._may_be_empty = may_be_empty
         self._fmt = fmt
         self._content = content
+        self._def = default
         self._parent = parent
 
         self._word_bsize = struct.calcsize(self._fmt)
@@ -105,6 +108,11 @@ class BaseField(object):
     def content(self) -> bytes:
         """The field content."""
         return self._content
+
+    @property
+    def default(self) -> bytes:
+        """Default field content"""
+        return self._def
 
     @property
     def end_byte(self) -> int | None:
@@ -208,7 +216,7 @@ class Field(BaseField):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    content: Content, default=b""
+    default: Content, default=b""
         field content.
     may_be_empty: bool, default=False
         if True then field can be empty in a message.
@@ -227,7 +235,7 @@ class Field(BaseField):
             expected: int,
             fmt: str,
             info: dict[str, Any] = None,
-            content: ContentType = b"",
+            default: ContentType = b"",
             may_be_empty: bool = False,
             parent=None,
     ):
@@ -243,10 +251,12 @@ class Field(BaseField):
             fmt=fmt,
             info=info,
             content=b"",
+            default=b"",
             parent=parent
         )
-        if content != b"":
-            self.set(content)
+        if default != b"":
+            self.set(default)
+            self._def = default
 
     def set(self, content: ContentType) -> None:
         """
@@ -390,9 +400,10 @@ class Field(BaseField):
         NDArray
             an array of words
         """
-        if fmt is None:
-            fmt = self._fmt
-        return np.frombuffer(self._content, dtype=fmt)
+        return self._unpack_bytes(self._content, fmt=fmt)
+
+    def unpack_default(self, fmt: str = None) -> npt.NDArray: # nodesc
+        return self._unpack_bytes(self._def, fmt=fmt)
 
     def hex(self, sep: str = " ", sep_step: int = None) -> str:
         """
@@ -413,6 +424,11 @@ class Field(BaseField):
         if sep_step is None:
             sep_step = self._word_bsize
         return self._content.hex(sep=sep, bytes_per_sep=sep_step)
+
+    def _unpack_bytes(self, bytes_: bytes, fmt: str = None) -> npt.NDArray: # nodesc
+        if fmt is None:
+            fmt = self._fmt
+        return np.frombuffer(bytes_, dtype=fmt)
 
     def __getitem__(self, word_index: int | slice) -> int | float | npt.NDArray:
         """
@@ -507,7 +523,7 @@ class SingleField(Field):
             start_byte: int,
             fmt: str,
             info: dict[str, Any] = None,
-            content: ContentType = b"",
+            default: ContentType = b"",
             may_be_empty: bool = False,
             parent=None,
     ):
@@ -519,7 +535,7 @@ class SingleField(Field):
             expected=1,
             fmt=fmt,
             info=info,
-            content=content,
+            default=default,
             may_be_empty=may_be_empty,
             parent=parent
         )
@@ -542,7 +558,7 @@ class StaticField(SingleField):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    content: Content, default=b""
+    default: Content, default=b""
         field content.
     parent: MessageType or None
         parent message.
@@ -563,7 +579,7 @@ class StaticField(SingleField):
             *,
             start_byte: int,
             fmt: str,
-            content: ContentType,
+            default: ContentType,
             info: dict[str, Any] | None = None,
             parent=None,
     ):
@@ -576,7 +592,7 @@ class StaticField(SingleField):
             info=info,
             parent=parent
         )
-        self.set(content)
+        self.set(default)
 
     def set(self, content: ContentType) -> None:
         content = self._convert_content(content)
@@ -994,6 +1010,130 @@ class OperationField(SingleField):
         compare: comparsion method.
         """
         return not self.compare(other)
+
+
+class FieldSetter(object):
+
+    BYTES = DataLengthField.BYTES
+    WORDS = DataLengthField.WORDS
+
+    def __init__(
+            self,
+            special: str = None,
+            **kwargs: Any,
+    ):
+        self.special = special
+        if "default" in kwargs and isinstance(kwargs["default"], bytes):
+            raise TypeError(
+                "%s not recomended bytes type for 'default' argument" % type(
+                    kwargs["default"]
+                )
+            )
+        self.kwargs = kwargs
+
+    @classmethod
+    def base(
+            cls,
+            *,
+            expected: int,
+            fmt: str,
+            default: ContentType = None,
+            info: dict[str, Any] = None,
+            may_be_empty: bool = False,
+    ):
+        """For classical field"""
+        if default is None:
+            default = []
+        return cls(
+            expected=expected,
+            fmt=fmt,
+            default=default,
+            info=info,
+            may_be_empty=may_be_empty
+        )
+
+    @classmethod
+    def single(
+            cls,
+            *,
+            fmt: str,
+            default: ContentType = None,
+            info: dict[str, Any] = None,
+            may_be_empty: bool = False,
+    ):
+        if default is None:
+            default = []
+        return cls(
+            special="single",
+            fmt=fmt,
+            default=default,
+            info=info,
+            may_be_empty=may_be_empty
+        )
+
+    @classmethod
+    def static(
+            cls,
+            *,
+            fmt: str,
+            default: ContentType,
+            info: dict[str, Any] = None,
+    ):
+        return cls(
+            special="static",
+            fmt=fmt,
+            default=default,
+            info=info,
+        )
+
+    @classmethod
+    def address(
+            cls,
+            *,
+            fmt: str,
+            info: dict[str, Any] | None = None
+    ):
+        return cls(fmt=fmt, info=info)
+
+    @classmethod
+    def data(
+            cls,
+            *,
+            expected: int,
+            fmt: str,
+            info: dict[str, Any] | None = None
+    ):
+        return cls(expected=expected, fmt=fmt, info=info)
+
+    @classmethod
+    def data_length(
+            cls,
+            *,
+            fmt: str,
+            units: int = BYTES,
+            additive: int = 0,
+            info: dict[str, Any] | None = None
+    ):
+        return cls(fmt=fmt, units=units, additive=additive, info=info)
+
+    @classmethod
+    def operation(
+            cls,
+            *,
+            fmt: str,
+            desc_dict: dict[str, int] = None,
+            info: dict[str, Any] | None = None
+    ):
+        return cls(fmt=fmt, desc_dict=desc_dict, info=info)
+
+    def __repr__(self) -> str:
+        cls_name = self.__class__.__name__
+        kwargs = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
+        if len(kwargs):
+            kwargs = ", " + kwargs
+        return f"<{cls_name}(special={self.special}{kwargs})>"
+
+    __str__ = __repr__
 
 
 @runtime_checkable

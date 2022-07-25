@@ -15,7 +15,7 @@ __all__ = [
 class StringEncoder(object):
 
     SINGLE_TYPES = int | float | str | bool | None
-    ITERS = dict | list | np.ndarray | set | tuple
+    ITERS = dict | list | np.ndarray | set | tuple | bytes
 
     DELIMITER = ","
     PARAMETER = "="
@@ -29,6 +29,7 @@ class StringEncoder(object):
     EOV = ")"           # end of value
 
     HEADERS = {
+        "bts": Code.BYTES,
         "dct": Code.DICT,
         "lst": Code.LIST,
         "npa": Code.NUMPY_ARRAY,
@@ -38,6 +39,7 @@ class StringEncoder(object):
     }
     _HEADERS_R = {v: k for k, v in HEADERS.items()}
     _CONVERTERS = {
+        Code.BYTES: lambda s: bytes(v for v in s),
         Code.DICT: lambda v: {i: next(v) for i in v},
         Code.LIST: list,
         Code.NUMPY_ARRAY: lambda v: np.array(tuple(v)),
@@ -45,6 +47,7 @@ class StringEncoder(object):
         Code.TUPLE: tuple,
     }
     _TYPES = {
+        bytes: Code.BYTES,
         dict: Code.DICT,
         list: Code.LIST,
         np.ndarray: Code.NUMPY_ARRAY,

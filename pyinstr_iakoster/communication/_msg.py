@@ -7,6 +7,7 @@ import numpy.typing as npt
 from ._fields import (
     ContentType,
     Field,
+    FieldSetter,
     AddressField,
     DataField,
     DataLengthField,
@@ -40,116 +41,6 @@ __all__ = [
     "NotConfiguredMessageError",
     "PartialFieldError",
 ]
-
-
-class FieldSetter(object):
-
-    BYTES = DataLengthField.BYTES
-    WORDS = DataLengthField.WORDS
-
-    def __init__(
-            self,
-            special: str = None,
-            **kwargs: Any,
-    ):
-        self.special = special
-        self.kwargs = kwargs
-
-    @classmethod
-    def base(
-            cls,
-            *,
-            expected: int,
-            fmt: str,
-            info: dict[str, Any] = None,
-            may_be_empty: bool = False,
-    ):
-        """For classical field"""
-        return cls(
-            expected=expected,
-            fmt=fmt,
-            info=info,
-            may_be_empty=may_be_empty
-        )
-
-    @classmethod
-    def single(
-            cls,
-            *,
-            fmt: str,
-            info: dict[str, Any] = None,
-            may_be_empty: bool = False,
-    ):
-        return cls(
-            special="single",
-            fmt=fmt,
-            info=info,
-            may_be_empty=may_be_empty
-        )
-
-    @classmethod
-    def static(
-            cls,
-            *,
-            fmt: str,
-            content: ContentType,
-            info: dict[str, Any] = None,
-    ):
-        return cls(
-            special="static",
-            fmt=fmt,
-            content=content,
-            info=info,
-        )
-
-    @classmethod
-    def address(
-            cls,
-            *,
-            fmt: str,
-            info: dict[str, Any] | None = None
-    ):
-        return cls(fmt=fmt, info=info)
-
-    @classmethod
-    def data(
-            cls,
-            *,
-            expected: int,
-            fmt: str,
-            info: dict[str, Any] | None = None
-    ):
-        return cls(expected=expected, fmt=fmt, info=info)
-
-    @classmethod
-    def data_length(
-            cls,
-            *,
-            fmt: str,
-            units: int = BYTES,
-            additive: int = 0,
-            info: dict[str, Any] | None = None
-    ):
-        return cls(fmt=fmt, units=units, additive=additive, info=info)
-
-    @classmethod
-    def operation(
-            cls,
-            *,
-            fmt: str,
-            desc_dict: dict[str, int] = None,
-            info: dict[str, Any] | None = None
-    ):
-        return cls(fmt=fmt, desc_dict=desc_dict, info=info)
-
-    def __repr__(self) -> str:
-        cls_name = self.__class__.__name__
-        kwargs = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
-        if len(kwargs):
-            kwargs = ", " + kwargs
-        return f"<{cls_name}(special={self.special}{kwargs})>"
-
-    __str__ = __repr__
 
 
 class MessageBase(object):

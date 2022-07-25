@@ -53,20 +53,31 @@ class TestFieldSetter(unittest.TestCase):
     def test_base(self):
         self.validate_setter(
             FieldSetter.base(expected=1, fmt="i"),
-            {"expected": 1, "fmt": "i", "info": None, 'may_be_empty': False}
+            {
+                "expected": 1,
+                "fmt": "i",
+                "default": [],
+                "info": None,
+                'may_be_empty': False
+            }
         )
 
     def test_single(self):
         self.validate_setter(
             FieldSetter.single(fmt="i"),
-            {"fmt": "i", "info": None, 'may_be_empty': False},
+            {
+                "fmt": "i",
+                "default": [],
+                "info": None,
+                'may_be_empty': False
+            },
             special="single"
         )
 
     def test_static(self):
         self.validate_setter(
-            FieldSetter.static(fmt="i", content=b""),
-            {"fmt": "i", "content": b"", "info": None},
+            FieldSetter.static(fmt="i", default=[]),
+            {"fmt": "i", "default": [], "info": None},
             special="static"
         )
 
@@ -122,7 +133,7 @@ class TestMessage(unittest.TestCase):
 
     def setUp(self) -> None:
         self.msg: Message = Message().configure(
-            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.single(fmt=">B"),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
@@ -150,7 +161,7 @@ class TestMessage(unittest.TestCase):
 
     def test_configure(self):
         msg = Message(format_name="not_def").configure(
-            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.single(fmt=">B"),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
@@ -378,7 +389,7 @@ class TestMessage(unittest.TestCase):
 
     def test_extract(self):
         msg: Message = Message(format_name="not_def").configure(
-            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.single(fmt=">B"),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
@@ -402,7 +413,7 @@ class TestMessage(unittest.TestCase):
 
     def test_extract_middle_infinite(self):
         msg: Message = Message(format_name="not_def").configure(
-            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.single(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
             data=FieldSetter.data(expected=-1, fmt=">I"),
@@ -503,7 +514,7 @@ class TestMessage(unittest.TestCase):
         def get_test_msg() -> Message:
             new_msg = Message(splitable=True, slice_length=64)
             new_msg.configure(
-                preamble=FieldSetter.static(fmt=">H", content=b"\x01\x02"),
+                preamble=FieldSetter.static(fmt=">H", default=0x102),
                 address=FieldSetter.address(fmt=">I"),
                 data_length=FieldSetter.data_length(fmt=">I"),
                 test_field=FieldSetter.base(expected=1, fmt=">B"),
@@ -657,7 +668,7 @@ class TestFields(unittest.TestCase):
 
     def test_data_length_unpdate(self):
         msg: Message = Message(format_name="not_def").configure(
-            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.single(fmt=">B"),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
@@ -673,7 +684,7 @@ class TestFields(unittest.TestCase):
 
     def test_operation_compare(self):
         msg: Message = Message(format_name="not_def").configure(
-            preamble=FieldSetter.static(fmt=">H", content=0x1aa5),
+            preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.single(fmt=">B"),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
