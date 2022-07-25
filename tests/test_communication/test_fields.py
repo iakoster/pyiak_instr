@@ -7,6 +7,7 @@ from pyinstr_iakoster.communication import (
     Field,
     SingleField,
     StaticField,
+    CrcField,
     AddressField,
     DataField,
     DataLengthField,
@@ -396,6 +397,51 @@ class TestFieldAddress(unittest.TestCase):
             content=b"",
             words_count=0,
         )
+
+
+class TestCrcField(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.tf = CrcField("test", start_byte=0, fmt=">H")
+
+    def test_base_init(self):
+        compare_fields_base(
+            self,
+            CrcField(
+                "format",
+                start_byte=0,
+                fmt=">H",
+                info={"info": True}
+            ),
+            slice_=slice(0, 2),
+            class_instance=CrcField,
+            format_name="format",
+            name="crc",
+            info={"info": True},
+            start_byte=0,
+            end_byte=2,
+            expected=1,
+            finite=True,
+            may_be_empty=False,
+            fmt=">H",
+            bytesize=2,
+            content=b"",
+            default=b"",
+            words_count=0,
+        )
+
+    def test_algorithms(self):
+        check_data = {
+            "crc16-CCITT XMODEM": [
+                (b"\x10\x01\x20\x04", 0x6af5),
+                (bytes(range(15)), 0x9b92),
+                (bytes(i % 256 for i in range(1500)), 0x9243)
+            ]
+        }
+        for name, algorithm in CrcField.CRC_ALGORITHMS.items():
+            for content, ref in check_data[name]:
+                with self.subTest(name=name, ref=ref):
+                    self.assertEqual(ref, algorithm(content))
 
 
 class TestFieldData(unittest.TestCase):

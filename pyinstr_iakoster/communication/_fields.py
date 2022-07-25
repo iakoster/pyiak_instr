@@ -23,6 +23,7 @@ __all__ = [
     "Field",
     "FieldSetter",
     "AddressField",
+    "CrcField",
     "DataField",
     "DataLengthField",
     "OperationField",
@@ -683,6 +684,67 @@ class AddressField(SingleField):
         )
 
 
+class CrcField(SingleField): # nodesc
+
+    def __init__(
+            self,
+            format_name: str,
+            *,
+            start_byte: int,
+            fmt: str,
+            info: dict[str, Any] | None = None,
+            algorithm_name: str = "crc16-CCITT XMODEM",
+            parent=None,
+    ):
+        if algorithm_name not in self.CRC_ALGORITHMS:
+            raise ValueError("invalid algorithm name: %s" % algorithm_name)
+
+        SingleField.__init__(
+            self,
+            format_name,
+            "crc",
+            start_byte=start_byte,
+            fmt=fmt,
+            info=info,
+            parent=parent
+        )
+        self._alg_name = algorithm_name
+        self._alg = self.CRC_ALGORITHMS[algorithm_name]
+
+    def calculate(self, msg) -> int: # nodesc
+        return self._alg(
+            b"".join(msg[name].content for name in msg if name != self._name)
+        )
+
+    def update(self) -> None: # nodesc
+        self.set(self.calculate(self.parent))
+
+    @staticmethod
+    def get_crc16_ccitt_xmodem(content: bytes) -> int: # nodesc
+
+        crc, poly = 0, 0x1021
+        for idx in range(len(content)):
+            crc ^= content[idx] << 8
+            for _ in range(8):
+                crc <<= 1
+                if crc & 0x10000:
+                    crc ^= poly
+            crc &= 0xffff
+        return crc
+
+    CRC_ALGORITHMS = {
+        "crc16-CCITT XMODEM": get_crc16_ccitt_xmodem
+    }
+
+    @property
+    def algorithm(self): # nodesc
+        return self._alg
+
+    @property
+    def algorithm_name(self): # nodesc
+        return self._alg_name
+
+
 class DataField(Field):
     """
     Represents a field of a Message with data.
@@ -1151,6 +1213,18 @@ class FieldSetter(object):
         return cls(fmt=fmt, info=info)
 
     @classmethod
+    def crc(
+            cls,
+            *,
+            fmt: str,
+            info: dict[str, Any] | None = None,
+            algorithm_name: str = "crc16-CCITT XMODEM",
+    ):
+        return cls(
+            special="crc", fmt=fmt, info=info, algorithm_name=algorithm_name
+        )
+
+    @classmethod
     def data(
             cls,
             *,
@@ -1191,6 +1265,18 @@ class FieldSetter(object):
     __str__ = __repr__
 
 
+FieldType = (
+    Field |
+    SingleField |
+    StaticField |
+    AddressField |
+    CrcField |
+    DataField |
+    DataLengthField |
+    OperationField
+)
+
+
 @runtime_checkable
 class MessageType(Protocol):
 
@@ -1215,14 +1301,7 @@ class MessageType(Protocol):
     def operation(self):
         return OperationField("", start_byte=0, fmt="i")
 
+    def __getitem__(self, field: str) -> FieldType: ...
 
-FieldType = (
-        Field |
-        SingleField |
-        StaticField |
-        AddressField |
-        DataField |
-        DataLengthField |
-        OperationField
-)
+    def __iter__(self) -> str: ...
 
