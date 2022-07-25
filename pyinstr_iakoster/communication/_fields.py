@@ -314,26 +314,6 @@ class Field(BaseField):
             )
         self.set(message[self._slice])
 
-    def unpack(self, fmt: str = None) -> npt.NDArray:
-        """
-        Returns the content of the field unpacked in fmt.
-
-        Parameters
-        ----------
-        fmt: str
-            format for unpacking. If None, fmt is taken from
-            an instance of the class.
-
-        Returns
-        -------
-        NDArray
-            an array of words
-        """
-        return self._unpack_bytes(self._content, fmt=fmt)
-
-    def unpack_default(self, fmt: str = None) -> npt.NDArray: # nodesc
-        return self._unpack_bytes(self._def, fmt=fmt)
-
     def hex(self, sep: str = " ", sep_step: int = None) -> str:
         """
         Returns a string of hexadecimal numbers from the content.
@@ -353,6 +333,29 @@ class Field(BaseField):
         if sep_step is None:
             sep_step = self._word_bsize
         return self._content.hex(sep=sep, bytes_per_sep=sep_step)
+
+    def reset_to_default(self) -> None: # nodesc
+        self._content = self._def
+
+    def unpack(self, fmt: str = None) -> npt.NDArray:
+        """
+        Returns the content of the field unpacked in fmt.
+
+        Parameters
+        ----------
+        fmt: str
+            format for unpacking. If None, fmt is taken from
+            an instance of the class.
+
+        Returns
+        -------
+        NDArray
+            an array of words
+        """
+        return self._unpack_bytes(self._content, fmt=fmt)
+
+    def unpack_default(self, fmt: str = None) -> npt.NDArray: # nodesc
+        return self._unpack_bytes(self._def, fmt=fmt)
 
     def _convert_content(self, content: ContentType) -> bytes:
         """
