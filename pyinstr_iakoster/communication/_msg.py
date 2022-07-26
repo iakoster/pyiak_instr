@@ -605,6 +605,7 @@ class Message(MessageView):
             self._fmt_name,
             name,
             start_byte=start_byte,
+            parent=self,
             **setter.kwargs
         )
 

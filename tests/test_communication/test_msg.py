@@ -125,6 +125,8 @@ class TestMessage(unittest.TestCase):
                 class_=field.__class__.__name__, name="field_class"
         ):
             self.assertIs(field_class, field.field_class)
+        with self.subTest(name="parent"):
+            self.assertIsInstance(field.parent, Message)
 
     def fill_content(self) -> bytes:
         content = b"\x1a\xa5\x00\x00\xaa\x01\x04\xff\xee\xdd\xcc\x39\x86"
@@ -521,7 +523,6 @@ class TestMessage(unittest.TestCase):
                 "Error with crc in Message: invalid crc value, ",
                 exc.exception.args[0]
             )
-
 
     def test_split(self):
 

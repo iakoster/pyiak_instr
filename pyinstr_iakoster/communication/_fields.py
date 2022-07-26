@@ -1,5 +1,7 @@
+from __future__ import annotations
 import struct
 from typing import (
+    TYPE_CHECKING,
     Any,
     Iterable,
     SupportsBytes,
@@ -16,6 +18,8 @@ from ..exceptions import (
     FloatWordsCountError,
     PartialFieldError,
 )
+if TYPE_CHECKING:
+    from ._msg import Message
 
 
 __all__ = [
@@ -65,7 +69,7 @@ class BaseField(object):
         is calculated from the format.
     content: bytes
         field content in bytes.
-    parent: MessageType or None
+    parent: Message or None
         parent message.
     """
 
@@ -81,7 +85,7 @@ class BaseField(object):
             info: dict[str, Any],
             content: bytes,
             default: ContentType,
-            parent,
+            parent: Message,
     ):
         self._fmt_name = format_name
         self._name = name
@@ -165,7 +169,7 @@ class BaseField(object):
         return self._name
 
     @property
-    def parent(self):
+    def parent(self) -> Message | None:
         return self._parent
 
     @property
@@ -221,6 +225,8 @@ class Field(BaseField):
         field content.
     may_be_empty: bool, default=False
         if True then field can be empty in a message.
+    parent: Message or None
+            parent message.
 
     See Also
     --------
@@ -238,7 +244,7 @@ class Field(BaseField):
             info: dict[str, Any] = None,
             default: ContentType = b"",
             may_be_empty: bool = False,
-            parent=None,
+            parent: Message = None,
     ):
         if info is None:
             info = {}
@@ -516,7 +522,7 @@ class SingleField(Field):
         is calculated from the format.
     may_be_empty: bool, default=False
         if True then field can be empty in a message.
-    parent: MessageType or None
+    parent: Message or None
         parent message.
 
     Notes
@@ -538,7 +544,7 @@ class SingleField(Field):
             info: dict[str, Any] = None,
             default: ContentType = b"",
             may_be_empty: bool = False,
-            parent=None,
+            parent: Message = None,
     ):
         Field.__init__(
             self,
@@ -581,7 +587,7 @@ class StaticField(SingleField):
         is calculated from the format.
     default: Content, default=b""
         field content.
-    parent: MessageType or None
+    parent: Message or None
         parent message.
 
     Notes
@@ -602,7 +608,7 @@ class StaticField(SingleField):
             fmt: str,
             default: ContentType,
             info: dict[str, Any] | None = None,
-            parent=None,
+            parent: Message = None,
     ):
         SingleField.__init__(
             self,
@@ -650,7 +656,7 @@ class AddressField(SingleField):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    parent: MessageType or None
+    parent: Message or None
         parent message.
 
     See Also
@@ -665,7 +671,7 @@ class AddressField(SingleField):
             start_byte: int,
             fmt: str,
             info: dict[str, Any] | None = None,
-            parent=None,
+            parent: Message = None,
     ):
         SingleField.__init__(
             self,
@@ -695,7 +701,7 @@ class CrcField(SingleField): # nodesc
             fmt: str,
             info: dict[str, Any] | None = None,
             algorithm_name: str = "crc16-CCITT XMODEM",
-            parent=None,
+            parent: Message = None,
     ):
         if algorithm_name not in self.CRC_ALGORITHMS:
             raise ValueError("invalid algorithm name: %s" % algorithm_name)
@@ -712,7 +718,7 @@ class CrcField(SingleField): # nodesc
         self._alg_name = algorithm_name
         self._alg = self.CRC_ALGORITHMS[algorithm_name]
 
-    def calculate(self, msg) -> int: # nodesc
+    def calculate(self, msg: Message) -> int: # nodesc
         return self._alg(
             b"".join(field.content for field in msg if field is not self)
         )
@@ -761,7 +767,7 @@ class DataField(Field):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    parent: MessageType or None
+    parent: Message or None
         parent message.
 
     See Also
@@ -777,7 +783,7 @@ class DataField(Field):
             expected: int,
             fmt: str,
             info: dict[str, Any] | None = None,
-            parent=None
+            parent: Message = None
     ):
         Field.__init__(
             self,
@@ -830,7 +836,7 @@ class DataLengthField(SingleField):
         data length units. Data can be measured in bytes or words.
     additive: int
         additional value to the length of the data.
-    parent: MessageType or None
+    parent: Message or None
         parent message.
 
     Raises
@@ -857,7 +863,7 @@ class DataLengthField(SingleField):
             units: int = BYTES,
             additive: int = 0,
             info: dict[str, Any] | None = None,
-            parent=None
+            parent: Message = None
     ):
         if units not in (self.BYTES, self.WORDS):
             raise ValueError("invalid units: %d" % units)
@@ -968,7 +974,7 @@ class OperationField(SingleField):
     desc_dict: dict of {str, int}, optional
         dictionary of correspondence between the operation base and
         the value in the content.
-    parent: MessageType or None
+    parent: Message or None
         parent message.
 
     Notes
@@ -996,7 +1002,7 @@ class OperationField(SingleField):
             fmt: str,
             desc_dict: dict[str, int] = None,
             info: dict[str, Any] | None = None,
-            parent=None,
+            parent: Message = None,
     ):
         if desc_dict is None:
             self._desc_dict = {"r": 0, "w": 1, "e": 2}
