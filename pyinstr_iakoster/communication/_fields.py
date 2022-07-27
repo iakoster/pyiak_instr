@@ -1032,7 +1032,10 @@ class OperationField(SingleField):
         """Update desc by desc dict where key is a content value."""
         c_value = self.unpack()
         if len(c_value):
-            self._desc = self._desc_dict_r[c_value[0]]
+            if c_value[0] in self.desc_dict_r:
+                self._desc = self._desc_dict_r[c_value[0]]
+            else:
+                self._desc = "unknown"
         else:
             self._desc = ""
 
