@@ -16,7 +16,7 @@ from ._msg import (
     NotConfiguredMessageError,
     PartialFieldError,
 )
-from ._pf import MessageFormat, PackageFormat
+from ._pf import MessageErrorMark, MessageFormat, PackageFormat
 
 __all__ = [
     "ContentType",
@@ -32,6 +32,7 @@ __all__ = [
     "FieldType",
     "FloatWordsCountError",
     "Message",
+    "MessageErrorMark",
     "MessageFormat",
     "PackageFormat",
     "MessageContentError",

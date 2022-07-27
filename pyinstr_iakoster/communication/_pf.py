@@ -11,9 +11,107 @@ from ..rwfile import (
 
 
 __all__ = [
+    "MessageErrorMark",
     "MessageFormat",
     "PackageFormat",
 ]
+
+
+class MessageErrorMark(object): # nodesc
+
+    def __init__(
+            self,
+            operation: str = None,
+            value: bytes | list[int | float] = None,
+            start_byte: int = None,
+            stop_byte: int = None,
+            field_name: str = None,
+    ):
+        if operation is None:
+            self._empty = True
+            self._oper, self._field_name = "", ""
+            self._start, self._stop = 0, 0
+            self._val = b""
+            self._bytes_req = True
+            return
+        else:
+            self._empty = False
+
+        if operation not in ("eq", "neq"):
+            raise ValueError("%r operation not in {'eq', 'neq'}" % operation)
+        if field_name is None and None in (start_byte, stop_byte):
+            raise ValueError(
+                "field name or start byte and end byte must be defined"
+            )
+        if value is None:
+            raise ValueError("value not specified")
+
+        self._oper = operation
+        if field_name is not None:
+            self._field_name = field_name
+            self._start, self._stop = 0, 0
+            self._bytes_req = False
+
+        else:
+            self._field_name = ""
+            self._start, self._stop = start_byte, stop_byte
+            self._bytes_req = True
+
+        if self._bytes_req and not isinstance(value, bytes):
+            raise TypeError(
+                "if start and end bytes is specified that value must be bytes"
+            )
+        self._val = value
+
+    def match(self, msg: bytes | Message) -> tuple[bytes | Message, bool]: # nodesc
+        if self._empty:
+            return msg, False
+        if self._bytes_req and not isinstance(msg, bytes):
+            raise TypeError("bytes type required")
+
+        if isinstance(msg, bytes):
+            msg_mark = msg[self._start:self._stop]
+            msg = msg[:self._start] + msg[self._stop:]
+
+        else:
+            msg_mark = msg[self._field_name]
+            if isinstance(self._val, bytes):
+                msg_mark = msg_mark.content
+            else:
+                msg_mark = msg_mark.unpack().tolist()
+
+        if self._oper == "eq":
+            return msg, msg_mark == self._val # if mark == val, then mark is error mark
+        elif self._oper == "neq":
+            return msg, msg_mark != self._val # if mark != val, then mark is error mark
+
+    @property
+    def bytes_required(self) -> bool:
+        return self._bytes_req
+
+    @property
+    def empty(self) -> bool:
+        return self._empty
+
+    @property
+    def field_name(self) -> str:
+        return self._field_name
+
+    @property
+    def operation(self) -> str:
+        return self._oper
+
+    @property
+    def start_byte(self) -> int:
+        return self._start
+
+    @property
+    def stop_byte(self) -> int:
+        return self._stop
+
+    @property
+    def value(self) -> bytes | list[int | float]:
+        return self._val
 
 
 class MessageFormat(object):  # nodesc

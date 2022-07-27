@@ -1,14 +1,11 @@
 import unittest
-from pathlib import Path
-
-import numpy as np
-import pandas as pd
 
 from tests.env_vars import DATA_TEST_DIR
 
 from pyinstr_iakoster.communication import (
     FieldSetter,
     Message,
+    MessageErrorMark,
     MessageFormat,
     PackageFormat
 )
@@ -103,6 +100,115 @@ def get_mf_kpm(reference: bool = True):
             )
         )
     return mf
+
+
+class TestMessageErrorMark(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.emarks = {
+            "empty": MessageErrorMark(),
+            0: MessageErrorMark(
+                operation="eq",
+                value=b"\x4c",
+                start_byte=0,
+                stop_byte=1,
+            ),
+            1: MessageErrorMark(
+                operation="neq",
+                value=b"\x4c\x54",
+                start_byte=1,
+                stop_byte=3,
+            ),
+            2: MessageErrorMark(
+                operation="eq",
+                value=b"\x4c",
+                field_name="response"
+            ),
+            3: MessageErrorMark(
+                operation="neq",
+                value=[7],
+                field_name="response"
+            ),
+        }
+
+    @staticmethod
+    def get_message(content: bytes) -> Message:
+        return Message().configure(
+            address=FieldSetter.address(fmt="B"),
+            response=FieldSetter.single(fmt="B", default=0),
+            operation=FieldSetter.operation(fmt="B"),
+            data_length=FieldSetter.data_length(fmt="B"),
+            data=FieldSetter.data(expected=-1, fmt="B")
+        ).extract(content)
+
+    def test_emarks(self):
+        msgs = (
+            b"\x4c\x4c\x54\x01\xfe",
+            b"\xef\x07\xaa\x01\xed",
+            b"\x12\x4c\x54\x01\x9a"
+        )
+        ret_msg = {
+            "empty": msgs,
+            0: tuple(m[1:] for m in msgs),
+            1: tuple(m[:1] + m[3:] for m in msgs),
+            2: msgs,
+            3: msgs,
+        }
+        ret_emark = {
+            "empty": (False, False, False),
+            0: (True, False, False),
+            1: (False, True, False),
+            2: (True, False, True),
+            3: (True, False, True),
+        }
+        for key, emark in self.emarks.items():
+            for i_msg, msg in enumerate(msgs):
+                if not emark.bytes_required:
+                    msg = self.get_message(msg)
+                res_msg, res = emark.match(msg)
+                if not emark.bytes_required:
+                    res_msg = res_msg.to_bytes()
+
+                with self.subTest(key=key, i_msg=i_msg, name="emark"):
+                    self.assertEqual(ret_emark[key][i_msg], res)
+                with self.subTest(key=key, i_msg=i_msg, name="msg"):
+                    self.assertEqual(ret_msg[key][i_msg], res_msg)
+
+    def test_operation_not_exists(self):
+        with self.assertRaises(ValueError) as exc:
+            MessageErrorMark(operation="lol")
+        self.assertEqual(
+            "'lol' operation not in {'eq', 'neq'}", exc.exception.args[0]
+        )
+
+    def test_invalid_range(self):
+        with self.assertRaises(ValueError) as exc:
+            MessageErrorMark(operation="eq", start_byte=10)
+        self.assertEqual(
+            "field name or start byte and end byte must be defined",
+            exc.exception.args[0]
+        )
+
+    def test_value_not_exists(self):
+        with self.assertRaises(ValueError) as exc:
+            MessageErrorMark(operation="eq", field_name="req")
+        self.assertEqual("value not specified", exc.exception.args[0])
+
+    def test_value_not_bytes(self):
+        with self.assertRaises(TypeError) as exc:
+            MessageErrorMark(
+                operation="eq", start_byte=1, stop_byte=2, value=[10]
+            )
+        self.assertEqual(
+            "if start and end bytes is specified that value must be bytes",
+            exc.exception.args[0]
+        )
+
+    def test_match_not_bytes(self):
+        with self.assertRaises(TypeError) as exc:
+            self.emarks[0].match(self.get_message(b"12345"))
+        self.assertEqual("bytes type required", exc.exception.args[0])
 
 
 class TestMessageFormat(unittest.TestCase):
