@@ -5,6 +5,7 @@ from typing import Any
 from tinydb.table import Document
 
 from ._msg import FieldSetter, Message
+from ..utilities import StringEncoder
 from ..rwfile import (
     RWNoSqlJsonDatabase,
 )
@@ -22,7 +23,7 @@ class MessageErrorMark(object): # nodesc
     def __init__(
             self,
             operation: str = None,
-            value: bytes | list[int | float] = None,
+            value: str | bytes | list[int | float] = None,
             start_byte: int = None,
             stop_byte: int = None,
             field_name: str = None,
@@ -56,6 +57,11 @@ class MessageErrorMark(object): # nodesc
             self._field_name = ""
             self._start, self._stop = start_byte, stop_byte
             self._bytes_req = True
+
+        if isinstance(value, str):
+            value = StringEncoder.from_str(value)
+            if isinstance(value, str):
+                raise ValueError("convert string is impossible")
 
         if self._bytes_req and not isinstance(value, bytes):
             raise TypeError(
@@ -98,6 +104,24 @@ class MessageErrorMark(object): # nodesc
         return self._field_name
 
     @property
+    def kwargs(self):
+        if self._empty:
+            return {}
+
+        ret = {"operation": self._oper}
+        if isinstance(self._val, bytes):
+            ret["value"] = StringEncoder.to_str(self._val)
+        else:
+            ret["value"] = self._val
+        if self._bytes_req:
+            ret["start_byte"] = self._start
+            ret["stop_byte"] = self._stop
+        else:
+            ret["field_name"] = self._field_name
+
+        return ret
+
+    @property
     def operation(self) -> str:
         return self._oper
 
@@ -118,9 +142,10 @@ class MessageFormat(object):  # nodesc
 
     def __init__(
             self,
+            emark: MessageErrorMark = MessageErrorMark(),
             **settings: FieldSetter | Any
     ):
-
+        self._emark = emark
         self._msg_args = {}
         self._setters = {}
         for k, v in settings.items():
@@ -145,19 +170,21 @@ class MessageFormat(object):  # nodesc
                     new_dict[k] = v
             return new_dict # todo dict comprehetion
 
-        def remove_if_doc_id_exists(doc_id: int) -> None:
-            if format_table.contains(doc_id=doc_id):
-                format_table.remove(doc_ids=(doc_id,))
+        def remove_if_doc_id_exists(doc_ids: list[int]) -> None:
+            for doc_id in doc_ids:
+                if format_table.contains(doc_id=doc_id):
+                    format_table.remove(doc_ids=(doc_id,))
 
-        remove_if_doc_id_exists(-1)
+        remove_if_doc_id_exists([-2, -1])
         format_table.insert(Document(drop_none(self._msg_args), doc_id=-1))
+        format_table.insert(Document(self._emark.kwargs, doc_id=-2))
 
         for i_setter, (name, setter) in enumerate(self.setters.items()):
             field_pars = {"name": name}
             if setter.special is not None:
                 field_pars["special"] = setter.special
             field_pars.update(drop_none(setter.kwargs))
-            remove_if_doc_id_exists(i_setter)
+            remove_if_doc_id_exists([i_setter])
             format_table.insert(Document(field_pars, doc_id=i_setter))
 
     def get(self, **update: dict[str, Any]) -> Message:
@@ -185,6 +212,10 @@ class MessageFormat(object):  # nodesc
                 setters[field.pop("name")] = FieldSetter(**field)
 
         return cls(**msg, **setters)
+
+    @property
+    def emark(self) -> MessageErrorMark:
+        return self._emark
 
     @property
     def msg_args(self) -> dict[str, Any]:
@@ -220,13 +251,21 @@ class PackageFormat(object):  # nodesc
         with RWNoSqlJsonDatabase(database) as db:
             for table_name in db.tables():
                 table = db.table(table_name)
+
                 msg_args = table.get(doc_id=-1)
+                if table.contains(doc_id=-2):
+                    emark = MessageErrorMark(**table.get(doc_id=-2))
+                else:
+                    emark = MessageErrorMark()
+
                 setters = {}
-                for i_setter in range(len(table) - 1):
+                for i_setter in range(len(table)):
+                    if not table.contains(doc_id=i_setter):
+                        break
                     setter_args = table.get(doc_id=i_setter)
                     name = setter_args.pop("name")
                     setters[name] = FieldSetter(**setter_args)
-                formats[table_name] = MessageFormat(**msg_args, **setters)
+                formats[table_name] = MessageFormat(emark=emark, **msg_args, **setters)
         return cls(**formats)
 
     @property

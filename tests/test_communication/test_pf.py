@@ -17,6 +17,12 @@ DATA_TEST_PATH = DATA_TEST_DIR / "test.json"
 def get_mf_asm(reference: bool = True):
 
     mf = MessageFormat(
+        emark=MessageErrorMark(
+            operation="neq",
+            start_byte=12,
+            stop_byte=16,
+            value=b"\x00\x00\x00\x01"
+        ),
         format_name="asm",
         splitable=True,
         slice_length=1024,
@@ -54,6 +60,9 @@ def get_mf_asm(reference: bool = True):
 def get_mf_kpm(reference: bool = True):
 
     mf = MessageFormat(
+        emark=MessageErrorMark(
+            operation="neq", field_name="response", value=[0]
+        ),
         format_name="kpm",
         splitable=False,
         slice_length=1024,
@@ -251,6 +260,9 @@ class TestPackageFormat(unittest.TestCase):
             mf = pf[name]
             with self.subTest(name=name):
                 self.assertEqual(ref_mf.msg_args, mf.msg_args)
+
+            with self.subTest(name):
+                self.assertDictEqual(ref_mf.emark.kwargs, mf.emark.kwargs)
 
             with self.subTest(name=name, setter="all"):
                 self.assertEqual(len(ref_mf.setters), len(mf.setters))
