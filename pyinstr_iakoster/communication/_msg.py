@@ -1,3 +1,4 @@
+from __future__ import annotations
 from copy import deepcopy
 from typing import Any, overload
 
@@ -30,7 +31,7 @@ __all__ = [
 ]
 
 
-class MessageBase(object):
+class MessageBase(object): # todo: join all classes together
     """
     Base class of the Message with required methods.
     """
@@ -71,7 +72,7 @@ class MessageBase(object):
         """Set addresses to None."""
         self._tx, self._rx = None, None
 
-    def get_instance(self, **kwargs: Any):
+    def get_instance(self, **kwargs: Any) -> Message:
         """
         Get the same class as the current object, initialized with
         the specified arguments.
@@ -88,7 +89,7 @@ class MessageBase(object):
         """
         return self.__class__(**kwargs)
 
-    def set_addresses(self, tx: Any = None, rx: Any = None):
+    def set_addresses(self, tx: Any = None, rx: Any = None) -> Message:
         """
         Set Tx and Rx addresses.
 
@@ -170,19 +171,19 @@ class MessageBase(object):
         return self._fields["operation"]
 
     @property
-    def rx(self):
+    def rx(self) -> Any: # nodesc
         return self._rx
 
     @property
-    def slice_length(self):
+    def slice_length(self) -> int: # nodesc
         return self._slice_length
 
     @property
-    def splitable(self):
+    def splitable(self) -> bool: # nodesc
         return self._splitable
 
     @property
-    def tx(self):
+    def tx(self) -> Any: # nodesc
         return self._tx
 
 
@@ -249,11 +250,11 @@ class MessageView(MessageBase):
                 return str(address)
 
     @property
-    def rx_str(self):
+    def rx_str(self) -> str:
         return self._format_address(self._rx)
 
     @property
-    def tx_str(self):
+    def tx_str(self) -> str:
         return self._format_address(self._tx)
 
     def __bytes__(self) -> bytes:
@@ -292,7 +293,7 @@ class MessageView(MessageBase):
         """Returns length of the message in bytes."""
         return len(self.to_bytes())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Returns string representation of the message."""
         fields_repr = []
         for name, field in self._fields.items():
@@ -346,10 +347,10 @@ class Message(MessageView):
             data_length: FieldSetter = None,
             operation: FieldSetter = None,
             **fields: FieldSetter
-    ):
+    ) -> Message:
         ...
 
-    def configure(self, **fields: FieldSetter): # todo: add automatic calculate of the data_length
+    def configure(self, **fields: FieldSetter) -> Message: # todo: add automatic calculate of the data_length
         """
         Configure fields parameters in the message.
 
@@ -424,7 +425,7 @@ class Message(MessageView):
 
         return self
 
-    def extract(self, message: bytes):
+    def extract(self, message: bytes) -> Message:
         """
         Extract fields content from a message.
 
@@ -453,7 +454,7 @@ class Message(MessageView):
         self._validate_content()
         return self
 
-    def get_same_instance(self):
+    def get_same_instance(self) -> Message:
         """
         Get the same class as the current object, initialized with
         the same arguments.
@@ -477,10 +478,10 @@ class Message(MessageView):
             data: ContentType = b"",
             data_length: ContentType = b"",
             **fields: ContentType
-    ):
+    ) -> Message:
         ...
 
-    def set(self, **fields: ContentType):
+    def set(self, **fields: ContentType) -> Message:
         """
         Set field content by names.
 
@@ -622,7 +623,7 @@ class Message(MessageView):
                     "invalid crc value, '%x' != '%x'" % (ref_crc, res_crc)
                 )
 
-    def __add__(self, other):
+    def __add__(self, other) -> Message:
         """
         Add new data to the data field.
 
