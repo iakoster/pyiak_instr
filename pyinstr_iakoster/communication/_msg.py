@@ -617,10 +617,13 @@ class Message(MessageView):
                     self.__class__.__name__, field.name, "field is empty"
                 )
 
-        oper, dlen = self.operation, self.data_length
-        if oper.base == "w" and dlen[0] != dlen.calculate(self.data):
+        if self.operation.base == "w" and (
+                not self.data.may_be_empty or self.data.words_count
+        ) and self.data_length[0] != self.data_length.calculate(self.data):
             raise MessageContentError(
-                self.__class__.__name__, dlen.name, "invalid length"
+                self.__class__.__name__,
+                self.data_length.name,
+                "invalid length"
             )
 
         if "crc" in self._fields and isinstance(self["crc"], CrcField):

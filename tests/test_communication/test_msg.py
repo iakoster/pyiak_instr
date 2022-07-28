@@ -524,6 +524,17 @@ class TestMessage(unittest.TestCase):
                 exc.exception.args[0]
             )
 
+    def test_empry_write(self):
+        self.assertEqual(
+            b"\x00\x11\x01\x0a",
+            self.simple_msg.set(
+                address=0x11,
+                data_length=10,
+                operation="w",
+                data=[]
+            ).to_bytes()
+        )
+
     def test_split(self):
 
         def get_test_msg() -> Message:
