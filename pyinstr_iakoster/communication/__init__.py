@@ -1,4 +1,4 @@
-from ._msg import (
+from ._fields import (
     ContentType,
     Field,
     AddressField,
@@ -11,10 +11,12 @@ from ._msg import (
     StaticField,
     FieldType,
     FloatWordsCountError,
+    PartialFieldError,
+)
+from ._msg import (
     Message,
     MessageContentError,
     NotConfiguredMessageError,
-    PartialFieldError,
 )
 from ._pf import MessageErrorMark, MessageFormat, PackageFormat
 
