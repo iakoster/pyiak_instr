@@ -164,11 +164,7 @@ class MessageFormat(object):  # nodesc
     def write(self, format_table: RWNoSqlJsonDatabase.table_class) -> None:
 
         def drop_none(dict_: dict[Any]) -> Any:
-            new_dict = {}
-            for k, v in dict_.items():
-                if v is not None:
-                    new_dict[k] = v
-            return new_dict # todo dict comprehetion
+            return {k: v for k, v in dict_.items() if v is not None}
 
         def remove_if_doc_id_exists(doc_ids: list[int]) -> None:
             for doc_id in doc_ids:

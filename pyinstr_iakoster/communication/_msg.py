@@ -350,7 +350,7 @@ class Message(MessageView):
     ) -> Message:
         ...
 
-    def configure(self, **fields: FieldSetter) -> Message: # todo: add automatic calculate of the data_length
+    def configure(self, **fields: FieldSetter) -> Message:
         """
         Configure fields parameters in the message.
 
