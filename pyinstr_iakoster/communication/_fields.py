@@ -489,7 +489,14 @@ class Field(BaseField):
         str
             content as readable string.
         """
-        return " ".join("%X" % word for word in self)
+        words = []
+        for start in range(0, len(self.content), self.bytesize):
+            word = self.content[start:start + self.bytesize]\
+                .hex().lstrip("0").upper()
+            if not len(word):
+                word = "0"
+            words.append(word)
+        return " ".join(words)
 
     def __repr__(self) -> str:
         """Returns string representation of the field instance"""

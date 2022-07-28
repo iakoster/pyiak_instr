@@ -277,6 +277,13 @@ class TestField(unittest.TestCase):
         self.tf.set([0x23, 0xff12, 0x521, 0x12])
         self.assertEqual("23 FF12 521 12", str(self.tf))
 
+    def test_magic_str_float(self):
+        tf = Field(
+            "f", "n", start_byte=1, expected=-1, fmt=">e"
+        )
+        tf.set([12.2, -23])
+        self.assertEqual("4A1A CDC0", str(tf))
+
 
 class TestFieldSingle(unittest.TestCase):
 
