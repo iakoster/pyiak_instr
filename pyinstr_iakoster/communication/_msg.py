@@ -157,7 +157,14 @@ class MessageBase(object): # todo: join all classes together
         return self._fmt_name
 
     @property
-    def have_infinite(self) -> bool:  # nodesc
+    def have_infinite(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            mark that there is a field in the message that can have
+            an unlimited length.
+        """
         return self._have_infinite
 
     @property
@@ -171,19 +178,52 @@ class MessageBase(object): # todo: join all classes together
         return self._fields["operation"]
 
     @property
-    def rx(self) -> Any: # nodesc
+    def rx(self) -> Any:
+        """
+        Returns
+        -------
+        Any
+            reciever address.
+        """
         return self._rx
 
     @property
-    def slice_length(self) -> int: # nodesc
+    def slice_length(self) -> int:
+        """
+        If splittable is True that this attribute can be used.
+
+        Returns
+        -------
+        int
+            max length of the data field in message for sending.
+
+        See Also
+        --------
+        pyinstr_iakoster.communication.Message.split: method for splitting
+            message for sending
+        """
         return self._slice_length
 
     @property
-    def splitable(self) -> bool: # nodesc
+    def splitable(self) -> bool:
+        """
+        Indicates that the message can be splited.
+
+        Returns
+        -------
+        bool
+            pointer to the possibility of separation
+        """
         return self._splitable
 
     @property
-    def tx(self) -> Any: # nodesc
+    def tx(self) -> Any:
+        """
+        Returns
+        -------
+        Any
+            transiever address.
+        """
         return self._tx
 
 
