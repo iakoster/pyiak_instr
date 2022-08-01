@@ -90,7 +90,6 @@ class BaseField(object):
         self._fmt_name = format_name
         self._name = name
         self._info = info
-        self._st_byte = start_byte
         self._exp = expected
         self._may_be_empty = may_be_empty
         self._fmt = fmt
@@ -100,9 +99,10 @@ class BaseField(object):
 
         self._word_bsize = struct.calcsize(self._fmt)
         self._fin = expected > 0
-        self._end_byte = start_byte + self._word_bsize * expected \
-            if self._fin else None
-        self._slice = slice(start_byte, self._end_byte)
+        self._slice = slice(
+            start_byte,
+            start_byte + self._word_bsize * expected if self._fin else None
+        )
 
     @property
     def bytesize(self) -> int:
@@ -122,12 +122,11 @@ class BaseField(object):
     @property
     def end_byte(self) -> int | None:
         """The number of byte in the message from which the field starts."""
-        return self._end_byte
+        return self._slice.stop
 
     @end_byte.setter
     def end_byte(self, stop: int | None) -> None: # nodesc
-        self._end_byte = stop
-        self._slice = slice(self._st_byte, stop)
+        self._slice = slice(self._slice.start, stop)
 
     @property
     def expected(self) -> int:
@@ -180,12 +179,11 @@ class BaseField(object):
     @property
     def start_byte(self) -> int:
         """The number of byte in the message from which the field starts."""
-        return self._st_byte
+        return self._slice.start
 
     @start_byte.setter
     def start_byte(self, start: int | None) -> None: # nodesc
-        self._st_byte = start
-        self._slice = slice(start, self._end_byte)
+        self._slice = slice(start, self._slice.stop)
 
     @property
     def words_count(self) -> int:
