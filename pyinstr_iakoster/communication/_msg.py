@@ -442,7 +442,7 @@ class Message(MessageView):
                 next_start_byte += offset
                 if self._have_infinite:
                     field.start_byte = next_start_byte
-                    field.end_byte += offset
+                    field.stop_byte += offset
 
             elif self._have_infinite:
                 raise MessageContentError(
@@ -458,9 +458,9 @@ class Message(MessageView):
 
             for i_field, (name, field) in enumerate(list(footers.items())[::-1]):
                 if i_field == 0:
-                    infinite.end_byte = field.start_byte
+                    infinite.stop_byte = field.start_byte
                 if i_field == len(footers) - 1:
-                    field.end_byte = None
+                    field.stop_byte = None
                 self._fields[name] = field
 
         return self

@@ -120,15 +120,6 @@ class BaseField(object):
         return self._def
 
     @property
-    def end_byte(self) -> int | None:
-        """The number of byte in the message from which the field starts."""
-        return self._slice.stop
-
-    @end_byte.setter
-    def end_byte(self, stop: int | None) -> None: # nodesc
-        self._slice = slice(self._slice.start, stop)
-
-    @property
     def expected(self) -> int:
         """The expected count of words."""
         return self._exp
@@ -182,8 +173,17 @@ class BaseField(object):
         return self._slice.start
 
     @start_byte.setter
-    def start_byte(self, start: int | None) -> None: # nodesc
+    def start_byte(self, start: int) -> None: # nodesc
         self._slice = slice(start, self._slice.stop)
+
+    @property
+    def stop_byte(self) -> int | None:
+        """The number of byte in the message from which the field starts."""
+        return self._slice.stop
+
+    @stop_byte.setter
+    def stop_byte(self, stop: int | None) -> None: # nodesc
+        self._slice = slice(self._slice.start, stop)
 
     @property
     def words_count(self) -> int:
@@ -392,7 +392,8 @@ class Field(BaseField):
 
         return converted
 
-    def _unpack_bytes(self, bytes_: bytes, fmt: str = None) -> npt.NDArray: # nodesc
+    def _unpack_bytes(self, bytes_: bytes, fmt: str = None) -> npt.NDArray: # todo: add complex fmt (e.g. >HH)
+        # nodesc
         if fmt is None:
             fmt = self._fmt
         return np.frombuffer(bytes_, dtype=fmt)
