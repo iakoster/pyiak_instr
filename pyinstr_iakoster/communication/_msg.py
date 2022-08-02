@@ -53,7 +53,7 @@ class MessageBase(object): # todo: join all classes together
             format_name: str = "default",
             splitable: bool = False,
             slice_length: int = 1024
-    ):
+    ): # todo: simplify checks, reduce memory
         self._fmt_name = format_name
         self._splitable = splitable
         self._slice_length = slice_length

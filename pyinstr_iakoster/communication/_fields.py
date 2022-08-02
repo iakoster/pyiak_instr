@@ -7,6 +7,7 @@ from typing import (
     SupportsBytes,
     Generator,
     Protocol,
+    Callable,
     runtime_checkable
 )
 
@@ -173,16 +174,18 @@ class BaseField(object):
         return self._slice.start
 
     @start_byte.setter
-    def start_byte(self, start: int) -> None: # nodesc
+    def start_byte(self, start: int) -> None:
+        """Set the number of a start byte of a field in a message."""
         self._slice = slice(start, self._slice.stop)
 
     @property
     def stop_byte(self) -> int | None:
-        """The number of byte in the message from which the field starts."""
+        """The number of byte in the message to which the field stops."""
         return self._slice.stop
 
     @stop_byte.setter
-    def stop_byte(self, stop: int | None) -> None: # nodesc
+    def stop_byte(self, stop: int | None) -> None:
+        """Set the numbet of a stop byte of a field in a message."""
         self._slice = slice(self._slice.start, stop)
 
     @property
@@ -263,7 +266,17 @@ class Field(BaseField):
             self.set(default)
             self._def = self._content
 
-    def get_setter(self): # nodesc
+    def get_setter(self) -> FieldSetter:
+        """
+        Returns
+        -------
+        FieldSetter
+            field setter for a message configure method.
+
+        See Also
+        --------
+        Message.get_same_instance: where it used.
+        """
         return FieldSetter.base(
             expected=self._exp,
             fmt=self._fmt,
@@ -339,27 +352,44 @@ class Field(BaseField):
             sep_step = self._word_bsize
         return self._content.hex(sep=sep, bytes_per_sep=sep_step)
 
-    def reset_to_default(self) -> None: # nodesc
+    def reset_to_default(self) -> None:
+        """Set field content to default."""
         self._content = self._def
 
     def unpack(self, fmt: str = None) -> npt.NDArray:
         """
         Returns the content of the field unpacked in fmt.
 
+        If fmt is None, that is taken from an instance of the class.
+
         Parameters
         ----------
         fmt: str
-            format for unpacking. If None, fmt is taken from
-            an instance of the class.
+            format for unpacking.
 
         Returns
         -------
-        NDArray
-            an array of words
+        numpy.ndarray
+            an array of unpacked bytes.
         """
         return self._unpack_bytes(self._content, fmt=fmt)
 
-    def unpack_default(self, fmt: str = None) -> npt.NDArray: # nodesc
+    def unpack_default(self, fmt: str = None) -> npt.NDArray:
+        """
+        Returns the default content unpacked in fmt.
+
+        If fmt is None, that is taken from an instance of the class.
+
+        Parameters
+        ----------
+        fmt: str
+            format for unpacking.
+
+        Returns
+        -------
+        numpy.ndarray
+            an array of unpacked bytes.
+        """
         return self._unpack_bytes(self._def, fmt=fmt)
 
     def _convert_content(self, content: ContentType) -> bytes:
@@ -393,7 +423,23 @@ class Field(BaseField):
         return converted
 
     def _unpack_bytes(self, bytes_: bytes, fmt: str = None) -> npt.NDArray: # todo: add complex fmt (e.g. >HH)
-        # nodesc
+        """
+        Returns bytes unpacked in fmt.
+
+        If fmt is None, that is taken from an instance of the class.
+
+        Parameters
+        ----------
+        bytes_: bytes
+            bytes for unpacking.
+        fmt: str
+            format for unpacking.
+
+        Returns
+        -------
+        numpy.ndarray
+            an array of unpacked bytes.
+        """
         if fmt is None:
             fmt = self._fmt
         return np.frombuffer(bytes_, dtype=fmt)
@@ -565,7 +611,7 @@ class SingleField(Field):
             parent=parent
         )
 
-    def get_setter(self): # nodesc
+    def get_setter(self):
         return FieldSetter.single(
             fmt=self._fmt,
             default=self.unpack_default(),
@@ -627,7 +673,7 @@ class StaticField(SingleField):
         )
         self.set(default)
 
-    def get_setter(self): # nodesc
+    def get_setter(self):
         return FieldSetter.static(
             fmt=self._fmt,
             default=self.unpack_default(),
@@ -689,14 +735,43 @@ class AddressField(SingleField):
             parent=parent
         )
 
-    def get_setter(self): # nodesc
+    def get_setter(self):
         return FieldSetter.address(
             fmt=self._fmt,
             info=self._info,
         )
 
 
-class CrcField(SingleField): # nodesc
+class CrcField(SingleField):
+    """
+    Represents a field of a Message with crc value.
+
+    If the field name is 'crc', then Message will automatically update
+    the value. The user/developer is responsible for setting the correct
+    parameters (e.g. fmt).
+
+    Parameters
+    ----------
+    format_name: str
+        the name of package format to which the field belongs.
+    name: str
+        the name of a field.
+    info: dict of {str, Any}, optional
+        additional info about a field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    algorithm_name: str
+        the name of the algorithm by which the crc is counted.
+    parent: Message or None
+        parent message.
+
+    See Also
+    --------
+    FieldSingle: parent class.
+    """
 
     def __init__(
             self,
@@ -706,7 +781,7 @@ class CrcField(SingleField): # nodesc
             start_byte: int,
             fmt: str,
             info: dict[str, Any] | None = None,
-            algorithm_name: str = "crc16-CCITT XMODEM",
+            algorithm_name: str = "crc16-CCITT/XMODEM",
             parent: Message = None,
     ):
         if algorithm_name not in self.CRC_ALGORITHMS:
@@ -724,16 +799,43 @@ class CrcField(SingleField): # nodesc
         self._alg_name = algorithm_name
         self._alg = self.CRC_ALGORITHMS[algorithm_name]
 
-    def calculate(self, msg: Message) -> int: # nodesc
+    def calculate(self, msg: Message) -> int:
+        """
+        Calculate a crc value of a message with all fields except this
+        field instance.
+
+        Parameters
+        ----------
+        msg: Message
+            message.
+
+        Returns
+        -------
+        int
+            crc value.
+        """
         return self._alg(
             b"".join(field.content for field in msg if field is not self)
         )
 
-    def update(self) -> None: # nodesc
+    def update(self) -> None:
+        """Update crc value using parent message."""
         self.set(self.calculate(self.parent))
 
     @staticmethod
-    def get_crc16_ccitt_xmodem(content: bytes) -> int: # nodesc
+    def get_crc16_ccitt_xmodem(content: bytes) -> int:
+        """
+        Calculate a crc16-CCITT/XMODEM of content.
+
+        Parameters
+        ----------
+        content
+
+        Returns
+        -------
+        int
+            crc value from 0 to 0xffff.
+        """
 
         crc, poly = 0, 0x1021
         for idx in range(len(content)):
@@ -745,16 +847,28 @@ class CrcField(SingleField): # nodesc
             crc &= 0xffff
         return crc
 
-    CRC_ALGORITHMS = {
-        "crc16-CCITT XMODEM": get_crc16_ccitt_xmodem
+    CRC_ALGORITHMS: dict[str, Callable[[bytes], int]] = {
+        "crc16-CCITT/XMODEM": get_crc16_ccitt_xmodem
     }
 
     @property
-    def algorithm(self): # nodesc
+    def algorithm(self) -> Callable[[bytes], int]:
+        """
+        Returns
+        -------
+        Callable[[bytes], int]
+            algorithm function.
+        """
         return self._alg
 
     @property
-    def algorithm_name(self): # nodesc
+    def algorithm_name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            algorithm name.
+        """
         return self._alg_name
 
 
@@ -815,7 +929,7 @@ class DataField(Field):
         if self._exp > 0:
             self._exp = exp
 
-    def get_setter(self): # nodesc
+    def get_setter(self):
         return FieldSetter.data(
             expected=self._exp,
             fmt=self._fmt,
@@ -918,7 +1032,7 @@ class DataLengthField(SingleField):
         else:
             raise ValueError(f"invalid units: {self._units}")
 
-    def get_setter(self): # nodesc
+    def get_setter(self):
         return FieldSetter.data_length(
             fmt=self._fmt,
             units=self._units,
@@ -1027,7 +1141,7 @@ class OperationField(SingleField):
         )
         self._desc = ""
 
-    def get_setter(self): # nodesc
+    def get_setter(self):
         return FieldSetter.operation(
             fmt=self._fmt,
             desc_dict=self._desc_dict,
@@ -1234,7 +1348,7 @@ class FieldSetter(object):
             *,
             fmt: str,
             info: dict[str, Any] | None = None,
-            algorithm_name: str = "crc16-CCITT XMODEM",
+            algorithm_name: str = "crc16-CCITT/XMODEM",
     ):
         return cls(
             special="crc", fmt=fmt, info=info, algorithm_name=algorithm_name

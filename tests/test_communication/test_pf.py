@@ -104,7 +104,7 @@ def get_mf_kpm(reference: bool = True):
                     expected=-1, fmt=">f", info=None
                 )),
                 crc=dict(special="crc", kwargs=dict(
-                    fmt=">H", algorithm_name="crc16-CCITT XMODEM", info=None
+                    fmt=">H", algorithm_name="crc16-CCITT/XMODEM", info=None
                 ))
             )
         )
@@ -175,7 +175,7 @@ class TestMessageErrorMark(unittest.TestCase):
             for i_msg, msg in enumerate(msgs):
                 if not emark.bytes_required:
                     msg = self.get_message(msg)
-                res_msg, res = emark.match(msg)
+                res_msg, res = emark.exists(msg)
                 if not emark.bytes_required:
                     res_msg = res_msg.to_bytes()
 
@@ -216,7 +216,7 @@ class TestMessageErrorMark(unittest.TestCase):
 
     def test_match_not_bytes(self):
         with self.assertRaises(TypeError) as exc:
-            self.emarks[0].match(self.get_message(b"12345"))
+            self.emarks[0].exists(self.get_message(b"12345"))
         self.assertEqual("bytes type required", exc.exception.args[0])
 
 

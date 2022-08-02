@@ -440,7 +440,7 @@ class TestCrcField(unittest.TestCase):
 
     def test_algorithms(self):
         check_data = {
-            "crc16-CCITT XMODEM": [
+            "crc16-CCITT/XMODEM": [
                 (b"\x10\x01\x20\x04", 0x6af5),
                 (bytes(range(15)), 0x9b92),
                 (bytes(i % 256 for i in range(1500)), 0x9243)

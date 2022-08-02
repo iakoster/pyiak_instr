@@ -1,3 +1,4 @@
+from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -18,7 +19,49 @@ __all__ = [
 ]
 
 
-class MessageErrorMark(object): # nodesc
+class MessageErrorMark(object):
+    """
+    A class for detecting the existence of an error mark in a message.
+
+    Attribute `operation` must be one of {'eq', 'neq'}.
+        - 'eq' -- equal. If equal to value that error mark in a message.
+        - 'neq' -- not equal. It not equal to value that error mark
+            in a message.
+
+    Parameters
+    ----------
+    operation: str
+        match operation. If None, instance is considered empty
+        (all checks pass).
+    value: str or bytes or list of int or float
+        value for checking. Can be encoded with StringEncoder.
+    start_byte: int
+        start byte of the error mark in a message. Used for cutting
+        an error mark from a message in bytes.
+    stop_byte: int
+        stop byte (not included) of the error mark in a message. Used
+        for cutting an error mark from a message in bytes.
+    field_name: str
+        the name of the field in Message instance. Used for copying
+        an error mark from an initilized message.
+
+    Raises
+    ------
+    ValueError
+        if `operation` not in {'eq', 'neq'};
+        if `field_name` not specified and one of `start_byte` or `stop_byte`
+            not specified too;
+        if `value` not specified;
+        if `value` is string and cannot be converted from string
+            by StringEncoder.
+    TypeError
+        if `start_byte` and `stop_byte` are specified and `value` not instance
+        of bytes type.
+
+    See Also
+    --------
+    MessageErrorMark.match: main method of this class.
+    """
 
     def __init__(
             self,
@@ -27,7 +70,7 @@ class MessageErrorMark(object): # nodesc
             start_byte: int = None,
             stop_byte: int = None,
             field_name: str = None,
-    ):
+    ): # todo: simplify checks, reduce memory
         if operation is None:
             self._empty = True
             self._oper, self._field_name = "", ""
@@ -69,7 +112,38 @@ class MessageErrorMark(object): # nodesc
             )
         self._val = value
 
-    def match(self, msg: bytes | Message) -> tuple[bytes | Message, bool]: # nodesc
+    def exists(self, msg: bytes | Message) -> tuple[bytes | Message, bool]:
+        """
+        Match error mark in a message.
+
+        The second return value is a boolean value and indicates the presence
+        of an error in the message (if True).
+
+        If `operation` is None (error mark is empty) returns message as is and
+        False indicator.
+
+        If `start_byte` and `stop_byte` are specified, the message is expected
+        as bytes. This part of the message is cut from the message.
+
+        If `field_name` is specified, the message is expected as bytes.
+
+        Parameters
+        ----------
+        msg: bytes or Message
+            message for checking.
+
+        Raises
+        ------
+        TypeError
+            if `start_byte` and `stop_byte` are specified and message
+            not is instance of bytes type.
+
+        Returns
+        -------
+        tuple of {bytes or Message, bool}
+            the edited message (if part of it is cut out) and
+            the error mark indicator.
+        """
         if self._empty:
             return msg, False
         if self._bytes_req and not isinstance(msg, bytes):
@@ -93,22 +167,50 @@ class MessageErrorMark(object): # nodesc
 
     @property
     def bytes_required(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            indicator that '.match' method expected message in bytes.
+        """
         return self._bytes_req
 
     @property
     def empty(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            indicator that there is an empty error mark.
+        """
         return self._empty
 
     @property
     def field_name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            the name of the field.
+        """
         return self._field_name
 
     @property
-    def kwargs(self):
+    def kwargs(self) -> dict[str, str | int | bytes | None]:
+        """
+        Bytes type will be encoded to string.
+
+        Returns
+        -------
+        dict[str, str | int | bytes | None]
+            dictionary for writing to a package format file.
+        """
         if self._empty:
             return {}
 
-        ret = {"operation": self._oper}
+        ret: dict[str, str | list[int | float] | bytes | None] = {
+            "operation": self._oper
+        }
         if isinstance(self._val, bytes):
             ret["value"] = StringEncoder.to_str(self._val)
         else:
@@ -123,22 +225,62 @@ class MessageErrorMark(object): # nodesc
 
     @property
     def operation(self) -> str:
+        """
+        Returns
+        -------
+        str
+            match operation.
+        """
         return self._oper
 
     @property
     def start_byte(self) -> int:
+        """
+        Returns
+        -------
+        int
+            the number of a start byte of an error mark.
+        """
         return self._start
 
     @property
     def stop_byte(self) -> int:
+        """
+        Returns
+        -------
+        int
+            the number of a stop byte of an error mark.
+        """
         return self._stop
 
     @property
     def value(self) -> bytes | list[int | float]:
+        """
+        Returns
+        -------
+        bytes of list of int or float
+            value for checking.
+        """
         return self._val
 
 
-class MessageFormat(object):  # nodesc
+class MessageFormat(object):
+    """
+    Represents class instance for message format.
+
+    Parameters
+    ----------
+    emark: MessageErrorMark
+        error mark for message.
+    **settings: FieldSetter or Any
+        settings for message. If there is a FieldSetter that it will be added
+        to setters dict and to msg_args in other cases.
+
+    Raises
+    ------
+    ValueError
+        if not all required fields are specified.
+    """
 
     def __init__(
             self,
@@ -162,6 +304,14 @@ class MessageFormat(object):  # nodesc
             )
 
     def write(self, format_table: RWNoSqlJsonDatabase.table_class) -> None:
+        """
+        Write parameters to the table.
+
+        Parameters
+        ----------
+        format_table: RWNoSqlTable
+            table instance.
+        """
 
         def drop_none(dict_: dict[Any]) -> Any:
             return {k: v for k, v in dict_.items() if v is not None}
@@ -184,6 +334,19 @@ class MessageFormat(object):  # nodesc
             format_table.insert(Document(field_pars, doc_id=i_setter))
 
     def get(self, **update: dict[str, Any]) -> Message:
+        """
+        Get message instance with message format.
+
+        Parameters
+        ----------
+        update: dict[str, Any]
+            dictinary of parameters to change.
+
+        Returns
+        -------
+        Message
+            message configured with message format.
+        """
         setters = deepcopy(self._setters)
         if len(update):
             for setter_name, fields in update.items():
@@ -191,7 +354,22 @@ class MessageFormat(object):  # nodesc
         return Message(**self._msg_args).configure(**setters)
 
     @classmethod
-    def read(cls, path: Path, fmt_name: str):
+    def read(cls, path: Path, fmt_name: str) -> MessageFormat:
+        """
+        Read message format from a json database.
+
+        Parameters
+        ----------
+        path: Path
+            path to json database.
+        fmt_name: str
+            name of format.
+
+        Returns
+        -------
+        MessageFormat
+            message format initilized with parameters from database.
+        """
 
         with RWNoSqlJsonDatabase(path) as db:
             if fmt_name not in db.tables():
@@ -211,18 +389,44 @@ class MessageFormat(object):  # nodesc
 
     @property
     def emark(self) -> MessageErrorMark:
+        """
+        Returns
+        -------
+        MessageErrorMark
+            error mark.
+        """
         return self._emark
 
     @property
     def msg_args(self) -> dict[str, Any]:
+        """
+        Returns
+        -------
+        dict[str, Any]
+            arguments for setting Message class.
+        """
         return self._msg_args
 
     @property
     def setters(self) -> dict[str, FieldSetter]:
+        """
+        Returns
+        -------
+        dict[str, FieldSetter]
+            setters for Message.configure method.
+        """
         return self._setters
 
 
-class PackageFormat(object):  # nodesc
+class PackageFormat(object):
+    """
+    Represents class instance for package format.
+
+    Parameters
+    ----------
+    **formats: MessageFormat
+        message formats. Key is a name of a message format.
+    """
 
     def __init__(
             self,
@@ -233,16 +437,54 @@ class PackageFormat(object):  # nodesc
             self._formats[name].msg_args["format_name"] = name
 
     def write(self, database: Path) -> None:
+        """
+        Write parameters to the table.
+
+        The database will be cleared before writing the data.
+
+        Parameters
+        ----------
+        database: Path
+            save path for database.
+        """
         with RWNoSqlJsonDatabase(database) as db:
             db.drop_tables()
             for name, format_ in self._formats.items():
                 format_.write(db.table(name))
 
     def get(self, format_name: str, **update: dict[str, Any]) -> Message:
+        """
+        Get message instance with message format.
+
+        Parameters
+        ----------
+        format_name: str
+            the name of the message format.
+        **update: dict[str, Any]
+            dictinary of parameters to change.
+
+        Returns
+        -------
+        Message
+            message configured with selected message format.
+        """
         return self[format_name].get(**update)
 
     @classmethod
-    def read(cls, database: Path):
+    def read(cls, database: Path) -> PackageFormat:
+        """
+        Read all message formats from a json database.
+
+        Parameters
+        ----------
+        database: Path
+            path to json database.
+
+        Returns
+        -------
+        PackageFormat
+            package format initilized by database.
+        """
         formats = {}
         with RWNoSqlJsonDatabase(database) as db:
             for table_name in db.tables():
@@ -266,7 +508,26 @@ class PackageFormat(object):  # nodesc
 
     @property
     def formats(self) -> dict[str, MessageFormat]:
+        """
+        Returns
+        -------
+        dict[str, MessageFormat]
+            all existing message formats in the package format.
+        """
         return self._formats
 
     def __getitem__(self, format_name: str) -> MessageFormat:
+        """
+        Get message format by name.
+
+        Parameters
+        ----------
+        format_name: str
+            message format name.
+
+        Returns
+        -------
+        MessageFormat
+            selected message format.
+        """
         return self._formats[format_name]
