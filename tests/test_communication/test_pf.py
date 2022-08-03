@@ -195,14 +195,9 @@ class TestMessageErrorMark(unittest.TestCase):
         with self.assertRaises(ValueError) as exc:
             MessageErrorMark(operation="eq", start_byte=10)
         self.assertEqual(
-            "field name or start byte and end byte must be defined",
+            "field name or start and stop bytes must be defined",
             exc.exception.args[0]
         )
-
-    def test_value_not_exists(self):
-        with self.assertRaises(ValueError) as exc:
-            MessageErrorMark(operation="eq", field_name="req")
-        self.assertEqual("value not specified", exc.exception.args[0])
 
     def test_value_not_bytes(self):
         with self.assertRaises(TypeError) as exc:
@@ -210,7 +205,7 @@ class TestMessageErrorMark(unittest.TestCase):
                 operation="eq", start_byte=1, stop_byte=2, value=[10]
             )
         self.assertEqual(
-            "if start and end bytes is specified that value must be bytes",
+            "invalid type: <class 'list'>, expected bytes",
             exc.exception.args[0]
         )
 

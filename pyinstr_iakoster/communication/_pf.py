@@ -51,12 +51,13 @@ class MessageErrorMark(object):
         if `operation` not in {'eq', 'neq'};
         if `field_name` not specified and one of `start_byte` or `stop_byte`
             not specified too;
-        if `value` not specified;
+        if `field_name`, `start_byte` and `stop_byte` is specified;
         if `value` is string and cannot be converted from string
             by StringEncoder.
     TypeError
         if `start_byte` and `stop_byte` are specified and `value` not instance
-        of bytes type.
+        of bytes type;
+        if `value` type is not bytes or list.
 
     See Also
     --------
@@ -66,50 +67,38 @@ class MessageErrorMark(object):
     def __init__(
             self,
             operation: str = None,
-            value: str | bytes | list[int | float] = None,
+            value: str | bytes | list[int | float] = b"",
             start_byte: int = None,
             stop_byte: int = None,
             field_name: str = None,
-    ): # todo: simplify checks, reduce memory
-        if operation is None:
-            self._empty = True
-            self._oper, self._field_name = "", ""
-            self._start, self._stop = 0, 0
-            self._val = b""
-            self._bytes_req = True
+    ):
+        self._oper = operation
+        if self.empty:
+            self._field_name, self._slice, self._val = None, slice(None), b""
             return
-        else:
-            self._empty = False
 
-        if operation not in ("eq", "neq"):
+        if operation not in (None, "eq", "neq"):
             raise ValueError("%r operation not in {'eq', 'neq'}" % operation)
         if field_name is None and None in (start_byte, stop_byte):
             raise ValueError(
-                "field name or start byte and end byte must be defined"
+                "field name or start and stop bytes must be defined"
             )
-        if value is None:
-            raise ValueError("value not specified")
-
-        self._oper = operation
-        if field_name is not None:
-            self._field_name = field_name
-            self._start, self._stop = 0, 0
-            self._bytes_req = False
-
-        else:
-            self._field_name = ""
-            self._start, self._stop = start_byte, stop_byte
-            self._bytes_req = True
+        if None not in (field_name, start_byte, stop_byte):
+            raise ValueError(
+                "field_name, start_byte, stop_byte cannot be specified at "
+                "the same time"
+            )
+        self._field_name = field_name
+        self._slice = slice(start_byte, stop_byte)
 
         if isinstance(value, str):
             value = StringEncoder.from_str(value)
             if isinstance(value, str):
                 raise ValueError("convert string is impossible")
-
-        if self._bytes_req and not isinstance(value, bytes):
-            raise TypeError(
-                "if start and end bytes is specified that value must be bytes"
-            )
+        if self.bytes_required and not isinstance(value, bytes):
+            raise TypeError("invalid type: %s, expected bytes" % type(value))
+        if not isinstance(value, bytes | list):
+            raise TypeError("invalid type: %s" % type(value))
         self._val = value
 
     def exists(self, msg: bytes | Message) -> tuple[bytes | Message, bool]:
@@ -144,14 +133,14 @@ class MessageErrorMark(object):
             the edited message (if part of it is cut out) and
             the error mark indicator.
         """
-        if self._empty:
+        if self._oper is None:
             return msg, False
-        if self._bytes_req and not isinstance(msg, bytes):
+        if self._field_name is None and not isinstance(msg, bytes):
             raise TypeError("bytes type required")
 
         if isinstance(msg, bytes):
-            msg_mark = msg[self._start:self._stop]
-            msg = msg[:self._start] + msg[self._stop:]
+            msg_mark = msg[self._slice]
+            msg = msg[:self._slice.start] + msg[self._slice.stop:]
 
         else:
             msg_mark = msg[self._field_name]
@@ -173,7 +162,7 @@ class MessageErrorMark(object):
         bool
             indicator that '.match' method expected message in bytes.
         """
-        return self._bytes_req
+        return self._field_name is None
 
     @property
     def empty(self) -> bool:
@@ -183,10 +172,10 @@ class MessageErrorMark(object):
         bool
             indicator that there is an empty error mark.
         """
-        return self._empty
+        return self._oper is None
 
     @property
-    def field_name(self) -> str:
+    def field_name(self) -> str | None:
         """
         Returns
         -------
@@ -205,7 +194,7 @@ class MessageErrorMark(object):
         dict[str, str | int | bytes | None]
             dictionary for writing to a package format file.
         """
-        if self._empty:
+        if self._oper is None:
             return {}
 
         ret: dict[str, str | list[int | float] | bytes | None] = {
@@ -215,16 +204,16 @@ class MessageErrorMark(object):
             ret["value"] = StringEncoder.to_str(self._val)
         else:
             ret["value"] = self._val
-        if self._bytes_req:
-            ret["start_byte"] = self._start
-            ret["stop_byte"] = self._stop
+        if self.bytes_required:
+            ret["start_byte"] = self._slice.start
+            ret["stop_byte"] = self._slice.stop
         else:
             ret["field_name"] = self._field_name
 
         return ret
 
     @property
-    def operation(self) -> str:
+    def operation(self) -> str | None:
         """
         Returns
         -------
@@ -234,24 +223,24 @@ class MessageErrorMark(object):
         return self._oper
 
     @property
-    def start_byte(self) -> int:
+    def start_byte(self) -> int | None:
         """
         Returns
         -------
         int
             the number of a start byte of an error mark.
         """
-        return self._start
+        return self._slice.start
 
     @property
-    def stop_byte(self) -> int:
+    def stop_byte(self) -> int | None:
         """
         Returns
         -------
         int
             the number of a stop byte of an error mark.
         """
-        return self._stop
+        return self._slice.stop
 
     @property
     def value(self) -> bytes | list[int | float]:
