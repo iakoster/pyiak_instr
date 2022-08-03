@@ -58,7 +58,6 @@ class MessageBase(object): # todo: join all classes together
         self._splitable = splitable
         self._slice_length = slice_length
 
-        self._have_infinite = False
         self._fields: dict[str, FieldType] = {}
         self._tx, self._rx = None, None
 
@@ -165,7 +164,10 @@ class MessageBase(object): # todo: join all classes together
             mark that there is a field in the message that can have
             an unlimited length.
         """
-        return self._have_infinite
+        for field in self._fields.values():
+            if not field.finite:
+                return True
+        return False
 
     @property
     def operation(self) -> OperationField:
@@ -412,55 +414,48 @@ class Message(MessageView):
             )
         del fields_diff
 
-        def get_setters():
+        def get_setters() -> FieldType:
             last_name = ""
             for setter_name, setter_ in fields.items():
-                if self.have_infinite:
+                if infinite is not None:
                     break
                 yield setter_name, setter_
                 last_name = setter_name
 
-            if len(last_name) and self.have_infinite:
+            if len(last_name) and infinite is not None:
                 for setter_name, setter_ in list(fields.items())[::-1]:
                     if setter_name == last_name:
                         break
                     yield setter_name, setter_
 
         self._fields.clear()
-        next_start_byte = 0
-        footers, infinite = {}, None
+        next_start_byte, footers, infinite = 0, {}, None
         selected = self._fields
 
         for name, setter in get_setters():
             field = self._get_field(name, next_start_byte, setter)
+            selected[name] = field
             if field.finite:
-                selected[name] = field
-
                 offset = field.expected * field.bytesize
-                if self._have_infinite:
+                if infinite is not None:
                     offset *= -1
                 next_start_byte += offset
-                if self._have_infinite:
+                if infinite is not None:
                     field.start_byte = next_start_byte
                     field.stop_byte += offset
 
-            elif self._have_infinite:
+            elif infinite is not None:
                 raise MessageContentError(
                     self.__class__.__name__, name, "second infinite field"
                 )
             else:
-                next_start_byte = 0
-                selected, infinite = footers, field
-                self._have_infinite = True
+                next_start_byte, selected, infinite = 0, footers, field
 
-        if self._have_infinite:
-            self._fields[infinite.name] = infinite
-
-            for i_field, (name, field) in enumerate(list(footers.items())[::-1]):
-                if i_field == 0:
-                    infinite.stop_byte = field.start_byte
-                if i_field == len(footers) - 1:
-                    field.stop_byte = None
+        if infinite is not None and len(footers):
+            footers = list(footers.items())[::-1]
+            infinite.stop_byte = footers[0][1].start_byte
+            footers[-1][1].stop_byte = None
+            for i_field, (name, field) in enumerate(footers):
                 self._fields[name] = field
 
         return self

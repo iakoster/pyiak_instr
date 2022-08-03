@@ -14,6 +14,7 @@ from ._comm import (
     FloatWordsCountError,
     PartialFieldError,
 )
+# todo: simplify exceptions
 
 __all__ = [
     "CompletedWorkError",
