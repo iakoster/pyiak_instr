@@ -31,9 +31,18 @@ __all__ = [
 ]
 
 
-class MessageBase(object): # todo: join all classes together
+class Message(object):
     """
-    Base class of the Message with required methods.
+    Represents a message for communication between devices.
+
+    Parameters
+    ----------
+    format_name: str
+        name of the message format.
+    splitable: bool
+        shows that the message can be divided by the data.
+    slice_length: int
+        max length of the data in one slice.
     """
 
     REQ_FIELDS = {
@@ -53,7 +62,7 @@ class MessageBase(object): # todo: join all classes together
             format_name: str = "default",
             splitable: bool = False,
             slice_length: int = 1024
-    ): # todo: simplify checks, reduce memory
+    ):
         self._fmt_name = format_name
         self._splitable = splitable
         self._slice_length = slice_length
@@ -70,316 +79,6 @@ class MessageBase(object): # todo: join all classes together
     def clear_addresses(self) -> None:
         """Set addresses to None."""
         self._tx, self._rx = None, None
-
-    def get_instance(self, **kwargs: Any) -> Message:
-        """
-        Get the same class as the current object, initialized with
-        the specified arguments.
-
-        Parameters
-        ----------
-        **kwargs: Any
-            initial keywords arguments.
-
-        Returns
-        -------
-        Message
-            new class instance.
-        """
-        return self.__class__(**kwargs)
-
-    def set_addresses(self, tx: Any = None, rx: Any = None) -> Message:
-        """
-        Set Tx and Rx addresses.
-
-        Addresses may differ depending on the type of connection used.
-            * Tx - is a source address;
-            * Rx - is a reciever address.
-        If address (Rx or Tx) is None that it will be ignored.
-
-        Parameters
-        ----------
-        tx: Any
-            source address.
-        rx: Any
-            reciever address.
-
-        Returns
-        -------
-        Message
-            object message instance.
-        """
-        if tx is not None:
-            self._tx = tx
-        if rx is not None:
-            self._rx = rx
-        return self
-
-    @property
-    def address(self) -> AddressField:
-        """
-        Returns
-        -------
-        AddressField
-            address field instance.
-        """
-        return self._fields["address"]
-
-    @property
-    def data(self) -> DataField:
-        """
-        Returns
-        -------
-        DataField
-            data field instance.
-        """
-        return self._fields["data"]
-
-    @property
-    def data_length(self) -> DataLengthField:
-        """
-        Returns
-        -------
-        DataLengthField
-            data length field instance.
-        """
-        return self._fields["data_length"]
-
-    @property
-    def format_name(self) -> str:
-        """
-        Returns
-        -------
-        str
-            name of the message format.
-        """
-        return self._fmt_name
-
-    @property
-    def have_infinite(self) -> bool:
-        """
-        Returns
-        -------
-        bool
-            mark that there is a field in the message that can have
-            an unlimited length.
-        """
-        for field in self._fields.values():
-            if not field.finite:
-                return True
-        return False
-
-    @property
-    def operation(self) -> OperationField:
-        """
-        Returns
-        -------
-        OperationField
-            operation field instance.
-        """
-        return self._fields["operation"]
-
-    @property
-    def rx(self) -> Any:
-        """
-        Returns
-        -------
-        Any
-            reciever address.
-        """
-        return self._rx
-
-    @property
-    def slice_length(self) -> int:
-        """
-        If splittable is True that this attribute can be used.
-
-        Returns
-        -------
-        int
-            max length of the data field in message for sending.
-
-        See Also
-        --------
-        pyinstr_iakoster.communication.Message.split: method for splitting
-            message for sending
-        """
-        return self._slice_length
-
-    @property
-    def splitable(self) -> bool:
-        """
-        Indicates that the message can be splited.
-
-        Returns
-        -------
-        bool
-            pointer to the possibility of separation
-        """
-        return self._splitable
-
-    @property
-    def tx(self) -> Any:
-        """
-        Returns
-        -------
-        Any
-            transiever address.
-        """
-        return self._tx
-
-
-class MessageView(MessageBase):
-
-    def hex(self, sep: str = " ", sep_step: int = None) -> str:
-        """
-        Returns a string of hexademical numbers from the fields content.
-
-        Parameters
-        ----------
-        sep: str
-            separator between bytes/words and fields.
-        sep_step: int
-            separator step.
-
-        Returns
-        -------
-        str
-            hex string.
-
-        See Also
-        --------
-        Field.hex: return field content hex string.
-        """
-        fields_hex = []
-        for field in self:
-            field_hex = field.hex(sep=sep, sep_step=sep_step)
-            if field_hex != "":
-                fields_hex.append(field_hex)
-        return sep.join(fields_hex)
-
-    def to_bytes(self) -> bytes:
-        """
-        Returns
-        -------
-        bytes
-            joined fields contents.
-        """
-        return b"".join(
-            bytes(field) for field in self._fields.values()
-        )
-
-    def unpack(self) -> npt.NDArray:
-        """
-        Returns
-        -------
-        npt.NDArray
-            unpacked joined fields content.
-        """
-        unpacked = np.array([])
-        for field in self:
-            unpacked = np.append(unpacked, field.unpack())
-        return unpacked
-
-    @staticmethod
-    def _format_address(address: Any) -> str:
-        match address:
-            case str():
-                return address
-            case (str() as ip, int() as port):
-                return f"{ip}:{port}"
-            case _:
-                return str(address)
-
-    @property
-    def rx_str(self) -> str:
-        return self._format_address(self._rx)
-
-    @property
-    def tx_str(self) -> str:
-        return self._format_address(self._tx)
-
-    def __bytes__(self) -> bytes:
-        """Returns joined fields content."""
-        return self.to_bytes()
-
-    def __getitem__(self, name: str) -> FieldType:
-        """
-        Returns a field instance by field name.
-
-        Parameters
-        ----------
-        name : str
-            field name.
-
-        Returns
-        -------
-        FieldType
-            field instance.
-        """
-        return self._fields[name]
-
-    def __iter__(self):
-        """
-        Iteration by fields.
-
-        Yields
-        -------
-        FieldType
-            field instance.
-        """
-        for field in self._fields.values():
-            yield field
-
-    def __len__(self) -> int:
-        """Returns length of the message in bytes."""
-        return len(self.to_bytes())
-
-    def __repr__(self) -> str:
-        """Returns string representation of the message."""
-        fields_repr = []
-        for name, field in self._fields.items():
-            if field.words_count:
-                fields_repr.append((name, str(field))) # danger with huge fields
-            else:
-                fields_repr.append((name, "EMPTY"))
-        fields_repr = ", ".join(
-            f"{name}={field}" for name, field in fields_repr
-        )
-        return f"<{self.__class__.__name__}({fields_repr}), " \
-               f"from={self.tx_str}, to={self.rx_str}>"
-
-    def __str__(self) -> str:
-        """Returns fields converted to string."""
-        return " ".join(str(field) for field in self if str(field) != "")
-
-
-class Message(MessageView):
-    """
-    Represents a message for communication between devices.
-
-    Parameters
-    ----------
-    format_name: str
-        name of the message format.
-    splitable: bool
-        shows that the message can be divided by the data.
-    slice_length: int
-        max length of the data in one slice.
-    """
-
-    def __init__(
-            self,
-            format_name: str = "default",
-            splitable: bool = False,
-            slice_length: int = 1024
-    ):
-        MessageView.__init__(
-            self,
-            format_name=format_name,
-            splitable=splitable,
-            slice_length=slice_length
-        )
 
     @overload
     def configure(
@@ -489,6 +188,23 @@ class Message(MessageView):
         self._validate_content()
         return self
 
+    def get_instance(self, **kwargs: Any) -> Message:
+        """
+        Get the same class as the current object, initialized with
+        the specified arguments.
+
+        Parameters
+        ----------
+        **kwargs: Any
+            initial keywords arguments.
+
+        Returns
+        -------
+        Message
+            new class instance.
+        """
+        return self.__class__(**kwargs)
+
     def get_same_instance(self) -> Message:
         """
         Get the same class as the current object, initialized with
@@ -503,6 +219,33 @@ class Message(MessageView):
         """
         return self.__class__(**self._kwargs) \
             .configure(**{n: f.get_setter() for n, f in self._fields.items()})
+
+    def hex(self, sep: str = " ", sep_step: int = None) -> str:
+        """
+        Returns a string of hexademical numbers from the fields content.
+
+        Parameters
+        ----------
+        sep: str
+            separator between bytes/words and fields.
+        sep_step: int
+            separator step.
+
+        Returns
+        -------
+        str
+            hex string.
+
+        See Also
+        --------
+        Field.hex: return field content hex string.
+        """
+        fields_hex = []
+        for field in self:
+            field_hex = field.hex(sep=sep, sep_step=sep_step)
+            if field_hex != "":
+                fields_hex.append(field_hex)
+        return sep.join(fields_hex)
 
     @overload
     def set(
@@ -546,6 +289,33 @@ class Message(MessageView):
                 and isinstance(self["crc"], CrcField):
             self["crc"].update()
         self._validate_content()
+        return self
+
+    def set_addresses(self, tx: Any = None, rx: Any = None) -> Message:
+        """
+        Set Tx and Rx addresses.
+
+        Addresses may differ depending on the type of connection used.
+            * Tx - is a source address;
+            * Rx - is a reciever address.
+        If address (Rx or Tx) is None that it will be ignored.
+
+        Parameters
+        ----------
+        tx: Any
+            source address.
+        rx: Any
+            reciever address.
+
+        Returns
+        -------
+        Message
+            object message instance.
+        """
+        if tx is not None:
+            self._tx = tx
+        if rx is not None:
+            self._rx = rx
         return self
 
     def split(self):
@@ -594,6 +364,29 @@ class Message(MessageView):
                 self.address[0] + i_part * self._slice_length)
             msg.set_addresses(self._tx, self._rx)
             yield msg
+
+    def to_bytes(self) -> bytes:
+        """
+        Returns
+        -------
+        bytes
+            joined fields contents.
+        """
+        return b"".join(
+            bytes(field) for field in self._fields.values()
+        )
+
+    def unpack(self) -> npt.NDArray:
+        """
+        Returns
+        -------
+        npt.NDArray
+            unpacked joined fields content.
+        """
+        unpacked = np.array([])
+        for field in self:
+            unpacked = np.append(unpacked, field.unpack())
+        return unpacked
 
     def _get_field(
             self, name: str, start_byte: int, setter: FieldSetter
@@ -658,6 +451,137 @@ class Message(MessageView):
                     "invalid crc value, '%x' != '%x'" % (ref_crc, res_crc)
                 )
 
+    @staticmethod
+    def _format_address(address: Any) -> str: # nodesc
+        match address:
+            case str():
+                return address
+            case (str() as ip, int() as port):
+                return f"{ip}:{port}"
+            case _:
+                return str(address)
+
+    @property
+    def address(self) -> AddressField:
+        """
+        Returns
+        -------
+        AddressField
+            address field instance.
+        """
+        return self._fields["address"]
+
+    @property
+    def data(self) -> DataField:
+        """
+        Returns
+        -------
+        DataField
+            data field instance.
+        """
+        return self._fields["data"]
+
+    @property
+    def data_length(self) -> DataLengthField:
+        """
+        Returns
+        -------
+        DataLengthField
+            data length field instance.
+        """
+        return self._fields["data_length"]
+
+    @property
+    def format_name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            name of the message format.
+        """
+        return self._fmt_name
+
+    @property
+    def have_infinite(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            mark that there is a field in the message that can have
+            an unlimited length.
+        """
+        for field in self._fields.values():
+            if not field.finite:
+                return True
+        return False
+
+    @property
+    def operation(self) -> OperationField:
+        """
+        Returns
+        -------
+        OperationField
+            operation field instance.
+        """
+        return self._fields["operation"]
+
+    @property
+    def rx(self) -> Any:
+        """
+        Returns
+        -------
+        Any
+            reciever address.
+        """
+        return self._rx
+
+    @property
+    def rx_str(self) -> str: # nodesc
+        return self._format_address(self._rx)
+
+    @property
+    def slice_length(self) -> int:
+        """
+        If splittable is True that this attribute can be used.
+
+        Returns
+        -------
+        int
+            max length of the data field in message for sending.
+
+        See Also
+        --------
+        pyinstr_iakoster.communication.Message.split: method for splitting
+            message for sending
+        """
+        return self._slice_length
+
+    @property
+    def splitable(self) -> bool:
+        """
+        Indicates that the message can be splited.
+
+        Returns
+        -------
+        bool
+            pointer to the possibility of separation
+        """
+        return self._splitable
+
+    @property
+    def tx(self) -> Any:
+        """
+        Returns
+        -------
+        Any
+            transiever address.
+        """
+        return self._tx
+
+    @property
+    def tx_str(self) -> str: # nodesc
+        return self._format_address(self._tx)
+
     def __add__(self, other) -> Message:
         """
         Add new data to the data field.
@@ -702,3 +626,59 @@ class Message(MessageView):
         self.data.append(other)
         self.data_length.update()
         return self
+
+    def __bytes__(self) -> bytes:
+        """Returns joined fields content."""
+        return self.to_bytes()
+
+    def __getitem__(self, name: str) -> FieldType:
+        """
+        Returns a field instance by field name.
+
+        Parameters
+        ----------
+        name : str
+            field name.
+
+        Returns
+        -------
+        FieldType
+            field instance.
+        """
+        return self._fields[name]
+
+    def __iter__(self):
+        """
+        Iteration by fields.
+
+        Yields
+        -------
+        FieldType
+            field instance.
+        """
+        for field in self._fields.values():
+            yield field
+
+    def __len__(self) -> int:
+        """Returns length of the message in bytes."""
+        return len(self.to_bytes())
+
+    def __repr__(self) -> str:
+        """Returns string representation of the message."""
+        fields_repr = []
+        for name, field in self._fields.items():
+            if field.words_count:
+                fields_repr.append((name, str(field))) # danger with huge fields
+            else:
+                fields_repr.append((name, "EMPTY"))
+        fields_repr = ", ".join(
+            f"{name}={field}" for name, field in fields_repr
+        )
+        return (
+            f"<{self.__class__.__name__}({fields_repr}), from={self.tx_str}, "
+            f"to={self.rx_str}>"
+        )
+
+    def __str__(self) -> str:
+        """Returns fields converted to string."""
+        return " ".join(str(field) for field in self if str(field) != "")
