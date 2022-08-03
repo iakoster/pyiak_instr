@@ -18,7 +18,15 @@ from ._msg import (
     MessageContentError,
     NotConfiguredMessageError,
 )
-from ._pf import MessageErrorMark, MessageFormat, PackageFormat
+from ._regs import (
+    Register,
+    RegisterMap
+)
+from ._pf import (
+    MessageErrorMark,
+    MessageFormat,
+    PackageFormat
+)
 
 __all__ = [
     "ContentType",
@@ -37,6 +45,8 @@ __all__ = [
     "MessageErrorMark",
     "MessageFormat",
     "PackageFormat",
+    "Register",
+    "RegisterMap",
     "MessageContentError",
     "NotConfiguredMessageError",
     "PartialFieldError",

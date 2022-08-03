@@ -83,10 +83,11 @@ class Message(object):
     @overload
     def configure(
             self,
-            address: FieldSetter = None,
-            data: FieldSetter = None,
-            data_length: FieldSetter = None,
-            operation: FieldSetter = None,
+            *,
+            address: FieldSetter,
+            operation: FieldSetter,
+            data: FieldSetter = FieldSetter(),
+            data_length: FieldSetter = FieldSetter(),
             **fields: FieldSetter
     ) -> Message:
         ...
