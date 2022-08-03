@@ -452,7 +452,23 @@ class Message(object):
                 )
 
     @staticmethod
-    def _format_address(address: Any) -> str: # nodesc
+    def _format_address(address: Any) -> str:
+        """
+        Format address to strint.
+
+        If the address has an unknown type, it returns as is with
+        the __str__ method.
+
+        Parameters
+        ----------
+        address: Any
+            address for converting.
+
+        Returns
+        -------
+        str
+            converted address.
+        """
         match address:
             case str():
                 return address
@@ -536,7 +552,13 @@ class Message(object):
         return self._rx
 
     @property
-    def rx_str(self) -> str: # nodesc
+    def rx_str(self) -> str:
+        """
+        Returns
+        -------
+        str
+            reciever address converted to string.
+        """
         return self._format_address(self._rx)
 
     @property
@@ -579,7 +601,13 @@ class Message(object):
         return self._tx
 
     @property
-    def tx_str(self) -> str: # nodesc
+    def tx_str(self) -> str:
+        """
+        Returns
+        -------
+        str
+            transiever address converted to string.
+        """
         return self._format_address(self._tx)
 
     def __add__(self, other) -> Message:
