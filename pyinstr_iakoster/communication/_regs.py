@@ -1,7 +1,12 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import sqlite3
+from pathlib import Path
 
 import pandas as pd
+
+from ..rwfile import RWSQLite3Simple
 
 if TYPE_CHECKING:
     from ._msg import Message, ContentType
@@ -16,6 +21,11 @@ __all__ = [
 
 class Register(object): # nodesc
 
+# todo:
+#  data format. If None get from mf.
+#  RO/WO/RW regimes.
+#  check to max length
+
     _mf: MessageFormat
 
     def __init__(
@@ -24,29 +34,31 @@ class Register(object): # nodesc
             name: str,
             address: int,
             length: int,
-            message_format_name: str,
+            format_name: str,
             description: str = ""
     ):
         self._ext_name = extended_name
         self._name = name
         self._addr = address
         self._dlen = length
-        self._msg_fmt_name = message_format_name
+        self._fmt_name = format_name
         self._desc = description
 
     def read(
             self,
             data_length: ContentType = None,
+            update: dict[str, dict[str, Any]] = None,
             **other_fields: ContentType
     ) -> Message: # nodesc
-        if "_mf" not in dir(self):
-            raise AttributeError("message format not setted") # todo: custom exception
-        msg = self._mf.get()
-        del self._mf
+        msg = self._get_message(**(update or {}))
+        if "operation" in other_fields:
+            operation = other_fields["operation"]
+        else:
+            operation = self._find_operation(msg, "r")
         return msg.set(
             address=self._addr,
-            operation=self._find_operation(msg, "r"),
-            data_length=self._dlen if data_length is None else data_length,
+            operation=operation,
+            data_length=data_length or self._dlen,
             **other_fields
         )
 
@@ -56,19 +68,28 @@ class Register(object): # nodesc
 
     def write(
             self,
-            data: ContentType,
+            data: ContentType = None,
+            update: dict[str, dict[str, Any]] = None,
             **other_fields: ContentType
     ) -> Message: # nodesc
-        if "_mf" not in dir(self):
-            raise AttributeError("message format not setted")  # todo: custom exception
-        msg = self._mf.get()
-        del self._mf
+        msg = self._get_message(**(update or {}))
+        if "operation" in other_fields:
+            operation = other_fields["operation"]
+        else:
+            operation = self._find_operation(msg, "w")
         return msg.set(
             address=self._addr,
-            operation=self._find_operation(msg, "w"),
-            data=data,
+            operation=operation,
+            data=data or b"",
             **other_fields
         )
+
+    def _get_message(self, **update: dict[str, Any]) -> Message:
+        if not hasattr(self, "_mf"):
+            raise AttributeError("message format not specified")  # todo: custom exception
+        msg = self._mf.get(**update)
+        del self._mf
+        return msg
 
     @classmethod
     def from_series(cls, series: pd.Series) -> Register: # nodesc
@@ -99,8 +120,8 @@ class Register(object): # nodesc
         return self._dlen
 
     @property
-    def message_format_name(self) -> str: # nodesc
-        return self._msg_fmt_name
+    def format_name(self) -> str: # nodesc
+        return self._fmt_name
 
     @property
     def name(self) -> str: # nodesc
@@ -123,7 +144,7 @@ class RegisterMap(object): # nodesc
         "name",
         "address",
         "length",
-        "message_format_name",
+        "format_name",
         "description",
     )
 
@@ -146,6 +167,9 @@ class RegisterMap(object): # nodesc
 
         raise AttributeError("register %r not exists" % name)
 
+    def write(self, con: sqlite3.Connection) -> None: # nodesc
+        self._tbl.to_sql("registers", con, index=False)
+
     def _validate_table(self, table: pd.DataFrame) -> pd.DataFrame: # nodesc
         cols_diff = set(table.columns) - set(self.EXPECTED_COLUMNS)
         if len(cols_diff):
@@ -154,7 +178,14 @@ class RegisterMap(object): # nodesc
         #  without dublicates in extended_name and name
         #  without duplicates in address with the same msg_fmt
         #  sort by msg_fmt and address
-        return table.sort_values(by=["message_format_name", "address"])
+        return table.sort_values(by=["format_name", "address"])
+
+    @classmethod
+    def read(cls, database: Path) -> RegisterMap: # nodesc
+        with RWSQLite3Simple(database, autocommit=False) as db:
+            return RegisterMap(
+                pd.read_sql("SELECT * FROM registers", db.connection)
+            )
 
     @property
     def table(self) -> pd.DataFrame: # nodesc

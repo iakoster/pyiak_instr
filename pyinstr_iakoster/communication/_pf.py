@@ -3,12 +3,15 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from tinydb.table import Document
+import pandas as pd
+from tinydb.table import Table, Document
 
 from ._msg import FieldSetter, Message
+from ._regs import Register, RegisterMap
 from ..utilities import StringEncoder
 from ..rwfile import (
     RWNoSqlJsonDatabase,
+    RWSQLite3Simple,
 )
 
 
@@ -292,7 +295,7 @@ class MessageFormat(object):
                 ", ".join(setters_diff)
             )
 
-    def write(self, format_table: RWNoSqlJsonDatabase.table_class) -> None:
+    def write(self, format_table: Table) -> None:
         """
         Write parameters to the table.
 
@@ -419,13 +422,24 @@ class PackageFormat(object):
 
     def __init__(
             self,
+            register_map: RegisterMap = None,
             **formats: MessageFormat
     ):
+        if register_map is None:
+            register_map = RegisterMap(
+                pd.DataFrame(columns=RegisterMap.EXPECTED_COLUMNS)
+            )
+
         self._formats = formats
         for name, mf in self._formats.items():
             self._formats[name].msg_args["format_name"] = name
+        self._reg_map = register_map
 
-    def write(self, database: Path) -> None:
+    def write(
+            self,
+            message_format: Path,
+            register_map: Path = None
+    ) -> None:
         """
         Write parameters to the table.
 
@@ -433,13 +447,21 @@ class PackageFormat(object):
 
         Parameters
         ----------
-        database: Path
-            save path for database.
+        message_format: Path
+            save path for message_format database.
+        register_map: Path
+            save path for register map database.
         """
-        with RWNoSqlJsonDatabase(database) as db:
+        with RWNoSqlJsonDatabase(message_format) as db:
             db.drop_tables()
             for name, format_ in self._formats.items():
                 format_.write(db.table(name))
+
+        if register_map is not None:
+            with RWSQLite3Simple(register_map) as db:
+                for table in db.tables:
+                    db.request(f"DROP TABLE {table};")
+                self._reg_map.write(db.connection)
 
     def get(self, format_name: str, **update: dict[str, Any]) -> Message:
         """
@@ -458,6 +480,14 @@ class PackageFormat(object):
             message configured with selected message format.
         """
         return self[format_name].get(**update)
+
+    def get_register(self, register: str) -> Register: # nodesc
+        reg = self._reg_map[register]
+        return reg.set_message_format(self[reg.format_name])
+
+    def read_register_map(self, database: Path) -> PackageFormat: # nodesc
+        self._reg_map = RegisterMap.read(database)
+        return self
 
     @classmethod
     def read(cls, database: Path) -> PackageFormat:
@@ -504,6 +534,13 @@ class PackageFormat(object):
             all existing message formats in the package format.
         """
         return self._formats
+
+    @property
+    def register_map(self) -> RegisterMap: # nodesc
+        return self._reg_map
+
+    def __getattr__(self, register: str) -> Register: # nodesc
+        return self.get_register(register)
 
     def __getitem__(self, format_name: str) -> MessageFormat:
         """

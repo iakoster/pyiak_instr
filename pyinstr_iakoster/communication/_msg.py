@@ -25,6 +25,8 @@ from ..exceptions import (
 
 
 __all__ = [
+    "ContentType",
+    "FieldSetter",
     "Message",
     "MessageContentError",
     "NotConfiguredMessageError",

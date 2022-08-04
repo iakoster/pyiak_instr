@@ -26,7 +26,7 @@ class TestRegister(unittest.TestCase):
             address=0xfdec,
             description="short desc. Long desc.",
             extended_name="lol",
-            message_format_name="mf",
+            format_name="mf",
             length=123,
             name="kek",
             short_description="short desc."

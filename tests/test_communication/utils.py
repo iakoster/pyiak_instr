@@ -25,6 +25,31 @@ from pyinstr_iakoster.communication import (
 )
 
 
+def get_asm_msg() -> Message:
+    return Message(format_name="asm", splitable=True).configure(
+        address=FieldSetter.address(fmt=">I"),
+        data_length=FieldSetter.data_length(
+            fmt=">I", units=FieldSetter.WORDS
+        ),
+        operation=FieldSetter.operation(fmt=">I", desc_dict={"w": 0, "r": 1}),
+        data=FieldSetter.data(expected=-1, fmt=">I")
+    )
+
+
+def get_kpm_msg(data_fmt: str = ">b") -> Message:
+    return Message(format_name="kpm").configure(
+        preamble=FieldSetter.static(fmt=">H", default=0xaa55),
+        operation=FieldSetter.operation(
+            fmt=">B", desc_dict={"wp": 1, "rp": 2, "wn": 3, "rn": 4}
+        ),
+        response=FieldSetter.single(fmt=">B", default=0),
+        address=FieldSetter.address(fmt=">H"),
+        data_length=FieldSetter.data_length(fmt=">H"),
+        data=FieldSetter.data(expected=-1, fmt=data_fmt),
+        crc=FieldSetter.crc(fmt=">H")
+    )
+
+
 def get_mf_asm(reference: bool = True):
 
     mf = MessageFormat(
@@ -83,7 +108,7 @@ def get_mf_kpm(reference: bool = True):
                 "wp": 1, "rp": 2, "wn": 3, "rn": 4
             }
         ),
-        response=FieldSetter.single(fmt=">B"),
+        response=FieldSetter.single(fmt=">B", default=0),
         address=FieldSetter.address(fmt=">H"),
         data_length=FieldSetter.data_length(fmt=">H"),
         data=FieldSetter.data(expected=-1, fmt=">f"),
@@ -105,7 +130,7 @@ def get_mf_kpm(reference: bool = True):
                     info=None
                 )),
                 response=dict(special="single", kwargs=dict(
-                    fmt=">B", default=[], info=None, may_be_empty=False,
+                    fmt=">B", default=0, info=None, may_be_empty=False,
                 )),
                 address=dict(special=None, kwargs=dict(fmt=">H", info=None)),
                 data_length=dict(special=None, kwargs=dict(
@@ -129,7 +154,7 @@ def get_register_map_data() -> pd.DataFrame:
             "name",
             "address",
             "length",
-            "message_format_name",
+            "format_name",
             "description"
         ]
     )
@@ -140,7 +165,7 @@ def get_register_map_data() -> pd.DataFrame:
         (0x200, 1, "asm"),
         (0x1000, 7, "asm"),
         (0x500, 4, "kpm"),
-        (0xf000, 2, "kpm")
+        (0xf000, 6, "kpm")
     ]
     for i_addr, (addr, dlen, fmt_name) in enumerate(data):
         df_data.loc[len(df_data)] = [
@@ -191,6 +216,19 @@ def get_field_attributes(field) -> list[str]:
     return attrs
 
 
+def get_message_attributes() -> list[str]:
+    return [
+        "format_name",
+        "splitable",
+        "slice_length",
+        "have_infinite",
+        "rx",
+        "rx_str",
+        "tx",
+        "tx_str"
+    ]
+
+
 def validate_object(
         case: unittest.TestCase,
         obj: object,
@@ -224,7 +262,7 @@ def compare_objects(
         attrs: list[str],
 ):
     for attr in attrs:
-        with case.subTest(attr=attr):
+        with case.subTest(res_class=res.__class__.__name__, attr=attr):
             case.assertEqual(getattr(ref, attr), getattr(res, attr))
 
 
@@ -234,16 +272,7 @@ def compare_registers(
         res: Register,
 ) -> None:
     compare_objects(
-        case,
-        ref,
-        res,
-        [
-            "address",
-            "length",
-            "description",
-            "extended_name",
-            "message_format_name",
-            "name",
+        case, ref, res, list(get_register_map_data().columns) + [
             "short_description"
         ]
     )
@@ -265,4 +294,15 @@ def compare_fields(
             case.assertIs(parent, res.parent)
 
 
+def compare_messages(
+        case: unittest.TestCase,
+        ref: Message,
+        res: Message
+):
+    for attr in get_message_attributes():
+        case.assertEqual(getattr(ref, attr), getattr(res, attr))
+    for ref_field, res_field in zip(ref, res):
+        compare_fields(case, ref_field, res_field, parent=res)
+    with case.subTest(test="content"):
+        case.assertEqual(ref.hex(), res.hex())
 

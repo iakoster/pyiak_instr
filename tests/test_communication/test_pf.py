@@ -1,10 +1,20 @@
 import unittest
 
 from tests.env_vars import DATA_TEST_DIR
-from .utils import get_mf_asm, get_mf_kpm
+from .utils import (
+    get_asm_msg,
+    get_kpm_msg,
+    get_mf_asm,
+    get_mf_kpm,
+    get_register_map_data,
+    compare_registers,
+    compare_messages,
+)
 
 from pyinstr_iakoster.communication import (
     FieldSetter,
+    RegisterMap,
+    Register,
     Message,
     MessageErrorMark,
     MessageFormat,
@@ -12,7 +22,8 @@ from pyinstr_iakoster.communication import (
 )
 
 
-DATA_TEST_PATH = DATA_TEST_DIR / "test.json"
+DATA_JSON_PATH = DATA_TEST_DIR / "test.json"
+DATA_DB_PATH = DATA_TEST_DIR / "test.db"
 
 
 class TestMessageErrorMark(unittest.TestCase):
@@ -146,15 +157,19 @@ class TestMessageFormat(unittest.TestCase):
 
 class TestPackageFormat(unittest.TestCase):
 
+    REG_MAP_DATA = get_register_map_data()
+
     def setUp(self) -> None:
         self.pf = PackageFormat(
+            register_map=RegisterMap(self.REG_MAP_DATA),
             asm=get_mf_asm(False),
             kpm=get_mf_kpm(False)
         )
 
     def test_write_read(self):
-        self.pf.write(DATA_TEST_PATH)
-        pf = PackageFormat.read(DATA_TEST_PATH)
+        self.pf.write(DATA_JSON_PATH, DATA_DB_PATH)
+        pf = PackageFormat.read(DATA_JSON_PATH)\
+            .read_register_map(DATA_DB_PATH)
         for name, ref_mf in self.pf.formats.items():
             mf = pf[name]
             with self.subTest(name=name):
@@ -178,48 +193,27 @@ class TestPackageFormat(unittest.TestCase):
                             setter.kwargs
                         )
 
+        with self.subTest(test="register_map"):
+            result = pf.register_map.table == self.pf.register_map.table
+            self.assertTrue(
+                result.all().all(), self.pf.register_map.table[~result]
+            )
+
     def test_get_asm_basic(self):
-        asm_msg: Message = Message(
-            format_name="asm", splitable=True
-        ).configure(
-            address=FieldSetter.address(fmt=">I"),
-            data_length=FieldSetter.data_length(
-                fmt=">I", units=FieldSetter.WORDS
-            ),
-            operation=FieldSetter.operation(
-                fmt=">I", desc_dict={"w": 0, "r": 1}
-            ),
-            data=FieldSetter.data(expected=-1, fmt=">I")
-        ).set(
+        ref = get_asm_msg().set(
             address=0x01020304,
             data_length=2,
             operation="w",
             data=[34, 52]
         )
-        message = self.pf.get("asm").extract(
+        res = self.pf.get("asm").extract(
             b"\x01\x02\x03\x04\x00\x00\x00\x02\x00\x00\x00\x00"
             b"\x00\x00\x00\x22\x00\x00\x00\x34"
         )
-        self.assertEqual(asm_msg.to_bytes(), message.to_bytes())
-        for ref_field, field in zip(asm_msg, message):
-            with self.subTest(ref=ref_field.name):
-                self.assertEqual(ref_field.name, field.name)
-                self.assertEqual(ref_field.content, field.content)
+        compare_messages(self, ref, res)
 
     def test_get_kpm_basic(self):
-        kpm_msg: Message = Message(format_name="kpm").configure(
-            preamble=FieldSetter.static(fmt=">H", default=0xaa55),
-            operation=FieldSetter.operation(
-                fmt=">B", desc_dict={
-                    "wp": 1, "rp": 2, "wn": 3, "rn": 4
-                }
-            ),
-            response=FieldSetter.single(fmt=">B"),
-            address=FieldSetter.address(fmt=">H"),
-            data_length=FieldSetter.data_length(fmt=">H"),
-            data=FieldSetter.data(expected=-1, fmt=">b"),
-            crc=FieldSetter.single(fmt=">H")
-        ).set(
+        ref = get_kpm_msg().set(
             operation="wp",
             response=0,
             address=0x33,
@@ -227,11 +221,46 @@ class TestPackageFormat(unittest.TestCase):
             data=[17, 32],
             crc=0xedbc
         )
-        message = self.pf.get("kpm", data={"fmt": ">b"})
-        message.extract(
+        res = self.pf.get("kpm", data={"fmt": ">b"}).extract(
             b"\xaa\x55\x01\x00\x00\x33\x00\x02\x11\x20\xed\xbc"
         )
-        self.assertEqual(bytes(kpm_msg), bytes(message))
-        for ref_field, field in zip(kpm_msg, message):
-            self.assertEqual(ref_field.name, field.name)
-            self.assertEqual(ref_field.content, field.content)
+        compare_messages(self, ref, res)
+
+    def test_get_register(self):
+        res = self.pf.get_register("tst_1")
+        compare_registers(
+            self,
+            Register(
+                "tst_1",
+                "test_1",
+                16,
+                20,
+                "asm",
+                "test address 1. Other description."
+            ),
+            res
+        )
+        compare_messages(
+            self,
+            get_asm_msg().set(
+                address=0x10,
+                data_length=1,
+                operation=0,
+                data=10
+            ),
+            res.write([10])
+        )
+
+    def test_getattr(self):
+        compare_messages(
+            self,
+            get_kpm_msg(data_fmt=">H").set(
+                address=0xf000,
+                operation="rp",
+                data_length=6,
+                data=[3, 11, 32]
+            ),
+            self.pf.test_6.read(
+                data=[3, 11, 32], update={"data": {"fmt": ">H"}}
+            )
+        )
