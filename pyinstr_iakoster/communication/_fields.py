@@ -13,6 +13,7 @@ from typing import (
 
 import numpy as np
 import numpy.typing as npt
+import deprecation
 
 
 from ..exceptions import (
@@ -126,6 +127,11 @@ class BaseField(object):
         return self._exp
 
     @property
+    @deprecation.deprecated(
+        deprecated_in="0.0.1",
+        removed_in="0.0.3",
+        details="Useless property"
+    )
     def field_class(self):
         """The field class."""
         return self.__class__
@@ -691,6 +697,7 @@ class StaticField(SingleField):
             )
         else:
             self._content = self._validate_content(content)
+            self._def = self._content
 
 
 class AddressField(SingleField):

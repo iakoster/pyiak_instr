@@ -23,7 +23,7 @@ class Register(object): # nodesc
             extended_name: str,
             name: str,
             address: int,
-            length: ContentType,
+            length: int,
             message_format_name: str,
             description: str = ""
     ):
@@ -95,7 +95,7 @@ class Register(object): # nodesc
         return self._ext_name
 
     @property
-    def length(self) -> ContentType: # nodesc
+    def length(self) -> int: # nodesc
         return self._dlen
 
     @property

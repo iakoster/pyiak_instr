@@ -3,6 +3,8 @@ from typing import Any
 
 import numpy as np
 
+from .utils import validate_field
+
 from pyinstr_iakoster.communication import (
     Field,
     SingleField,
@@ -12,28 +14,29 @@ from pyinstr_iakoster.communication import (
     DataField,
     DataLengthField,
     OperationField,
+    FieldSetter,
     FloatWordsCountError,
     PartialFieldError
 )
 
 
-def compare_fields_base(
-        test_case: unittest.TestCase,
-        field: Field,
-        class_instance: type = None,
-        slice_: slice = None,
-        **attributes: Any,
-):
-    for name, val in attributes.items():
-        with test_case.subTest(name=name):
-            test_case.assertEqual(val, field.__getattribute__(name))
-    if slice_ is not None:
-        with test_case.subTest(name="slice"):
-            test_case.assertEqual(slice_.start, field.slice.start)
-            test_case.assertEqual(slice_.stop, field.slice.stop)
-    if class_instance is not None:
-        with test_case.subTest(name="field_class"):
-            test_case.assertIs(class_instance, field.field_class)
+# def compare_fields_base(
+#         test_case: unittest.TestCase,
+#         field: Field,
+#         class_instance: type = None,
+#         slice_: slice = None,
+#         **attributes: Any,
+# ):
+#     for name, val in attributes.items():
+#         with test_case.subTest(name=name):
+#             test_case.assertEqual(val, field.__getattribute__(name))
+#     if slice_ is not None:
+#         with test_case.subTest(name="slice"):
+#             test_case.assertEqual(slice_.start, field.slice.start)
+#             test_case.assertEqual(slice_.stop, field.slice.stop)
+#     if class_instance is not None:
+#         with test_case.subTest(name="field_class"):
+#             test_case.assertIs(class_instance, field.field_class)
 
 
 class TestField(unittest.TestCase):
@@ -44,7 +47,7 @@ class TestField(unittest.TestCase):
         )
 
     def test_base_init(self):
-        compare_fields_base(
+        validate_field(
             self,
             Field(
                 "format",
@@ -54,8 +57,7 @@ class TestField(unittest.TestCase):
                 fmt=">B",
                 info={"info": True}
             ),
-            slice_=slice(1, 5),
-            class_instance=Field,
+            slice=slice(1, 5),
             format_name="format",
             name="name",
             info={"info": True},
@@ -66,11 +68,14 @@ class TestField(unittest.TestCase):
             may_be_empty=False,
             fmt=">B",
             bytesize=1,
+            default=b"",
+            content=b"",
             words_count=0,
+            check_attrs=True
         )
 
     def test_base_init_infinite(self):
-        compare_fields_base(
+        validate_field(
             self,
             Field(
                 "format",
@@ -79,8 +84,7 @@ class TestField(unittest.TestCase):
                 expected=-1,
                 fmt=">B",
             ),
-            slice_=slice(1, None),
-            class_instance=Field,
+            slice=slice(1, None),
             info={},
             start_byte=1,
             stop_byte=None,
@@ -291,7 +295,7 @@ class TestFieldSingle(unittest.TestCase):
         self.tf = SingleField("f", "n", start_byte=0, fmt=">H")
 
     def test_base_init(self):
-        compare_fields_base(
+        validate_field(
             self,
             SingleField(
                 "format",
@@ -300,8 +304,7 @@ class TestFieldSingle(unittest.TestCase):
                 fmt=">H",
                 info={"info": True},
             ),
-            slice_=slice(1, 3),
-            class_instance=SingleField,
+            slice=slice(1, 3),
             format_name="format",
             name="name",
             info={"info": True},
@@ -313,7 +316,9 @@ class TestFieldSingle(unittest.TestCase):
             fmt=">H",
             bytesize=2,
             content=b"",
+            default=b"",
             words_count=0,
+            check_attrs=True
         )
 
     def test_unpack(self):
@@ -334,7 +339,7 @@ class TestFieldStatic(unittest.TestCase):
         )
 
     def test_base_init(self):
-        compare_fields_base(
+        validate_field(
             self,
             StaticField(
                 "format",
@@ -344,8 +349,7 @@ class TestFieldStatic(unittest.TestCase):
                 info={"info": True},
                 default=0xfa1c
             ),
-            slice_=slice(0, 4),
-            class_instance=StaticField,
+            slice=slice(0, 4),
             format_name="format",
             name="name",
             info={"info": True},
@@ -357,7 +361,9 @@ class TestFieldStatic(unittest.TestCase):
             fmt=">I",
             bytesize=4,
             content=b"\x00\x00\xfa\x1c",
+            default=b"\x00\x00\xfa\x1c",
             words_count=1,
+            check_attrs=True
         )
 
     def test_set(self):
@@ -381,7 +387,7 @@ class TestFieldStatic(unittest.TestCase):
 class TestFieldAddress(unittest.TestCase):
 
     def test_base_init(self):
-        compare_fields_base(
+        validate_field(
             self,
             AddressField(
                 "format",
@@ -389,8 +395,7 @@ class TestFieldAddress(unittest.TestCase):
                 fmt=">I",
                 info={"info": True}
             ),
-            slice_=slice(0, 4),
-            class_instance=AddressField,
+            slice=slice(0, 4),
             format_name="format",
             name="address",
             info={"info": True},
@@ -402,7 +407,9 @@ class TestFieldAddress(unittest.TestCase):
             fmt=">I",
             bytesize=4,
             content=b"",
+            default=b"",
             words_count=0,
+            check_attrs=True
         )
 
 
@@ -412,17 +419,17 @@ class TestCrcField(unittest.TestCase):
         self.tf = CrcField("test", "crc", start_byte=0, fmt=">H")
 
     def test_base_init(self):
-        compare_fields_base(
-            self,
-            CrcField(
+        field = CrcField(
                 "format",
                 "crc",
                 start_byte=0,
                 fmt=">H",
                 info={"info": True}
-            ),
-            slice_=slice(0, 2),
-            class_instance=CrcField,
+            )
+        validate_field(
+            self,
+            field,
+            slice=slice(0, 2),
             format_name="format",
             name="crc",
             info={"info": True},
@@ -436,6 +443,9 @@ class TestCrcField(unittest.TestCase):
             content=b"",
             default=b"",
             words_count=0,
+            algorithm=field.algorithm,
+            algorithm_name="crc16-CCITT/XMODEM",
+            check_attrs=True,
         )
 
     def test_algorithms(self):
@@ -455,7 +465,7 @@ class TestCrcField(unittest.TestCase):
 class TestFieldData(unittest.TestCase):
 
     def test_base_init(self):
-        compare_fields_base(
+        validate_field(
             self,
             DataField(
                 "format",
@@ -464,8 +474,7 @@ class TestFieldData(unittest.TestCase):
                 fmt=">I",
                 info={"info": True}
             ),
-            slice_=slice(0, 8),
-            class_instance=DataField,
+            slice=slice(0, 8),
             format_name="format",
             name="data",
             info={"info": True},
@@ -477,7 +486,9 @@ class TestFieldData(unittest.TestCase):
             fmt=">I",
             bytesize=4,
             content=b"",
+            default=b"",
             words_count=0,
+            check_attrs=True
         )
 
 
@@ -498,7 +509,7 @@ class TestFieldDataLength(unittest.TestCase):
         return tf
 
     def test_base_init(self):
-        compare_fields_base(
+        validate_field(
             self,
             DataLengthField(
                 "format",
@@ -506,8 +517,7 @@ class TestFieldDataLength(unittest.TestCase):
                 fmt=">H",
                 additive=0,
             ),
-            slice_=slice(0, 2),
-            class_instance=DataLengthField,
+            slice=slice(0, 2),
             format_name="format",
             name="data_length",
             info={},
@@ -519,13 +529,15 @@ class TestFieldDataLength(unittest.TestCase):
             fmt=">H",
             bytesize=2,
             content=b"",
+            default=b"",
             words_count=0,
             units=0x10,
             additive=0,
+            check_attrs=True
         )
 
     def test_base_init_other(self):
-        compare_fields_base(
+        validate_field(
             self,
             DataLengthField(
                 "format",
@@ -534,8 +546,7 @@ class TestFieldDataLength(unittest.TestCase):
                 units=0x11,
                 additive=10,
             ),
-            slice_=slice(0, 2),
-            class_instance=DataLengthField,
+            slice=slice(0, 2),
             format_name="format",
             name="data_length",
             info={},
@@ -547,9 +558,11 @@ class TestFieldDataLength(unittest.TestCase):
             fmt=">H",
             bytesize=2,
             content=b"",
+            default=b"",
             words_count=0,
             units=0x11,
             additive=10,
+            check_attrs=True
         )
 
     def test_init_wrong_oper_core(self):
@@ -610,11 +623,10 @@ class TestFieldOperation(unittest.TestCase):
                 fmt=">H"
             )
         tf.set(1)
-        compare_fields_base(
+        validate_field(
             self,
             tf,
-            slice_=slice(0, 2),
-            class_instance=OperationField,
+            slice=slice(0, 2),
             format_name="format",
             name="operation",
             info={},
@@ -626,11 +638,13 @@ class TestFieldOperation(unittest.TestCase):
             fmt=">H",
             bytesize=2,
             content=b"\x00\x01",
+            default=b"",
             words_count=1,
             base="w",
             desc="w",
             desc_dict={'r': 0, 'w': 1, 'e': 2},
             desc_dict_r={0: 'r', 1: 'w', 2: 'e'},
+            check_attrs=True,
         )
 
     def test_base_init_custom_desc_dict(self):
@@ -641,11 +655,9 @@ class TestFieldOperation(unittest.TestCase):
                 desc_dict={"r1": 0x2, "r2": 0xf1, "w1": 0xf}
             )
         tf.set("w1")
-        compare_fields_base(
+        validate_field(
             self,
             tf,
-            slice_=slice(0, 2),
-            class_instance=OperationField,
             content=b"\x00\x0f",
             words_count=1,
             base="w",
@@ -716,5 +728,78 @@ class TestFieldOperation(unittest.TestCase):
         self.assertEqual(
             "invalid class for comparsion: <class 'int'>",
             exc.exception.args[0]
+        )
+
+
+class TestFieldSetter(unittest.TestCase):
+
+    def validate_setter(
+            self,
+            fs: FieldSetter,
+            kwargs: dict,
+            special: str = None
+    ):
+        self.assertDictEqual(kwargs, fs.kwargs)
+        self.assertEqual(special, fs.special)
+
+    def test_init(self):
+        self.validate_setter(
+            FieldSetter(a=0, b=3),
+            {"a": 0, "b": 3}
+        )
+
+    def test_base(self):
+        self.validate_setter(
+            FieldSetter.base(expected=1, fmt="i"),
+            {
+                "expected": 1,
+                "fmt": "i",
+                "default": [],
+                "info": None,
+                'may_be_empty': False
+            }
+        )
+
+    def test_single(self):
+        self.validate_setter(
+            FieldSetter.single(fmt="i"),
+            {
+                "fmt": "i",
+                "default": [],
+                "info": None,
+                'may_be_empty': False
+            },
+            special="single"
+        )
+
+    def test_static(self):
+        self.validate_setter(
+            FieldSetter.static(fmt="i", default=[]),
+            {"fmt": "i", "default": [], "info": None},
+            special="static"
+        )
+
+    def test_address(self):
+        self.validate_setter(
+            FieldSetter.address(fmt="i"),
+            {"fmt": "i", "info": None}
+        )
+
+    def test_data(self):
+        self.validate_setter(
+            FieldSetter.data(expected=3, fmt="i"),
+            {"expected": 3, "fmt": "i", "info": None}
+        )
+
+    def test_data_length(self):
+        self.validate_setter(
+            FieldSetter.data_length(fmt="i"),
+            {"fmt": "i", "additive": 0, "info": None, "units": 16}
+        )
+
+    def test_operation(self):
+        self.validate_setter(
+            FieldSetter.operation(fmt="i"),
+            {"fmt": "i", "desc_dict": None, "info": None}
         )
 

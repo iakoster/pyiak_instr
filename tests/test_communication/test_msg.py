@@ -3,14 +3,16 @@ from typing import Any
 
 import numpy as np
 
+from .utils import compare_fields
+
 from pyinstr_iakoster.communication import (
     Message,
     FieldSetter,
-    Field,
     SingleField,
     StaticField,
     AddressField,
     DataField,
+    CrcField,
     DataLengthField,
     OperationField,
     MessageContentError
@@ -33,100 +35,7 @@ class AnotherMessage(Message):
         )
 
 
-class TestFieldSetter(unittest.TestCase):
-
-    def validate_setter(
-            self,
-            fs: FieldSetter,
-            kwargs: dict,
-            special: str = None
-    ):
-        self.assertDictEqual(kwargs, fs.kwargs)
-        self.assertEqual(special, fs.special)
-
-    def test_init(self):
-        self.validate_setter(
-            FieldSetter(a=0, b=3),
-            {"a": 0, "b": 3}
-        )
-
-    def test_base(self):
-        self.validate_setter(
-            FieldSetter.base(expected=1, fmt="i"),
-            {
-                "expected": 1,
-                "fmt": "i",
-                "default": [],
-                "info": None,
-                'may_be_empty': False
-            }
-        )
-
-    def test_single(self):
-        self.validate_setter(
-            FieldSetter.single(fmt="i"),
-            {
-                "fmt": "i",
-                "default": [],
-                "info": None,
-                'may_be_empty': False
-            },
-            special="single"
-        )
-
-    def test_static(self):
-        self.validate_setter(
-            FieldSetter.static(fmt="i", default=[]),
-            {"fmt": "i", "default": [], "info": None},
-            special="static"
-        )
-
-    def test_address(self):
-        self.validate_setter(
-            FieldSetter.address(fmt="i"),
-            {"fmt": "i", "info": None}
-        )
-
-    def test_data(self):
-        self.validate_setter(
-            FieldSetter.data(expected=3, fmt="i"),
-            {"expected": 3, "fmt": "i", "info": None}
-        )
-
-    def test_data_length(self):
-        self.validate_setter(
-            FieldSetter.data_length(fmt="i"),
-            {"fmt": "i", "additive": 0, "info": None, "units": 16}
-        )
-
-    def test_operation(self):
-        self.validate_setter(
-            FieldSetter.operation(fmt="i"),
-            {"fmt": "i", "desc_dict": None, "info": None}
-        )
-
-
 class TestMessage(unittest.TestCase):
-
-    def validate_field(
-            self,
-            field: Field,
-            slice_: slice,
-            field_class: type,
-            **attributes: Any
-    ):
-        for name, val in attributes.items():
-            with self.subTest(class_=field.__class__.__name__, name=name):
-                self.assertEqual(val, field.__getattribute__(name))
-        with self.subTest(class_=field.__class__.__name__, name="slice"):
-            self.assertEqual(slice_.start, field.slice.start)
-            self.assertEqual(slice_.stop, field.slice.stop)
-        with self.subTest(
-                class_=field.__class__.__name__, name="field_class"
-        ):
-            self.assertIs(field_class, field.field_class)
-        with self.subTest(name="parent"):
-            self.assertIsInstance(field.parent, Message)
 
     def fill_content(self) -> bytes:
         content = b"\x1a\xa5\x00\x00\xaa\x01\x04\xff\xee\xdd\xcc\x39\x86"
@@ -169,126 +78,52 @@ class TestMessage(unittest.TestCase):
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
             data=FieldSetter.data(expected=4, fmt=">I"),
-            crc=FieldSetter.base(expected=2, fmt=">H"),
+            crc=FieldSetter.crc(fmt=">H"),
         )
-        self.validate_field(
-            msg["preamble"],
-            slice(0, 2),
-            StaticField,
-            bytesize=2,
-            content=b"\x1a\xa5",
-            stop_byte=2,
-            expected=1,
-            finite=True,
-            fmt=">H",
-            info={},
-            name="preamble",
-            format_name="not_def",
-            start_byte=0,
-            words_count=1
+        fields = dict(
+            preamble=StaticField(
+                "not_def",
+                "preamble",
+                start_byte=0,
+                fmt=">H",
+                default=0x1aa5
+            ),
+            response=SingleField(
+                "not_def",
+                "response",
+                start_byte=2,
+                fmt=">B",
+            ),
+            address=AddressField(
+                "not_def",
+                start_byte=3,
+                fmt=">H"
+            ),
+            operation=OperationField(
+                "not_def",
+                start_byte=5,
+                fmt=">B"
+            ),
+            data_length=DataLengthField(
+                "not_def",
+                start_byte=6,
+                fmt=">B"
+            ),
+            data=DataField(
+                "not_def",
+                start_byte=7,
+                expected=4,
+                fmt=">I"
+            ),
+            crc=CrcField(
+                "not_def",
+                "crc",
+                start_byte=23,
+                fmt=">H"
+            )
         )
-        self.validate_field(
-            msg["response"],
-            slice(2, 3),
-            SingleField,
-            bytesize=1,
-            content=b"",
-            stop_byte=3,
-            expected=1,
-            finite=True,
-            fmt=">B",
-            info={},
-            name="response",
-            format_name="not_def",
-            start_byte=2,
-            words_count=0
-        )
-        self.validate_field(
-            msg["address"],
-            slice(3, 5),
-            AddressField,
-            bytesize=2,
-            content=b"",
-            stop_byte=5,
-            expected=1,
-            finite=True,
-            fmt=">H",
-            info={},
-            name="address",
-            format_name="not_def",
-            start_byte=3,
-            words_count=0
-        )
-        self.validate_field(
-            msg["operation"],
-            slice(5, 6),
-            OperationField,
-            bytesize=1,
-            content=b"",
-            stop_byte=6,
-            expected=1,
-            finite=True,
-            fmt=">B",
-            info={},
-            name="operation",
-            format_name="not_def",
-            start_byte=5,
-            words_count=0,
-            base="",
-            desc="",
-            desc_dict={"r": 0, "w": 1, "e": 2},
-            desc_dict_r={0: "r", 1: "w", 2: "e"},
-        )
-        self.validate_field(
-            msg["data_length"],
-            slice(6, 7),
-            DataLengthField,
-            bytesize=1,
-            content=b"",
-            stop_byte=7,
-            expected=1,
-            finite=True,
-            fmt=">B",
-            info={},
-            name="data_length",
-            format_name="not_def",
-            start_byte=6,
-            words_count=0,
-            units=0x10,
-            additive=0
-        )
-        self.validate_field(
-            msg["data"],
-            slice(7, 23),
-            DataField,
-            bytesize=4,
-            content=b"",
-            stop_byte=23,
-            expected=4,
-            finite=True,
-            fmt=">I",
-            info={},
-            name="data",
-            format_name="not_def",
-            start_byte=7,
-            words_count=0,
-        )
-        self.validate_field(
-            msg["crc"],
-            slice(23, 27),
-            Field,
-            bytesize=2,
-            content=b"",
-            stop_byte=27,
-            expected=2,
-            finite=True,
-            fmt=">H",
-            info={},
-            name="crc",
-            format_name="not_def",
-            start_byte=23,
-            words_count=0,
-        )
+        for name, field in fields.items():
+            compare_fields(self, field, msg[name], parent=msg)
 
     def test_configure_middle_infinite(self):
         msg = Message(format_name="inf").configure(
@@ -304,88 +139,52 @@ class TestMessage(unittest.TestCase):
             address=0xaa55,
             footer=0x42
         )
-        self.validate_field(
-            msg["operation"],
-            slice(0, 1),
-            OperationField,
-            bytesize=1,
-            content=b"\x01",
-            stop_byte=1,
-            expected=1,
-            finite=True,
-            fmt=">B",
-            info={},
-            name="operation",
-            format_name="inf",
-            start_byte=0,
-            words_count=1
+        fields = dict(
+            operation=OperationField(
+                "inf",
+                start_byte=0,
+                fmt=">B"
+            ),
+            data_length=DataLengthField(
+                "inf",
+                start_byte=1,
+                fmt=">B"
+            ),
+            data=DataField(
+                "inf",
+                start_byte=2,
+                expected=-1,
+                fmt=">H"
+            ),
+            address=AddressField(
+                "inf",
+                start_byte=3,
+                fmt=">H"
+            ),
+            footer=SingleField(
+                "inf",
+                "footer",
+                start_byte=4,
+                fmt=">H"
+            )
         )
-        self.validate_field(
-            msg["data_length"],
-            slice(1, 2),
-            DataLengthField,
-            bytesize=1,
-            content=b"\x06",
-            stop_byte=2,
-            expected=1,
-            finite=True,
-            fmt=">B",
-            info={},
-            name="data_length",
-            format_name="inf",
-            start_byte=1,
-            words_count=1
-        )
-        self.validate_field(
-            msg["data"],
-            slice(2, -4),
-            DataField,
-            bytesize=2,
-            content=b"\x00\x01\x00\x17\x00\x04",
-            stop_byte=-4,
-            expected=-1,
-            finite=False,
-            fmt=">H",
-            info={},
-            name="data",
-            format_name="inf",
-            start_byte=2,
-            words_count=3
-        )
-        self.validate_field(
-            msg["address"],
-            slice(-4, -2),
-            AddressField,
-            bytesize=2,
-            content=b"\xaa\x55",
-            stop_byte=-2,
-            expected=1,
-            finite=True,
-            fmt=">H",
-            info={},
-            name="address",
-            format_name="inf",
-            start_byte=-4,
-            words_count=1
-        )
-        self.validate_field(
-            msg["footer"],
-            slice(-2, None),
-            SingleField,
-            bytesize=2,
-            content=b"\x00\x42",
-            stop_byte=None,
-            expected=1,
-            finite=True,
-            fmt=">H",
-            info={},
-            name="footer",
-            format_name="inf",
-            start_byte=-2,
-            words_count=1
-        )
+        for name, field in fields.items():
+            fields[name].set(msg[name].content)
+
+        fields["data"].stop_byte = -4
+        fields["address"].start_byte = -4
+        fields["address"].stop_byte = -2
+        fields["footer"].start_byte = -2
+        fields["footer"].stop_byte = None
+
+        for name, field in fields.items():
+            compare_fields(self, field, msg[name], parent=msg)
         self.assertEqual(
             b"\x01\x06\x00\x01\x00\x17\x00\x04\xaa\x55\x00\x42",
+            msg.to_bytes()
+        )
+        self.assertEqual(
+            b"".join(f.content for f in fields.values()),
             msg.to_bytes()
         )
 

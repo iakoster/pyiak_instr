@@ -1,6 +1,7 @@
 import unittest
 
 from tests.env_vars import DATA_TEST_DIR
+from .utils import get_mf_asm, get_mf_kpm
 
 from pyinstr_iakoster.communication import (
     FieldSetter,
@@ -12,103 +13,6 @@ from pyinstr_iakoster.communication import (
 
 
 DATA_TEST_PATH = DATA_TEST_DIR / "test.json"
-
-
-def get_mf_asm(reference: bool = True):
-
-    mf = MessageFormat(
-        emark=MessageErrorMark(
-            operation="neq",
-            start_byte=12,
-            stop_byte=16,
-            value=b"\x00\x00\x00\x01"
-        ),
-        format_name="asm",
-        splitable=True,
-        slice_length=1024,
-        address=FieldSetter.address(fmt=">I"),
-        data_length=FieldSetter.data_length(
-            fmt=">I", units=FieldSetter.WORDS
-        ),
-        operation=FieldSetter.operation(
-            fmt=">I", desc_dict={"w": 0, "r": 1}
-        ),
-        data=FieldSetter.data(expected=-1, fmt=">I")
-    )
-
-    if reference:
-        return mf, dict(
-            msg_args=dict(
-                format_name="asm", splitable=True, slice_length=1024
-            ),
-            setters=dict(
-                address=dict(special=None, kwargs=dict(fmt=">I", info=None)),
-                data_length=dict(special=None, kwargs=dict(
-                    fmt=">I", units=0x11, info=None, additive=0,
-                )),
-                operation=dict(special=None, kwargs=dict(
-                    fmt=">I", desc_dict={"w": 0, "r": 1}, info=None
-                )),
-                data=dict(special=None, kwargs=dict(
-                    expected=-1, fmt=">I", info=None
-                ))
-            )
-        )
-    return mf
-
-
-def get_mf_kpm(reference: bool = True):
-
-    mf = MessageFormat(
-        emark=MessageErrorMark(
-            operation="neq", field_name="response", value=[0]
-        ),
-        format_name="kpm",
-        splitable=False,
-        slice_length=1024,
-        preamble=FieldSetter.static(fmt=">H", default=0xaa55),
-        operation=FieldSetter.operation(
-            fmt=">B", desc_dict={
-                "wp": 1, "rp": 2, "wn": 3, "rn": 4
-            }
-        ),
-        response=FieldSetter.single(fmt=">B"),
-        address=FieldSetter.address(fmt=">H"),
-        data_length=FieldSetter.data_length(fmt=">H"),
-        data=FieldSetter.data(expected=-1, fmt=">f"),
-        crc=FieldSetter.crc(fmt=">H")
-    )
-
-    if reference:
-        return mf, dict(
-            msg_args=dict(
-                format_name="kpm", splitable=False, slice_length=1024
-            ),
-            setters=dict(
-                preamble=dict(special="static", kwargs=dict(
-                    fmt=">H", default=0xaa55, info=None
-                )),
-                operation=dict(special=None, kwargs=dict(
-                    fmt=">B",
-                    desc_dict={"wp": 1, "rp": 2, "wn": 3, "rn": 4},
-                    info=None
-                )),
-                response=dict(special="single", kwargs=dict(
-                    fmt=">B", default=[], info=None, may_be_empty=False,
-                )),
-                address=dict(special=None, kwargs=dict(fmt=">H", info=None)),
-                data_length=dict(special=None, kwargs=dict(
-                    fmt=">H", units=0x10, info=None, additive=0,
-                )),
-                data=dict(special=None, kwargs=dict(
-                    expected=-1, fmt=">f", info=None
-                )),
-                crc=dict(special="crc", kwargs=dict(
-                    fmt=">H", algorithm_name="crc16-CCITT/XMODEM", info=None
-                ))
-            )
-        )
-    return mf
 
 
 class TestMessageErrorMark(unittest.TestCase):
