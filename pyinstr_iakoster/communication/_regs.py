@@ -131,15 +131,15 @@ class RegisterMap(object): # nodesc
             self,
             registers_table: pd.DataFrame
     ):
-        self._regs = self._validate_table(registers_table)
+        self._tbl = self._validate_table(registers_table)
 
     def get(self, name: str) -> Register: # nodesc
-        name_table = self._regs[self._regs["name"] == name]
+        name_table = self._tbl[self._tbl["name"] == name]
         if len(name_table):
             assert len(name_table) == 1
             return Register.from_series(name_table.iloc[0])
 
-        ext_table = self._regs[self._regs["extended_name"] == name]
+        ext_table = self._tbl[self._tbl["extended_name"] == name]
         if len(ext_table):
             assert len(ext_table) == 1
             return Register.from_series(ext_table.iloc[0])
@@ -155,6 +155,10 @@ class RegisterMap(object): # nodesc
         #  without duplicates in address with the same msg_fmt
         #  sort by msg_fmt and address
         return table.sort_values(by=["message_format_name", "address"])
+
+    @property
+    def table(self) -> pd.DataFrame: # nodesc
+        return self._tbl
 
     def __getattr__(self, name: str) -> Register: # nodesc
         return self.get(name)
