@@ -1,7 +1,6 @@
 import unittest
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 from pyinstr_iakoster.communication import (
@@ -9,19 +8,12 @@ from pyinstr_iakoster.communication import (
     Message,
     MessageErrorMark,
     MessageFormat,
-    PackageFormat,
     Field,
     FieldType,
-    SingleField,
-    StaticField,
-    AddressField,
-    DataField,
     CrcField,
     Register,
-    RegisterMap,
     DataLengthField,
     OperationField,
-    MessageContentError
 )
 
 
@@ -47,6 +39,16 @@ def get_kpm_msg(data_fmt: str = ">b") -> Message:
         data_length=FieldSetter.data_length(fmt=">H"),
         data=FieldSetter.data(expected=-1, fmt=data_fmt),
         crc=FieldSetter.crc(fmt=">H")
+    )
+
+
+def get_mf_dict(
+        special=None,
+        **kwargs
+):
+    return dict(
+        special=special,
+        kwargs=kwargs
     )
 
 
@@ -78,16 +80,19 @@ def get_mf_asm(reference: bool = True):
                 format_name="asm", splitable=True, slice_length=1024
             ),
             setters=dict(
-                address=dict(special=None, kwargs=dict(fmt=">I", info=None)),
-                data_length=dict(special=None, kwargs=dict(
-                    fmt=">I", units=0x11, info=None, additive=0,
-                )),
-                operation=dict(special=None, kwargs=dict(
-                    fmt=">I", desc_dict={"w": 0, "r": 1}, info=None
-                )),
-                data=dict(special=None, kwargs=dict(
-                    expected=-1, fmt=">I", info=None
-                ))
+                address=get_mf_dict(special=None, fmt=">I", info=None),
+                data_length=get_mf_dict(
+                    special=None, fmt=">I", units=0x11, info=None, additive=0
+                ),
+                operation=get_mf_dict(
+                    special=None,
+                    fmt=">I",
+                    desc_dict={"w": 0, "r": 1},
+                    info=None
+                ),
+                data=get_mf_dict(
+                    special=None, expected=-1, fmt=">I", info=None
+                )
             )
         )
     return mf
@@ -121,27 +126,35 @@ def get_mf_kpm(reference: bool = True):
                 format_name="kpm", splitable=False, slice_length=1024
             ),
             setters=dict(
-                preamble=dict(special="static", kwargs=dict(
-                    fmt=">H", default=0xaa55, info=None
-                )),
-                operation=dict(special=None, kwargs=dict(
+                preamble=get_mf_dict(
+                    special="static", fmt=">H", default=0xaa55, info=None
+                ),
+                operation=get_mf_dict(
+                    special=None,
                     fmt=">B",
                     desc_dict={"wp": 1, "rp": 2, "wn": 3, "rn": 4},
                     info=None
-                )),
-                response=dict(special="single", kwargs=dict(
-                    fmt=">B", default=0, info=None, may_be_empty=False,
-                )),
-                address=dict(special=None, kwargs=dict(fmt=">H", info=None)),
-                data_length=dict(special=None, kwargs=dict(
-                    fmt=">H", units=0x10, info=None, additive=0,
-                )),
-                data=dict(special=None, kwargs=dict(
-                    expected=-1, fmt=">f", info=None
-                )),
-                crc=dict(special="crc", kwargs=dict(
-                    fmt=">H", algorithm_name="crc16-CCITT/XMODEM", info=None
-                ))
+                ),
+                response=get_mf_dict(
+                    special="single",
+                    fmt=">B",
+                    default=0,
+                    info=None,
+                    may_be_empty=False,
+                ),
+                address=get_mf_dict(special=None, fmt=">H", info=None),
+                data_length=get_mf_dict(
+                    special=None, fmt=">H", units=0x10, info=None, additive=0,
+                ),
+                data=get_mf_dict(
+                    special=None, expected=-1, fmt=">f", info=None
+                ),
+                crc=get_mf_dict(
+                    special="crc",
+                    fmt=">H",
+                    algorithm_name="crc16-CCITT/XMODEM",
+                    info=None
+                )
             )
         )
     return mf
