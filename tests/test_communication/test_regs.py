@@ -18,10 +18,11 @@ class TestRegister(unittest.TestCase):
             Register(
                 "lol",
                 "kek",
-                0xfdec,
-                123,
                 "mf",
-                "short desc. Long desc."
+                0xfdec,
+                Register.RW,
+                123,
+                description="short desc. Long desc."
             ),
             address=0xfdec,
             description="short desc. Long desc.",
@@ -30,6 +31,13 @@ class TestRegister(unittest.TestCase):
             length=123,
             name="kek",
             short_description="short desc."
+        )
+
+    def test_invalid_type(self):
+        with self.assertRaises(TypeError) as exc:
+            Register("", "", "", 0, "re", 0)
+        self.assertEqual(
+            "invalid register type: 're'", exc.exception.args[0]
         )
 
 
@@ -61,9 +69,11 @@ class TestRegisterMap(unittest.TestCase):
             Register(
                 "tst_3",
                 "test_3",
-                0x200,
-                1,
                 "asm",
+                0x200,
+                "rw",
+                1,
+                ">H",
                 "test address 3. Other description."
             ),
             self.rm.test_3
@@ -75,9 +85,11 @@ class TestRegisterMap(unittest.TestCase):
             Register(
                 "tst_5",
                 "test_5",
-                0x500,
-                4,
                 "kpm",
+                0x500,
+                "RO",
+                4,
+                ">f",
                 "test address 5. Other description."
             ),
             self.rm["test_5"]

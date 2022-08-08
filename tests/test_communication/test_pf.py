@@ -1,5 +1,7 @@
 import unittest
 
+import pandas.testing
+
 from tests.env_vars import DATA_TEST_DIR
 from .utils import (
     get_asm_msg,
@@ -194,9 +196,10 @@ class TestPackageFormat(unittest.TestCase):
                         )
 
         with self.subTest(test="register_map"):
-            result = pf.register_map.table == self.pf.register_map.table
-            self.assertTrue(
-                result.all().all(), self.pf.register_map.table[~result]
+            pandas.testing.assert_frame_equal(
+                pf.register_map.table,
+                self.pf.register_map.table,
+                check_names=False
             )
 
     def test_get_asm_basic(self):
@@ -227,23 +230,24 @@ class TestPackageFormat(unittest.TestCase):
         compare_messages(self, ref, res)
 
     def test_get_register(self):
-        res = self.pf.get_register("tst_1")
+        res = self.pf.get_register("tst_4")
         compare_registers(
             self,
             Register(
-                "tst_1",
-                "test_1",
-                16,
-                20,
+                "tst_4",
+                "test_4",
                 "asm",
-                "test address 1. Other description."
+                0x1000,
+                "RW",
+                7,
+                description="test address 4. Other description."
             ),
             res
         )
         compare_messages(
             self,
             get_asm_msg().set(
-                address=0x10,
+                address=0x1000,
                 data_length=1,
                 operation=0,
                 data=10
@@ -263,4 +267,36 @@ class TestPackageFormat(unittest.TestCase):
             self.pf.test_6.read(
                 data=[3, 11, 32], update={"data": {"fmt": ">H"}}
             )
+        )
+
+    def test_write_with_update(self):
+        self.assertEqual(
+            ">f",
+            self.pf.test_0.read(update={"data": {"fmt": ">f"}}).data.fmt
+        )
+
+    def test_read_wo(self):
+        with self.assertRaises(TypeError) as exc:
+            self.pf.test_2.read()
+        self.assertEqual(
+            "writing only", exc.exception.args[0]
+        )
+
+    def test_write_ro(self):
+        with self.assertRaises(TypeError) as exc:
+            self.pf.test_1.write()
+        self.assertEqual(
+            "reading only", exc.exception.args[0]
+        )
+
+    def test_invalid_data_length(self):
+        with self.assertRaises(ValueError) as exc:
+            self.pf.test_1.read(21)
+        self.assertEqual(
+            "invalid data length: 21 > 20", exc.exception.args[0]
+        )
+        with self.assertRaises(ValueError) as exc:
+            self.pf.test_2.write([0] * 6)
+        self.assertEqual(
+            "invalid data length: 6 > 5", exc.exception.args[0]
         )

@@ -165,28 +165,28 @@ def get_register_map_data() -> pd.DataFrame:
         columns=[
             "extended_name",
             "name",
-            "address",
-            "length",
             "format_name",
+            "address",
+            "reg_type",
+            "length",
+            "data_fmt",
             "description"
         ]
     )
     data = [
-        (1, 1, "asm"),
-        (0x10, 20, "asm"),
-        (0x100, 5, "asm"),
-        (0x200, 1, "asm"),
-        (0x1000, 7, "asm"),
-        (0x500, 4, "kpm"),
-        (0xf000, 6, "kpm")
+        ("asm", 1, "RW", 1, None),
+        ("asm", 0x10, "RO", 20, None),
+        ("asm", 0x100, "WO", 5, None),
+        ("asm", 0x200, "RW", 1, ">H"),
+        ("asm", 0x1000, "RW", 7, None),
+        ("kpm", 0x500, "RO", 4, ">f"),
+        ("kpm", 0xf000, "RW", 6, ">I")
     ]
-    for i_addr, (addr, dlen, fmt_name) in enumerate(data):
+    for i_addr, reg_args in enumerate(data):
         df_data.loc[len(df_data)] = [
             f"tst_{i_addr}",
             f"test_{i_addr}",
-            addr,
-            dlen,
-            fmt_name,
+            *reg_args,
             f"test address {i_addr}. Other description."
         ]
     return df_data
@@ -286,7 +286,7 @@ def compare_registers(
 ) -> None:
     compare_objects(
         case, ref, res, list(get_register_map_data().columns) + [
-            "short_description"
+            "short_description", "reg_type_str"
         ]
     )
 

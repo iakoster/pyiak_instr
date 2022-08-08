@@ -481,11 +481,37 @@ class PackageFormat(object):
         """
         return self[format_name].get(**update)
 
-    def get_register(self, register: str) -> Register: # nodesc
+    def get_register(self, register: str) -> Register:
+        """
+        Get register by its name or extended name.
+
+        Parameters
+        ----------
+        register: str
+            register name.
+
+        Returns
+        -------
+        Register
+            register instance.
+        """
         reg = self._reg_map[register]
         return reg.set_message_format(self[reg.format_name])
 
-    def read_register_map(self, database: Path) -> PackageFormat: # nodesc
+    def read_register_map(self, database: Path) -> PackageFormat:
+        """
+        Read register map from database.
+
+        Parameters
+        ----------
+        database: Path
+            path to the database.
+
+        Returns
+        -------
+        PackageFormat
+            self instance.
+        """
         self._reg_map = RegisterMap.read(database)
         return self
 
@@ -536,10 +562,31 @@ class PackageFormat(object):
         return self._formats
 
     @property
-    def register_map(self) -> RegisterMap: # nodesc
+    def register_map(self) -> RegisterMap:
+        """
+        Returns
+        -------
+        RegisterMap
+            register map instance.
+        """
         return self._reg_map
 
-    def __getattr__(self, register: str) -> Register: # nodesc
+    def __getattr__(self, register: str) -> Register:
+        """
+        Get register.
+
+        If not exister, exception will be raised.
+
+        Parameters
+        ----------
+        register: str
+            register name.
+
+        Returns
+        -------
+        Register
+            register instance.
+        """
         return self.get_register(register)
 
     def __getitem__(self, format_name: str) -> MessageFormat:
