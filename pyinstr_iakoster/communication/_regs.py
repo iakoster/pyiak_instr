@@ -22,16 +22,41 @@ __all__ = [
 
 @dataclass(frozen=True, eq=False)
 class Register(object): # nodesc
+    """
+    Represents class instance of register.
+
+    Raises
+    ------
+    TypeError
+        if `reg_type` not in {'rw', 'ro', 'wo'}.
+    """
 
     extended_name: str
+    "name of the register in extended documents."
+
     name: str
+    "the name of the register"
+
     format_name: str
+    "the name of the message format."
+
     address: int
+    "register address. Used for address field in message."
+
     length: int
+    "register length. May used for `data_length` field in message."
+
     reg_type: str = "rw"
+    "register type. Can be one of {'rw', 'ro', 'wo'}"
+
     data_fmt: str = None
+    "format of a data in the register."
+
     description: str = ""
+    "register description. First sentence must be a short summary."
+
     mf: MessageFormat = None
+    "message format for messages of this register."
 
     def __post_init__(self):
         if self.reg_type not in {"rw", "ro", "wo"}:
@@ -42,7 +67,34 @@ class Register(object): # nodesc
             data_length: ContentType = None,
             update: dict[str, dict[str, Any]] = None,
             **other_fields: ContentType
-    ) -> Message: # nodesc
+    ) -> Message:
+        """
+        Get message with read operation.
+
+        If 'operation' not specified in `other_fields`, find operation
+        in `desc_dict` by operation base.
+
+        Parameters
+        ----------
+        data_length: ContentType, default=None
+            The length of the data for reading. If None than length will be
+            equal length of the register.
+        update: dict[str, dict[str, Any]], default=None
+            parameters for update standard settings from MessageFormat.
+            Must be writter in format {FIELD_NAME: {FIELD_ATTR: VALUE}}.
+        **other_fields: ContentType, optional
+            values for .set method of message.
+
+        Returns
+        -------
+        Message
+            message for reading data from register.
+
+        Raises
+        ------
+        TypeError
+            if register is write only.
+        """
         if self.reg_type == "wo":
             raise TypeError("writing only") # todo unique exception
 
@@ -61,7 +113,33 @@ class Register(object): # nodesc
             data: ContentType = b"",
             update: dict[str, dict[str, Any]] = None,
             **other_fields: ContentType
-    ) -> Message: # nodesc
+    ) -> Message:
+        """
+        Get message with write operation.
+
+        If 'operation' not specified in `other_fields`, find operation
+        in `desc_dict` by operation base.
+
+        Parameters
+        ----------
+        data: ContentType, default=b''
+            The length of the data for writing.
+        update: dict[str, dict[str, Any]], default=None
+            parameters for update standard settings from MessageFormat.
+            Must be writter in format {FIELD_NAME: {FIELD_ATTR: VALUE}}.
+        **other_fields: ContentType, optional
+            values for .set method of message.
+
+        Returns
+        -------
+        Message
+            message for writing data from register.
+
+        Raises
+        ------
+        TypeError
+            if register is read only.
+        """
         if self.reg_type == "ro":
             raise TypeError("reading only") # todo unique exception
 
@@ -76,6 +154,24 @@ class Register(object): # nodesc
         ))
 
     def _get_message(self, **update: dict[str, Any]) -> Message:
+        """
+        Get message from message format.
+
+        Parameters
+        ----------
+        **update: dict[str, Any], optional
+            parameters for update standard settings from MessageFormat.
+
+        Returns
+        -------
+        Message
+            message with specified message format.
+
+        Raises
+        ------
+        AttributeError
+            if message format is not specified.
+        """
         if self.mf is None:
             raise AttributeError("message format not specified")  # todo: custom exception
         return self.mf.get(**update)
@@ -83,6 +179,22 @@ class Register(object): # nodesc
     def _modify_update_kw(
             self, update: dict[str, dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
+        """
+        Modify update kwargs.
+
+        If {'data': {'fmt': VALUE}} not exists, set `data_fmt` from register
+        it is specified.
+
+        Parameters
+        ----------
+        update: dict[str, dict[str, Any]]
+            parameters for update standard settings from MessageFormat.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+            modified update kwargs.
+        """
         if self.data_fmt is not None and (
             "data" not in update or
             "data" in update and "fmt" not in update["data"]
@@ -95,7 +207,25 @@ class Register(object): # nodesc
                 update["data"] = {"fmt": self.data_fmt}
         return update
 
-    def _validate_msg(self, msg: Message) -> Message: # nodesc
+    def _validate_msg(self, msg: Message) -> Message:
+        """
+        Check message to correct settings.
+
+        Parameters
+        ----------
+        msg: Message
+            message.
+
+        Returns
+        -------
+        Message
+            message instance.
+
+        Raises
+        ------
+        ValueError
+            if `data_length` in message more than register length.
+        """
         dlen = msg.data_length.unpack()[0]
         if dlen > self.length:
             raise ValueError(
@@ -107,11 +237,46 @@ class Register(object): # nodesc
     @classmethod
     def from_series(
             cls, series: pd.Series, mf: MessageFormat = None
-    ) -> Register: # nodesc
+    ) -> Register:
+        """
+        Get register fron pandas.Series
+
+        Parameters
+        ----------
+        series: pandas.Series
+            series with register parameters.
+        mf: MessageFormat, default=None.
+            message format for this register.
+
+        Returns
+        -------
+        Register
+            register instance.
+        """
         return cls(**series.to_dict(), mf=mf)
 
     @staticmethod
-    def _find_operation(msg: Message, base: str) -> str: # nodesc
+    def _find_operation(msg: Message, base: str) -> str:
+        """
+        Find operation from `desc_dict` from `operation` field by base.
+
+        Parameters
+        ----------
+        msg: Message
+            message.
+        base: str
+            operation base.
+
+        Returns
+        -------
+        str
+            full operation name from `desc_dict`.
+
+        Raises
+        ------
+        ValueError
+            if there is no operations starts with `base`.
+        """
         assert len(base) == 1
         for msg_oper in msg.operation.desc_dict:
             if msg_oper[0] == base:
@@ -119,7 +284,15 @@ class Register(object): # nodesc
         raise ValueError("operation starts with %r not found" % base)
 
     @property
-    def short_description(self) -> str: # nodesc
+    def short_description(self) -> str:
+        """
+        Returns first sentence from description.
+
+        Returns
+        -------
+        str
+            Short description.
+        """
         short = ""
         for letter in self.description:
             short += letter
@@ -128,7 +301,15 @@ class Register(object): # nodesc
         return short # todo: may use itertools
 
 
-class RegisterMap(object): # nodesc
+class RegisterMap(object):
+    """
+    Represents class instance to store registers.
+
+    Parameters
+    ----------
+    registers_table: pandas.DataFrame
+        table with parameters for registers.
+    """
 
     EXPECTED_COLUMNS = (
         "extended_name",
@@ -140,6 +321,7 @@ class RegisterMap(object): # nodesc
         "data_fmt",
         "description",
     )
+    "tuple of expected columns in `register_table`"
 
     def __init__(
             self,
@@ -147,7 +329,27 @@ class RegisterMap(object): # nodesc
     ):
         self._tbl = self._validate_table(registers_table)
 
-    def get(self, name: str, pf: PackageFormat = None) -> Register: # nodesc
+    def get(self, name: str, pf: PackageFormat = None) -> Register:
+        """
+        Get register by name.
+
+        Searches the register first by 'name', then, if not found,
+        by 'extended_name'.
+
+        Set to register message format if it exists in package format.
+
+        Parameters
+        ----------
+        name: str
+            register name.
+        pf: PackageFormat
+            package format which contain required message format.
+
+        Returns
+        -------
+        Register
+            register instance.
+        """
         name_table = self._tbl[self._tbl["name"] == name]
         ext_table = self._tbl[self._tbl["extended_name"] == name]
 
@@ -164,10 +366,36 @@ class RegisterMap(object): # nodesc
             series, mf=None if pf is None else pf[series["format_name"]]
         )
 
-    def write(self, con: sqlite3.Connection) -> None: # nodesc
+    def write(self, con: sqlite3.Connection) -> None:
+        """
+        Write register map table to sqlite table.
+
+        Parameters
+        ----------
+        con: sqlite3.Connection
+            connection to database.
+        """
         self._tbl.to_sql("registers", con, index=False)
 
-    def _validate_table(self, table: pd.DataFrame) -> pd.DataFrame: # nodesc
+    def _validate_table(self, table: pd.DataFrame) -> pd.DataFrame:
+        """
+        Check table and data in table.
+
+        Parameters
+        ----------
+        table: pandas.DataFrame
+            table for validating.
+
+        Returns
+        -------
+        pandas.DataFrame
+            table for validating.
+
+        Raises
+        ------
+        ValueError
+            if not all expected columns specified
+        """
         cols_diff = set(table.columns) - set(self.EXPECTED_COLUMNS)
         if len(cols_diff):
             raise ValueError(f"invalid columns: {cols_diff}") # todo: custom exc
@@ -178,20 +406,67 @@ class RegisterMap(object): # nodesc
         return table.sort_values(by=["format_name", "address"])
 
     @classmethod
-    def read(cls, database: Path) -> RegisterMap: # nodesc
+    def read(cls, database: Path) -> RegisterMap:
+        """
+        Read RegisterMap from database.
+
+        Data will be readed from 'registers' table.
+
+        Parameters
+        ----------
+        database: Path
+            path to the database.
+
+        Returns
+        -------
+        RegisterMap
+            register map instance.
+        """
         with RWSQLite3Simple(database, autocommit=False) as db:
             return RegisterMap(
                 pd.read_sql("SELECT * FROM registers", db.connection)
             )
 
     @property
-    def table(self) -> pd.DataFrame: # nodesc
+    def table(self) -> pd.DataFrame:
+        """
+        Returns
+        -------
+        pandas.DataFrame
+            table with parameters of registers.
+        """
         return self._tbl
 
-    def __getattr__(self, name: str) -> Register: # nodesc
+    def __getattr__(self, name: str) -> Register:
+        """
+        Get register by name.
+
+        Parameters
+        ----------
+        name: str
+            register name.
+
+        Returns
+        -------
+        Register
+            register instance.
+        """
         return self.get(name)
 
-    def __getitem__(self, name: str | tuple[str, PackageFormat]) -> Register: # nodesc
+    def __getitem__(self, name: str | tuple[str, PackageFormat]) -> Register:
+        """
+        Get register by name.
+
+        Parameters
+        ----------
+        name: str or tuple of str and PackageFormat
+            register name or register name and package format.
+
+        Returns
+        -------
+        Register
+            register instance.
+        """
         if isinstance(name, tuple):
             name, pf = name
         else:
