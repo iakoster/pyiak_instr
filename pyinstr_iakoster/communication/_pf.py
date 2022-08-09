@@ -495,8 +495,8 @@ class PackageFormat(object):
         Register
             register instance.
         """
-        reg = self._reg_map[register]
-        return reg.set_message_format(self[reg.format_name])
+        # reg = self._reg_map[register, self]
+        return self._reg_map[register, self]
 
     def read_register_map(self, database: Path) -> PackageFormat:
         """

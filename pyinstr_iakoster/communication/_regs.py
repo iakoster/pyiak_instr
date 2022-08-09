@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field, InitVar
 
 import sqlite3
 from pathlib import Path
@@ -10,7 +11,7 @@ from ..rwfile import RWSQLite3Simple
 
 if TYPE_CHECKING:
     from ._msg import Message, ContentType
-    from ._pf import MessageFormat
+    from ._pf import MessageFormat, PackageFormat
 
 
 __all__ = [
@@ -19,42 +20,22 @@ __all__ = [
 ]
 
 
+@dataclass(frozen=True, eq=False)
 class Register(object): # nodesc
 
-    RO = 0  # todo: change to enum codes
-    WO = 1
-    RW = 2
-    REG_TYPES = {"RO": RO, "WO": WO, "RW": RW}
-    _REG_TYPES_R = {v: k for k, v in REG_TYPES.items()}
+    extended_name: str
+    name: str
+    format_name: str
+    address: int
+    length: int
+    reg_type: str = "rw"
+    data_fmt: str = None
+    description: str = ""
+    mf: MessageFormat = None
 
-    _mf: MessageFormat
-
-    def __init__(
-            self,
-            extended_name: str,
-            name: str,
-            format_name: str,
-            address: int,
-            reg_type: str | int,
-            length: int,
-            data_fmt: str = None,
-            description: str = ""
-    ):
-        if isinstance(reg_type, int) and reg_type in self._REG_TYPES_R:
-            pass
-        elif isinstance(reg_type, str) and reg_type.upper() in self.REG_TYPES:
-            reg_type = self.REG_TYPES[reg_type.upper()]
-        else:
-            raise TypeError("invalid register type: %r" % reg_type)
-
-        self._ext_name = extended_name
-        self._name = name
-        self._fmt_name = format_name
-        self._addr = address
-        self._type = reg_type
-        self._len = length
-        self._dfmt = data_fmt
-        self._desc = description
+    def __post_init__(self):
+        if self.reg_type not in {"rw", "ro", "wo"}:
+            raise TypeError("invalid register type: %r" % self.reg_type)
 
     def read(
             self,
@@ -62,22 +43,18 @@ class Register(object): # nodesc
             update: dict[str, dict[str, Any]] = None,
             **other_fields: ContentType
     ) -> Message: # nodesc
-        if self._type == self.WO:
+        if self.reg_type == "wo":
             raise TypeError("writing only") # todo unique exception
 
         msg = self._get_message(**self._modify_update_kw(update or {}))
         return self._validate_msg(msg.set(
-            address=self._addr,
+            address=self.address,
             operation=other_fields["operation"]
             if "operation" in other_fields else
             self._find_operation(msg, "r"),
-            data_length=data_length or self._len,
+            data_length=data_length or self.length,
             **other_fields
         ))
-
-    def set_message_format(self, mf: MessageFormat) -> Register: # nodesc
-        self._mf = mf
-        return self
 
     def write(
             self,
@@ -85,12 +62,12 @@ class Register(object): # nodesc
             update: dict[str, dict[str, Any]] = None,
             **other_fields: ContentType
     ) -> Message: # nodesc
-        if self._type == self.RO:
+        if self.reg_type == "ro":
             raise TypeError("reading only") # todo unique exception
 
         msg = self._get_message(**self._modify_update_kw(update or {}))
         return self._validate_msg(msg.set(
-            address=self._addr,
+            address=self.address,
             operation=other_fields["operation"]
             if "operation" in other_fields else
             self._find_operation(msg, "w"),
@@ -99,39 +76,39 @@ class Register(object): # nodesc
         ))
 
     def _get_message(self, **update: dict[str, Any]) -> Message:
-        if not hasattr(self, "_mf"):
+        if self.mf is None:
             raise AttributeError("message format not specified")  # todo: custom exception
-        msg = self._mf.get(**update)
-        del self._mf
-        return msg
+        return self.mf.get(**update)
 
     def _modify_update_kw(
             self, update: dict[str, dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
-        if self._dfmt is not None and (
+        if self.data_fmt is not None and (
             "data" not in update or
             "data" in update and "fmt" not in update["data"]
         ):
             if "data" in update:
                 tmp = update["data"]
-                tmp["fmt"] = self._dfmt
+                tmp["fmt"] = self.data_fmt
                 update.update(data=tmp)
             else:
-                update["data"] = {"fmt": self._dfmt}
+                update["data"] = {"fmt": self.data_fmt}
         return update
 
     def _validate_msg(self, msg: Message) -> Message: # nodesc
         dlen = msg.data_length.unpack()[0]
-        if dlen > self._len:
+        if dlen > self.length:
             raise ValueError(
-                "invalid data length: %d > %d" % (dlen, self._len)
+                "invalid data length: %d > %d" % (dlen, self.length)
             )
 
         return msg
 
     @classmethod
-    def from_series(cls, series: pd.Series) -> Register: # nodesc
-        return cls(**series.to_dict())
+    def from_series(
+            cls, series: pd.Series, mf: MessageFormat = None
+    ) -> Register: # nodesc
+        return cls(**series.to_dict(), mf=mf)
 
     @staticmethod
     def _find_operation(msg: Message, base: str) -> str: # nodesc
@@ -139,48 +116,12 @@ class Register(object): # nodesc
         for msg_oper in msg.operation.desc_dict:
             if msg_oper[0] == base:
                 return msg_oper
-        raise ValueError("operation in message not founded")
-
-    @property
-    def address(self) -> int: # nodesc
-        return self._addr
-
-    @property
-    def data_fmt(self) -> str: # nodesc
-        return self._dfmt
-
-    @property
-    def description(self) -> str: # nodesc
-        return self._desc
-
-    @property
-    def extended_name(self) -> str: # nodesc
-        return self._ext_name
-
-    @property
-    def format_name(self) -> str: # nodesc
-        return self._fmt_name
-
-    @property
-    def length(self) -> int: # nodesc
-        return self._len
-
-    @property
-    def name(self) -> str: # nodesc
-        return self._name
-
-    @property
-    def reg_type(self) -> int: # nodesc
-        return self._type
-
-    @property
-    def reg_type_str(self) -> str: # nodesc
-        return self._REG_TYPES_R[self._type]
+        raise ValueError("operation starts with %r not found" % base)
 
     @property
     def short_description(self) -> str: # nodesc
         short = ""
-        for letter in self._desc:
+        for letter in self.description:
             short += letter
             if letter == ".":
                 break
@@ -206,18 +147,22 @@ class RegisterMap(object): # nodesc
     ):
         self._tbl = self._validate_table(registers_table)
 
-    def get(self, name: str) -> Register: # nodesc
+    def get(self, name: str, pf: PackageFormat = None) -> Register: # nodesc
         name_table = self._tbl[self._tbl["name"] == name]
+        ext_table = self._tbl[self._tbl["extended_name"] == name]
+
         if len(name_table):
             assert len(name_table) == 1
-            return Register.from_series(name_table.iloc[0])
-
-        ext_table = self._tbl[self._tbl["extended_name"] == name]
-        if len(ext_table):
+            series = name_table.iloc[0]
+        elif len(ext_table):
             assert len(ext_table) == 1
-            return Register.from_series(ext_table.iloc[0])
+            series = ext_table.iloc[0]
+        else:
+            raise AttributeError("register %r not found" % name)
 
-        raise AttributeError("register %r not found" % name)
+        return Register.from_series(
+            series, mf=None if pf is None else pf[series["format_name"]]
+        )
 
     def write(self, con: sqlite3.Connection) -> None: # nodesc
         self._tbl.to_sql("registers", con, index=False)
@@ -246,7 +191,11 @@ class RegisterMap(object): # nodesc
     def __getattr__(self, name: str) -> Register: # nodesc
         return self.get(name)
 
-    def __getitem__(self, name: str) -> Register: # nodesc
-        return self.get(name)
+    def __getitem__(self, name: str | tuple[str, PackageFormat]) -> Register: # nodesc
+        if isinstance(name, tuple):
+            name, pf = name
+        else:
+            pf = None
+        return self.get(name, pf=pf)
 
 

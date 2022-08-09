@@ -238,8 +238,8 @@ class TestPackageFormat(unittest.TestCase):
                 "test_4",
                 "asm",
                 0x1000,
-                "RW",
                 7,
+                "rw",
                 description="test address 4. Other description."
             ),
             res
