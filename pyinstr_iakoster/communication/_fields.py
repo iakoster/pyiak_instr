@@ -17,8 +17,7 @@ import deprecation
 
 
 from ..exceptions import (
-    FloatWordsCountError,
-    PartialFieldError,
+    FieldContentError
 )
 if TYPE_CHECKING:
     from ._msg import Message
@@ -36,8 +35,7 @@ __all__ = [
     "SingleField",
     "StaticField",
     "FieldType",
-    "FloatWordsCountError",
-    "PartialFieldError",
+    "FieldContentError"
 ]
 
 
@@ -472,9 +470,8 @@ class Field(BaseField):
 
         Raises
         ------
-        FloatWordsCountError
+        FieldContentError
             if the number of words in the content is not an integer.
-        PartialFieldError
             if the length of the content is less than expected.
         """
         if content is None:
@@ -485,17 +482,25 @@ class Field(BaseField):
             exp = self._exp
 
         if len(content) % self._word_bsize != 0:
-            raise FloatWordsCountError(
-                self.__class__.__name__,
+            words_count = len(content) / self._word_bsize
+            raise FieldContentError(
+                self.__class__,
                 exp,
-                len(content) / self._word_bsize
+                words_count,
+                clarification=(
+                        "not integer count of words "
+                        "(expected %d, got %.1f)" % (exp, words_count)
+                )
             )
 
         # Similary to self._exp > 0 and
         # len(content) / self._word_bsize != self._exp
         if 0 < exp != len(content) / self._word_bsize:
-            raise PartialFieldError(
-                self.__class__.__name__, len(content) / (exp * self._word_bsize)
+            fill_ratio = len(content) / (exp * self._word_bsize)
+            raise FieldContentError(
+                self.__class__,
+                fill_ratio,
+                clarification="fill ratio - %.1f" % fill_ratio
             )
 
         return content

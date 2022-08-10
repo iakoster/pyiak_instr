@@ -11,20 +11,18 @@ from ._comm import (
     MessageContentError,
     NotConfiguredMessageError,
     FieldError,
-    FloatWordsCountError,
-    PartialFieldError,
+    FieldContentError,
 )
 # todo: simplify exceptions
 
 __all__ = [
+    "PyiError",
     "CompletedWorkError",
     "FieldError",
     "FilepathPatternError",
-    "FloatWordsCountError",
     "InterruptedWorkError",
     "MessageContentError",
     "MessageError",
     "NotConfiguredMessageError",
-    "PartialFieldError",
-    "PyiError",
+    "FieldContentError",
 ]

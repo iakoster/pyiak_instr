@@ -23,7 +23,7 @@ __all__ = [
 
 
 @dataclass(frozen=True, eq=False)
-class Register(object): # nodesc
+class Register(object):
     """
     Represents class instance of register.
 

@@ -15,28 +15,8 @@ from pyinstr_iakoster.communication import (
     DataLengthField,
     OperationField,
     FieldSetter,
-    FloatWordsCountError,
-    PartialFieldError
+    FieldContentError
 )
-
-
-# def compare_fields_base(
-#         test_case: unittest.TestCase,
-#         field: Field,
-#         class_instance: type = None,
-#         slice_: slice = None,
-#         **attributes: Any,
-# ):
-#     for name, val in attributes.items():
-#         with test_case.subTest(name=name):
-#             test_case.assertEqual(val, field.__getattribute__(name))
-#     if slice_ is not None:
-#         with test_case.subTest(name="slice"):
-#             test_case.assertEqual(slice_.start, field.slice.start)
-#             test_case.assertEqual(slice_.stop, field.slice.stop)
-#     if class_instance is not None:
-#         with test_case.subTest(name="field_class"):
-#             test_case.assertIs(class_instance, field.field_class)
 
 
 class TestField(unittest.TestCase):
@@ -123,7 +103,7 @@ class TestField(unittest.TestCase):
             )
 
     def test_init_exc_float(self):
-        with self.assertRaises(FloatWordsCountError) as exc:
+        with self.assertRaises(FieldContentError) as exc:
             Field(
                 "format",
                 "name",
@@ -132,12 +112,13 @@ class TestField(unittest.TestCase):
                 fmt=">H",
             ).set(b"\x01\x02\x03")
         self.assertEqual(
-            "not integer count of words in the Field (expected 2, got 1.5)",
+            "invalid content in Field: not integer count of words "
+            "(expected 2, got 1.5)",
             exc.exception.args[0]
         )
 
     def test_init_exc_partial(self):
-        with self.assertRaises(PartialFieldError) as exc:
+        with self.assertRaises(FieldContentError) as exc:
             Field(
                 "format",
                 "name",
@@ -146,12 +127,12 @@ class TestField(unittest.TestCase):
                 fmt=">H",
             ).set(b"\x01\x02")
         self.assertEqual(
-            "the Field is incomplete (filled to 0.3)",
+            "invalid content in Field: fill ratio - 0.3",
             exc.exception.args[0]
         )
 
     def test_init_exc_partial_more(self):
-        with self.assertRaises(PartialFieldError) as exc:
+        with self.assertRaises(FieldContentError) as exc:
             Field(
                 "format",
                 "name",
@@ -160,7 +141,7 @@ class TestField(unittest.TestCase):
                 fmt=">H",
             ).set(b"\x01\x02" * 5)
         self.assertEqual(
-            "the Field is incomplete (filled to 1.7)",
+            "invalid content in Field: fill ratio - 1.7",
             exc.exception.args[0]
         )
 

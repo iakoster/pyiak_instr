@@ -10,8 +10,7 @@ from ._fields import (
     SingleField,
     StaticField,
     FieldType,
-    FloatWordsCountError,
-    PartialFieldError,
+    FieldContentError
 )
 from ._msg import (
     Message,
@@ -40,7 +39,7 @@ __all__ = [
     "SingleField",
     "StaticField",
     "FieldType",
-    "FloatWordsCountError",
+    "FieldContentError",
     "Message",
     "MessageErrorMark",
     "MessageFormat",
@@ -49,5 +48,4 @@ __all__ = [
     "RegisterMap",
     "MessageContentError",
     "NotConfiguredMessageError",
-    "PartialFieldError",
 ]
