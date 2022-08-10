@@ -297,6 +297,28 @@ class Register(object):
         """
         return "".join(takewhile(lambda l: l != ".", self.description))
 
+    @property
+    def series(self) -> pd.Series:
+        """
+        Returns
+        -------
+        pandas.Series
+            register parameters in series.
+        """
+        return pd.Series(
+            index=RegisterMap.EXPECTED_COLUMNS,
+            data=(
+                self.external_name,
+                self.name,
+                self.format_name,
+                self.address,
+                self.length,
+                self.reg_type,
+                self.data_fmt,
+                self.description
+            )
+        )
+
 
 class RegisterMap(object):
     """
