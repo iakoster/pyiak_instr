@@ -26,7 +26,7 @@ class TestRegister(unittest.TestCase):
             ),
             address=0xfdec,
             description="short desc. Long desc.",
-            extended_name="lol",
+            external_name="lol",
             format_name="mf",
             length=123,
             name="kek",
@@ -50,14 +50,14 @@ class TestRegisterMap(unittest.TestCase):
 
     def test_get(self):
         names = np.append(
-            self.DATA["name"].values, self.DATA["extended_name"].values
+            self.DATA["name"].values, self.DATA["external_name"].values
         )
         for name in names:
             compare_registers(
                 self,
                 Register.from_series(
                     self.DATA[
-                        (self.DATA["extended_name"] == name) |
+                        (self.DATA["external_name"] == name) |
                         (self.DATA["name"] == name)
                         ].iloc[0]),
                 self.rm.get(name)

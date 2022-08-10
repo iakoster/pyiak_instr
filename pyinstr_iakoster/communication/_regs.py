@@ -33,8 +33,8 @@ class Register(object): # nodesc
         if `reg_type` not in {'rw', 'ro', 'wo'}.
     """
 
-    extended_name: str
-    "name of the register in extended documents."
+    external_name: str
+    "name of the register in external documents."
 
     name: str
     "the name of the register"
@@ -309,7 +309,7 @@ class RegisterMap(object):
     """
 
     EXPECTED_COLUMNS = (
-        "extended_name",
+        "external_name",
         "name",
         "format_name",
         "address",
@@ -331,7 +331,7 @@ class RegisterMap(object):
         Get register by name.
 
         Searches the register first by 'name', then, if not found,
-        by 'extended_name'.
+        by 'external_name'.
 
         Set to register message format if it exists in package format.
 
@@ -348,7 +348,7 @@ class RegisterMap(object):
             register instance.
         """
         name_table = self._tbl[self._tbl["name"] == name]
-        ext_table = self._tbl[self._tbl["extended_name"] == name]
+        ext_table = self._tbl[self._tbl["external_name"] == name]
 
         if len(name_table):
             assert len(name_table) == 1
@@ -397,7 +397,7 @@ class RegisterMap(object):
         if len(cols_diff):
             raise ValueError(f"invalid columns: {cols_diff}") # todo: custom exc
         # todo: checks:
-        #  without dublicates in extended_name and name
+        #  without dublicates in external_name and name
         #  without duplicates in address with the same msg_fmt
         #  sort by msg_fmt and address
         return table.sort_values(by=["format_name", "address"])

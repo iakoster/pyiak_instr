@@ -163,7 +163,7 @@ def get_mf_kpm(reference: bool = True):
 def get_register_map_data() -> pd.DataFrame:
     df_data = pd.DataFrame(
         columns=[
-            "extended_name",
+            "external_name",
             "name",
             "format_name",
             "address",
