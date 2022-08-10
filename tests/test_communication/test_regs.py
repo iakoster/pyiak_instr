@@ -30,7 +30,7 @@ class TestRegister(unittest.TestCase):
             format_name="mf",
             length=123,
             name="kek",
-            short_description="short desc."
+            short_description="short desc"
         )
 
     def test_invalid_type(self):

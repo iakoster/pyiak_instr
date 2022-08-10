@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from itertools import takewhile
 from typing import TYPE_CHECKING, Any
 from dataclasses import dataclass, field, InitVar
 
@@ -293,12 +295,7 @@ class Register(object): # nodesc
         str
             Short description.
         """
-        short = ""
-        for letter in self.description:
-            short += letter
-            if letter == ".":
-                break
-        return short # todo: may use itertools
+        return "".join(takewhile(lambda l: l != ".", self.description))
 
 
 class RegisterMap(object):
