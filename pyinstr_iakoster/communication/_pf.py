@@ -495,7 +495,6 @@ class PackageFormat(object):
         Register
             register instance.
         """
-        # reg = self._reg_map[register, self]
         return self._reg_map[register, self]
 
     def read_register_map(self, database: Path) -> PackageFormat:
@@ -513,6 +512,23 @@ class PackageFormat(object):
             self instance.
         """
         self._reg_map = RegisterMap.read(database)
+        return self
+
+    def set_register_map(self, reg_map: RegisterMap) -> PackageFormat:
+        """
+        Set register map.
+
+        Parameters
+        ----------
+        reg_map: RegisterMap
+            register map instance.
+
+        Returns
+        -------
+        PackageFormat
+            self instance.
+        """
+        self._reg_map = reg_map
         return self
 
     @classmethod
