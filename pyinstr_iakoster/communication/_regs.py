@@ -51,7 +51,7 @@ class Register(object):
     reg_type: str = "rw"
     "register type. Can be one of {'rw', 'ro', 'wo'}"
 
-    data_fmt: str = None
+    data_fmt: str | None = None
     "format of a data in the register."
 
     description: str = ""
@@ -382,7 +382,7 @@ class RegisterMap(object):
             raise AttributeError("register %r not found" % name)
 
         return Register.from_series(
-            series, mf=None if pf is None else pf[series["format_name"]]
+            series, mf=None if pf is None else pf.get_format(series["format_name"])
         )
 
     def write(self, con: sqlite3.Connection) -> None:

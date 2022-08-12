@@ -173,7 +173,7 @@ class TestPackageFormat(unittest.TestCase):
         pf = PackageFormat.read(DATA_JSON_PATH)\
             .read_register_map(DATA_DB_PATH)
         for name, ref_mf in self.pf.formats.items():
-            mf = pf[name]
+            mf = pf.get_format(name)
             with self.subTest(name=name):
                 self.assertEqual(ref_mf.msg_args, mf.msg_args)
 

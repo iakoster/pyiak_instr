@@ -479,7 +479,23 @@ class PackageFormat(object):
         Message
             message configured with selected message format.
         """
-        return self[format_name].get(**update)
+        return self._formats[format_name].get(**update)
+
+    def get_format(self, format_name: str) -> MessageFormat:
+        """
+        Get message format by name.
+
+        Parameters
+        ----------
+        format_name: str
+            message format name.
+
+        Returns
+        -------
+        MessageFormat
+            selected message format.
+        """
+        return self._formats[format_name]
 
     def get_register(self, register: str) -> Register:
         """
@@ -591,7 +607,7 @@ class PackageFormat(object):
         """
         Get register.
 
-        If not exister, exception will be raised.
+        If not exists, exception will be raised.
 
         Parameters
         ----------
@@ -605,18 +621,20 @@ class PackageFormat(object):
         """
         return self.get_register(register)
 
-    def __getitem__(self, format_name: str) -> MessageFormat:
+    def __getitem__(self, register: str) -> Register:
         """
-        Get message format by name.
+        Get register.
+
+        If not exists, exception will be raised.
 
         Parameters
         ----------
-        format_name: str
-            message format name.
+        register: str
+            register name.
 
         Returns
         -------
-        MessageFormat
-            selected message format.
+        Register
+            register instance.
         """
-        return self._formats[format_name]
+        return self.get_register(register)
