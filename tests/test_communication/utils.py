@@ -299,7 +299,6 @@ def compare_fields(
 ) -> None:
     attrs = get_field_attributes(ref)
     case.assertIs(ref.__class__, res.__class__)
-    case.assertIs(ref.__class__, res.field_class)
 
     compare_objects(case, ref, res, attrs)
     if parent is not None:

@@ -134,7 +134,7 @@ class RWSQLite3Simple(object):
             insert_into, columns, val_marks), values)
 
     @deprecation.deprecated(
-        deprecated_in='0.0.4', removed_in='0.0.6',
+        deprecated_in='0.0.1a0', removed_in='0.0.1',
         details='it is redundant function')
     def delete_from(self, *, from_: str) -> None:
         """
@@ -152,7 +152,7 @@ class RWSQLite3Simple(object):
             self.commit()
 
     @deprecation.deprecated(
-        deprecated_in='0.0.4', removed_in='0.0.6',
+        deprecated_in='0.0.1a0', removed_in='0.0.1',
         details='it is redundant function')
     def select(
             self, *, from_: str, select: str = '*',
@@ -208,7 +208,7 @@ class RWSQLite3Simple(object):
             raise ValueError('unknown fetch variable %r' % fetch)
 
     @deprecation.deprecated(
-        deprecated_in='0.0.4', removed_in='0.0.6',
+        deprecated_in='0.0.1a0', removed_in='0.0.1',
         details='it is redundant function')
     def to_dataframe(
             self, *, from_: str, select: str = '*',
@@ -243,7 +243,7 @@ class RWSQLite3Simple(object):
             request, self._conn, index_col=index_col)
 
     @deprecation.deprecated(
-        deprecated_in='0.0.4', removed_in='0.0.6',
+        deprecated_in='0.0.1a0', removed_in='0.0.1',
         details='it is redundant function')
     def from_dataframe(
             self, *,

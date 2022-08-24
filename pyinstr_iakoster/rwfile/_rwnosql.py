@@ -2,8 +2,8 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
-from tinydb import TinyDB
-from tinydb.table import Table, QueryLike
+from tinydb import TinyDB, Query
+from tinydb.table import Table
 
 from ._utils import if_str2path, create_dir_if_not_exists, match_filename
 
@@ -42,7 +42,7 @@ class RWNoSqlTable(Table):
 
     def rwf_update(
             self,
-            cond: QueryLike = None,
+            cond: Query = None,
             doc_ids: Iterable[int] | int = None,
             **fields: Any
     ) -> list[int]:
@@ -51,7 +51,7 @@ class RWNoSqlTable(Table):
 
         Parameters
         ----------
-        cond: QueryLike
+        cond: Query
             which documents to update.
         doc_ids: iterable if ints or int
             document ID('s) to update.
@@ -68,13 +68,13 @@ class RWNoSqlTable(Table):
             doc_ids = (doc_ids,)
         return Table.update(self, fields, cond=cond, doc_ids=doc_ids)
 
-    def rwf_upsert(self, cond: QueryLike = None, **fields) -> list[int]:
+    def rwf_upsert(self, cond: Query = None, **fields) -> list[int]:
         """
         Update documents, if they exist, insert them otherwise.
 
         Parameters
         ----------
-        cond: QueryLike
+        cond: Query
             which document to look for.
         **fields: Any
             the document parameters to insert or the fields to update.

@@ -126,8 +126,8 @@ class BaseField(object):
 
     @property
     @deprecation.deprecated(
-        deprecated_in="0.0.1",
-        removed_in="0.0.3",
+        deprecated_in="0.0.1a0",
+        removed_in="0.0.1",
         details="Useless property"
     )
     def field_class(self):

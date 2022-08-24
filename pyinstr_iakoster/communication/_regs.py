@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from itertools import takewhile
 from typing import TYPE_CHECKING, Any
-from dataclasses import dataclass, field, InitVar
+from dataclasses import dataclass
 
 import sqlite3
 from pathlib import Path
