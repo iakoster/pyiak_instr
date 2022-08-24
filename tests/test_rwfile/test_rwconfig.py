@@ -4,7 +4,7 @@ import configparser
 from pathlib import Path
 
 from pyinstr_iakoster.rwfile import RWConfig
-from pyinstr_iakoster.exceptions import FilepathPatternError
+from pyinstr_iakoster.exceptions import FileSuffixError
 
 from tests.env_vars import DATA_TEST_DIR
 
@@ -95,20 +95,20 @@ class TestRWConfig(unittest.TestCase):
 
     def test_path_is_dir(self):
         test_path = Path('.\\data_test\\only_dir')
-        with self.assertRaises(FilepathPatternError) as err:
+        with self.assertRaises(FileSuffixError) as err:
             RWConfig(test_path)
-        self.assertEqual(
-            'The path does not lead to \'\\\\S+.ini$\' file',
-            err.exception.message
+        self.assertIn(
+            r"suffix of 'data_test\only_dir' not in",
+            err.exception.msg
         )
 
     def test_wrong_fileformat(self):
         test_path = Path('.\\date_test\\not_ini.txt')
-        with self.assertRaises(FilepathPatternError) as err:
+        with self.assertRaises(FileSuffixError) as err:
             RWConfig(test_path)
-        self.assertEqual(
-            'The path does not lead to \'\\\\S+.ini$\' file',
-            err.exception.message
+        self.assertIn(
+            r"suffix of 'date_test\not_ini.txt' not in",
+            err.exception.msg
         )
 
     def test_file_creation(self):
@@ -137,7 +137,8 @@ class TestRWConfig(unittest.TestCase):
                 )
 
     def test_write_dict_conv(self):
-        self.test_config.write(TEST_DICT_CONV)
+        with self.test_config as cfg:
+            cfg.write(TEST_DICT_CONV)
         readed_config = configparser.ConfigParser()
         readed_config.read(CONFIG_PATH)
         self.assertDictEqual(

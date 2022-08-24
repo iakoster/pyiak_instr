@@ -4,13 +4,13 @@ import configparser
 from pathlib import Path
 from typing import overload, Any
 
-from ._utils import *
+from ._core import RWFile
 
 
 __all__ = ['RWConfig']
 
 
-class RWConfig(object):
+class RWConfig(RWFile):
     """
     Class for reading and writing to the configfile as *.ini.
 
@@ -22,6 +22,8 @@ class RWConfig(object):
         path to config file *.ini.
     """
 
+    _hapi: configparser.ConfigParser
+
     LIST_DELIMITER = ','
     LIST_PATTERN = re.compile(LIST_DELIMITER)
     TUPLE_DELIMITER = ';'
@@ -31,23 +33,18 @@ class RWConfig(object):
     FLOAT_PATTERN = re.compile('^\d+\.\d+$')
     EFLOAT_PATTERN = re.compile('^\d\.\d+[eE][+-]\d+$')
 
-    FILENAME_PATTERN = re.compile('\S+.ini$')
+    FILE_SUFFIXES = {".ini"}
 
     def __init__(self, filepath: Path | str):
-        filepath = if_str2path(filepath)
-        match_filename(self.FILENAME_PATTERN, filepath)
-        create_dir_if_not_exists(filepath)
-
-        self._filepath = filepath
-        self._cfg = self.read_config()
-        self.update_config()
+        super().__init__(filepath)
+        self._hapi = self.read_config()
 
     def update_config(self) -> None:
         """
         Re-reads the config file from specified and
         writes to the class.
         """
-        self._cfg = self.read_config()
+        self._hapi = self.read_config()
 
     def read_config(self) -> configparser.ConfigParser:
         """
@@ -63,10 +60,10 @@ class RWConfig(object):
         """
 
         config = configparser.ConfigParser()
-        if self._filepath.exists():
-            config.read(self._filepath)
+        if self._fp.exists():
+            config.read(self._fp)
         else:
-            with io.open(self._filepath, 'w') as cfg_file:
+            with io.open(self._fp, 'w') as cfg_file:
                 config.write(cfg_file)
         return config
 
@@ -90,7 +87,7 @@ class RWConfig(object):
         --------
         _any2str: method to convert the value to a str.
         """
-        self._cfg.set(section, option, self._any2str(value))
+        self._hapi.set(section, option, self._any2str(value))
 
     def apply_changes(self) -> None:
         """
@@ -98,8 +95,11 @@ class RWConfig(object):
 
         Used for save changes which created by .set method.
         """
-        with io.open(self._filepath, 'w') as cfg_file:
-            self._cfg.write(cfg_file)
+        with io.open(self._fp, 'w') as cfg_file:
+            self._hapi.write(cfg_file)
+
+    def close(self):
+        pass
 
     def get(self, section: str, option: str,
             convert: bool = True) -> Any:
@@ -126,7 +126,7 @@ class RWConfig(object):
         Any
             resulting value from configfile.
         """
-        value = self._cfg.get(section, option)
+        value = self._hapi.get(section, option)
         return self._str2any(value) if convert else value
 
     @overload
@@ -172,10 +172,10 @@ class RWConfig(object):
             case (str() as section, str() as option, value):
                 conv_value = self._any2str(value)
                 config = configparser.ConfigParser()
-                config.read(self._filepath)
+                config.read(self._fp)
                 config.set(section, option, conv_value)
                 self.set(section, option, conv_value)
-                with io.open(self._filepath, 'w') as cnfg_file:
+                with io.open(self._fp, 'w') as cnfg_file:
                     config.write(cnfg_file)
 
             case (dict() as dictionary,):
@@ -184,9 +184,9 @@ class RWConfig(object):
                     conv_dict[section] = {}
                     for option, raw_value in item.items():
                         conv_dict[section][option] = self._any2str(raw_value)
-                self._cfg.read_dict(conv_dict)
-                with io.open(self._filepath, 'w') as cnfg_file:
-                    self._cfg.write(cnfg_file)
+                self._hapi.read_dict(conv_dict)
+                with io.open(self._fp, 'w') as cnfg_file:
+                    self._hapi.write(cnfg_file)
 
             case _:
                 raise TypeError('Wrong args for write method')
@@ -246,12 +246,12 @@ class RWConfig(object):
         """
 
         config = configparser.ConfigParser()
-        config.read(self._filepath)
+        config.read(self._fp)
         return self._str2any(config.get(section, option))
 
     def _str2any(self, value: str) -> Any:
         """
-        Convert string value to the any.
+        Convert string value to any.
 
         If there are no templates to convert, then returns
         the value 'as is' as a string.
@@ -300,20 +300,5 @@ class RWConfig(object):
             return val2any(value)
 
     @property
-    def config(self):
-        """
-        Returns
-        -------
-        configparser.ConfigParser
-        """
-        return self._cfg
-
-    @property
-    def filepath(self):
-        """
-        Returns
-        -------
-        Path
-            path to the configfile
-        """
-        return self._filepath
+    def hapi(self) -> configparser.ConfigParser:
+        return self._hapi

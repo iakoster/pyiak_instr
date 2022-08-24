@@ -93,7 +93,7 @@ class TestBlankWork(unittest.TestCase):
         self.assertIsInstance(exc.exception.args[1], KeyboardInterrupt)
         self.assertEqual(
             'Work was interrupted by KeyboardInterrupt(\'test\')',
-            exc.exception.message)
+            exc.exception.msg)
         with self.assertRaises(InterruptedWorkError):
             work.add_substep('', None)
         with self.assertRaises(InterruptedWorkError):
@@ -117,7 +117,7 @@ class TestBlankWork(unittest.TestCase):
             work()
         self.assertEqual(
             'Work tests.test_log.test_work.<lambda> is already done',
-            exc.exception.message)
+            exc.exception.msg)
         self.assertEqual('tests.test_log.test_work.<lambda>', exc.exception.work_name)
         self.assertEqual(
             'Work report:\n'

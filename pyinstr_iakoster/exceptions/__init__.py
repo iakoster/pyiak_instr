@@ -4,7 +4,8 @@ from ._log import (
     InterruptedWorkError,
 )
 from ._rwfile import (
-    FilepathPatternError
+    RWFileError,
+    FileSuffixError
 )
 from ._comm import (
     MessageError,
@@ -19,7 +20,8 @@ __all__ = [
     "PyiError",
     "CompletedWorkError",
     "FieldError",
-    "FilepathPatternError",
+    "RWFileError",
+    "FileSuffixError",
     "InterruptedWorkError",
     "MessageContentError",
     "MessageError",

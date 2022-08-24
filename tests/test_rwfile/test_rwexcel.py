@@ -4,7 +4,7 @@ import unittest
 from tests.env_vars import DATA_TEST_DIR
 
 from pyinstr_iakoster.rwfile import RWExcel
-from pyinstr_iakoster.exceptions import FilepathPatternError
+from pyinstr_iakoster.exceptions import FileSuffixError
 
 EXCEL_NAME = 'test_excel.xlsx'
 EXCEL_PATH = DATA_TEST_DIR / EXCEL_NAME
@@ -21,22 +21,6 @@ class TestRWExcel(unittest.TestCase):
         if not EXCEL_PATH.exists():
             RWExcel.new_empty(EXCEL_PATH, first_sheet='test_sheet')
 
-    def test_init_wrong_path(self):
-        with self.assertRaises(FilepathPatternError) as exc:
-            RWExcel(r'.\abrakadabre')
-        self.assertEqual(
-            'The path does not lead to \'\\\\S+.xlsx$\' file',
-            exc.exception.message
-        )
-
-    def test_create_empty_wrong_path(self):
-        with self.assertRaises(FilepathPatternError) as exc:
-            RWExcel.new_empty(r'.\abrakaderbre')
-        self.assertEqual(
-            'The path does not lead to \'\\\\S+.xlsx$\' file',
-            exc.exception.message
-        )
-
     def test_create_empty(self):
         self.tearDownClass()
         RWExcel.new_empty(EXCEL_PATH, first_sheet='test_sheet')
@@ -51,7 +35,7 @@ class TestRWExcel(unittest.TestCase):
 
     def test_init(self):
         rwe = RWExcel(EXCEL_PATH)
-        self.assertEqual('test_sheet', rwe.excel.active.title)
+        self.assertEqual('test_sheet', rwe.hapi.active.title)
 
     def test_cell_gs_cell(self):
         rwe = RWExcel(EXCEL_PATH, autosave=True)

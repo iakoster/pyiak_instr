@@ -17,7 +17,7 @@ class TestPyiError(unittest.TestCase):
             ("test msg", "test_arg", 1, 2.3),
             self.exc.args
         )
-        self.assertEqual("test msg", self.exc.message)
+        self.assertEqual("test msg", self.exc.msg)
 
     def test_magic_repr(self):
         self.assertEqual("PyiError: test msg", repr(self.exc))

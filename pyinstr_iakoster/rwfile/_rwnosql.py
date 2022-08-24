@@ -5,8 +5,7 @@ from typing import Any, Iterable
 from tinydb import TinyDB, Query
 from tinydb.table import Table
 
-from ._utils import if_str2path, create_dir_if_not_exists, match_filename
-
+from ..exceptions import RWFileError, FileSuffixError
 
 __all__ = [
     "RWNoSqlJsonDatabase",
@@ -106,13 +105,22 @@ class RWNoSqlJsonDatabase(TinyDB):
 
     table_class = RWNoSqlTable
     _tables: dict[str, table_class]
-    FILENAME_PATTERN = re.compile('\S+.json$')
+    FILE_SUFFIXES = {".json"}
 
     def __init__(self, filepath: Path | str, *args, **kwargs):
-        filepath = if_str2path(filepath)
-        match_filename(self.FILENAME_PATTERN, filepath)
-        create_dir_if_not_exists(filepath)
-        self._filepath = filepath
+        if isinstance(filepath, str):
+            filepath = Path(filepath)
+        if len(self.FILE_SUFFIXES) and \
+                filepath.suffix not in self.FILE_SUFFIXES:
+            raise FileSuffixError(self.FILE_SUFFIXES, filepath)
+
+        if filepath.exists():
+            if not filepath.is_file():
+                raise RWFileError("path not lead to file", filepath)
+        elif not filepath.parent.exists():
+            filepath.parent.mkdir(parents=True)
+
+        self._fp = filepath
 
         super().__init__(filepath, *args, **kwargs)
 
@@ -153,7 +161,7 @@ class RWNoSqlJsonDatabase(TinyDB):
         Path
             path to the JSON database/file.
         """
-        return self._filepath
+        return self._fp
 
     def __getitem__(self, table: str) -> table_class:
         """

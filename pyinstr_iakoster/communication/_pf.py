@@ -11,7 +11,7 @@ from ._regs import Register, RegisterMap
 from ..utilities import StringEncoder
 from ..rwfile import (
     RWNoSqlJsonDatabase,
-    RWSQLite3Simple,
+    RWSQLite,
 )
 
 
@@ -458,7 +458,7 @@ class PackageFormat(object):
                 format_.write(db.table(name))
 
         if register_map is not None:
-            with RWSQLite3Simple(register_map) as db:
+            with RWSQLite(register_map) as db:
                 for table in db.tables:
                     db.request(f"DROP TABLE {table};")
                 self._reg_map.write(db.connection)

@@ -4,23 +4,28 @@ from ._base import PyiError
 
 
 __all__ = [
-    "FilepathPatternError"
+    "RWFileError",
+    "FileSuffixError"
 ]
 
 
-class FilepathPatternError(PyiError):
+class RWFileError(PyiError):
+    """
+    Base class for exceptionts in rwfile module
+    """
+
+    def __init__(self, msg: str, filepath: Path):
+        super().__init__(msg, filepath)
+        self.filepath = filepath
+
+
+class FileSuffixError(RWFileError):
     """
     Raised when filepath is wrong by some pattern
     """
 
-    def __init__(self, pattern: str, filepath: Path | str):
-        PyiError.__init__(
-            self,
-            "The path does not lead to %r file" % pattern,
-            pattern,
+    def __init__(self, suffixes: set[str], filepath: Path):
+        super().__init__(
+            "suffix of '%s' not in %s" % (filepath, suffixes),
             filepath
         )
-        if isinstance(filepath, str):
-            filepath = Path(filepath)
-        self.filepath = filepath
-        self.pattern = pattern

@@ -5,13 +5,13 @@ from pathlib import Path
 import deprecation
 import pandas as pd
 
-from ._utils import *
+from ._core import RWFile
 
 
-__all__ = ['RWSQLite3Simple']
+__all__ = ['RWSQLite']
 
 
-class RWSQLite3Simple(object):
+class RWSQLite(RWFile):
     """
     Class for reading and writing to the database as *.db.
 
@@ -28,7 +28,7 @@ class RWSQLite3Simple(object):
         database response timeout.
     """
 
-    FILENAME_PATTERN = re.compile('\S+.db$')
+    FILE_SUFFIXES = {".db"}
 
     def __init__(
             self,
@@ -36,13 +36,10 @@ class RWSQLite3Simple(object):
             autocommit: bool = True,
             timeout: float = 5
     ):
-        filepath = if_str2path(filepath)
-        match_filename(self.FILENAME_PATTERN, filepath)
-        create_dir_if_not_exists(filepath)
+        super().__init__(filepath)
 
-        self._filepath = filepath
         self._conn = sqlite3.connect(filepath, timeout=timeout)
-        self._cur = self._conn.cursor()
+        self._hapi = self._conn.cursor()
         self._autocommit = autocommit
 
     def request(
@@ -66,11 +63,11 @@ class RWSQLite3Simple(object):
             sql cursor.
         """
         if many is None:
-            result = self._cur.execute(request)
+            result = self._hapi.execute(request)
         elif isinstance(many, tuple):
-            result = self._cur.execute(request, many)
+            result = self._hapi.execute(request, many)
         else:
-            result = self._cur.executemany(request, many)
+            result = self._hapi.executemany(request, many)
 
         if self._autocommit:
             self.commit()
@@ -99,6 +96,9 @@ class RWSQLite3Simple(object):
         if self._autocommit:
             self.commit()
 
+    @deprecation.deprecated(
+        deprecated_in='0.0.1a0', removed_in='0.0.1',
+        details='it is redundant function')
     def insert_into(
             self, *,
             insert_into: str,
@@ -146,7 +146,7 @@ class RWSQLite3Simple(object):
             from where to delete.
         """
         request = 'DELETE FROM %s;' % from_
-        self._cur.execute(request)
+        self._hapi.execute(request)
 
         if self._autocommit:
             self.commit()
@@ -194,7 +194,7 @@ class RWSQLite3Simple(object):
 
         where = '' if where is None else f' WHERE {where}'
         request = 'SELECT {} FROM {}{};'.format(select, from_, where)
-        result = self._cur.execute(request)
+        result = self._hapi.execute(request)
 
         if fetch is None:
             return result
@@ -291,7 +291,7 @@ class RWSQLite3Simple(object):
             list of a column names in the table
         """
         self.request('SELECT * FROM %s;' % table)
-        return [el[0] for el in self._cur.description]
+        return [el[0] for el in self._hapi.description]
 
     def table_rows(self, table: str) -> int:
         """
@@ -318,7 +318,7 @@ class RWSQLite3Simple(object):
     def close(self) -> None:
         """Close cursor and connection."""
         try:
-            self._cur.close()
+            self._hapi.close()
         except sqlite3.ProgrammingError as err:
             if err.args[0] != 'Cannot operate on a closed database.':
                 raise
@@ -383,30 +383,5 @@ class RWSQLite3Simple(object):
         return self._conn
 
     @property
-    def cursor(self):
-        """
-        Returns
-        -------
-        sqlite3.Cursor
-            cursor of the SQLite connection.
-        """
-        return self._cur
-
-    @property
-    def filepath(self):
-        """
-        Returns
-        -------
-        Path
-            path to the SQL database
-        """
-        return self._filepath
-
-    def __del__(self):
-        self.close()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+    def hapi(self) -> sqlite3.Cursor:
+        return self._hapi

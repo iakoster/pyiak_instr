@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ..rwfile import RWSQLite3Simple
+from ..rwfile import RWSQLite
 
 if TYPE_CHECKING:
     from ._msg import Message, ContentType
@@ -441,7 +441,7 @@ class RegisterMap(object):
         RegisterMap
             register map instance.
         """
-        with RWSQLite3Simple(database, autocommit=False) as db:
+        with RWSQLite(database, autocommit=False) as db:
             return RegisterMap(
                 pd.read_sql("SELECT * FROM registers", db.connection)
             )

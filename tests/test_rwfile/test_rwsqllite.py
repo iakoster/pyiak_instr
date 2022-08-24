@@ -3,7 +3,7 @@ import unittest
 
 from tests.env_vars import DATA_TEST_DIR
 
-from pyinstr_iakoster.rwfile import RWSQLite3Simple
+from pyinstr_iakoster.rwfile import RWSQLite
 
 SQLLITE_NAME = 'test_sqllite.db'
 SQLLITE_PATH = DATA_TEST_DIR / SQLLITE_NAME
@@ -18,13 +18,13 @@ class TestRWSimpleSqlLite(unittest.TestCase):
         shutil.rmtree(DATA_TEST_DIR)
 
     def setUp(self) -> None:
-        self.rws = RWSQLite3Simple(SQLLITE_PATH, timeout=0.5)
+        self.rws = RWSQLite(SQLLITE_PATH, timeout=0.5)
 
     def tearDown(self) -> None:
         self.rws.close()
 
     def test_0a_create_table_new(self):
-        RWSQLite3Simple(DATA_TEST_DIR / 'test.database_aa-lol.db', timeout=0.5)
+        RWSQLite(DATA_TEST_DIR / 'test.database_aa-lol.db', timeout=0.5)
 
     def test_a_create_table(self):
         self.rws.create_table(
@@ -38,32 +38,34 @@ class TestRWSimpleSqlLite(unittest.TestCase):
         )
 
     def test_b_insert_into(self):
-        self.rws.insert_into(
-            insert_into=self.table,
-            values=(0, 'first', 192.))
+        self.rws.request(
+            f"INSERT INTO {self.table} VALUES (?, ?, ?)",
+            (0, 'first', 192.)
+        )
         self.assertTupleEqual(
             (0, 'first', 192.),
-            self.rws.cursor.execute(
+            self.rws.hapi.execute(
                 'SELECT * FROM test_table WHERE id=0;'
             ).fetchall()[0]
         )
 
     def test_c_insert_into_many(self):
-        self.rws.insert_into(
-            insert_into=self.table, values=[
-                (1, 'second', 92.8),
-                (2, 'third', 47.)
-            ])
+        self.rws.request(
+            f"INSERT INTO {self.table} VALUES (?, ?, ?)",
+            [(1, 'second', 92.8), (2, 'third', 47.)]
+        )
         self.assertListEqual(
             [(1, 'second', 92.8), (2, 'third', 47.0)],
-            self.rws.cursor.execute(
+            self.rws.hapi.execute(
                 'SELECT * FROM test_table WHERE id IN (1, 2);'
             ).fetchall()
         )
 
     def test_d_select(self):
-        self.rws.insert_into(
-            insert_into=self.table, values=(4, 'fourth', 88))
+        self.rws.request(
+            f"INSERT INTO {self.table} VALUES (?, ?, ?)",
+            (4, 'fourth', 88)
+        )
         result = self.rws.request(
             f'SELECT * FROM {self.table} WHERE id=4'
         ).fetchall()[0]
@@ -73,10 +75,10 @@ class TestRWSimpleSqlLite(unittest.TestCase):
         )
 
     def test_e_insert_into_autoincrement(self):
-        self.rws.insert_into(
-            insert_into=self.table,
-            values=('five', 152.),
-            columns=['name', 'price'])
+        self.rws.request(
+            f"INSERT INTO {self.table}(name, price) VALUES (?, ?)",
+            ('five', 152.)
+        )
         rows_count = self.rws.table_rows(self.table)
         result = self.rws.request(
             f'SELECT * FROM {self.table} WHERE id={rows_count}'
