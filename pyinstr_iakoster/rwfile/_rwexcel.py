@@ -1,4 +1,4 @@
-import re
+import warnings
 from pathlib import Path
 from typing import overload, Any
 
@@ -37,6 +37,11 @@ class RWExcel(RWFile):
 
         self._autosave = autosave
         self._hapi = opxl.open(self._fp)
+
+        warnings.warn(
+            "The RWExcel class has been removed in lib version 0.0.1.",
+            DeprecationWarning, stacklevel=2
+        )
 
     def active_sheet(self, title: str) -> None:
         """

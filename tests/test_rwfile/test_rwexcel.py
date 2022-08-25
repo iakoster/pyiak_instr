@@ -4,12 +4,12 @@ import unittest
 from tests.env_vars import DATA_TEST_DIR
 
 from pyinstr_iakoster.rwfile import RWExcel
-from pyinstr_iakoster.exceptions import FileSuffixError
 
 EXCEL_NAME = 'test_excel.xlsx'
 EXCEL_PATH = DATA_TEST_DIR / EXCEL_NAME
 
 
+@unittest.skip("RWExcel will be removed soon")
 class TestRWExcel(unittest.TestCase):
 
     @classmethod
