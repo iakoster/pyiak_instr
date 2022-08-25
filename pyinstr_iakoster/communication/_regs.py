@@ -33,7 +33,7 @@ class Register(object):
         if `reg_type` not in {'rw', 'ro', 'wo'}.
     """
 
-    external_name: str
+    external_name: str | None
     "name of the register in external documents."
 
     name: str
@@ -57,12 +57,62 @@ class Register(object):
     description: str = ""
     "register description. First sentence must be a short summary."
 
-    mf: MessageFormat = None
+    mf: MessageFormat | None = None
     "message format for messages of this register."
 
     def __post_init__(self):
         if self.reg_type not in {"rw", "ro", "wo"}:
             raise TypeError("invalid register type: %r" % self.reg_type)
+
+    def shift(self, shift: int) -> Register:
+        """
+        Shift the address by a specified number.
+
+        Shift value must be in range [0,length). Also adds the suffix
+        '_shifted' to the name (if the name does not end in '_shifted').
+
+        If shift value is equal to zero returns the same register
+        instance and create new register otherwise.
+
+        Parameters
+        ----------
+        shift: int
+            address offset.
+
+        Returns
+        -------
+        Register
+            shifted register instance.
+
+        Raises
+        ------
+        ValueError
+            if shift value is negative;
+            if shift more or equal than register length.
+        """
+
+        if shift == 0:
+            return self
+        elif shift < 0:
+            raise ValueError("shift can't be negative")
+        elif shift >= self.length:
+            raise ValueError("shift more or equal to register length")
+        elif self.name.endswith("_shifted"):
+            name = self.name
+        else:
+            name = self.name + "_shifted"
+
+        return Register(
+            self.external_name,
+            name,
+            self.format_name,
+            self.address + shift,
+            self.length - shift,
+            reg_type=self.reg_type,
+            data_fmt=self.data_fmt,
+            description=self.description,
+            mf=self.mf
+        )
 
     def read(
             self,
@@ -318,6 +368,10 @@ class Register(object):
                 self.description
             )
         )
+
+    def __add__(self, shift: int) -> Register:
+        """Shift the address by a specified number."""
+        return self.shift(shift)
 
 
 class RegisterMap(object):

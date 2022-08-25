@@ -12,23 +12,26 @@ from pyinstr_iakoster.communication import (
 
 class TestRegister(unittest.TestCase):
 
+    def setUp(self) -> None:
+        self.reg = Register(
+            "lol",
+            "kek",
+            "mf",
+            0x100,
+            0x800,
+            reg_type="rw",
+            description="short desc. Long desc."
+        )
+
     def test_init(self):
         validate_object(
             self,
-            Register(
-                "lol",
-                "kek",
-                "mf",
-                0xfdec,
-                123,
-                reg_type="rw",
-                description="short desc. Long desc."
-            ),
-            address=0xfdec,
+            self.reg,
+            address=0x100,
             description="short desc. Long desc.",
             external_name="lol",
             format_name="mf",
-            length=123,
+            length=2048,
             name="kek",
             short_description="short desc"
         )
@@ -39,6 +42,43 @@ class TestRegister(unittest.TestCase):
         self.assertEqual(
             "invalid register type: 're'", exc.exception.args[0]
         )
+
+    def test_shift(self):
+        reg = self.reg.shift(0)
+        compare_registers(self, self.reg, reg)
+        reg = self.reg.shift(128)
+        validate_object(
+            self,
+            reg,
+            address=384,
+            description="short desc. Long desc.",
+            external_name="lol",
+            format_name="mf",
+            length=1920,
+            name="kek_shifted",
+            short_description="short desc"
+        )
+        self.assertEqual(2304, reg.address + reg.length)
+        reg = reg + 128
+        validate_object(
+            self, reg, address=512, length=1792, name="kek_shifted",
+        )
+        self.assertEqual(2304, reg.address + reg.length)
+        reg += 128
+        validate_object(self, reg, address=640, length=1664)
+        self.assertEqual(2304, reg.address + reg.length)
+
+    def test_shift_exc(self):
+
+        def test(shift: int, exc_msg: str):
+            with self.subTest(shift=shift, exc_msg=exc_msg):
+                with self.assertRaises(ValueError) as exc:
+                    self.reg.shift(shift)
+                self.assertEqual(exc_msg, exc.exception.args[0])
+
+        test(-100, "shift can't be negative")
+        test(2048, "shift more or equal to register length")
+        test(2050, "shift more or equal to register length")
 
 
 class TestRegisterMap(unittest.TestCase):
