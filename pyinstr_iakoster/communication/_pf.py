@@ -453,9 +453,9 @@ class PackageFormat(object):
             save path for register map database.
         """
         with RWNoSqlJsonDatabase(message_format) as db:
-            db.drop_tables()
+            db.hapi.drop_tables()
             for name, format_ in self._formats.items():
-                format_.write(db.table(name))
+                format_.write(db[name])
 
         if register_map is not None:
             with RWSQLite(register_map) as db:
@@ -564,8 +564,8 @@ class PackageFormat(object):
         """
         formats = {}
         with RWNoSqlJsonDatabase(database) as db:
-            for table_name in db.tables():
-                table = db.table(table_name)
+            for table_name in db.hapi.tables():
+                table = db[table_name]
 
                 msg_args = table.get(doc_id=-1)
                 if table.contains(doc_id=-2):
