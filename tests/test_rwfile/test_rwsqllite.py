@@ -25,6 +25,7 @@ class TestRWSimpleSqlLite(unittest.TestCase):
 
     def test_0a_create_table_new(self):
         RWSQLite(DATA_TEST_DIR / 'test.database_aa-lol.db', timeout=0.5)
+        self.assertTrue((DATA_TEST_DIR / 'test.database_aa-lol.db').exists())
 
     def test_a_create_table(self):
         self.rws.create_table(
@@ -107,4 +108,9 @@ class TestRWSimpleSqlLite(unittest.TestCase):
         self.assertEqual(5, self.rws.table_rows(self.table))
         self.rws.request('DELETE FROM %s;' % self.table)
         self.assertEqual(0, self.rws.table_rows(self.table))
+
+    def test_str_magic(self):
+        self.assertEqual(
+            r"RWSQLite('data_test\test_sqllite.db')", str(self.rws)
+        )
 

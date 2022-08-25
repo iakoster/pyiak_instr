@@ -1,10 +1,8 @@
 import shutil
 import unittest
 import configparser
-from pathlib import Path
 
 from pyinstr_iakoster.rwfile import RWConfig
-from pyinstr_iakoster.exceptions import FileSuffixError
 
 from tests.env_vars import DATA_TEST_DIR
 
@@ -87,32 +85,13 @@ class TestRWConfig(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.test_config = RWConfig(CONFIG_PATH)
+        cls.rwc = RWConfig(CONFIG_PATH)
 
     @classmethod
     def tearDownClass(cls) -> None:
         shutil.rmtree(DATA_TEST_DIR)
 
-    def test_path_is_dir(self):
-        test_path = Path('.\\data_test\\only_dir')
-        with self.assertRaises(FileSuffixError) as err:
-            RWConfig(test_path)
-        self.assertIn(
-            r"suffix of 'data_test\only_dir' not in",
-            err.exception.msg
-        )
-
-    def test_wrong_fileformat(self):
-        test_path = Path('.\\date_test\\not_ini.txt')
-        with self.assertRaises(FileSuffixError) as err:
-            RWConfig(test_path)
-        self.assertIn(
-            r"suffix of 'date_test\not_ini.txt' not in",
-            err.exception.msg
-        )
-
     def test_file_creation(self):
-        print(RWConfig(CONFIG_PATH).__class__.LIST_PATTERN.__doc__)
         RWConfig(CONFIG_PATH)
         self.assertTrue(CONFIG_PATH.exists())
 
@@ -127,7 +106,7 @@ class TestRWConfig(unittest.TestCase):
         vals_str = ['10', '254.641685', '1.12476e-123', '5.4165e+123']
         for i in range(len(options)):
             with self.subTest(option=options[i]):
-                self.test_config.write(
+                self.rwc.write(
                     'test_single', options[i], vals[i])
                 readed_config = configparser.ConfigParser()
                 readed_config.read(CONFIG_PATH)
@@ -137,7 +116,7 @@ class TestRWConfig(unittest.TestCase):
                 )
 
     def test_write_dict_conv(self):
-        with self.test_config as cfg:
+        with self.rwc as cfg:
             cfg.write(TEST_DICT_CONV)
         readed_config = configparser.ConfigParser()
         readed_config.read(CONFIG_PATH)
@@ -148,7 +127,7 @@ class TestRWConfig(unittest.TestCase):
         )
 
     def test_write_dict_str(self):
-        self.test_config.write(TEST_DICT_STR)
+        self.rwc.write(TEST_DICT_STR)
         readed_config = configparser.ConfigParser()
         readed_config.read(CONFIG_PATH)
         self.assertDictEqual(
@@ -165,7 +144,7 @@ class TestRWConfig(unittest.TestCase):
             'test_efloat_huge': 5.4321e+99,
         }}
 
-        self.test_config.write(test_dict)
+        self.rwc.write(test_dict)
         readed_config = configparser.ConfigParser()
         readed_config.read(CONFIG_PATH)
         red_dict = TEST_DICT_STR
@@ -178,14 +157,14 @@ class TestRWConfig(unittest.TestCase):
 
     def test_write_wrong_args(self):
         with self.assertRaises(TypeError) as exc:
-            self.test_config.write('', '')
+            self.rwc.write('', '')
         self.assertEqual(
             exc.exception.args[0],
             'Wrong args for write method'
         )
 
     def setUp(self) -> None:
-        self.test_config.write(TEST_DICT_STR)
+        self.rwc.write(TEST_DICT_STR)
 
     def test_read_conversion(self) -> None:
         high_items = TEST_DICT_CONV.items()
@@ -193,11 +172,11 @@ class TestRWConfig(unittest.TestCase):
             for option, conv_value in option_dict.items():
                 with self.subTest(section=section, option=option):
                     self.assertIsInstance(
-                        self.test_config.read(section, option),
+                        self.rwc.read(section, option),
                         type(conv_value)
                     )
                     self.assertEqual(
-                        self.test_config.read(section, option),
+                        self.rwc.read(section, option),
                         conv_value
                     )
 
@@ -206,17 +185,17 @@ class TestRWConfig(unittest.TestCase):
         option = 'test_int'
         self.assertEqual(
             TEST_DICT_CONV[section][option],
-            self.test_config.get(section, option)
+            self.rwc.get(section, option)
         )
 
     def test_set(self) -> None:
         section = 'test_single'
         option = 'test_int'
         value = 12345
-        self.test_config.set(section, option, value)
+        self.rwc.set(section, option, value)
         self.assertEqual(
             value,
-            self.test_config.get(section, option)
+            self.rwc.get(section, option)
         )
 
     def test_set_isolation(self) -> None:
@@ -224,14 +203,14 @@ class TestRWConfig(unittest.TestCase):
         section = 'test_single'
         option = 'test_int'
         value = 12345
-        self.test_config.set(section, option, value)
+        self.rwc.set(section, option, value)
         self.assertEqual(
             value,
-            self.test_config.get(section, option)
+            self.rwc.get(section, option)
         )
         self.assertEqual(
             TEST_DICT_CONV[section][option],
-            self.test_config.read(section, option)
+            self.rwc.read(section, option)
         )
 
     def test_apply_changes(self) -> None:
@@ -239,13 +218,18 @@ class TestRWConfig(unittest.TestCase):
         section = 'test_single'
         option = 'test_int'
         value = 12345
-        self.test_config.set(section, option, value)
-        self.test_config.apply_changes()
+        self.rwc.set(section, option, value)
+        self.rwc.apply_changes()
         self.assertEqual(
             value,
-            self.test_config.read(section, option)
+            self.rwc.read(section, option)
         )
         self.assertEqual(
             value,
-            self.test_config.get(section, option)
+            self.rwc.get(section, option)
+        )
+
+    def test_str_magic(self):
+        self.assertEqual(
+            r"RWConfig('data_test\test_config.ini')", str(self.rwc)
         )

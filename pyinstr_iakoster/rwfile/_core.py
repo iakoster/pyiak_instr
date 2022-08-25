@@ -5,11 +5,13 @@ from ..exceptions import FileSuffixError, RWFileError
 
 
 __all__ = [
-    "RWFile"
+    "RWFile",
+    "RWFileError",
+    "FileSuffixError",
 ]
 
 
-class RWFile(object): # nodesc
+class RWFile(object):
     """
     Represents a base class for read/write file.
 
@@ -82,5 +84,5 @@ class RWFile(object): # nodesc
         str
             String interpretation of the class instance.
         """
-        return f"{self.__class__.__name__}({self._fp})"
+        return f"{self.__class__.__name__}('{self._fp}')"
 

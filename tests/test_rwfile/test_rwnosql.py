@@ -72,3 +72,9 @@ class TestRWNoSql(unittest.TestCase):
     def test_ae_table(self):
         self.rwns["test_table"].insert(dict(name="test", value=10))
         self.assertIn("test_table", self.rwns.hapi.tables())
+
+    def test_str_magic(self):
+        self.assertEqual(
+            r"RWNoSqlJsonDatabase('data_test\test_nosql.json')",
+            str(self.rwns)
+        )
