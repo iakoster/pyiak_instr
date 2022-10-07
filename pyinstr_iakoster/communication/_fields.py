@@ -34,6 +34,7 @@ __all__ = [
     "OperationField",
     "SingleField",
     "StaticField",
+    "ResponseField",
     "FieldType",
     "FieldContentError"
 ]
@@ -1478,7 +1479,8 @@ FieldType = (
     CrcField |
     DataField |
     DataLengthField |
-    OperationField
+    OperationField |
+    ResponseField
 )
 
 

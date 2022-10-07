@@ -9,6 +9,7 @@ from ._fields import (
     FieldSetter,
     SingleField,
     StaticField,
+    ResponseField,
     FieldType,
     FieldContentError
 )
@@ -35,6 +36,7 @@ __all__ = [
     "DataField",
     "DataLengthField",
     "OperationField",
+    "ResponseField",
     "FieldSetter",
     "SingleField",
     "StaticField",
