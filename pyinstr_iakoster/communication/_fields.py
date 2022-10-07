@@ -1286,7 +1286,7 @@ class ResponseField(SingleField):  # nodesc
             start_byte: int,
             fmt: str,
             codes: dict[int | float, Code | int],
-            default: int | Code = UNDEFINED,
+            default: int | Code | None = UNDEFINED,
             info: dict[str, Any] | None = None,
             parent: Message = None,
     ):
@@ -1317,12 +1317,11 @@ class ResponseField(SingleField):  # nodesc
             val = self.unpack()[0]
             if val in self._codes:
                 return self._codes[val]
-            elif -1 in self._codes:
+            elif self._def_code is not None:
                 return self._def_code
             raise FieldContentError(
                 self.__class__,
-                clarification=f"undefined code: "
-                              f"{val} not in {set(self._codes)}"
+                clarification=f"undefined code by content {val}"
             )
         raise FieldContentError(
             self.__class__, clarification="content is empty"

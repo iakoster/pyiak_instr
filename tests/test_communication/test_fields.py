@@ -1,10 +1,10 @@
 import unittest
-from typing import Any
 
 import numpy as np
 
 from .utils import validate_field
 
+from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
     Field,
     SingleField,
@@ -14,6 +14,7 @@ from pyinstr_iakoster.communication import (
     DataField,
     DataLengthField,
     OperationField,
+    ResponseField,
     FieldSetter,
     FieldContentError
 )
@@ -710,6 +711,103 @@ class TestFieldOperation(unittest.TestCase):
             "invalid class for comparsion: <class 'int'>",
             exc.exception.args[0]
         )
+
+
+class TestResponseField(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.tf = ResponseField(
+            "test",
+            start_byte=2,
+            fmt=">H",
+            codes={
+                0: Code.WAIT,
+                1: ResponseField.OK,
+                2: ResponseField.RAISE,
+                3: ResponseField.WAIT,
+            }
+        )
+
+    def test_init(self) -> None:
+        self.tf.set(2)
+        validate_field(
+            self,
+            self.tf,
+            slice=slice(2, 4),
+            format_name="test",
+            name="response",
+            info={},
+            start_byte=2,
+            stop_byte=4,
+            expected=1,
+            finite=True,
+            may_be_empty=False,
+            fmt=">H",
+            bytesize=2,
+            content=b"\x00\x02",
+            default=b"",
+            words_count=1,
+            check_attrs=True,
+        )
+        self.assertEqual(
+            self.tf.codes,
+            {
+                0: Code.WAIT,
+                1: ResponseField.OK,
+                2: ResponseField.RAISE,
+                3: ResponseField.WAIT,
+            }
+        )
+        self.assertEqual(Code.RAISE, self.tf.current_code)
+
+    def test_current_code(self) -> None:
+        for i_code, code in enumerate(
+                (Code.WAIT, Code.OK, Code.RAISE, Code.WAIT, Code.UNDEFINED)
+        ):
+            self.tf.set(i_code)
+            with self.subTest(content=i_code, code=code):
+                self.assertEqual(self.tf, code)
+
+    def test_raises(self) -> None:
+        with self.subTest(exception="empty content"):
+            with self.assertRaises(FieldContentError) as exc:
+                self.tf.current_code
+            self.assertEqual(
+                "invalid content in ResponseField: content is empty",
+                exc.exception.args[0]
+            )
+
+        with self.subTest(exception="undefined code"):
+            tf = ResponseField(
+                "test",
+                start_byte=2,
+                fmt=">H",
+                codes={
+                    0: Code.WAIT,
+                    1: ResponseField.OK,
+                    2: ResponseField.RAISE,
+                    3: ResponseField.WAIT,
+                },
+                default=None,
+            )
+            tf.set(10)
+            with self.assertRaises(FieldContentError) as exc:
+                tf.current_code
+            self.assertEqual(
+                "invalid content in ResponseField: "
+                "undefined code by content 10",
+                exc.exception.args[0]
+            )
+
+    def test_magic_eq(self) -> None:
+        self.tf.set(2)
+        self.assertTrue(self.tf == Code.RAISE)
+        self.assertFalse(self.tf == 1)
+
+    def test_magic_neq(self) -> None:
+        self.tf.set(1)
+        self.assertTrue(self.tf != Code.RAISE)
+        self.assertFalse(self.tf != Code.OK)
 
 
 class TestFieldSetter(unittest.TestCase):
