@@ -9,7 +9,8 @@ __all__ = [
 class Code(IntEnum):
 
     # System codes
-    NONE = -1
+    NONE = 0
+    UNDEFINED = 0xff
 
     # Type codes
     BYTES = 0x100
@@ -25,4 +26,3 @@ class Code(IntEnum):
     WAIT = auto()
     ERROR = auto()
     RAISE = auto()
-    UNDEFINED = 0x5ff
