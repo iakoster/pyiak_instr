@@ -15,7 +15,7 @@ import numpy as np
 import numpy.typing as npt
 import deprecation
 
-
+from ..core import Code
 from ..exceptions import (
     FieldContentError
 )
@@ -1269,6 +1269,69 @@ class OperationField(SingleField):
         compare: comparsion method.
         """
         return not self.compare(other)
+
+
+class ResponseField(SingleField):  # nodesc
+
+    OK = Code.OK  # nodesc: all is ok
+    WAIT = Code.WAIT  # nodesc: next message is an answer (if needed (e.g. read something)
+    RAISE = Code.RAISE  # nodesc: something wrong (e.g. wrong CRC)
+    UNDEFINED = Code.UNDEFINED  # nodesc
+
+    def __init__(
+            self,
+            format_name: str,
+            *,
+            start_byte: int,
+            fmt: str,
+            codes: dict[int | float, Code | int],
+            default: int | Code = UNDEFINED,
+            info: dict[str, Any] | None = None,
+            parent: Message = None,
+    ):
+        super().__init__(
+            format_name=format_name,
+            name="response",
+            start_byte=start_byte,
+            fmt=fmt,
+            info=info,
+            may_be_empty=False,
+            parent=parent,
+        )
+
+        self._codes = {}
+        for k, v in codes.items():
+            self._codes[k] = Code(v) if isinstance(v, int) else v
+        if isinstance(default, int):
+            default = Code(default)
+        self._def_code = default
+
+    @property
+    def codes(self) -> dict[int | float, Code]:  # nodesc
+        return self._codes
+
+    @property
+    def current_code(self) -> Code:  # nodesc
+        if len(self):
+            val = self.unpack()[0]
+            if val in self._codes:
+                return self._codes[val]
+            elif -1 in self._codes:
+                return self._def_code
+            raise FieldContentError(
+                self.__class__,
+                clarification=f"undefined code: "
+                              f"{val} not in {set(self._codes)}"
+            )
+        raise FieldContentError(
+            self.__class__, clarification="content is empty"
+        )
+
+    def __eq__(self, other: Code | int) -> bool:  # nodesc
+        return self.current_code == other
+
+    def __ne__(self, other: Code | int) -> bool:  # nodesc
+        return self.current_code != other
 
 
 class FieldSetter(object):
