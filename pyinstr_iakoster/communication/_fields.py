@@ -1460,6 +1460,17 @@ class FieldSetter(object):
     ):
         return cls(fmt=fmt, desc_dict=desc_dict, info=info)
 
+    @classmethod
+    def response(
+            cls,
+            *,
+            fmt: str,
+            codes: dict[int | float, Code | int],
+            default: int | Code | None = Code.UNDEFINED,
+            info: dict[str, Any] | None = None,
+    ):
+        return cls(fmt=fmt, codes=codes, default=default, info=info)
+
     def __repr__(self) -> str:
         cls_name = self.__class__.__name__
         kwargs = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())

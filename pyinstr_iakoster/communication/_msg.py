@@ -14,6 +14,7 @@ from ._fields import (
     DataField,
     DataLengthField,
     OperationField,
+    ResponseField,
     SingleField,
     StaticField,
     FieldType,
@@ -57,6 +58,7 @@ class Message(object):
         "crc": CrcField,
         "single": SingleField,
         "static": StaticField,
+        "response": ResponseField,
     }
 
     def __init__(
