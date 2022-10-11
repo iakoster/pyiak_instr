@@ -718,6 +718,7 @@ class TestResponseField(unittest.TestCase):
     def setUp(self) -> None:
         self.tf = ResponseField(
             "test",
+            "response",
             start_byte=2,
             fmt=">H",
             codes={
@@ -746,6 +747,13 @@ class TestResponseField(unittest.TestCase):
             bytesize=2,
             content=b"\x00\x02",
             default=b"",
+            codes={
+                0: Code.WAIT,
+                1: ResponseField.OK,
+                2: ResponseField.RAISE,
+                3: ResponseField.WAIT,
+            },
+            default_code=Code.UNDEFINED,
             words_count=1,
             check_attrs=True,
         )
@@ -780,6 +788,7 @@ class TestResponseField(unittest.TestCase):
         with self.subTest(exception="undefined code"):
             tf = ResponseField(
                 "test",
+                "response",
                 start_byte=2,
                 fmt=">H",
                 codes={

@@ -5,6 +5,7 @@ import numpy as np
 
 from .utils import compare_fields
 
+from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
     Message,
     FieldSetter,
@@ -15,8 +16,15 @@ from pyinstr_iakoster.communication import (
     CrcField,
     DataLengthField,
     OperationField,
+    ResponseField,
     MessageContentError
 )
+
+
+RESPONSE_CODES = {
+    0: Code.OK,
+    4: Code.WAIT
+}
 
 
 class AnotherMessage(Message):
@@ -45,7 +53,9 @@ class TestMessage(unittest.TestCase):
     def setUp(self) -> None:
         self.msg: Message = Message().configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
-            response=FieldSetter.single(fmt=">B"),
+            response=FieldSetter.response(
+                fmt=">B", codes=RESPONSE_CODES, default=Code.RAISE
+            ),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
@@ -73,7 +83,9 @@ class TestMessage(unittest.TestCase):
     def test_configure(self):
         msg = Message(format_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
-            response=FieldSetter.single(fmt=">B"),
+            response=FieldSetter.response(
+                fmt=">B", codes=RESPONSE_CODES, default=Code.RAISE
+            ),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
@@ -88,11 +100,13 @@ class TestMessage(unittest.TestCase):
                 fmt=">H",
                 default=0x1aa5
             ),
-            response=SingleField(
+            response=ResponseField(
                 "not_def",
                 "response",
                 start_byte=2,
                 fmt=">B",
+                codes=RESPONSE_CODES,
+                default=Code.RAISE
             ),
             address=AddressField(
                 "not_def",
@@ -215,7 +229,7 @@ class TestMessage(unittest.TestCase):
     def test_extract_middle_infinite(self):
         msg: Message = Message(format_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
-            response=FieldSetter.single(fmt=">B"),
+            response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             data_length=FieldSetter.data_length(fmt=">B"),
             data=FieldSetter.data(expected=-1, fmt=">I"),
             address=FieldSetter.address(fmt=">H"),
@@ -494,7 +508,7 @@ class TestFields(unittest.TestCase):
     def test_data_length_unpdate(self):
         msg: Message = Message(format_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
-            response=FieldSetter.single(fmt=">B"),
+            response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
@@ -510,7 +524,7 @@ class TestFields(unittest.TestCase):
     def test_operation_compare(self):
         msg: Message = Message(format_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
-            response=FieldSetter.single(fmt=">B"),
+            response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),

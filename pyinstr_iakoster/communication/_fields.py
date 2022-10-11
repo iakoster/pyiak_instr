@@ -1282,6 +1282,7 @@ class ResponseField(SingleField):  # nodesc
     def __init__(
             self,
             format_name: str,
+            name: str,
             *,
             start_byte: int,
             fmt: str,
@@ -1291,8 +1292,8 @@ class ResponseField(SingleField):  # nodesc
             parent: Message = None,
     ):
         super().__init__(
-            format_name=format_name,
-            name="response",
+            format_name,
+            name,
             start_byte=start_byte,
             fmt=fmt,
             info=info,
@@ -1326,6 +1327,10 @@ class ResponseField(SingleField):  # nodesc
         raise FieldContentError(
             self.__class__, clarification="content is empty"
         )
+
+    @property
+    def default_code(self) -> Code:  # nodesc
+        return self._def_code
 
     def __eq__(self, other: Code | int) -> bool:  # nodesc
         return self.current_code == other
@@ -1469,7 +1474,13 @@ class FieldSetter(object):
             default: int | Code | None = Code.UNDEFINED,
             info: dict[str, Any] | None = None,
     ):
-        return cls(fmt=fmt, codes=codes, default=default, info=info)
+        return cls(
+            special="response",
+            fmt=fmt,
+            codes=codes,
+            default=default,
+            info=info
+        )
 
     def __repr__(self) -> str:
         cls_name = self.__class__.__name__

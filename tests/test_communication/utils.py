@@ -14,6 +14,7 @@ from pyinstr_iakoster.communication import (
     Register,
     DataLengthField,
     OperationField,
+    ResponseField,
 )
 
 
@@ -192,7 +193,7 @@ def get_register_map_data() -> pd.DataFrame:
     return df_data
 
 
-def get_field_attributes(field) -> list[str]:
+def get_field_attributes(field) -> list[str]:  # todo: make it auto
     attrs = [
         "bytesize",
         "content",
@@ -225,6 +226,11 @@ def get_field_attributes(field) -> list[str]:
             "desc",
             "desc_dict",
             "desc_dict_r",
+        ]
+    elif isinstance(field, ResponseField):
+        attrs += [
+            "codes",
+            "default_code",
         ]
     return attrs
 
