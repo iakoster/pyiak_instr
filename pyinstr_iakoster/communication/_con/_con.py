@@ -7,6 +7,11 @@ from .._pf import MessageErrorMark
 from ...core import Code
 
 
+__all__ = [
+    "Connection"
+]
+
+
 class Connection(object):  # nodesc
 
     ADDRESS_TYPE = Any

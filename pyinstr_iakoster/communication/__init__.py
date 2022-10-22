@@ -18,6 +18,9 @@ from ._msg import (
     MessageContentError,
     NotConfiguredMessageError,
 )
+from ._con import (
+    Connection
+)
 from ._regs import (
     Register,
     RegisterMap
@@ -50,4 +53,5 @@ __all__ = [
     "RegisterMap",
     "MessageContentError",
     "NotConfiguredMessageError",
+    "Connection",
 ]
