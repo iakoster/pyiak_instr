@@ -6,7 +6,7 @@ __all__ = [
 ]
 
 
-class Code(IntEnum):
+class Code(IntEnum):  # nodesc
 
     # System codes
     NONE = 0

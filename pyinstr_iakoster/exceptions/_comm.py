@@ -10,14 +10,14 @@ __all__ = [
 ]
 
 
-class FieldError(PyiError):
+class FieldError(PyiError):  # nodesc
 
     def __init__(self, msg: str, field: object, *args):
         PyiError.__init__(self, msg, field, *args)
         self.field = field
 
 
-class FieldContentError(FieldError):
+class FieldContentError(FieldError):  # nodesc
 
     def __init__(self, field: type, *args, clarification: str = None):
         msg = "invalid content in %s" % field.__name__
@@ -26,14 +26,14 @@ class FieldContentError(FieldError):
         FieldError.__init__(self, msg, field, *args)
 
 
-class MessageError(PyiError):
+class MessageError(PyiError):  # nodesc
 
     def __init__(self, msg: str, message: str, *args):
         PyiError.__init__(self, msg, message, *args)
         self.message_class = message
 
 
-class MessageContentError(MessageError):
+class MessageContentError(MessageError):  # nodesc
 
     def __init__(self, message: str, field: str, clarification: str = None):
         msg = "Error with %s in %s" % (field, message)
@@ -42,7 +42,7 @@ class MessageContentError(MessageError):
         MessageError.__init__(self, msg, message, field)
 
 
-class NotConfiguredMessageError(MessageError):
+class NotConfiguredMessageError(MessageError):  # nodesc
 
     def __init__(self, message: str):
         MessageError.__init__(
