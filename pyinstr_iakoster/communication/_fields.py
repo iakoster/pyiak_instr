@@ -83,7 +83,7 @@ class BaseField(object):
             expected: int,
             may_be_empty: bool,
             fmt: str,
-            info: dict[str, Any],
+            info: dict[str, Any],  # todo: unused parameter
             content: bytes,
             default: ContentType,
             parent: Message,
@@ -1117,10 +1117,6 @@ class OperationField(SingleField):
     See Also
     --------
     FieldSingle: parent class.
-
-    Examples
-    --------
-    Example of po
     """
 
     READ = "r"
@@ -1272,12 +1268,46 @@ class OperationField(SingleField):
         return not self.compare(other)
 
 
-class ResponseField(SingleField):  # nodesc
+class ResponseField(SingleField):
+    """
+    Represents a field of a Message with response field.
 
-    OK = Code.OK  # nodesc: all is ok
-    WAIT = Code.WAIT  # nodesc: next message is an answer (if needed (e.g. read something)
-    RAISE = Code.RAISE  # nodesc: something wrong (e.g. wrong CRC)
-    UNDEFINED = Code.UNDEFINED  # nodesc
+    Parameters
+    ----------
+    format_name: str
+        the name of package format to which the field belongs.
+    name: str
+        the name of the field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    info: dict of {str, Any}, optional
+        additional info about a field.
+    codes: dict of {int, Core or int}
+        matching dictionary value and codes.
+    default: int or Code or None
+        default code if value undefined.
+    parent: Message or None
+        parent message.
+
+    See Also
+    --------
+    SingleField: parent class.
+    """
+
+    OK = Code.OK
+    "all is OK"
+
+    WAIT = Code.WAIT
+    "wait next message"
+
+    RAISE = Code.RAISE
+    "some error"
+
+    UNDEFINED = Code.UNDEFINED
+    "codes dict does not have value"
 
     def __init__(
             self,
@@ -1286,7 +1316,7 @@ class ResponseField(SingleField):  # nodesc
             *,
             start_byte: int,
             fmt: str,
-            codes: dict[int | float, Code | int],
+            codes: dict[int, Code | int],
             default: int | Code | None = UNDEFINED,
             info: dict[str, Any] | None = None,
             parent: Message = None,
@@ -1309,11 +1339,29 @@ class ResponseField(SingleField):  # nodesc
         self._def_code = default
 
     @property
-    def codes(self) -> dict[int | float, Code]:  # nodesc
+    def codes(self) -> dict[int, Code]:
+        """
+        Returns
+        -------
+        dict of {int, Code}
+            matching dictionary value and codes
+        """
         return self._codes
 
     @property
-    def current_code(self) -> Code:  # nodesc
+    def current_code(self) -> Code:
+        """
+        Returns
+        -------
+        Code
+            current code.
+
+        Raises
+        ------
+        FieldContentError
+            if content is empty;
+            if unknown value and default code is None.
+        """
         if len(self):
             val = self.unpack()[0]
             if val in self._codes:
@@ -1329,13 +1377,21 @@ class ResponseField(SingleField):  # nodesc
         )
 
     @property
-    def default_code(self) -> Code:  # nodesc
+    def default_code(self) -> Code | None:
+        """
+        Returns
+        -------
+        Code or None
+            default code or none.
+        """
         return self._def_code
 
-    def __eq__(self, other: Code | int) -> bool:  # nodesc
+    def __eq__(self, other: Code | int) -> bool:
+        """Compare current code with other"""
         return self.current_code == other
 
-    def __ne__(self, other: Code | int) -> bool:  # nodesc
+    def __ne__(self, other: Code | int) -> bool:
+        """Compare current code with other"""
         return self.current_code != other
 
 
