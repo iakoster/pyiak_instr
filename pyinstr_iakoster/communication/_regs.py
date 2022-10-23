@@ -471,7 +471,7 @@ class RegisterMap(object):
         """
         cols_diff = set(table.columns) - set(self.EXPECTED_COLUMNS)
         if len(cols_diff):
-            raise ValueError(f"invalid columns: {cols_diff}") # todo: custom exc
+            raise ValueError(f"invalid columns: {cols_diff}")  # todo: custom exc
         # todo: checks:
         #  without dublicates in external_name and name
         #  without duplicates in address with the same msg_fmt

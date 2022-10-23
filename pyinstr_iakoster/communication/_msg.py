@@ -24,6 +24,7 @@ from ..exceptions import (
     MessageContentError,
     NotConfiguredMessageError,
 )
+from ..core import Code
 
 
 __all__ = [
@@ -84,7 +85,7 @@ class Message(object):
 
     @deprecation.deprecated(
         deprecated_in="0.0.1a14",
-        removed_in="0.1.0",
+        removed_in="0.0.2",
         details="use `clear_src_dst` instead"
     )
     def clear_addresses(self) -> None:
@@ -309,7 +310,7 @@ class Message(object):
 
     @deprecation.deprecated(
         deprecated_in="0.0.1a14",
-        removed_in="0.1.0",
+        removed_in="0.0.2",
         details="use `set_src_dst` instead"
     )
     def set_addresses(
@@ -496,7 +497,7 @@ class Message(object):
                 )
 
     @staticmethod
-    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.1.0")
+    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.0.2")
     def _format_address(address: Any) -> str:
         """
         Format address to strint.
@@ -597,9 +598,26 @@ class Message(object):
         return self._fields["operation"]
 
     @property
+    def response_codes(self) -> dict[str, Code]:
+        """
+        Returns
+        -------
+        dict of {str, Code}
+            dictionary of all response codes in the message, where
+            key is the field name and value is the code.
+            If there is no ResponseField in the message,
+            the dictionary will be empty.
+        """
+        codes = {}
+        for field in self._fields.values():
+            if isinstance(field, ResponseField):
+                codes[field.name] = field.current_code
+        return codes
+
+    @property
     @deprecation.deprecated(
         deprecated_in="0.0.1a14",
-        removed_in="0.1.0",
+        removed_in="0.0.2",
         details="renamed, use `dst` instead"
     )
     def rx(self) -> Any:
@@ -612,7 +630,7 @@ class Message(object):
         return self.dst
 
     @property
-    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.1.0")
+    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.0.2")
     def rx_str(self) -> str:
         """
         Returns
@@ -664,7 +682,7 @@ class Message(object):
     @property
     @deprecation.deprecated(
         deprecated_in="0.0.1a14",
-        removed_in="0.1.0",
+        removed_in="0.0.2",
         details="renamed, use `src` instead"
     )
     def tx(self) -> Any:
@@ -677,7 +695,7 @@ class Message(object):
         return self.src
 
     @property
-    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.1.0")
+    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.0.2")
     def tx_str(self) -> str:
         """
         Returns

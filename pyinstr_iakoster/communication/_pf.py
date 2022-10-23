@@ -22,7 +22,7 @@ __all__ = [
 ]
 
 
-class MessageErrorMark(object):
+class MessageErrorMark(object):  # todo: make only for asymmetric emark (bytes only)
     """
     A class for detecting the existence of an error mark in a message.
 
@@ -301,7 +301,7 @@ class MessageFormat(object):
 
         Parameters
         ----------
-        format_table: RWNoSqlTable
+        format_table: Table
             table instance.
         """
 

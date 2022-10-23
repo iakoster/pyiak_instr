@@ -65,10 +65,10 @@ class Connection(object):  # nodesc
     ) -> Message:
         if self._addr is None:
             raise ConnectionError("no address specified")
-        if message.tx != self._addr:
+        if message.src != self._addr:
             raise ConnectionError(
                 "addresses in message and connection is not equal: "
-                f"{message.tx} != {self._addr}"
+                f"{message.src} != {self._addr}"
             )
 
         if message.operation.base == "w":
@@ -127,21 +127,21 @@ class Connection(object):  # nodesc
             while receive_start - dt.datetime.now() < self._rx_to:
 
                 try:
-                    ans, src_addr = self._receive()
+                    ans, rec_from = self._receive()
                     received += 1
                     self._log_info("{}, src={}, dst={}".format(
-                        ans.hex(" "), src_addr, self._addr
+                        ans.hex(" "), rec_from, self._addr
                     ))
 
                 except TimeoutError as exc:
                     self._log_info(repr(exc))
 
                 else:
-                    if msg.rx != src_addr:
+                    if msg.dst != rec_from:
                         invalid_received += 1
                         self._log_info(
-                            f"message received from {src_addr}, "
-                            f"but expected from {msg.rx}"
+                            f"message received from {rec_from}, "
+                            f"but expected from {msg.dst}"
                         )
                         continue
 
@@ -158,7 +158,7 @@ class Connection(object):  # nodesc
                         receive_start = dt.datetime.now()
                     else:
                         invalid_received += 1
-                        self._log_info(f"receive with code: {repr(code)}")
+                        self._log_info(f"receive with code(s): %r" % code)
 
         raise ConnectionError(
             "time is up: "
@@ -178,7 +178,7 @@ class Connection(object):  # nodesc
             rx_msg, emark_exists = emark.exists(rx_msg)
         # todo: check that bytes can be reformatted into a message
         rx_msg = tx_msg.get_same_instance().extract(rx_msg)\
-            .set_addresses(dst=tx_msg.rx, src=self._addr)
+            .set_addresses(src=tx_msg.dst, dst=self._addr)
 
         if emark_exists:
             return rx_msg, Code.ERROR
@@ -186,11 +186,25 @@ class Connection(object):  # nodesc
 
     def _validate_message(
             self, rx_msg: Message, emark: MessageErrorMark
-    ) -> Code:
+    ) -> Code | list[Code]:
+
+        codes = list(rx_msg.response_codes.values())
+        if len(codes):
+            if len(codes) == 1:
+                return codes[0]
+
+            ref_code = codes[0]
+            for code in codes[1:]:
+                if code != ref_code:
+                    return codes
+            return ref_code
+
+        # else:
+        #     return Code.OK  # todo: uncomment after fix emark
+
         emark_exists = False
         if not emark.bytes_required:
-            _, emark_exists = emark.exists(rx_msg)
-        # todo: check code in ResponseField (if exists)
+            _, emark_exists = emark.exists(rx_msg)  # todo: remove, response codes do it
 
         if emark_exists:
             return Code.ERROR
