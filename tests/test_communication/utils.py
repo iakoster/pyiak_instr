@@ -241,10 +241,8 @@ def get_message_attributes() -> list[str]:
         "splitable",
         "slice_length",
         "have_infinite",
-        "rx",
-        "rx_str",
-        "tx",
-        "tx_str"
+        "src",
+        "dst",
     ]
 
 

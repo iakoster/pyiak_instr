@@ -14,7 +14,7 @@ __all__ = [
 
 class Connection(object):  # nodesc
 
-    ADDRESS_TYPE = Any
+    ADDRESS_TYPE = Message.ADDRESS_TYPE
 
     def __init__(
             self,
@@ -58,7 +58,11 @@ class Connection(object):  # nodesc
         self._bind(address)
         return self
 
-    def send(self, message: Message, emark: MessageErrorMark = MessageErrorMark()) -> Message:
+    def send(
+            self,
+            message: Message,
+            emark: MessageErrorMark = MessageErrorMark()
+    ) -> Message:
         if self._addr is None:
             raise ConnectionError("no address specified")
         if message.tx != self._addr:
@@ -174,7 +178,7 @@ class Connection(object):  # nodesc
             rx_msg, emark_exists = emark.exists(rx_msg)
         # todo: check that bytes can be reformatted into a message
         rx_msg = tx_msg.get_same_instance().extract(rx_msg)\
-            .set_addresses(tx=tx_msg.rx, rx=self._addr)
+            .set_addresses(dst=tx_msg.rx, src=self._addr)
 
         if emark_exists:
             return rx_msg, Code.ERROR

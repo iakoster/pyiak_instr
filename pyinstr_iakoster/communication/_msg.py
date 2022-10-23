@@ -1,4 +1,5 @@
 from __future__ import annotations
+import deprecation
 from copy import deepcopy
 from typing import Any, overload
 
@@ -48,6 +49,7 @@ class Message(object):
         max length of the data in one slice.
     """
 
+    ADDRESS_TYPE = Any
     REQ_FIELDS = {
         "address": AddressField,
         "data": DataField,
@@ -72,7 +74,7 @@ class Message(object):
         self._slice_length = slice_length
 
         self._fields: dict[str, FieldType] = {}
-        self._tx, self._rx = None, None
+        self._dst, self._src = None, None
 
         self._kwargs = dict(
             format_name=format_name,
@@ -80,9 +82,18 @@ class Message(object):
             slice_length=slice_length,
         )
 
+    @deprecation.deprecated(
+        deprecated_in="0.0.1a14",
+        removed_in="0.1.0",
+        details="use `clear_src_dst` instead"
+    )
     def clear_addresses(self) -> None:
         """Set addresses to None."""
-        self._tx, self._rx = None, None
+        self.clear_src_dst()
+
+    def clear_src_dst(self) -> None:
+        """Set src and dst to None."""
+        self._dst, self._src = None, None
 
     @overload
     def configure(
@@ -296,31 +307,59 @@ class Message(object):
         self._validate_content()
         return self
 
-    def set_addresses(self, tx: Any = None, rx: Any = None) -> Message:
+    @deprecation.deprecated(
+        deprecated_in="0.0.1a14",
+        removed_in="0.1.0",
+        details="use `set_src_dst` instead"
+    )
+    def set_addresses(
+            self, src: ADDRESS_TYPE = None, dst: ADDRESS_TYPE = None
+    ) -> Message:
         """
-        Set Tx and Rx addresses.
+        Set src and dst addresses.
 
         Addresses may differ depending on the type of connection used.
-            * Tx - is a source address;
-            * Rx - is a reciever address.
-        If address (Rx or Tx) is None that it will be ignored.
+        If address (src or dst) is None that it will be ignored.
 
         Parameters
         ----------
-        tx: Any
+        src: Any
             source address.
-        rx: Any
-            reciever address.
+        dst: Any
+            destination address.
 
         Returns
         -------
         Message
             object message instance.
         """
-        if tx is not None:
-            self._tx = tx
-        if rx is not None:
-            self._rx = rx
+        return self.set_src_dst(src=src, dst=dst)
+
+    def set_src_dst(
+            self, src: ADDRESS_TYPE = None, dst: ADDRESS_TYPE = None
+    ) -> Message:
+        """
+        Set src and dst addresses.
+
+        Addresses may differ depending on the type of connection used.
+        If address (src or dst) is None that it will be ignored.
+
+        Parameters
+        ----------
+        src: Any
+            source address.
+        dst: Any
+            destination address.
+
+        Returns
+        -------
+        Message
+            object message instance.
+        """
+        if src is not None:
+            self._src = src
+        if dst is not None:
+            self._dst = dst
         return self
 
     def split(self):
@@ -367,7 +406,7 @@ class Message(object):
                 msg.data_length.update()
             msg.address.set(
                 self.address[0] + i_part * self._slice_length)
-            msg.set_addresses(self._tx, self._rx)
+            msg.set_src_dst(self._src, self._dst)
             yield msg
 
     def to_bytes(self) -> bytes:
@@ -457,6 +496,7 @@ class Message(object):
                 )
 
     @staticmethod
+    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.1.0")
     def _format_address(address: Any) -> str:
         """
         Format address to strint.
@@ -513,6 +553,16 @@ class Message(object):
         return self._fields["data_length"]
 
     @property
+    def dst(self) -> ADDRESS_TYPE:
+        """
+        Returns
+        -------
+        Any
+            destination address.
+        """
+        return self._dst
+
+    @property
     def format_name(self) -> str:
         """
         Returns
@@ -547,16 +597,22 @@ class Message(object):
         return self._fields["operation"]
 
     @property
+    @deprecation.deprecated(
+        deprecated_in="0.0.1a14",
+        removed_in="0.1.0",
+        details="renamed, use `dst` instead"
+    )
     def rx(self) -> Any:
         """
         Returns
         -------
         Any
-            reciever address.
+            destination address.
         """
-        return self._rx
+        return self.dst
 
     @property
+    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.1.0")
     def rx_str(self) -> str:
         """
         Returns
@@ -564,7 +620,7 @@ class Message(object):
         str
             reciever address converted to string.
         """
-        return self._format_address(self._rx)
+        return self._format_address(self._dst)
 
     @property
     def slice_length(self) -> int:
@@ -596,6 +652,21 @@ class Message(object):
         return self._splitable
 
     @property
+    def src(self) -> Any:
+        """
+        Returns
+        -------
+        Any
+            source address.
+        """
+        return self._src
+
+    @property
+    @deprecation.deprecated(
+        deprecated_in="0.0.1a14",
+        removed_in="0.1.0",
+        details="renamed, use `src` instead"
+    )
     def tx(self) -> Any:
         """
         Returns
@@ -603,9 +674,10 @@ class Message(object):
         Any
             transiever address.
         """
-        return self._tx
+        return self.src
 
     @property
+    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.1.0")
     def tx_str(self) -> str:
         """
         Returns
@@ -613,7 +685,7 @@ class Message(object):
         str
             transiever address converted to string.
         """
-        return self._format_address(self._tx)
+        return self._format_address(self.src)
 
     def __add__(self, other) -> Message:
         """
@@ -708,10 +780,10 @@ class Message(object):
             f"{name}={field}" for name, field in fields_repr
         )
         return (
-            f"<{self.__class__.__name__}({fields_repr}), from={self.tx_str}, "
-            f"to={self.rx_str}>"
+            f"<{self.__class__.__name__}({fields_repr}), src={self._src}, "
+            f"dst={self._dst}>"
         )
 
     def __str__(self) -> str:
         """Returns fields converted to string."""
-        return " ".join(str(field) for field in self if str(field) != "")
+        return " ".join(str(field) for field in self if len(str(field)))
