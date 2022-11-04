@@ -117,14 +117,14 @@ class Connection(object):  # nodesc
         transmitted = 0
         transmit_start = dt.datetime.now()
 
-        while (transmit_start - dt.datetime.now()) < self._tx_to:
+        while (dt.datetime.now() - transmit_start) < self._tx_to:
 
             self._transmit(msg)
             transmitted += 1
             self._log_info(repr(msg))
             receive_start = dt.datetime.now()
 
-            while (receive_start - dt.datetime.now()) < self._rx_to:
+            while (dt.datetime.now() - receive_start) < self._rx_to:
 
                 try:
                     ans, rec_from = self._receive()
