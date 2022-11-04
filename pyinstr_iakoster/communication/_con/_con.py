@@ -180,7 +180,7 @@ class Connection(object):  # nodesc
             rx_msg, emark_exists = emark.exists(rx_msg)
         # todo: check that bytes can be reformatted into a message
         rx_msg = tx_msg.get_same_instance().extract(rx_msg)\
-            .set_addresses(src=tx_msg.dst, dst=self._addr)
+            .set_src_dst(src=tx_msg.dst, dst=self._addr)
 
         if emark_exists:
             return rx_msg, Code.ERROR
