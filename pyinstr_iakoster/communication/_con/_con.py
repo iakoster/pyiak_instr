@@ -128,6 +128,8 @@ class Connection(object):  # nodesc
 
                 try:
                     ans, rec_from = self._receive()
+                    if len(ans) == 0:
+                        continue
                     received += 1
                     self._log_info("{}, src={}, dst={}".format(
                         ans.hex(" "), rec_from, self._addr
