@@ -623,7 +623,7 @@ class SingleField(Field):
             parent=parent
         )
 
-    def get_setter(self):
+    def get_setter(self) -> FieldSetter:
         return FieldSetter.single(
             fmt=self._fmt,
             default=self.unpack_default(),
@@ -685,7 +685,7 @@ class StaticField(SingleField):
         )
         self.set(default)
 
-    def get_setter(self):
+    def get_setter(self) -> FieldSetter:
         return FieldSetter.static(
             fmt=self._fmt,
             default=self.unpack_default(),
@@ -748,7 +748,7 @@ class AddressField(SingleField):
             parent=parent
         )
 
-    def get_setter(self):
+    def get_setter(self) -> FieldSetter:
         return FieldSetter.address(
             fmt=self._fmt,
             info=self._info,
@@ -942,7 +942,7 @@ class DataField(Field):
         if self._exp > 0:
             self._exp = exp
 
-    def get_setter(self):
+    def get_setter(self) -> FieldSetter:
         return FieldSetter.data(
             expected=self._exp,
             fmt=self._fmt,
@@ -1045,7 +1045,7 @@ class DataLengthField(SingleField):
         else:
             raise ValueError(f"invalid units: {self._units}")
 
-    def get_setter(self):
+    def get_setter(self) -> FieldSetter:
         return FieldSetter.data_length(
             fmt=self._fmt,
             units=self._units,
@@ -1150,7 +1150,7 @@ class OperationField(SingleField):
         )
         self._desc = ""
 
-    def get_setter(self):
+    def get_setter(self) -> FieldSetter:
         return FieldSetter.operation(
             fmt=self._fmt,
             desc_dict=self._desc_dict,
@@ -1337,6 +1337,15 @@ class ResponseField(SingleField):
         if isinstance(default, int):
             default = Code(default)
         self._def_code = default
+
+    def get_setter(self) -> FieldSetter:
+
+        return FieldSetter.response(
+            fmt=self._fmt,
+            codes=self._codes,
+            default=self._def_code,
+            info=self._info,
+        )
 
     @property
     def codes(self) -> dict[int, Code]:
