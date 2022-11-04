@@ -148,7 +148,7 @@ class Connection(object):  # nodesc
                         continue
 
                     ans, code = self._validate_bytes_message(msg, ans, emark)
-                    if code == Code.ERROR:
+                    if code == Code.ERROR:  # todo: if error transmit again
                         continue
 
                     code = self._validate_message(ans, emark)
