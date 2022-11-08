@@ -1,5 +1,4 @@
 from __future__ import annotations
-import deprecation
 from copy import deepcopy
 from typing import Any, overload
 
@@ -82,15 +81,6 @@ class Message(object):
             splitable=splitable,
             slice_length=slice_length,
         )
-
-    @deprecation.deprecated(
-        deprecated_in="0.0.1a14",
-        removed_in="0.0.2",
-        details="use `clear_src_dst` instead"
-    )
-    def clear_addresses(self) -> None:
-        """Set addresses to None."""
-        self.clear_src_dst()
 
     def clear_src_dst(self) -> None:
         """Set src and dst to None."""
@@ -308,34 +298,6 @@ class Message(object):
         self._validate_content()
         return self
 
-    @deprecation.deprecated(
-        deprecated_in="0.0.1a14",
-        removed_in="0.0.2",
-        details="use `set_src_dst` instead"
-    )
-    def set_addresses(
-            self, src: ADDRESS_TYPE = None, dst: ADDRESS_TYPE = None
-    ) -> Message:
-        """
-        Set src and dst addresses.
-
-        Addresses may differ depending on the type of connection used.
-        If address (src or dst) is None that it will be ignored.
-
-        Parameters
-        ----------
-        src: Any
-            source address.
-        dst: Any
-            destination address.
-
-        Returns
-        -------
-        Message
-            object message instance.
-        """
-        return self.set_src_dst(src=src, dst=dst)
-
     def set_src_dst(
             self, src: ADDRESS_TYPE = None, dst: ADDRESS_TYPE = None
     ) -> Message:
@@ -496,33 +458,6 @@ class Message(object):
                     "invalid crc value, '%x' != '%x'" % (ref_crc, res_crc)
                 )
 
-    @staticmethod
-    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.0.2")
-    def _format_address(address: Any) -> str:
-        """
-        Format address to strint.
-
-        If the address has an unknown type, it returns as is with
-        the __str__ method.
-
-        Parameters
-        ----------
-        address: Any
-            address for converting.
-
-        Returns
-        -------
-        str
-            converted address.
-        """
-        match address:
-            case str():
-                return address
-            case (str() as ip, int() as port):
-                return f"{ip}:{port}"
-            case _:
-                return str(address)
-
     @property
     def address(self) -> AddressField:
         """
@@ -615,32 +550,6 @@ class Message(object):
         return codes
 
     @property
-    @deprecation.deprecated(
-        deprecated_in="0.0.1a14",
-        removed_in="0.0.2",
-        details="renamed, use `dst` instead"
-    )
-    def rx(self) -> Any:
-        """
-        Returns
-        -------
-        Any
-            destination address.
-        """
-        return self.dst
-
-    @property
-    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.0.2")
-    def rx_str(self) -> str:
-        """
-        Returns
-        -------
-        str
-            reciever address converted to string.
-        """
-        return self._format_address(self._dst)
-
-    @property
     def slice_length(self) -> int:
         """
         If splittable is True that this attribute can be used.
@@ -678,32 +587,6 @@ class Message(object):
             source address.
         """
         return self._src
-
-    @property
-    @deprecation.deprecated(
-        deprecated_in="0.0.1a14",
-        removed_in="0.0.2",
-        details="renamed, use `src` instead"
-    )
-    def tx(self) -> Any:
-        """
-        Returns
-        -------
-        Any
-            transiever address.
-        """
-        return self.src
-
-    @property
-    @deprecation.deprecated(deprecated_in="0.0.1a14", removed_in="0.0.2")
-    def tx_str(self) -> str:
-        """
-        Returns
-        -------
-        str
-            transiever address converted to string.
-        """
-        return self._format_address(self.src)
 
     def __add__(self, other) -> Message:
         """

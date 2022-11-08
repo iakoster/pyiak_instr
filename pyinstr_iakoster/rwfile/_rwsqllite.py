@@ -1,9 +1,5 @@
-import re
 import sqlite3
 from pathlib import Path
-
-import deprecation
-import pandas as pd
 
 from ._core import RWFile
 
@@ -96,186 +92,6 @@ class RWSQLite(RWFile):
         if self._autocommit:
             self.commit()
 
-    @deprecation.deprecated(
-        deprecated_in='0.0.1a0', removed_in='0.0.1',
-        details='it is redundant function')
-    def insert_into(
-            self, *,
-            insert_into: str,
-            values: tuple | list[tuple],
-            columns: list[str] = None
-    ) -> None:
-        """
-        Execute sql command
-        'INSERT INTO {TABLE} VALUES(?, ?, ...);'.
-        Can insert a list of rows.
-
-        The values parameter must be represented as
-        tuple or list of tuples, where each tuple must
-        have the same len as a selected row.
-
-        Parameters
-        ----------
-        insert_into: str
-            where to insert.
-        values: tuple or list of tuple
-            cell values.
-        columns: list of str, default=None
-            selected columns to insert.
-        """
-        if isinstance(values, tuple):
-            val_marks = ', '.join(['?'] * len(values))
-        else:
-            val_marks = ', '.join(['?'] * len(values[0]))
-        columns = '' if columns is None else \
-            '({})'.format(', '.join(columns))
-
-        self.request('INSERT INTO {}{} VALUES ({});'.format(
-            insert_into, columns, val_marks), values)
-
-    @deprecation.deprecated(
-        deprecated_in='0.0.1a0', removed_in='0.0.1',
-        details='it is redundant function')
-    def delete_from(self, *, from_: str) -> None:
-        """
-        Execute sql command 'DELETE FROM {table};'.
-
-        Parameters
-        ----------
-        from_: str
-            from where to delete.
-        """
-        request = 'DELETE FROM %s;' % from_
-        self._hapi.execute(request)
-
-        if self._autocommit:
-            self.commit()
-
-    @deprecation.deprecated(
-        deprecated_in='0.0.1a0', removed_in='0.0.1',
-        details='it is redundant function')
-    def select(
-            self, *, from_: str, select: str = '*',
-            fetch: int | str = None, where: str = None):
-        """
-        Execute sql command 'SELECT {select} FROM {from_};'.
-
-        Append 'WHERE {where}' to the request if
-        where parameter is not None.
-
-        On the result can be applyed method fetchmany
-        if fetch is integer and fetch > 0 or
-        fetchall if fetch == 'all'.
-
-        Parameters
-        ----------
-        from_: str
-            from where to be select.
-        select: str, default='*'
-            what to be select.
-        fetch: int or str, optional
-            fetch result and how or not.
-        where: str, optional
-            where statement in the request.
-
-        Returns
-        -------
-        sqlite3.Cursor or list of Any
-            result of an operation.
-
-        Raises
-        ------
-        ValueError
-            if fetch is instance of int and less than one.
-        ValueError
-            if fetch is not instance of int, not None or
-            not equal 'all'.
-        """
-
-        where = '' if where is None else f' WHERE {where}'
-        request = 'SELECT {} FROM {}{};'.format(select, from_, where)
-        result = self._hapi.execute(request)
-
-        if fetch is None:
-            return result
-        elif isinstance(fetch, int):
-            if fetch < 1:
-                raise ValueError('fetch cannot be less than 1')
-            return result.fetchmany(fetch)
-        elif fetch == 'all':
-            return result.fetchall()
-        else:
-            raise ValueError('unknown fetch variable %r' % fetch)
-
-    @deprecation.deprecated(
-        deprecated_in='0.0.1a0', removed_in='0.0.1',
-        details='it is redundant function')
-    def to_dataframe(
-            self, *, from_: str, select: str = '*',
-            where: str = None, index_col=None
-    ) -> pd.DataFrame:
-        """
-        Execute sql command 'SELECT {select} FROM {from_};'.
-
-        Append 'WHERE {where}' to the request if
-        where parameter is not None.
-
-        Parameters
-        ----------
-        from_: str
-            from where to be select.
-        select: str, default='*'
-            what to be select.
-        where: str, optional
-            where statement in the request
-        index_col: str or list of str, optional
-            column(s) to set as index(MultiIndex).
-
-        Returns
-        -------
-        pd.DataFrame
-            sql table as a pandas DataFrame.
-        """
-
-        where = '' if where is None else f' WHERE {where}'
-        request = 'SELECT {} FROM {}{};'.format(select, from_, where)
-        return pd.read_sql_query(
-            request, self._conn, index_col=index_col)
-
-    @deprecation.deprecated(
-        deprecated_in='0.0.1a0', removed_in='0.0.1',
-        details='it is redundant function')
-    def from_dataframe(
-            self, *,
-            df: pd.DataFrame, table: str,
-            if_exists: str = 'replace',
-            index: bool = True,
-            index_label=None
-    ) -> None:
-        """
-        Export pandas dataframe to sql database.
-
-        Parameters
-        ----------
-        df: pd.DataFrame,
-            dataframe.
-        table: str
-            table name.
-        if_exists: str, default='replace'
-            How to behave if the table already exists.
-        index: bool, default=True
-            Write DataFrame index as a column.
-            Uses `index_label` as the column name in the table.
-        index_label: str or sequence, default=None
-            Column label for index column(s).
-            If None is given (default) and `index` is True,
-            then the index names are used.
-        """
-
-        df.to_sql(
-            table, self._conn, if_exists=if_exists,
-            index=index, index_label=index_label)
-
     def table_columns(self, table: str) -> list[str]:
         """
         Get column names in the table.
@@ -348,7 +164,7 @@ class RWSQLite(RWFile):
     @property
     def columns(self) -> dict[str, list[str]]:
         """
-        The column names in the each table.
+        The column names in the tables.
         Presented in format {table: [column, ...]}.
 
         Returns

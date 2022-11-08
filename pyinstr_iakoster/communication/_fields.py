@@ -13,7 +13,6 @@ from typing import (
 
 import numpy as np
 import numpy.typing as npt
-import deprecation
 
 from ..core import Code
 from ..exceptions import (
@@ -124,16 +123,6 @@ class BaseField(object):
     def expected(self) -> int:
         """The expected count of words."""
         return self._exp
-
-    @property
-    @deprecation.deprecated(
-        deprecated_in="0.0.1a0",
-        removed_in="0.0.1",
-        details="Useless property"
-    )
-    def field_class(self):
-        """The field class."""
-        return self.__class__
 
     @property
     def finite(self):
