@@ -18,9 +18,6 @@ from ._msg import (
     MessageContentError,
     NotConfiguredMessageError,
 )
-from ._con import (
-    Connection
-)
 from ._regs import (
     Register,
     RegisterMap
@@ -29,6 +26,14 @@ from ._pf import (
     MessageErrorMark,
     MessageFormat,
     PackageFormat
+)
+from ._con import (
+    Connection,
+    IPV4_PATTERN,
+    get_opened_connections,
+    get_busy_ports,
+    get_available_ips,
+    get_random_available_port,
 )
 
 __all__ = [
@@ -54,4 +59,9 @@ __all__ = [
     "MessageContentError",
     "NotConfiguredMessageError",
     "Connection",
+    "IPV4_PATTERN",
+    "get_opened_connections",
+    "get_busy_ports",
+    "get_available_ips",
+    "get_random_available_port",
 ]

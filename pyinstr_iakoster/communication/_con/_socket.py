@@ -6,6 +6,16 @@ import psutil  # todo: optional import
 import numpy as np
 
 
+__all__ = [
+    "IPV4_ADDRESS_TYPE",
+    "IPV4_PATTERN",
+    "get_opened_connections",
+    "get_busy_ports",
+    "get_available_ips",
+    "get_random_available_port",
+]
+
+
 IPV4_ADDRESS_TYPE = NamedTuple("addr", [("ip", str), ("port", int)])
 IPV4_PATTERN = re.compile("^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$")
 # not better version (stackoverflow.com/questions/5284147)
