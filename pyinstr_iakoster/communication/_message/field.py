@@ -14,12 +14,12 @@ from typing import (
 import numpy as np
 import numpy.typing as npt
 
-from ..core import Code
-from ..exceptions import (
+from pyinstr_iakoster.core import Code
+from pyinstr_iakoster.exceptions import (
     FieldContentError
 )
 if TYPE_CHECKING:
-    from ._msg import Message
+    from .message import Message
 
 
 __all__ = [

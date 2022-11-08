@@ -5,7 +5,7 @@ from typing import Any, overload
 import numpy as np
 import numpy.typing as npt
 
-from ._fields import (
+from .field import (
     ContentType,
     Field,
     FieldSetter,
@@ -19,11 +19,11 @@ from ._fields import (
     StaticField,
     FieldType,
 )
-from ..exceptions import (
+from pyinstr_iakoster.exceptions import (
     MessageContentError,
     NotConfiguredMessageError,
 )
-from ..core import Code
+from pyinstr_iakoster.core import Code
 
 
 __all__ = [

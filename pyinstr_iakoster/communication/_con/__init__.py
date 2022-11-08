@@ -1,5 +1,5 @@
-from ._con import Connection
-from ._socket import (
+from .connection import Connection
+from .socket import (
     IPV4_PATTERN,
     get_opened_connections,
     get_busy_ports,

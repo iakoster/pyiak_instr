@@ -9,11 +9,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from ..rwfile import RWSQLite
+from pyinstr_iakoster.rwfile import RWSQLite
 
 if TYPE_CHECKING:
-    from ._msg import Message, ContentType
-    from ._pf import MessageFormat, PackageFormat
+    from .message import Message, ContentType
+    from .package_format import MessageFormat, PackageFormat
 
 
 __all__ = [

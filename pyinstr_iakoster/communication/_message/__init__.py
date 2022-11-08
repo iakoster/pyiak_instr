@@ -1,4 +1,4 @@
-from ._message import (
+from .field import (
     ContentType,
     Field,
     SingleField,
@@ -12,22 +12,21 @@ from ._message import (
     FieldSetter,
     FieldType,
     FieldContentError,
+)
+
+from .message import (
     Message,
     MessageContentError,
     NotConfiguredMessageError,
+)
+from .register import (
     Register,
     RegisterMap,
+)
+from .package_format import (
     MessageErrorMark,
     MessageFormat,
     PackageFormat,
-)
-from ._con import (
-    Connection,
-    IPV4_PATTERN,
-    get_opened_connections,
-    get_busy_ports,
-    get_available_ips,
-    get_random_available_port,
 )
 
 __all__ = [
@@ -52,10 +51,4 @@ __all__ = [
     "MessageErrorMark",
     "MessageFormat",
     "PackageFormat",
-    "Connection",
-    "IPV4_PATTERN",
-    "get_opened_connections",
-    "get_busy_ports",
-    "get_available_ips",
-    "get_random_available_port",
 ]

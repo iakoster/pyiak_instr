@@ -6,10 +6,10 @@ from typing import Any
 import pandas as pd
 from tinydb.table import Table, Document
 
-from ._msg import FieldSetter, Message
-from ._regs import Register, RegisterMap
-from ..utilities import StringEncoder
-from ..rwfile import (
+from .message import FieldSetter, Message
+from .register import Register, RegisterMap
+from pyinstr_iakoster.utilities import StringEncoder
+from pyinstr_iakoster.rwfile import (
     RWNoSqlJsonDatabase,
     RWSQLite,
 )

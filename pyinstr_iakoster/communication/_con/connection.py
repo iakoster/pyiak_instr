@@ -2,8 +2,11 @@ import logging
 import datetime as dt
 from typing import Any
 
-from .._msg import Message, MessageContentError
-from .._pf import MessageErrorMark
+from .._message import (
+    Message,
+    MessageErrorMark,
+    MessageContentError
+)
 from ...core import Code
 
 
