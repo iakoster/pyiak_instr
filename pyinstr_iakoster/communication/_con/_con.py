@@ -41,16 +41,16 @@ class Connection(object):  # nodesc
     def close(self) -> None:
         raise NotImplementedError()
 
+    def receive(self) -> tuple[bytes, ADDRESS_TYPE]:
+        raise NotImplementedError()
+
     def setup(self, *args: Any, **kwargs: Any) -> "Connection":
         raise NotImplementedError()
 
+    def transmit(self, message: Message) -> None:
+        raise NotImplementedError()
+
     def _bind(self, address: ADDRESS_TYPE) -> None:
-        raise NotImplementedError()
-
-    def _receive(self) -> tuple[bytes, ADDRESS_TYPE]:
-        raise NotImplementedError()
-
-    def _transmit(self, message: Message) -> None:
         raise NotImplementedError()
 
     def bind(self, address: ADDRESS_TYPE) -> "Connection":
@@ -108,6 +108,7 @@ class Connection(object):  # nodesc
         answer = self._send(next(msg_gen), emark)
         for tx_msg in msg_gen:
             answer += self._send(tx_msg, emark)
+        answer.set(data_length=msg.data_length.content)
         return answer
 
     def _send(self, msg: Message, emark: MessageErrorMark) -> Message:
