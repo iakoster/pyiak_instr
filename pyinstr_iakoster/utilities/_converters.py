@@ -23,8 +23,8 @@ class StringEncoder(object):
     INT = re.compile("^-?\d+$")
     FLOAT = re.compile("^-?\d\.\d+([eE][+-]\d+)?$")
 
-    SOH = "/"           # start of heading
-    STX = "\t"          # start of text
+    SOH = "\\"          # start of heading
+    SOT = "\t"          # start of text
     SOV = f"{SOH}v("    # start of value
     EOV = ")"           # end of value
 
@@ -76,7 +76,7 @@ class StringEncoder(object):
         def read_header(string: str):
             """Read SOH and get code, parameters and clear string."""
             code_ = cls.HEADERS[string[1:4]]
-            eoh_pos = string.find(cls.STX)
+            eoh_pos = string.find(cls.SOT)
             assert eoh_pos != -1, "STX not found"
             return code_, {}, string[eoh_pos + 1:]
 
@@ -130,7 +130,7 @@ class StringEncoder(object):
             code_key = cls._HEADERS_R[code_]
             assert not len(pars), "parameters is not supported yet"
             pars = ""
-            return "{}{}{}{}{}".format(cls.SOH, code_key, pars, cls.STX, string)
+            return "{}{}{}{}{}".format(cls.SOH, code_key, pars, cls.SOT, string)
 
         def to_string(val: Any) -> str:
             """Convert value to string"""
@@ -164,7 +164,7 @@ class StringEncoder(object):
         """Check that SOH exists in the string."""
         if len(string) < 5 or string[0] != cls.SOH:
             return False
-        if cls.STX not in string:
+        if cls.SOT not in string:
             return False
         return string[1:4] in cls.HEADERS
 
