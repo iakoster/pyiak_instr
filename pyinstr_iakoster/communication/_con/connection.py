@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 
-class Connection(object):  # nodesc
+class Connection(object):  # todo: description and tests
 
     ADDRESS_TYPE = Message.ADDRESS_TYPE
 
