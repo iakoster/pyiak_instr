@@ -1,6 +1,6 @@
 from __future__ import annotations
 from copy import deepcopy
-from typing import Any, overload
+from typing import Generator, Any, overload
 
 import numpy as np
 import numpy.typing as npt
@@ -8,15 +8,15 @@ import numpy.typing as npt
 from .field import (
     ContentType,
     Field,
-    FieldSetter,
+    SingleField,
+    StaticField,
     AddressField,
     CrcField,
     DataField,
     DataLengthField,
     OperationField,
     ResponseField,
-    SingleField,
-    StaticField,
+    FieldSetter,
     FieldType,
 )
 from pyinstr_iakoster.exceptions import (
@@ -35,7 +35,272 @@ __all__ = [
 ]
 
 
-class Message(object):
+class BaseMessage(object):
+
+    def __init__(
+            self,
+            mf_name: str = "std",
+            splitable: bool = False,
+            slice_length: int = 1024,
+    ):
+        self._mf_name = mf_name
+        self._splitable = splitable
+        self._slice_length = slice_length
+
+        self._src, self._dst = None, None
+
+    def hex(self, sep: str = " ", sep_step: int = None) -> str:
+        """
+        Returns a string of hexadecimal numbers from the content.
+
+        Parameters
+        ----------
+        sep: str
+            separator between bytes/words and fields.
+        sep_step: int
+            separator step.
+
+        Returns
+        -------
+        str
+            hex string.
+        """
+        raise NotImplementedError()
+
+    def set(self, *args, **kwargs) -> BaseMessage:
+        """
+        Set message content.
+
+        Returns
+        -------
+        BytesMessage
+            self class instance.
+        """
+        raise NotImplementedError()
+
+    def split(self) -> Generator[BaseMessage, None, None]:
+        """
+        Split content of message by slice length.
+
+        Yields
+        ------
+        BaseMessage
+            message part.
+        """
+        raise NotImplementedError()
+
+    def to_bytes(self) -> bytes:
+        """
+        Returns
+        -------
+        bytes
+            message content in bytes.
+        """
+        raise NotImplementedError()
+
+    def unpack(self) -> npt.NDArray:
+        """
+        Returns
+        -------
+        numpy.typing.NDArray
+            unpacked message content.
+        """
+        raise NotImplementedError()
+
+    def _content_repr(self) -> str:
+        """Returns string representation of the content."""
+        raise NotImplementedError()
+
+    def __add__(self, other: BaseMessage | bytes) -> BaseMessage:
+        """
+        add new data to the Message.
+
+        Parameters
+        ----------
+        other: BaseMessage or bytes
+            additional data or message.
+
+        Returns
+        -------
+        BaseMessage
+            self instance.
+        """
+        raise NotImplementedError()
+
+    def __getitem__(self, item: str) -> Any:
+        """
+        Returns specified item of the message.
+        """
+        raise NotImplementedError()
+
+    def __iter__(self):
+        """Iteration by message."""
+        raise NotImplementedError()
+
+    def clear_src_dst(self) -> None:
+        """Set src and dst to None."""
+        self._dst, self._src = None, None
+
+    def get_instance(self, **kwargs: Any) -> BaseMessage:
+        """
+        Get the same class as the current object, initialized with
+        the specified arguments.
+
+        Parameters
+        ----------
+        **kwargs: Any
+            initial keywords arguments.
+
+        Returns
+        -------
+        Message
+            new class instance.
+        """
+        return self.__class__(**kwargs)
+
+    def get_same_instance(self) -> BaseMessage:
+        """
+        Get the same class as the current object, initialized with
+        the same arguments, but with empty content.
+
+        Returns
+        -------
+        Message
+            new class instance.
+        """
+        return self.__class__(
+            mf_name=self._mf_name,
+            splitable=self._splitable,
+            slice_length=self._slice_length,
+        )
+
+    def set_src_dst(self, src: Any, dst: Any) -> BaseMessage:
+        """
+        Set src and dst addresses.
+
+        Addresses may differ depending on the type of connection used.
+
+        Parameters
+        ----------
+        src: Any
+            source address.
+        dst: Any
+            destination address.
+
+        Returns
+        -------
+        Message
+            object message instance.
+        """
+        self._src, self._dst = src, dst
+        return self
+
+    @property
+    def dst(self) -> Any:
+        """
+        Returns
+        -------
+        Any
+            destination address.
+        """
+        return self._dst
+
+    @dst.setter
+    def dst(self, dst_: Any) -> None:
+        """
+        Set destination address.
+
+        Parameters
+        ----------
+        dst_: Any
+            destination address.
+        """
+        self._dst = dst_
+
+    @property
+    def mf_name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            name of the message format.
+        """
+        return self._mf_name
+
+    @property
+    def slice_length(self) -> int:
+        """
+        If splittable is True that this attribute can be used.
+
+        Returns
+        -------
+        int
+            max length of the data field in message for sending.
+
+        See Also
+        --------
+        pyinstr_iakoster.communication.Message.split: method for splitting
+            message for sending
+        """
+        return self._slice_length
+
+    @property
+    def splitable(self) -> bool:
+        """
+        Indicates that the message can be splited.
+
+        Returns
+        -------
+        bool
+            pointer to the possibility of separation
+        """
+        return self._splitable
+
+    @property
+    def src(self) -> Any:
+        """
+        Returns
+        -------
+        Any
+            source address.
+        """
+        return self._src
+
+    @src.setter
+    def src(self, src_: Any) -> None:
+        """
+        Set source address.
+
+        Parameters
+        ----------
+        src_: Any
+            source address.
+        """
+        self._src = src_
+
+    def __bytes__(self) -> bytes:
+        """Returns message content."""
+        return self.to_bytes()
+
+    def __len__(self) -> int:
+        """Returns length of the message in bytes."""
+        return len(self.to_bytes())
+
+    def __repr__(self) -> str:
+        """Returns string representation of the message."""
+        return "<{}({}), src={}, dst={}>".format(
+            self.__class__.__name__,
+            self._content_repr(),
+            self._src,
+            self._dst
+        )
+
+    def __str__(self) -> str:
+        """Returns fields converted to string."""
+        return self.hex().upper()
+
+
+class Message(BaseMessage):
     """
     Represents a message for communication between devices.
 
@@ -49,7 +314,6 @@ class Message(object):
         max length of the data in one slice.
     """
 
-    ADDRESS_TYPE = Any
     REQ_FIELDS = {
         "address": AddressField,
         "data": DataField,
@@ -65,26 +329,17 @@ class Message(object):
 
     def __init__(
             self,
-            mf_name: str = "default",
+            mf_name: str = "std",
             splitable: bool = False,
             slice_length: int = 1024
     ):
-        self._mf_name = mf_name
-        self._splitable = splitable
-        self._slice_length = slice_length
-
-        self._fields: dict[str, FieldType] = {}
-        self._dst, self._src = None, None
-
-        self._kwargs = dict(
+        super().__init__(
             mf_name=mf_name,
             splitable=splitable,
             slice_length=slice_length,
         )
 
-    def clear_src_dst(self) -> None:
-        """Set src and dst to None."""
-        self._dst, self._src = None, None
+        self._fields: dict[str, FieldType] = {}
 
     @overload
     def configure(
@@ -195,58 +450,12 @@ class Message(object):
         self._validate_content()
         return self
 
-    def get_instance(self, **kwargs: Any) -> Message:
-        """
-        Get the same class as the current object, initialized with
-        the specified arguments.
-
-        Parameters
-        ----------
-        **kwargs: Any
-            initial keywords arguments.
-
-        Returns
-        -------
-        Message
-            new class instance.
-        """
-        return self.__class__(**kwargs)
-
     def get_same_instance(self) -> Message:
-        """
-        Get the same class as the current object, initialized with
-        the same arguments.
-
-        Also configure fields in the message, but with empty content.
-
-        Returns
-        -------
-        Message
-            new class instance.
-        """
-        return self.__class__(**self._kwargs) \
-            .configure(**{n: f.get_setter() for n, f in self._fields.items()})
+        return super().get_same_instance().configure(
+            **{n: f.get_setter() for n, f in self._fields.items()}
+        )
 
     def hex(self, sep: str = " ", sep_step: int = None) -> str:
-        """
-        Returns a string of hexademical numbers from the fields content.
-
-        Parameters
-        ----------
-        sep: str
-            separator between bytes/words and fields.
-        sep_step: int
-            separator step.
-
-        Returns
-        -------
-        str
-            hex string.
-
-        See Also
-        --------
-        Field.hex: return field content hex string.
-        """
         fields_hex = []
         for field in self:
             field_hex = field.hex(sep=sep, sep_step=sep_step)
@@ -292,40 +501,13 @@ class Message(object):
             self[name].set(content)
         if "data_length" not in fields:
             self.data_length.update()
-        if "crc" not in fields and "crc" in self._fields \
+        if "crc" in self._fields and "crc" not in fields \
                 and isinstance(self["crc"], CrcField):
             self["crc"].update()
         self._validate_content()
         return self
 
-    def set_src_dst(
-            self, src: ADDRESS_TYPE = None, dst: ADDRESS_TYPE = None
-    ) -> Message:
-        """
-        Set src and dst addresses.
-
-        Addresses may differ depending on the type of connection used.
-        If address (src or dst) is None that it will be ignored.
-
-        Parameters
-        ----------
-        src: Any
-            source address.
-        dst: Any
-            destination address.
-
-        Returns
-        -------
-        Message
-            object message instance.
-        """
-        if src is not None:
-            self._src = src
-        if dst is not None:
-            self._dst = dst
-        return self
-
-    def split(self):
+    def split(self):  # todo: yield full message if not splitable
         """
         Split data field on slices.
 
@@ -373,27 +555,26 @@ class Message(object):
             yield msg
 
     def to_bytes(self) -> bytes:
-        """
-        Returns
-        -------
-        bytes
-            joined fields contents.
-        """
         return b"".join(
             bytes(field) for field in self._fields.values()
         )
 
     def unpack(self) -> npt.NDArray:
-        """
-        Returns
-        -------
-        npt.NDArray
-            unpacked joined fields content.
-        """
         unpacked = np.array([])
         for field in self:
             unpacked = np.append(unpacked, field.unpack())
         return unpacked
+
+    def _content_repr(self) -> str:
+        gen = zip(self._fields, self)
+        content_repr = "%s=%s" % next(gen)
+        for name, field in gen:
+            content_repr += ", %s=" % name
+            if field.words_count:
+                content_repr += str(field)
+            else:
+                content_repr += "EMPTY"
+        return content_repr
 
     def _get_field(
             self, name: str, start_byte: int, setter: FieldSetter
@@ -489,26 +670,6 @@ class Message(object):
         return self._fields["data_length"]
 
     @property
-    def dst(self) -> ADDRESS_TYPE:
-        """
-        Returns
-        -------
-        Any
-            destination address.
-        """
-        return self._dst
-
-    @property
-    def mf_name(self) -> str:
-        """
-        Returns
-        -------
-        str
-            name of the message format.
-        """
-        return self._mf_name
-
-    @property
     def have_infinite(self) -> bool:
         """
         Returns
@@ -549,46 +710,7 @@ class Message(object):
                 codes[field.name] = field.current_code
         return codes
 
-    @property
-    def slice_length(self) -> int:
-        """
-        If splittable is True that this attribute can be used.
-
-        Returns
-        -------
-        int
-            max length of the data field in message for sending.
-
-        See Also
-        --------
-        pyinstr_iakoster.communication.Message.split: method for splitting
-            message for sending
-        """
-        return self._slice_length
-
-    @property
-    def splitable(self) -> bool:
-        """
-        Indicates that the message can be splited.
-
-        Returns
-        -------
-        bool
-            pointer to the possibility of separation
-        """
-        return self._splitable
-
-    @property
-    def src(self) -> Any:
-        """
-        Returns
-        -------
-        Any
-            source address.
-        """
-        return self._src
-
-    def __add__(self, other) -> Message:
+    def __add__(self, other: Message | bytes) -> Message:
         """
         Add new data to the data field.
 
@@ -633,17 +755,13 @@ class Message(object):
         self.data_length.update()
         return self
 
-    def __bytes__(self) -> bytes:
-        """Returns joined fields content."""
-        return self.to_bytes()
-
-    def __getitem__(self, name: str) -> FieldType:
+    def __getitem__(self, item: str) -> FieldType:
         """
         Returns a field instance by field name.
 
         Parameters
         ----------
-        name : str
+        item : str
             field name.
 
         Returns
@@ -651,9 +769,9 @@ class Message(object):
         FieldType
             field instance.
         """
-        return self._fields[name]
+        return self._fields[item]
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[FieldType, None, None]:
         """
         Iteration by fields.
 
@@ -665,26 +783,7 @@ class Message(object):
         for field in self._fields.values():
             yield field
 
-    def __len__(self) -> int:
-        """Returns length of the message in bytes."""
-        return len(self.to_bytes())
-
-    def __repr__(self) -> str:
-        """Returns string representation of the message."""
-        fields_repr = []
-        for name, field in self._fields.items():
-            if field.words_count:
-                fields_repr.append((name, str(field))) # danger with huge fields
-            else:
-                fields_repr.append((name, "EMPTY"))
-        fields_repr = ", ".join(
-            f"{name}={field}" for name, field in fields_repr
-        )
-        return (
-            f"<{self.__class__.__name__}({fields_repr}), src={self._src}, "
-            f"dst={self._dst}>"
-        )
-
+    # todo: check with other str methods (hex, __str__, __repr__)
+    #  in Field and Message
     def __str__(self) -> str:
-        """Returns fields converted to string."""
         return " ".join(str(field) for field in self if len(str(field)))

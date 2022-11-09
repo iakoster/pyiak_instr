@@ -17,12 +17,10 @@ __all__ = [
 
 class Connection(object):  # todo: description and tests
 
-    ADDRESS_TYPE = Message.ADDRESS_TYPE
-
     def __init__(
             self,
             hapi: Any,
-            address: ADDRESS_TYPE | None = None,
+            address: Any | None = None,
             logger: logging.Logger | str | None = None
     ):
         if isinstance(logger, str) and logger != "self":
@@ -44,7 +42,7 @@ class Connection(object):  # todo: description and tests
     def close(self) -> None:
         raise NotImplementedError()
 
-    def receive(self) -> tuple[bytes, ADDRESS_TYPE]:
+    def receive(self) -> tuple[bytes, Any]:
         raise NotImplementedError()
 
     def setup(self, *args: Any, **kwargs: Any) -> "Connection":
@@ -53,10 +51,10 @@ class Connection(object):  # todo: description and tests
     def transmit(self, message: Message) -> None:
         raise NotImplementedError()
 
-    def _bind(self, address: ADDRESS_TYPE) -> None:
+    def _bind(self, address: Any) -> None:
         raise NotImplementedError()
 
-    def bind(self, address: ADDRESS_TYPE) -> "Connection":
+    def bind(self, address: Any) -> "Connection":
         self._addr = address
         self._bind(address)
         return self
@@ -227,7 +225,7 @@ class Connection(object):  # todo: description and tests
         return answer
 
     @property
-    def address(self) -> ADDRESS_TYPE:
+    def address(self) -> Any:
         return self._addr
 
     @property

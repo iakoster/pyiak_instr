@@ -70,7 +70,7 @@ class TestMessage(unittest.TestCase):
 
     def test_init(self):
         msg = Message()
-        self.assertEqual("default", msg.mf_name)
+        self.assertEqual("std", msg.mf_name)
         with self.assertRaises(KeyError) as exc:
             msg.data.unpack()
         self.assertEqual(
@@ -259,7 +259,7 @@ class TestMessage(unittest.TestCase):
 
     def test_get_same_instance(self):
         msg: Message = self.msg.get_same_instance()
-        self.assertEqual("default", msg.mf_name)
+        self.assertEqual("std", msg.mf_name)
         for ref, res in zip(self.msg, msg):
             self.assertEqual(ref.name, res.name)
             self.assertIn(str(res), ("1AA5", ""))
@@ -466,7 +466,7 @@ class TestMessage(unittest.TestCase):
         with self.assertRaises(TypeError) as exc:
             self.msg += self.msg.get_instance(mf_name="new")
         self.assertEqual(
-            "messages have different formats: new != default",
+            "messages have different formats: new != std",
             exc.exception.args[0]
         )
 
