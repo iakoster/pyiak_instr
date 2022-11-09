@@ -432,7 +432,7 @@ class PackageFormat(object):
 
         self._formats = formats
         for name, mf in self._formats.items():
-            self._formats[name].msg_args["format_name"] = name
+            self._formats[name].msg_args["mf_name"] = name
         self._reg_map = register_map
 
     def write(
@@ -463,13 +463,13 @@ class PackageFormat(object):
                     db.request(f"DROP TABLE {table};")
                 self._reg_map.write(db.connection)
 
-    def get(self, format_name: str, **update: dict[str, Any]) -> Message:
+    def get(self, mf_name: str, **update: dict[str, Any]) -> Message:
         """
         Get message instance with message format.
 
         Parameters
         ----------
-        format_name: str
+        mf_name: str
             the name of the message format.
         **update: dict[str, Any]
             dictinary of parameters to change.
@@ -479,7 +479,7 @@ class PackageFormat(object):
         Message
             message configured with selected message format.
         """
-        return self._formats[format_name].get(**update)
+        return self._formats[mf_name].get(**update)
 
     def get_format(self, format_name: str) -> MessageFormat:
         """

@@ -19,7 +19,7 @@ from pyinstr_iakoster.communication import (
 
 
 def get_asm_msg() -> Message:
-    return Message(format_name="asm", splitable=True).configure(
+    return Message(mf_name="asm", splitable=True).configure(
         address=FieldSetter.address(fmt=">I"),
         data_length=FieldSetter.data_length(
             fmt=">I", units=FieldSetter.WORDS
@@ -30,7 +30,7 @@ def get_asm_msg() -> Message:
 
 
 def get_kpm_msg(data_fmt: str = ">b") -> Message:
-    return Message(format_name="kpm").configure(
+    return Message(mf_name="kpm").configure(
         preamble=FieldSetter.static(fmt=">H", default=0xaa55),
         operation=FieldSetter.operation(
             fmt=">B", desc_dict={"wp": 1, "rp": 2, "wn": 3, "rn": 4}
@@ -62,7 +62,7 @@ def get_mf_asm(reference: bool = True):
             stop_byte=16,
             value=b"\x00\x00\x00\x01"
         ),
-        format_name="asm",
+        mf_name="asm",
         splitable=True,
         slice_length=1024,
         address=FieldSetter.address(fmt=">I"),
@@ -78,21 +78,20 @@ def get_mf_asm(reference: bool = True):
     if reference:
         return mf, dict(
             msg_args=dict(
-                format_name="asm", splitable=True, slice_length=1024
+                mf_name="asm", splitable=True, slice_length=1024
             ),
             setters=dict(
-                address=get_mf_dict(special=None, fmt=">I", info=None),
+                address=get_mf_dict(special=None, fmt=">I"),
                 data_length=get_mf_dict(
-                    special=None, fmt=">I", units=0x11, info=None, additive=0
+                    special=None, fmt=">I", units=0x11, additive=0
                 ),
                 operation=get_mf_dict(
                     special=None,
                     fmt=">I",
                     desc_dict={"w": 0, "r": 1},
-                    info=None
                 ),
                 data=get_mf_dict(
-                    special=None, expected=-1, fmt=">I", info=None
+                    special=None, expected=-1, fmt=">I"
                 )
             )
         )
@@ -105,7 +104,7 @@ def get_mf_kpm(reference: bool = True):
         emark=MessageErrorMark(
             operation="neq", field_name="response", value=[0]
         ),
-        format_name="kpm",
+        mf_name="kpm",
         splitable=False,
         slice_length=1024,
         preamble=FieldSetter.static(fmt=">H", default=0xaa55),
@@ -124,37 +123,34 @@ def get_mf_kpm(reference: bool = True):
     if reference:
         return mf, dict(
             msg_args=dict(
-                format_name="kpm", splitable=False, slice_length=1024
+                mf_name="kpm", splitable=False, slice_length=1024
             ),
             setters=dict(
                 preamble=get_mf_dict(
-                    special="static", fmt=">H", default=0xaa55, info=None
+                    special="static", fmt=">H", default=0xaa55
                 ),
                 operation=get_mf_dict(
                     special=None,
                     fmt=">B",
                     desc_dict={"wp": 1, "rp": 2, "wn": 3, "rn": 4},
-                    info=None
                 ),
                 response=get_mf_dict(
                     special="single",
                     fmt=">B",
                     default=0,
-                    info=None,
                     may_be_empty=False,
                 ),
-                address=get_mf_dict(special=None, fmt=">H", info=None),
+                address=get_mf_dict(special=None, fmt=">H"),
                 data_length=get_mf_dict(
-                    special=None, fmt=">H", units=0x10, info=None, additive=0,
+                    special=None, fmt=">H", units=0x10, additive=0,
                 ),
                 data=get_mf_dict(
-                    special=None, expected=-1, fmt=">f", info=None
+                    special=None, expected=-1, fmt=">f"
                 ),
                 crc=get_mf_dict(
                     special="crc",
                     fmt=">H",
                     algorithm_name="crc16-CCITT/XMODEM",
-                    info=None
                 )
             )
         )
@@ -201,9 +197,8 @@ def get_field_attributes(field) -> list[str]:  # todo: make it auto
         "expected",
         "finite",
         "fmt",
-        "info",
         "name",
-        "format_name",
+        "mf_name",
         "start_byte",
         "words_count",
         "default",
@@ -237,7 +232,7 @@ def get_field_attributes(field) -> list[str]:  # todo: make it auto
 
 def get_message_attributes() -> list[str]:
     return [
-        "format_name",
+        "mf_name",
         "splitable",
         "slice_length",
         "have_infinite",

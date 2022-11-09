@@ -31,13 +31,13 @@ class AnotherMessage(Message):
 
     def __init__(
             self,
-            format_name: str = "new_def",
+            mf_name: str = "new_def",
             splitable: bool = False,
             slice_length: int = 1024
     ):
         Message.__init__(
             self,
-            format_name=format_name,
+            mf_name=mf_name,
             splitable=splitable,
             slice_length=slice_length
         )
@@ -53,9 +53,7 @@ class TestMessage(unittest.TestCase):
     def setUp(self) -> None:
         self.msg: Message = Message().configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
-            response=FieldSetter.response(
-                fmt=">B", codes=RESPONSE_CODES, default=Code.RAISE
-            ),
+            response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
@@ -73,7 +71,7 @@ class TestMessage(unittest.TestCase):
 
     def test_init(self):
         msg = Message()
-        self.assertEqual("default", msg.format_name)
+        self.assertEqual("default", msg.mf_name)
         with self.assertRaises(KeyError) as exc:
             msg.data.unpack()
         self.assertEqual(
@@ -81,11 +79,9 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_configure(self):
-        msg = Message(format_name="not_def").configure(
+        msg = Message(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
-            response=FieldSetter.response(
-                fmt=">B", codes=RESPONSE_CODES, default=Code.RAISE
-            ),
+            response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
@@ -106,7 +102,7 @@ class TestMessage(unittest.TestCase):
                 start_byte=2,
                 fmt=">B",
                 codes=RESPONSE_CODES,
-                default=Code.RAISE
+                default_code=Code.UNDEFINED
             ),
             address=AddressField(
                 "not_def",
@@ -140,7 +136,7 @@ class TestMessage(unittest.TestCase):
             compare_fields(self, field, msg[name], parent=msg)
 
     def test_configure_middle_infinite(self):
-        msg = Message(format_name="inf").configure(
+        msg = Message(mf_name="inf").configure(
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
             data=FieldSetter.data(expected=-1, fmt=">H"),
@@ -203,7 +199,7 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_extract(self):
-        msg: Message = Message(format_name="not_def").configure(
+        msg: Message = Message(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.single(fmt=">B"),
             address=FieldSetter.address(fmt=">H"),
@@ -227,7 +223,7 @@ class TestMessage(unittest.TestCase):
         self.assertEqual("w", msg.operation.desc)
 
     def test_extract_middle_infinite(self):
-        msg: Message = Message(format_name="not_def").configure(
+        msg: Message = Message(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             data_length=FieldSetter.data_length(fmt=">B"),
@@ -257,14 +253,14 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_get_instance(self):
-        msg: Message = self.msg.get_instance(format_name="def")
-        self.assertEqual("def", msg.format_name)
+        msg: Message = self.msg.get_instance(mf_name="def")
+        self.assertEqual("def", msg.mf_name)
         for _ in msg:
             self.assertFalse(True, "there is cannot be fields")
 
     def test_get_same_instance(self):
         msg: Message = self.msg.get_same_instance()
-        self.assertEqual("default", msg.format_name)
+        self.assertEqual("default", msg.mf_name)
         for ref, res in zip(self.msg, msg):
             self.assertEqual(ref.name, res.name)
             self.assertIn(str(res), ("1AA5", ""))
@@ -409,7 +405,7 @@ class TestMessage(unittest.TestCase):
                 with self.subTest(i_mess=i_mess, i_part=i_part):
                     self.assertEqual(str(expected[i_mess][i_part]), str(mess))
                     self.assertEqual(
-                        expected[i_mess][i_part].format_name, mess.format_name
+                        expected[i_mess][i_part].mf_name, mess.mf_name
                     )
 
     def test_magic_bytes(self):
@@ -469,7 +465,7 @@ class TestMessage(unittest.TestCase):
 
     def test_madic_add_errors(self):
         with self.assertRaises(TypeError) as exc:
-            self.msg += self.msg.get_instance(format_name="new")
+            self.msg += self.msg.get_instance(mf_name="new")
         self.assertEqual(
             "messages have different formats: new != default",
             exc.exception.args[0]
@@ -506,7 +502,7 @@ class TestMessage(unittest.TestCase):
 class TestFields(unittest.TestCase):
 
     def test_data_length_unpdate(self):
-        msg: Message = Message(format_name="not_def").configure(
+        msg: Message = Message(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
@@ -522,7 +518,7 @@ class TestFields(unittest.TestCase):
         self.assertListEqual([4], list(dlen.unpack()))
 
     def test_operation_compare(self):
-        msg: Message = Message(format_name="not_def").configure(
+        msg: Message = Message(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),

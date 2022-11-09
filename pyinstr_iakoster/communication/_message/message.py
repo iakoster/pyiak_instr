@@ -41,7 +41,7 @@ class Message(object):
 
     Parameters
     ----------
-    format_name: str
+    mf_name: str
         name of the message format.
     splitable: bool
         shows that the message can be divided by the data.
@@ -65,11 +65,11 @@ class Message(object):
 
     def __init__(
             self,
-            format_name: str = "default",
+            mf_name: str = "default",
             splitable: bool = False,
             slice_length: int = 1024
     ):
-        self._fmt_name = format_name
+        self._mf_name = mf_name
         self._splitable = splitable
         self._slice_length = slice_length
 
@@ -77,7 +77,7 @@ class Message(object):
         self._dst, self._src = None, None
 
         self._kwargs = dict(
-            format_name=format_name,
+            mf_name=mf_name,
             splitable=splitable,
             slice_length=slice_length,
         )
@@ -418,13 +418,13 @@ class Message(object):
         """
         if name in self.REQ_FIELDS:
             return self.REQ_FIELDS[name](
-                self._fmt_name,
+                self._mf_name,
                 start_byte=start_byte,
                 parent=self,
                 **setter.kwargs
             )
         return self.SPECIAL_FIELDS.get(setter.special, Field)(
-            self._fmt_name,
+            self._mf_name,
             name,
             start_byte=start_byte,
             parent=self,
@@ -499,14 +499,14 @@ class Message(object):
         return self._dst
 
     @property
-    def format_name(self) -> str:
+    def mf_name(self) -> str:
         """
         Returns
         -------
         str
             name of the message format.
         """
-        return self._fmt_name
+        return self._mf_name
 
     @property
     def have_infinite(self) -> bool:
@@ -615,10 +615,10 @@ class Message(object):
 
         match other:
             case Message():
-                if other.format_name != self._fmt_name:
+                if other.mf_name != self._mf_name:
                     raise TypeError(
                         "messages have different formats: %s != %s" % (
-                            other.format_name, self._fmt_name
+                            other.mf_name, self._mf_name
                         )
                     )
                 other = other.data.content

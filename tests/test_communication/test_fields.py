@@ -36,12 +36,10 @@ class TestField(unittest.TestCase):
                 start_byte=1,
                 expected=4,
                 fmt=">B",
-                info={"info": True}
             ),
             slice=slice(1, 5),
-            format_name="format",
+            mf_name="format",
             name="name",
-            info={"info": True},
             start_byte=1,
             stop_byte=5,
             expected=4,
@@ -66,7 +64,6 @@ class TestField(unittest.TestCase):
                 fmt=">B",
             ),
             slice=slice(1, None),
-            info={},
             start_byte=1,
             stop_byte=None,
             expected=-1,
@@ -284,12 +281,10 @@ class TestFieldSingle(unittest.TestCase):
                 "name",
                 start_byte=1,
                 fmt=">H",
-                info={"info": True},
             ),
             slice=slice(1, 3),
-            format_name="format",
+            mf_name="format",
             name="name",
-            info={"info": True},
             start_byte=1,
             stop_byte=3,
             expected=1,
@@ -328,13 +323,11 @@ class TestFieldStatic(unittest.TestCase):
                 "name",
                 start_byte=0,
                 fmt=">I",
-                info={"info": True},
                 default=0xfa1c
             ),
             slice=slice(0, 4),
-            format_name="format",
+            mf_name="format",
             name="name",
-            info={"info": True},
             start_byte=0,
             stop_byte=4,
             expected=1,
@@ -375,12 +368,10 @@ class TestFieldAddress(unittest.TestCase):
                 "format",
                 start_byte=0,
                 fmt=">I",
-                info={"info": True}
             ),
             slice=slice(0, 4),
-            format_name="format",
+            mf_name="format",
             name="address",
-            info={"info": True},
             start_byte=0,
             stop_byte=4,
             expected=1,
@@ -406,15 +397,13 @@ class TestCrcField(unittest.TestCase):
                 "crc",
                 start_byte=0,
                 fmt=">H",
-                info={"info": True}
             )
         validate_field(
             self,
             field,
             slice=slice(0, 2),
-            format_name="format",
+            mf_name="format",
             name="crc",
-            info={"info": True},
             start_byte=0,
             stop_byte=2,
             expected=1,
@@ -454,12 +443,10 @@ class TestFieldData(unittest.TestCase):
                 start_byte=0,
                 expected=2,
                 fmt=">I",
-                info={"info": True}
             ),
             slice=slice(0, 8),
-            format_name="format",
+            mf_name="format",
             name="data",
-            info={"info": True},
             start_byte=0,
             stop_byte=8,
             expected=2,
@@ -500,9 +487,8 @@ class TestFieldDataLength(unittest.TestCase):
                 additive=0,
             ),
             slice=slice(0, 2),
-            format_name="format",
+            mf_name="format",
             name="data_length",
-            info={},
             start_byte=0,
             stop_byte=2,
             expected=1,
@@ -529,9 +515,8 @@ class TestFieldDataLength(unittest.TestCase):
                 additive=10,
             ),
             slice=slice(0, 2),
-            format_name="format",
+            mf_name="format",
             name="data_length",
-            info={},
             start_byte=0,
             stop_byte=2,
             expected=1,
@@ -609,9 +594,8 @@ class TestFieldOperation(unittest.TestCase):
             self,
             tf,
             slice=slice(0, 2),
-            format_name="format",
+            mf_name="format",
             name="operation",
-            info={},
             start_byte=0,
             stop_byte=2,
             expected=1,
@@ -735,9 +719,8 @@ class TestResponseField(unittest.TestCase):
             self,
             self.tf,
             slice=slice(2, 4),
-            format_name="test",
+            mf_name="test",
             name="response",
-            info={},
             start_byte=2,
             stop_byte=4,
             expected=1,
@@ -797,7 +780,7 @@ class TestResponseField(unittest.TestCase):
                     2: ResponseField.RAISE,
                     3: ResponseField.WAIT,
                 },
-                default=None,
+                default_code=None,
             )
             tf.set(10)
             with self.assertRaises(FieldContentError) as exc:
@@ -843,7 +826,6 @@ class TestFieldSetter(unittest.TestCase):
                 "expected": 1,
                 "fmt": "i",
                 "default": [],
-                "info": None,
                 'may_be_empty': False
             }
         )
@@ -854,7 +836,6 @@ class TestFieldSetter(unittest.TestCase):
             {
                 "fmt": "i",
                 "default": [],
-                "info": None,
                 'may_be_empty': False
             },
             special="single"
@@ -863,31 +844,31 @@ class TestFieldSetter(unittest.TestCase):
     def test_static(self):
         self.validate_setter(
             FieldSetter.static(fmt="i", default=[]),
-            {"fmt": "i", "default": [], "info": None},
+            {"fmt": "i", "default": []},
             special="static"
         )
 
     def test_address(self):
         self.validate_setter(
             FieldSetter.address(fmt="i"),
-            {"fmt": "i", "info": None}
+            {"fmt": "i"}
         )
 
     def test_data(self):
         self.validate_setter(
             FieldSetter.data(expected=3, fmt="i"),
-            {"expected": 3, "fmt": "i", "info": None}
+            {"expected": 3, "fmt": "i"}
         )
 
     def test_data_length(self):
         self.validate_setter(
             FieldSetter.data_length(fmt="i"),
-            {"fmt": "i", "additive": 0, "info": None, "units": 16}
+            {"fmt": "i", "additive": 0, "units": 16}
         )
 
     def test_operation(self):
         self.validate_setter(
             FieldSetter.operation(fmt="i"),
-            {"fmt": "i", "desc_dict": None, "info": None}
+            {"fmt": "i", "desc_dict": None}
         )
 

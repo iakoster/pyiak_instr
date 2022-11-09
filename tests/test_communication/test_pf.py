@@ -137,7 +137,7 @@ class TestMessageFormat(unittest.TestCase):
     def test_init(self):
 
         for mf, ref_data in (get_mf_asm(), get_mf_kpm()):
-            format_name = mf.msg_args["format_name"]
+            format_name = mf.msg_args["mf_name"]
 
             with self.subTest(format_name=format_name):
                 self.assertDictEqual(ref_data["msg_args"], mf.msg_args)
