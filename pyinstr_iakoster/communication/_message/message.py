@@ -27,12 +27,13 @@ from pyinstr_iakoster.core import Code
 
 
 __all__ = [
-    "ContentType",
-    "FieldSetter",
+    "BytesMessage",
     "Message",
     "MessageContentError",
     "NotConfiguredMessageError",
 ]
+
+# todo: add tests
 
 
 class BaseMessage(object):
@@ -127,7 +128,7 @@ class BaseMessage(object):
         """
         raise NotImplementedError()
 
-    def __getitem__(self, item: str) -> Any:
+    def __getitem__(self, item: Any) -> Any:
         """
         Returns specified item of the message.
         """
@@ -298,6 +299,63 @@ class BaseMessage(object):
     def __str__(self) -> str:
         """Returns fields converted to string."""
         return self.hex().upper()
+
+
+class BytesMessage(BaseMessage):
+
+    def __init__(
+            self,
+            mf_name: str = "std",
+            content: bytes = b"",
+            splitable: bool = False,
+            slice_length: int = 1024,
+    ):
+        super().__init__(
+            mf_name=mf_name,
+            splitable=splitable,
+            slice_length=slice_length,
+        )
+        self._content = content
+
+    def hex(self, sep: str = " ", sep_step: int = None) -> str:
+        return self._content.hex(sep=sep, bytes_per_sep=sep_step)
+
+    def set(self, content: bytes) -> BytesMessage:
+        """
+        Set message content.
+
+        Parameters
+        ----------
+        content: bytes
+            new message content.
+
+        Returns
+        -------
+        BytesMessage
+            self instance.
+        """
+        self._content = content
+        return self
+
+    def to_bytes(self) -> bytes:
+        return self._content
+
+    def unpack(self) -> npt.NDArray:
+        return np.frombuffer(self._content, dtype="B")
+
+    def _content_repr(self) -> str:
+        return self.hex()
+
+    def __add__(self, other: BytesMessage | bytes) -> BytesMessage:
+        self._content += bytes(other)
+        return self
+
+    def __getitem__(self, item: int | slice) -> int | bytes:
+        return self._content[item]
+
+    def __iter__(self) -> Generator[int, None, None]:
+        for byte in self._content:
+            yield byte
 
 
 class Message(BaseMessage):
