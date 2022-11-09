@@ -1,9 +1,8 @@
 import unittest
-from typing import Any
 
 import numpy as np
 
-from .utils import compare_fields
+from ..utils import compare_fields
 
 from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (

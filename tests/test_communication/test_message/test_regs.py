@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from .utils import get_register_map_data, compare_registers, validate_object
+from ..utils import get_register_map_data, compare_registers, validate_object
 
 from pyinstr_iakoster.communication import (
     Register,

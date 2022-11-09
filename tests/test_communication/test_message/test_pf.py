@@ -3,7 +3,7 @@ import unittest
 import pandas.testing
 
 from tests.env_vars import DATA_TEST_DIR
-from .utils import (
+from ..utils import (
     get_asm_msg,
     get_kpm_msg,
     get_mf_asm,

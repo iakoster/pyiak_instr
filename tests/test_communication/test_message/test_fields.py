@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from .utils import validate_field
+from ..utils import validate_field
 
 from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
