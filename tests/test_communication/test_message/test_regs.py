@@ -76,9 +76,9 @@ class TestRegister(unittest.TestCase):
                     self.reg.shift(shift)
                 self.assertEqual(exc_msg, exc.exception.args[0])
 
-        test(-100, "shift can't be negative")
-        test(2048, "shift more or equal to register length")
-        test(2050, "shift more or equal to register length")
+        test(-100, "invalid shift: -100 not in [0, 2048)")
+        test(2048, "invalid shift: 2048 not in [0, 2048)")
+        test(2050, "invalid shift: 2050 not in [0, 2048)")
 
 
 class TestRegisterMap(unittest.TestCase):
@@ -102,22 +102,6 @@ class TestRegisterMap(unittest.TestCase):
                         ].iloc[0]),
                 self.rm.get(name)
             )
-
-    def test_getattr(self):
-        compare_registers(
-            self,
-            Register(
-                "tst_3",
-                "test_3",
-                "asm",
-                0x200,
-                1,
-                "rw",
-                ">H",
-                "test address 3. Other description."
-            ),
-            self.rm.test_3
-        )
 
     def test_getitem(self):
         compare_registers(

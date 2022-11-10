@@ -12,7 +12,8 @@ import pandas as pd
 from pyinstr_iakoster.rwfile import RWSQLite
 
 if TYPE_CHECKING:
-    from .message import Message, ContentType
+    from .field import ContentType
+    from .message import Message
     from .package_format import MessageFormat, PackageFormat
 
 
@@ -20,6 +21,8 @@ __all__ = [
     "Register",
     "RegisterMap"
 ]
+
+# todo: think through a scheme of interaction
 
 
 @dataclass(frozen=True, eq=False)
@@ -93,10 +96,10 @@ class Register(object):
 
         if shift == 0:
             return self
-        elif shift < 0:
-            raise ValueError("shift can't be negative")
-        elif shift >= self.length:
-            raise ValueError("shift more or equal to register length")
+        elif not (0 < shift < self.length):
+            raise ValueError(
+                "invalid shift: %d not in [0, %d)" % (shift, self.length)
+            )
         elif self.name.endswith("_shifted"):
             name = self.name
         else:
@@ -291,7 +294,7 @@ class Register(object):
             cls, series: pd.Series, mf: MessageFormat = None
     ) -> Register:
         """
-        Get register fron pandas.Series
+        Get register from pandas.Series
 
         Parameters
         ----------
@@ -509,22 +512,6 @@ class RegisterMap(object):
             table with parameters of registers.
         """
         return self._tbl
-
-    def __getattr__(self, name: str) -> Register:
-        """
-        Get register by name.
-
-        Parameters
-        ----------
-        name: str
-            register name.
-
-        Returns
-        -------
-        Register
-            register instance.
-        """
-        return self.get(name)
 
     def __getitem__(self, name: str | tuple[str, PackageFormat]) -> Register:
         """
