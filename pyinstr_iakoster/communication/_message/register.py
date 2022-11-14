@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pyinstr_iakoster.rwfile import RWSQLite
+from ...rwfile import RWSQLite
 from ...utilities import split_complex_dict
 
 if TYPE_CHECKING:

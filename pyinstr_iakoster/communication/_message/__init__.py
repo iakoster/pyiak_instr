@@ -24,9 +24,11 @@ from .register import (
     Register,
     RegisterMap,
 )
-from .package_format import (
+from .message_format import (
     MessageErrorMark,
     MessageFormat,
+)
+from .package_format import (
     PackageFormat,
 )
 

@@ -19,7 +19,7 @@ from .field import (
     FieldSetter,
     FieldType,
 )
-from pyinstr_iakoster.exceptions import (
+from ...exceptions import (
     MessageContentError,
     NotConfiguredMessageError,
 )

@@ -14,8 +14,8 @@ from typing import (
 import numpy as np
 import numpy.typing as npt
 
-from pyinstr_iakoster.core import Code
-from pyinstr_iakoster.exceptions import (
+from ...core import Code
+from ...exceptions import (
     FieldContentError
 )
 if TYPE_CHECKING:
