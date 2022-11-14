@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from itertools import takewhile
-from typing import TYPE_CHECKING, Any
+from functools import wraps
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    overload,
+)
 from dataclasses import dataclass
 
 import sqlite3
@@ -10,6 +16,7 @@ from pathlib import Path
 import pandas as pd
 
 from pyinstr_iakoster.rwfile import RWSQLite
+from ...utilities import split_complex_dict
 
 if TYPE_CHECKING:
     from .field import ContentType
@@ -23,6 +30,51 @@ __all__ = [
 ]
 
 # todo: think through a scheme of interaction
+
+
+def _validate_register_rw_input(invalid_type: str):
+    """
+    validate input of .read and .write methods.
+
+    Parameters
+    ----------
+    invalid_type: str
+        type of register when exception will be risen.
+
+    Returns
+    -------
+    Callable
+        function wrapper.
+    """
+
+    if invalid_type not in {"ro", "wo"}:
+        raise ValueError(
+            "invalid argument: %s not in {'ro', 'wo'}" % invalid_type
+        )
+
+    def decorator(func: Callable) -> Callable:
+
+        @wraps(func)
+        def wrapper(
+                self: Register, *args: ContentType, **kwargs: Any
+        ) -> Message:
+            if self.register_type == invalid_type:
+                if invalid_type == "ro":
+                    raise TypeError("read only register")
+                raise TypeError("write only register")
+            if "address" in kwargs:
+                raise ValueError("setting the 'address' is not allowed")
+
+            if len(args) and func.__name__ == "write":
+                if len(args) > 1:
+                    raise ValueError("to many arguments")
+                kwargs["data"] = args[0]
+
+            return func(self, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 @dataclass(frozen=True, eq=False)
@@ -51,10 +103,10 @@ class Register(object):
     length: int
     "register length. May used for `data_length` field in message."
 
-    reg_type: str = "rw"
+    register_type: str = "rw"
     "register type. Can be one of {'rw', 'ro', 'wo'}"
 
-    data_fmt: str | None = None
+    data__fmt: str = None
     "format of a data in the register."
 
     description: str = ""
@@ -64,8 +116,8 @@ class Register(object):
     "message format for messages of this register."
 
     def __post_init__(self):
-        if self.reg_type not in {"rw", "ro", "wo"}:
-            raise TypeError("invalid register type: %r" % self.reg_type)
+        if self.register_type not in {"rw", "ro", "wo"}:
+            raise TypeError("invalid register type: %r" % self.register_type)
 
     def shift(self, shift: int) -> Register:
         """
@@ -111,34 +163,30 @@ class Register(object):
             self.format_name,
             self.address + shift,
             self.length - shift,
-            reg_type=self.reg_type,
-            data_fmt=self.data_fmt,
+            register_type=self.register_type,
+            data__fmt=self.data__fmt,
             description=self.description,
             mf=self.mf
         )
 
-    def read(
-            self,
-            data_length: ContentType = None,
-            update: dict[str, dict[str, Any]] = None,
-            **other_fields: ContentType
-    ) -> Message:
+    @_validate_register_rw_input("wo")
+    def read(self, **update: Any) -> Message:
         """
         Get message with read operation.
 
-        If 'operation' not specified in `other_fields`, find operation
+        Update must contain two dicts: kwargs for .configure method and
+        kwargs for .set method. Kwargs for .configure method must be written
+        in format FIELD__PARAMETER=VALUE, where '__' is a separator between
+        field name and field parameter. The other keys will be defined as
+        kwargs for the .set method
+
+        If 'operation' not specified in `update`, find operation
         in `desc_dict` by operation base.
 
         Parameters
         ----------
-        data_length: ContentType, default=None
-            The length of the data for reading. If None than length will be
-            equal length of the register.
-        update: dict[str, dict[str, Any]], default=None
+        **update: Any, optional
             parameters for update standard settings from MessageFormat.
-            Must be writter in format {FIELD_NAME: {FIELD_ATTR: VALUE}}.
-        **other_fields: ContentType, optional
-            values for .set method of message.
 
         Returns
         -------
@@ -149,41 +197,41 @@ class Register(object):
         ------
         TypeError
             if register is write only.
+        ValueError
+            if 'address' in `update`.
+
+        See Also
+        --------
+        pyinstr_iakoster.utilities.split_complex_dict: function for splitting
+            incoming dict.
         """
-        if self.reg_type == "wo":
-            raise TypeError("writing only") # todo unique exception
+        return self._get_message(
+            "r", *split_complex_dict(update, without_sep="other")
+        )
 
-        msg = self._get_message(**self._modify_update_kw(update or {}))
-        return self._validate_msg(msg.set(
-            address=self.address,
-            operation=other_fields["operation"]
-            if "operation" in other_fields else
-            self._find_operation(msg, "r"),
-            data_length=data_length or self.length,
-            **other_fields
-        ))
+    @overload
+    def write(self, data: ContentType, **update: ContentType) -> Message:
+        ...
 
-    def write(
-            self,
-            data: ContentType = b"",
-            update: dict[str, dict[str, Any]] = None,
-            **other_fields: ContentType
-    ) -> Message:
+    @_validate_register_rw_input("ro")
+    def write(self, **update: ContentType) -> Message:
         """
         Get message with write operation.
 
-        If 'operation' not specified in `other_fields`, find operation
+        Update must contain two dicts: kwargs for .configure method and
+        kwargs for .set method. Kwargs for .configure method must be written
+        in format FIELD__PARAMETER=VALUE, where '__' is a separator between
+        field name and field parameter. The other keys will be defined as
+        kwargs for the .set method
+
+        If 'operation' not specified in `update`, find operation
         in `desc_dict` by operation base.
 
         Parameters
         ----------
-        data: ContentType, default=b''
-            The length of the data for writing.
-        update: dict[str, dict[str, Any]], default=None
-            parameters for update standard settings from MessageFormat.
-            Must be writter in format {FIELD_NAME: {FIELD_ATTR: VALUE}}.
-        **other_fields: ContentType, optional
-            values for .set method of message.
+        **update: Any, optional
+            parameters for update standard settings from MessageFormat
+            and message content.
 
         Returns
         -------
@@ -194,33 +242,35 @@ class Register(object):
         ------
         TypeError
             if register is read only.
+        ValueError
+            if 'address' in `update`.
         """
-        if self.reg_type == "ro":
-            raise TypeError("reading only") # todo unique exception
+        return self._get_message(
+            "w", *split_complex_dict(update, without_sep="other")
+        )
 
-        msg = self._get_message(**self._modify_update_kw(update or {}))
-        return self._validate_msg(msg.set(
-            address=self.address,
-            operation=other_fields["operation"]
-            if "operation" in other_fields else
-            self._find_operation(msg, "w"),
-            data=data,
-            **other_fields
-        ))
-
-    def _get_message(self, **update: dict[str, Any]) -> Message:
+    def _get_message(
+            self,
+            operation_base: str,
+            configure_kw: dict[str, dict[str, Any]],
+            set_kw: dict[str, Any]
+    ) -> Message:
         """
         Get message from message format.
 
         Parameters
         ----------
-        **update: dict[str, Any], optional
+        operation_base: str
+            base of operation description.
+        configure_kw: dict[str, dict[str, Any]]
             parameters for update standard settings from MessageFormat.
+        set_kw: dict[str, Any]
+            message content for .set method.
 
         Returns
         -------
         Message
-            message with specified message format.
+            filled message with specified message format.
 
         Raises
         ------
@@ -229,65 +279,15 @@ class Register(object):
         """
         if self.mf is None:
             raise AttributeError("message format not specified")  # todo: custom exception
-        return self.mf.get(**update)
+        msg = self.mf.get(**configure_kw)
 
-    def _modify_update_kw(
-            self, update: dict[str, dict[str, Any]]
-    ) -> dict[str, dict[str, Any]]:
-        """
-        Modify update kwargs.
+        set_kw["address"] = self.address
+        if operation_base != "w" and "data_length" not in set_kw:
+            set_kw["data_length"] = self.length
+        if "operation" not in set_kw:
+            set_kw["operation"] = self._find_operation(msg, operation_base)
 
-        If {'data': {'fmt': VALUE}} not exists, set `data_fmt` from register
-        it is specified.
-
-        Parameters
-        ----------
-        update: dict[str, dict[str, Any]]
-            parameters for update standard settings from MessageFormat.
-
-        Returns
-        -------
-        dict[str, dict[str, Any]]
-            modified update kwargs.
-        """
-        if self.data_fmt is not None and (
-            "data" not in update or
-            "data" in update and "fmt" not in update["data"]
-        ):
-            if "data" in update:
-                tmp = update["data"]
-                tmp["fmt"] = self.data_fmt
-                update.update(data=tmp)
-            else:
-                update["data"] = {"fmt": self.data_fmt}
-        return update
-
-    def _validate_msg(self, msg: Message) -> Message:
-        """
-        Check message to correct settings.
-
-        Parameters
-        ----------
-        msg: Message
-            message.
-
-        Returns
-        -------
-        Message
-            message instance.
-
-        Raises
-        ------
-        ValueError
-            if `data_length` in message more than register length.
-        """
-        dlen = msg.data_length.unpack()[0]
-        if dlen > self.length:
-            raise ValueError(
-                "invalid data length: %d > %d" % (dlen, self.length)
-            )
-
-        return msg
+        return msg.set(**set_kw)
 
     @classmethod
     def from_series(
@@ -358,19 +358,16 @@ class Register(object):
         pandas.Series
             register parameters in series.
         """
-        return pd.Series(
-            index=RegisterMap.EXPECTED_COLUMNS,
-            data=(
-                self.external_name,
-                self.name,
-                self.format_name,
-                self.address,
-                self.length,
-                self.reg_type,
-                self.data_fmt,
-                self.description
-            )
-        )
+        return pd.Series(dict(
+            external_name=self.external_name,
+            name=self.name,
+            format_name=self.format_name,
+            address=self.address,
+            register_type=self.register_type,
+            length=self.length,
+            data__fmt=self.data__fmt,
+            description=self.description,
+        ))
 
     def __add__(self, shift: int) -> Register:
         """Shift the address by a specified number."""
@@ -392,9 +389,9 @@ class RegisterMap(object):
         "name",
         "format_name",
         "address",
-        "reg_type",
+        "register_type",
         "length",
-        "data_fmt",
+        "data__fmt",
         "description",
     )
     "tuple of expected columns in `register_table`"

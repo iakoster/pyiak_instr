@@ -1,3 +1,4 @@
+import deprecation
 from pathlib import Path
 
 from tinydb import TinyDB
@@ -14,6 +15,7 @@ __all__ = [
 RWNSDocument = Document
 
 
+@deprecation.deprecated(deprecated_in="0.0.1.1", removed_in="0.0.2.0")
 class RWNoSqlJsonDatabase(RWFile):
     """
     The class of the modified TinyDB.

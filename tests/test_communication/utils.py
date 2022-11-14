@@ -165,8 +165,8 @@ def get_register_map_data() -> pd.DataFrame:
             "format_name",
             "address",
             "length",
-            "reg_type",
-            "data_fmt",
+            "register_type",
+            "data__fmt",
             "description"
         ]
     )
