@@ -4,12 +4,12 @@ import pandas.testing
 
 from tests.env_vars import TEST_DATA_DIR
 from ..utils import (
-    get_asm_msg,
-    get_kpm_msg,
-    get_mf_asm,
-    get_mf_kpm,
+    get_msg_n0,
+    get_msg_n1,
+    get_mf_n0,
+    get_mf_n1,
     get_register_map_data,
-    compare_registers,
+    compare_objects,
     compare_messages,
 )
 
@@ -135,7 +135,7 @@ class TestMessageFormat(unittest.TestCase):
 
     def test_init(self):
 
-        for mf, ref_data in (get_mf_asm(), get_mf_kpm()):
+        for mf, ref_data in (get_mf_n0(), get_mf_n1()):
             format_name = mf.msg_args["mf_name"]
 
             with self.subTest(format_name=format_name):
@@ -163,8 +163,8 @@ class TestPackageFormat(unittest.TestCase):
     def setUp(self) -> None:
         self.pf = PackageFormat(
             register_map=RegisterMap(self.REG_MAP_DATA),
-            asm=get_mf_asm(False),
-            kpm=get_mf_kpm(False)
+            n0=get_mf_n0(False),
+            n1=get_mf_n1(False)
         )
 
     def test_write_read(self):
@@ -202,7 +202,7 @@ class TestPackageFormat(unittest.TestCase):
             )
 
     def test_get_asm_basic(self):
-        ref = get_asm_msg().set(
+        ref = get_msg_n1().set(
             address=0x01020304,
             data_length=2,
             operation="w",
@@ -215,7 +215,7 @@ class TestPackageFormat(unittest.TestCase):
         compare_messages(self, ref, res)
 
     def test_get_kpm_basic(self):
-        ref = get_kpm_msg().set(
+        ref = get_msg_n1().set(
             operation="wp",
             response=0,
             address=0x33,
@@ -223,19 +223,19 @@ class TestPackageFormat(unittest.TestCase):
             data=[17, 32],
             crc=0xedbc
         )
-        res = self.pf.get("kpm", data={"fmt": ">b"}).extract(
+        res = self.pf.get("n1", data={"fmt": "B"}).extract(
             b"\xaa\x55\x01\x00\x00\x33\x00\x02\x11\x20\xed\xbc"
         )
         compare_messages(self, ref, res)
 
     def test_get_register(self):
         res = self.pf.get_register("tst_4")
-        compare_registers(
+        compare_objects(
             self,
             Register(
                 "tst_4",
                 "test_4",
-                "asm",
+                "n0",
                 0x1000,
                 7,
                 "rw",
@@ -245,7 +245,7 @@ class TestPackageFormat(unittest.TestCase):
         )
         compare_messages(
             self,
-            get_asm_msg().set(
+            get_msg_n0().set(
                 address=0x1000,
                 data_length=1,
                 operation=0,
@@ -257,7 +257,7 @@ class TestPackageFormat(unittest.TestCase):
     def test_getattr(self):
         compare_messages(
             self,
-            get_kpm_msg(data_fmt=">H").set(
+            get_msg_n1(data__fmt=">H").set(
                 address=0xf000,
                 operation="rp",
                 data_length=6,

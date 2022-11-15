@@ -7,8 +7,8 @@ import pandas as pd
 
 from ..utils import (
     get_register_map_data,
-    get_mf_asm,
-    compare_registers,
+    get_mf_n0,
+    compare_objects,
     compare_messages,
     validate_object
 )
@@ -24,7 +24,7 @@ TEST_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
 
 class TestRegister(unittest.TestCase):
 
-    MF = get_mf_asm(reference=False)
+    MF = get_mf_n0(get_ref=False)
     REF_SERIES = pd.Series(
         index=RegisterMap.EXPECTED_COLUMNS,
         data=(
@@ -91,7 +91,7 @@ class TestRegister(unittest.TestCase):
 
     def test_shift_and_add(self):
         reg = self.reg.shift(0)
-        compare_registers(self, self.reg, reg)
+        compare_objects(self, self.reg, reg)
         reg = self.reg.shift(128)
         validate_object(
             self,
@@ -154,7 +154,7 @@ class TestRegister(unittest.TestCase):
 
     def test_from_series(self) -> None:
         res = Register.from_series(self.REF_SERIES)
-        compare_registers(self, self.ro_reg, res)
+        compare_objects(self, self.ro_reg, res)
 
     def test_series(self) -> None:
         self.assertTrue(
@@ -243,7 +243,6 @@ class TestRegisterMap(unittest.TestCase):
                 exc.exception.args[0]
             )
 
-
     def test_read(self) -> None:
         with sqlite3.connect(self.DB_PATH) as con:
             self.SORTED_DATA.to_sql("registers", con, index=False)
@@ -285,7 +284,7 @@ class TestRegisterMap(unittest.TestCase):
             self.DATA["name"].values, self.DATA["external_name"].values
         )
         for name in names:
-            compare_registers(
+            compare_objects(
                 self,
                 Register.from_series(
                     self.DATA[
@@ -296,19 +295,19 @@ class TestRegisterMap(unittest.TestCase):
             )
 
     def test_getitem(self):
-        compare_registers(
+        compare_objects(
             self,
             Register(
-                "tst_5",
-                "test_5",
-                "kpm",
+                "t5",
+                "t_5",
+                "n1",
                 0x500,
                 4,
                 "ro",
                 ">f",
-                "test address 5. Other description."
+                "Short 5. Long."
             ),
-            self.rm["test_5"]
+            self.rm["t_5"]
         )
 
     def test_write_exception(self) -> None:

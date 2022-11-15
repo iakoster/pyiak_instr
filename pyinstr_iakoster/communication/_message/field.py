@@ -1242,7 +1242,7 @@ class ResponseField(SingleField):
             start_byte: int,
             fmt: str,
             codes: dict[int, Code | int],
-            default: ContentType = b"",
+            default: ContentType = 0,
             default_code: int | Code | None = UNDEFINED,
             parent: Message = None,
     ):
@@ -1410,12 +1410,14 @@ class FieldSetter(object):
             *,
             fmt: str,
             codes: dict[int | float, Code | int],
+            default: ContentType = 0,
             default_code: int | Code | None = Code.UNDEFINED,
     ):
         return cls(
             special="response",
             fmt=fmt,
             codes=codes,
+            default=default,
             default_code=default_code,
         )
 

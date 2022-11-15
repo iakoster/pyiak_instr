@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from ..utils import validate_field
+from ..utils import validate_object
 
 from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
@@ -28,7 +28,7 @@ class TestField(unittest.TestCase):
         )
 
     def test_base_init(self):
-        validate_field(
+        validate_object(
             self,
             Field(
                 "format",
@@ -50,11 +50,11 @@ class TestField(unittest.TestCase):
             default=b"",
             content=b"",
             words_count=0,
-            check_attrs=True
+            check_attrs=True,
         )
 
     def test_base_init_infinite(self):
-        validate_field(
+        validate_object(
             self,
             Field(
                 "format",
@@ -274,7 +274,7 @@ class TestFieldSingle(unittest.TestCase):
         self.tf = SingleField("f", "n", start_byte=0, fmt=">H")
 
     def test_base_init(self):
-        validate_field(
+        validate_object(
             self,
             SingleField(
                 "format",
@@ -316,7 +316,7 @@ class TestFieldStatic(unittest.TestCase):
         )
 
     def test_base_init(self):
-        validate_field(
+        validate_object(
             self,
             StaticField(
                 "format",
@@ -362,7 +362,7 @@ class TestFieldStatic(unittest.TestCase):
 class TestFieldAddress(unittest.TestCase):
 
     def test_base_init(self):
-        validate_field(
+        validate_object(
             self,
             AddressField(
                 "format",
@@ -398,7 +398,7 @@ class TestCrcField(unittest.TestCase):
                 start_byte=0,
                 fmt=">H",
             )
-        validate_field(
+        validate_object(
             self,
             field,
             slice=slice(0, 2),
@@ -436,7 +436,7 @@ class TestCrcField(unittest.TestCase):
 class TestFieldData(unittest.TestCase):
 
     def test_base_init(self):
-        validate_field(
+        validate_object(
             self,
             DataField(
                 "format",
@@ -478,7 +478,7 @@ class TestFieldDataLength(unittest.TestCase):
         return tf
 
     def test_base_init(self):
-        validate_field(
+        validate_object(
             self,
             DataLengthField(
                 "format",
@@ -505,7 +505,7 @@ class TestFieldDataLength(unittest.TestCase):
         )
 
     def test_base_init_other(self):
-        validate_field(
+        validate_object(
             self,
             DataLengthField(
                 "format",
@@ -590,7 +590,7 @@ class TestFieldOperation(unittest.TestCase):
                 fmt=">H"
             )
         tf.set(1)
-        validate_field(
+        validate_object(
             self,
             tf,
             slice=slice(0, 2),
@@ -621,7 +621,7 @@ class TestFieldOperation(unittest.TestCase):
                 desc_dict={"r1": 0x2, "r2": 0xf1, "w1": 0xf}
             )
         tf.set("w1")
-        validate_field(
+        validate_object(
             self,
             tf,
             content=b"\x00\x0f",
@@ -715,7 +715,7 @@ class TestResponseField(unittest.TestCase):
 
     def test_init(self) -> None:
         self.tf.set(2)
-        validate_field(
+        validate_object(
             self,
             self.tf,
             slice=slice(2, 4),
@@ -729,7 +729,7 @@ class TestResponseField(unittest.TestCase):
             fmt=">H",
             bytesize=2,
             content=b"\x00\x02",
-            default=b"",
+            default=b"\x00\x00",
             codes={
                 0: Code.WAIT,
                 1: ResponseField.OK,
@@ -737,6 +737,7 @@ class TestResponseField(unittest.TestCase):
                 3: ResponseField.WAIT,
             },
             default_code=Code.UNDEFINED,
+            current_code=Code.RAISE,
             words_count=1,
             check_attrs=True,
         )
@@ -760,6 +761,7 @@ class TestResponseField(unittest.TestCase):
                 self.assertEqual(self.tf, code)
 
     def test_raises(self) -> None:
+        self.tf.set(b"")
         with self.subTest(exception="empty content"):
             with self.assertRaises(FieldContentError) as exc:
                 self.tf.current_code

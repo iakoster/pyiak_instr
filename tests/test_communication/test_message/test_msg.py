@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from ..utils import compare_fields
+from ..utils import compare_objects
 
 from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
@@ -93,7 +93,8 @@ class TestMessage(unittest.TestCase):
                 "preamble",
                 start_byte=0,
                 fmt=">H",
-                default=0x1aa5
+                default=0x1aa5,
+                parent=msg,
             ),
             response=ResponseField(
                 "not_def",
@@ -101,38 +102,44 @@ class TestMessage(unittest.TestCase):
                 start_byte=2,
                 fmt=">B",
                 codes=RESPONSE_CODES,
-                default_code=Code.UNDEFINED
+                default_code=Code.UNDEFINED,
+                parent=msg,
             ),
             address=AddressField(
                 "not_def",
                 start_byte=3,
-                fmt=">H"
+                fmt=">H",
+                parent=msg,
             ),
             operation=OperationField(
                 "not_def",
                 start_byte=5,
-                fmt=">B"
+                fmt=">B",
+                parent=msg,
             ),
             data_length=DataLengthField(
                 "not_def",
                 start_byte=6,
-                fmt=">B"
+                fmt=">B",
+                parent=msg,
             ),
             data=DataField(
                 "not_def",
                 start_byte=7,
                 expected=4,
-                fmt=">I"
+                fmt=">I",
+                parent=msg,
             ),
             crc=CrcField(
                 "not_def",
                 "crc",
                 start_byte=23,
-                fmt=">H"
+                fmt=">H",
+                parent=msg,
             )
         )
         for name, field in fields.items():
-            compare_fields(self, field, msg[name], parent=msg)
+            compare_objects(self, field, msg[name], wo_parent=False)
 
     def test_configure_middle_infinite(self):
         msg = Message(mf_name="inf").configure(
@@ -152,29 +159,34 @@ class TestMessage(unittest.TestCase):
             operation=OperationField(
                 "inf",
                 start_byte=0,
-                fmt=">B"
+                fmt=">B",
+                parent=msg,
             ),
             data_length=DataLengthField(
                 "inf",
                 start_byte=1,
-                fmt=">B"
+                fmt=">B",
+                parent=msg,
             ),
             data=DataField(
                 "inf",
                 start_byte=2,
                 expected=-1,
-                fmt=">H"
+                fmt=">H",
+                parent=msg,
             ),
             address=AddressField(
                 "inf",
                 start_byte=3,
-                fmt=">H"
+                fmt=">H",
+                parent=msg,
             ),
             footer=SingleField(
                 "inf",
                 "footer",
                 start_byte=4,
-                fmt=">H"
+                fmt=">H",
+                parent=msg,
             )
         )
         for name, field in fields.items():
@@ -187,7 +199,7 @@ class TestMessage(unittest.TestCase):
         fields["footer"].stop_byte = None
 
         for name, field in fields.items():
-            compare_fields(self, field, msg[name], parent=msg)
+            compare_objects(self, field, msg[name], wo_parent=False)
         self.assertEqual(
             b"\x01\x06\x00\x01\x00\x17\x00\x04\xaa\x55\x00\x42",
             msg.to_bytes()
@@ -262,7 +274,7 @@ class TestMessage(unittest.TestCase):
         self.assertEqual("std", msg.mf_name)
         for ref, res in zip(self.msg, msg):
             self.assertEqual(ref.name, res.name)
-            self.assertIn(str(res), ("1AA5", ""))
+            self.assertIn(str(res), ("1AA5", "0", ""))
 
     def test_hex(self):
         self.fill_content()
