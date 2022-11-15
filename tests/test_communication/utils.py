@@ -172,9 +172,9 @@ def get_register_map_data() -> pd.DataFrame:
     )
     data = [
         ("asm", 1, 1, "rw", None),
+        ("asm", 0x200, 1, "rw", ">H"),
         ("asm", 0x10, 20, "ro", None),
         ("asm", 0x100, 5, "wo", None),
-        ("asm", 0x200, 1, "rw", ">H"),
         ("asm", 0x1000, 7, "rw", None),
         ("kpm", 0x500, 4, "ro", ">f"),
         ("kpm", 0xf000, 6, "rw", ">I")

@@ -2,7 +2,7 @@ import unittest
 
 import pandas.testing
 
-from tests.env_vars import DATA_TEST_DIR
+from tests.env_vars import TEST_DATA_DIR
 from ..utils import (
     get_asm_msg,
     get_kpm_msg,
@@ -19,13 +19,12 @@ from pyinstr_iakoster.communication import (
     Register,
     Message,
     MessageErrorMark,
-    MessageFormat,
     PackageFormat
 )
 
 
-DATA_JSON_PATH = DATA_TEST_DIR / "test.json"
-DATA_DB_PATH = DATA_TEST_DIR / "test.db"
+DATA_JSON_PATH = TEST_DATA_DIR / "test.json"
+DATA_DB_PATH = TEST_DATA_DIR / "test.db"
 
 
 class TestMessageErrorMark(unittest.TestCase):

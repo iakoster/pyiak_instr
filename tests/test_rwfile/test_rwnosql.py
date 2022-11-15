@@ -3,13 +3,13 @@ import unittest
 
 from tinydb import Query
 
-from tests.env_vars import DATA_TEST_DIR
+from tests.env_vars import TEST_DATA_DIR
 
 from pyinstr_iakoster.rwfile import RWNoSqlJsonDatabase
 
 
 NOSQL_NAME = 'test_nosql.json'
-NOSQL_PATH = DATA_TEST_DIR / NOSQL_NAME
+NOSQL_PATH = TEST_DATA_DIR / NOSQL_NAME
 
 
 class TestRWNoSql(unittest.TestCase):
@@ -22,9 +22,9 @@ class TestRWNoSql(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        if NOSQL_PATH.exists():
+        if TEST_DATA_DIR.exists():
             cls.rwns.close()
-            shutil.rmtree(DATA_TEST_DIR)
+            shutil.rmtree(TEST_DATA_DIR)
 
     def test_aa_create(self):
         self.assertEqual(self.rwns.hapi.count(Query()["name"].exists()), 0)

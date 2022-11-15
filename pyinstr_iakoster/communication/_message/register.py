@@ -380,7 +380,7 @@ class RegisterMap(object):
 
     Parameters
     ----------
-    registers_table: pandas.DataFrame
+    registers: pandas.DataFrame
         table with parameters for registers.
     """
 
@@ -396,18 +396,15 @@ class RegisterMap(object):
     )
     "tuple of expected columns in `register_table`"
 
-    def __init__(
-            self,
-            registers_table: pd.DataFrame
-    ):
-        self._tbl = self._validate_table(registers_table)
+    def __init__(self, registers: pd.DataFrame):
+        self._tbl = self._validate_table(registers)
 
     def get(self, name: str, pf: PackageFormat = None) -> Register:
         """
         Get register by name.
 
-        Searches the register first by 'name', then, if not found,
-        by 'external_name'.
+        Searches the register first in 'name' column, then, if not found,
+        in 'external_name' column.
 
         Set to register message format if it exists in package format.
 
@@ -423,32 +420,64 @@ class RegisterMap(object):
         Register
             register instance.
         """
-        name_table = self._tbl[self._tbl["name"] == name]
-        ext_table = self._tbl[self._tbl["external_name"] == name]
+        founded_names = self._tbl[self._tbl["name"] == name]
+        founded_ext_names = self._tbl[self._tbl["external_name"] == name]
+        names_counts, ext_names_count = len(founded_names), len(founded_ext_names)
 
-        if len(name_table):
-            assert len(name_table) == 1
-            series = name_table.iloc[0]
-        elif len(ext_table):
-            assert len(ext_table) == 1
-            series = ext_table.iloc[0]
-        else:
+        if names_counts > 1 or ext_names_count > 1:
+            raise ValueError(
+                "several registers with name %s: %d in 'name', %d in "
+                "'external name'" % (name, names_counts, ext_names_count)
+            )
+        elif names_counts + ext_names_count == 0:
             raise AttributeError("register %r not found" % name)
 
-        return Register.from_series(
-            series, mf=None if pf is None else pf.get_format(series["format_name"])
-        )
+        series = (
+            founded_names if names_counts else founded_ext_names
+        ).iloc[0]
 
-    def write(self, con: sqlite3.Connection) -> None:
+        if pf is None:
+            mf = None
+        else:
+            mf = pf.get_format(series["format_name"])
+
+        return Register.from_series(series, mf=mf)
+
+    def write(
+            self,
+            database: str | Path | sqlite3.Connection,
+            if_exists: str = "replace"
+    ) -> None:
         """
         Write register map table to sqlite table.
 
         Parameters
         ----------
-        con: sqlite3.Connection
-            connection to database.
+        database: str | Path | sqlite3.Connection
+            path or connection to a database.
+        if_exists: str
+            How to behave if the table already exists.
+
+            * fail: Raise a ValueError.
+            * replace: Drop the table before inserting new values.
         """
-        self._tbl.to_sql("registers", con, index=False)
+        if if_exists == "append":
+            raise ValueError("'append' not available for if_exists")
+        if if_exists not in {"replace", "fail"}:
+            raise ValueError(f"'{if_exists}' is not valid for if_exists")
+
+        if isinstance(database, str | Path):
+            with RWSQLite(database, autocommit=False) as rws:
+                self._tbl.to_sql(
+                    "registers",
+                    rws.connection,
+                    index=False,
+                    if_exists=if_exists
+                )
+            return
+        self._tbl.to_sql(
+            "registers", database, index=False, if_exists=if_exists
+        )
 
     def _validate_table(self, table: pd.DataFrame) -> pd.DataFrame:
         """
@@ -469,17 +498,20 @@ class RegisterMap(object):
         ValueError
             if not all expected columns specified
         """
-        cols_diff = set(table.columns) - set(self.EXPECTED_COLUMNS)
-        if len(cols_diff):
-            raise ValueError(f"invalid columns: {cols_diff}")  # todo: custom exc
+        ref, cols = set(self.EXPECTED_COLUMNS), set(table.columns)
+        invalid_cols, missing_cols = cols - ref, ref - cols
+        if len(missing_cols):
+            raise ValueError(f"missing columns: {missing_cols}")
+        if len(invalid_cols):
+            raise ValueError(f"invalid columns: {invalid_cols}")  # todo: custom exc
         # todo: checks:
         #  without dublicates in external_name and name
         #  without duplicates in address with the same msg_fmt
-        #  sort by msg_fmt and address
+        #  addresses crossing by length?
         return table.sort_values(by=["format_name", "address"])
 
     @classmethod
-    def read(cls, database: Path) -> RegisterMap:
+    def read(cls, database: str | Path | sqlite3.Connection) -> RegisterMap:
         """
         Read RegisterMap from database.
 
@@ -487,18 +519,20 @@ class RegisterMap(object):
 
         Parameters
         ----------
-        database: Path
-            path to the database.
+        database: Path | sqlite3.Connection
+            path or connection to the database.
 
         Returns
         -------
         RegisterMap
             register map instance.
         """
-        with RWSQLite(database, autocommit=False) as db:
-            return RegisterMap(
-                pd.read_sql("SELECT * FROM registers", db.connection)
-            )
+        if isinstance(database, str | Path):
+            with RWSQLite(database, autocommit=False) as rws:
+                return RegisterMap(pd.read_sql(
+                    "SELECT * FROM registers", rws.connection
+                ))
+        return RegisterMap(pd.read_sql("SELECT * FROM registers", database))
 
     @property
     def table(self) -> pd.DataFrame:

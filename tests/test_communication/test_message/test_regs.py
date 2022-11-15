@@ -1,3 +1,5 @@
+import shutil
+import sqlite3
 import unittest
 
 import numpy as np
@@ -10,11 +12,14 @@ from ..utils import (
     compare_messages,
     validate_object
 )
+from ...env_vars import TEST_DATA_DIR
 
 from pyinstr_iakoster.communication import (
     Register,
     RegisterMap
 )
+
+TEST_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
 
 
 class TestRegister(unittest.TestCase):
@@ -191,9 +196,89 @@ class TestRegister(unittest.TestCase):
 class TestRegisterMap(unittest.TestCase):
 
     DATA = get_register_map_data()
+    SORTED_DATA = DATA.sort_values(by=["format_name", "address"])
+    DB_PATH = TEST_DIR / "regs.db"
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        TEST_DIR.mkdir(parents=True, exist_ok=True)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if TEST_DATA_DIR.exists():
+            shutil.rmtree(TEST_DATA_DIR)
 
     def setUp(self) -> None:
         self.rm = RegisterMap(self.DATA)
+
+    def test_init(self) -> None:
+        self.assertTrue(
+            np.all(self.rm.table.values == self.SORTED_DATA.values)
+        )
+
+    def test_validate_table(self) -> None:
+        with self.subTest(test="sort by format_name, address"):
+            self.assertFalse(
+                np.all(self.rm.table.values == self.DATA.values),
+                "looks like RegisterMap not sort DataFrame"
+            )
+
+        with self.subTest(test="not expected columns"):
+            with self.assertRaises(ValueError) as exc:
+                RegisterMap(pd.DataFrame(
+                    columns=RegisterMap.EXPECTED_COLUMNS[:-1]
+                ))
+            self.assertEqual(
+                "missing columns: {'description'}",
+                exc.exception.args[0]
+            )
+
+        with self.subTest(test="not expected columns"):
+            with self.assertRaises(ValueError) as exc:
+                RegisterMap(pd.DataFrame(
+                    columns=RegisterMap.EXPECTED_COLUMNS + ("data_fmt",)
+                ))
+            self.assertEqual(
+                "invalid columns: {'data_fmt'}",
+                exc.exception.args[0]
+            )
+
+
+    def test_read(self) -> None:
+        with sqlite3.connect(self.DB_PATH) as con:
+            self.SORTED_DATA.to_sql("registers", con, index=False)
+            res0 = RegisterMap.read(con).table.values
+
+            self.assertTupleEqual(
+                ("registers",),
+                con.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchone()
+            )
+
+        res1 = RegisterMap.read(self.DB_PATH).table.values
+
+        for i_res, res in enumerate((res0, res1)):
+            with self.subTest(res=i_res):
+                self.assertTrue(np.all(res == self.SORTED_DATA.values))
+
+    def test_write(self) -> None:
+
+        con = sqlite3.connect(self.DB_PATH)
+        tests = (
+            ("write with str", str(self.DB_PATH)),
+            ("write with Path", self.DB_PATH),
+            ("write with connection", con)
+        )
+
+        for name, db in tests:
+            with self.subTest(test=name):
+                self.rm.write(db, if_exists="replace")
+
+                res = RegisterMap.read(db).table.values
+                self.assertTrue(np.all(res == self.SORTED_DATA.values))
+
+        con.close()
 
     def test_get(self):
         names = np.append(
@@ -204,8 +289,8 @@ class TestRegisterMap(unittest.TestCase):
                 self,
                 Register.from_series(
                     self.DATA[
-                        (self.DATA["external_name"] == name) |
-                        (self.DATA["name"] == name)
+                        (self.DATA["external_name"] == name)
+                        | (self.DATA["name"] == name)
                         ].iloc[0]),
                 self.rm.get(name)
             )
@@ -224,4 +309,23 @@ class TestRegisterMap(unittest.TestCase):
                 "test address 5. Other description."
             ),
             self.rm["test_5"]
+        )
+
+    def test_write_exception(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            self.rm.write(self.DB_PATH, if_exists="fail")
+        self.assertEqual(
+            "Table 'registers' already exists.", exc.exception.args[0]
+        )
+
+        with self.assertRaises(ValueError) as exc:
+            self.rm.write(".", if_exists="append")
+        self.assertEqual(
+            "'append' not available for if_exists", exc.exception.args[0]
+        )
+
+        with self.assertRaises(ValueError) as exc:
+            self.rm.write(".", if_exists="test")
+        self.assertEqual(
+            "'test' is not valid for if_exists", exc.exception.args[0]
         )

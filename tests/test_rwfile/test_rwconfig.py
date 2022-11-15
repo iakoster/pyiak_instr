@@ -4,11 +4,11 @@ import configparser
 
 from pyinstr_iakoster.rwfile import RWConfig
 
-from tests.env_vars import DATA_TEST_DIR
+from tests.env_vars import TEST_DATA_DIR
 
 
 CONFIG_NAME = 'test_config.ini'
-CONFIG_PATH = DATA_TEST_DIR / CONFIG_NAME
+CONFIG_PATH = TEST_DATA_DIR / CONFIG_NAME
 TEST_DICT_STR = {
     'test_str': {
         'test_letter': 'a',
@@ -89,7 +89,7 @@ class TestRWConfig(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        shutil.rmtree(DATA_TEST_DIR)
+        shutil.rmtree(TEST_DATA_DIR)
 
     def test_file_creation(self):
         RWConfig(CONFIG_PATH)

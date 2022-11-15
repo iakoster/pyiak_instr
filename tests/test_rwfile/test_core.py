@@ -4,14 +4,14 @@ from pathlib import Path
 
 from pyinstr_iakoster.rwfile import RWFile, RWFileError, FileSuffixError
 
-from tests.env_vars import DATA_TEST_DIR
+from tests.env_vars import TEST_DATA_DIR
 
 
 class TestRWFile(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        shutil.rmtree(DATA_TEST_DIR)
+        shutil.rmtree(TEST_DATA_DIR)
 
     def test_init_invalid_suffix(self):
         RWFile.FILE_SUFFIXES = {".any"}
@@ -30,8 +30,8 @@ class TestRWFile(unittest.TestCase):
         self.assertEqual("path not lead to file", exc.exception.args[0])
 
     def test_init_with_mkdir(self):
-        RWFile(DATA_TEST_DIR / "test.any")
-        self.assertTrue(DATA_TEST_DIR.exists())
+        RWFile(TEST_DATA_DIR / "test.any")
+        self.assertTrue(TEST_DATA_DIR.exists())
 
     def test_filepath(self):
         self.assertEqual(Path("test.any"), RWFile("test.any").filepath)

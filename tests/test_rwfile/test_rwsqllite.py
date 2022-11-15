@@ -1,12 +1,12 @@
 import shutil
 import unittest
 
-from tests.env_vars import DATA_TEST_DIR
+from tests.env_vars import TEST_DATA_DIR
 
 from pyinstr_iakoster.rwfile import RWSQLite
 
 SQLLITE_NAME = 'test_sqllite.db'
-SQLLITE_PATH = DATA_TEST_DIR / SQLLITE_NAME
+SQLLITE_PATH = TEST_DATA_DIR / SQLLITE_NAME
 
 
 class TestRWSimpleSqlLite(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestRWSimpleSqlLite(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        shutil.rmtree(DATA_TEST_DIR)
+        shutil.rmtree(TEST_DATA_DIR)
 
     def setUp(self) -> None:
         self.rws = RWSQLite(SQLLITE_PATH, timeout=0.5)
@@ -24,8 +24,8 @@ class TestRWSimpleSqlLite(unittest.TestCase):
         self.rws.close()
 
     def test_0a_create_table_new(self):
-        RWSQLite(DATA_TEST_DIR / 'test.database_aa-lol.db', timeout=0.5)
-        self.assertTrue((DATA_TEST_DIR / 'test.database_aa-lol.db').exists())
+        RWSQLite(TEST_DATA_DIR / 'test.database_aa-lol.db', timeout=0.5)
+        self.assertTrue((TEST_DATA_DIR / 'test.database_aa-lol.db').exists())
 
     def test_a_create_table(self):
         self.rws.create_table(

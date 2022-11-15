@@ -1,4 +1,7 @@
 from pathlib import Path
 
 
-DATA_TEST_DIR = Path(r'.\data_test')
+__all__ = ["TEST_DATA_DIR"]
+
+
+TEST_DATA_DIR = Path("data_test")
