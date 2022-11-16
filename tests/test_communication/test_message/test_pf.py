@@ -42,10 +42,10 @@ class TestPackageFormat(unittest.TestCase):
         for name, ref_mf in self.pf.formats.items():
             mf = pf.get_format(name)
             with self.subTest(name=name):
-                self.assertEqual(ref_mf.msg_args, mf.msg_args)
+                self.assertEqual(ref_mf.message, mf.message)
 
             with self.subTest(name):
-                self.assertDictEqual(ref_mf.emark.kwargs, mf.emark.kwargs)
+                self.assertDictEqual(ref_mf.arf.kwargs, mf.arf.kwargs)
 
             with self.subTest(name=name, setter="all"):
                 self.assertEqual(len(ref_mf.setters), len(mf.setters))

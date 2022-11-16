@@ -41,7 +41,7 @@ class PackageFormat(object):
 
         self._formats = formats
         for name, mf in self._formats.items():
-            self._formats[name].msg_args["mf_name"] = name
+            self._formats[name].message["mf_name"] = name
         self._reg_map = register_map
 
     def write(
@@ -189,7 +189,7 @@ class PackageFormat(object):
                     setter_args = table.get(doc_id=i_setter)
                     name = setter_args.pop("name")
                     setters[name] = FieldSetter(**setter_args)
-                formats[table_name] = MessageFormat(emark=emark, **msg_args, **setters)
+                formats[table_name] = MessageFormat(arf=emark, **msg_args, **setters)
         return cls(**formats)
 
     @property

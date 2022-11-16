@@ -1,4 +1,5 @@
 import inspect
+from copy import deepcopy
 from unittest import TestCase
 from typing import Any
 
@@ -28,7 +29,7 @@ STATIC_SETTERS = [
 
 MF_MSG_ARGS = [
     dict(
-        emark=AsymmetricResponseField(
+        arf=AsymmetricResponseField(
             operand="!=",
             start=12,
             stop=16,
@@ -65,7 +66,6 @@ def get_setters_n1(data__fmt: str = "B") -> dict[str, FieldSetter]:
 
 def get_setters_n2(data__fmt: str = "B") -> dict[str, FieldSetter]:
     return dict(
-        preamble=FieldSetter.static(fmt=">H", default=0xaa55),
         operation=FieldSetter.operation(fmt=">B", desc_dict={"r": 1, "w": 2}),
         response=FieldSetter.response(
             fmt=">B",
@@ -81,15 +81,17 @@ def get_setters_n2(data__fmt: str = "B") -> dict[str, FieldSetter]:
 
 
 def get_msg_n0() -> Message:
-    return Message(**MF_MSG_ARGS[0]).configure(**STATIC_SETTERS[0])
+    message = deepcopy(MF_MSG_ARGS[0])
+    message.pop("arf")
+    return Message(**message).configure(**STATIC_SETTERS[0])
 
 
-def get_msg_n1(data__fmt: str = "B") -> Message:
+def get_msg_n1(data__fmt: str = ">f") -> Message:
     return Message(**MF_MSG_ARGS[1])\
         .configure(**get_setters_n1(data__fmt=data__fmt))
 
 
-def get_msg_n2(data__fmt: str = "B") -> Message:
+def get_msg_n2(data__fmt: str = ">f") -> Message:
     return Message(**MF_MSG_ARGS[2])\
         .configure(**get_setters_n2(data__fmt=data__fmt))
 
@@ -100,7 +102,7 @@ def unpack_setter(setter: FieldSetter) -> dict[str, Any]:
 
 def get_mf_reference(mf: MessageFormat):
     return dict(
-        msg_args=mf.msg_args,
+        message=mf.message,
         setters={n: unpack_setter(s) for n, s in mf.setters.items()}
     )
 
@@ -178,7 +180,15 @@ def compare_values(case: TestCase, ref: Any, res: Any) -> None:
         case.assertTrue(np.all(ref, res))
     elif isinstance(ref, (pd.Series, pd.DataFrame)):
         case.assertTrue(np.all(ref.values == res.values))
+    elif not hasattr(ref, "__eq__"):
+        if len(get_object_attrs(ref)):
+            compare_objects(case, ref, res)
+        else:
+            raise ValueError("values cannot be compared")
     else:
+        if "AddressField" in str(ref):
+            print(ref)
+            print(res)
         case.assertEqual(ref, res)
 
 

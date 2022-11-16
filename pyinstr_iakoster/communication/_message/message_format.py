@@ -3,13 +3,12 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from tinydb.table import Table, Document
-
 from .field import FieldSetter
 from .message import Message
+from ...core import Code
 from ...utilities import StringEncoder
 from ...rwfile import (
-    RWNoSqlJsonDatabase,
+    RWConfig,
 )
 
 
@@ -214,6 +213,26 @@ class AsymmetricResponseField(object):  # todo: add to fields
         """
         return self._val
 
+    def __eq__(self, other: Any) -> bool:
+        """
+        Compare this field to `other`.
+
+        If `other` is not AsymmetricResponseField instance return False.
+
+        Parameters
+        ----------
+        other: Any
+            comparison object.
+
+        Returns
+        -------
+        bool
+            comparison result
+        """
+        if isinstance(other, AsymmetricResponseField):
+            return self.kwargs == other.kwargs
+        return False
+
 
 class MessageFormat(object):
     """
@@ -221,8 +240,8 @@ class MessageFormat(object):
 
     Parameters
     ----------
-    emark: AsymmetricResponseField
-        error mark for message.
+    arf: AsymmetricResponseField
+        asymmetric field for message or kwargs for it.
     **settings: FieldSetter or Any
         settings for message. If there is a FieldSetter that it will be added
         to setters dict and to msg_args in other cases.
@@ -233,65 +252,81 @@ class MessageFormat(object):
         if not all required fields are specified.
     """
 
+    SEP = "__"
+    "separator for nested dictionaries"
+
     def __init__(
             self,
-            emark: AsymmetricResponseField = AsymmetricResponseField(),
+            arf: dict[str, Any] | AsymmetricResponseField = AsymmetricResponseField(),
             **settings: FieldSetter | Any
     ):
-        self._emark = emark
-        self._msg_args = {}
+        if isinstance(arf, dict):
+            arf = AsymmetricResponseField(**arf)
+        self._arf = arf
+        self._message = {}
         self._setters = {}
         for k, v in settings.items():
             if isinstance(v, FieldSetter):
                 self._setters[k] = v
             else:
-                self._msg_args[k] = v
+                self._message[k] = v
 
-        setters_diff = set(self._setters) - set(Message.REQ_FIELDS)
+        setters_diff = set(Message.REQ_FIELDS) - set(self._setters)
         if len(setters_diff):
-            ValueError(
-                f"not all requared setters were got: %s are missing" %
-                ", ".join(setters_diff)
-            )
+            raise ValueError(f"missing the required setters: {setters_diff}")
 
-    def write(self, format_table: Table) -> None:
+    def write(self, config: Path) -> None:
         """
-        Write parameters to the table.
+        Write parameters to the config.
 
         Parameters
         ----------
-        format_table: Table
-            table instance.
+        config: Path
+            path to the config file.
         """
 
-        def drop_none(dict_: dict[Any]) -> Any:
-            return {k: v for k, v in dict_.items() if v is not None}
+        mf_name, mf_dict = self._message["mf_name"], {}
+        sec_message = f"{mf_name}{self.SEP}message"
+        sec_setters = f"{mf_name}{self.SEP}setters"
 
-        def remove_if_doc_id_exists(doc_ids: list[int]) -> None:
-            for doc_id in doc_ids:
-                if format_table.contains(doc_id=doc_id):
-                    format_table.remove(doc_ids=(doc_id,))
+        mf_dict[sec_message] = {}
+        for opt, val in dict(arf=self.arf.kwargs, **self._message).items():
+            mf_dict[sec_message][opt] = StringEncoder.to_str(val)
 
-        remove_if_doc_id_exists([-2, -1])
-        format_table.insert(Document(drop_none(self._msg_args), doc_id=-1))
-        format_table.insert(Document(self._emark.kwargs, doc_id=-2))
+        mf_dict[sec_setters] = {}
+        for opt, val in self._setters.items():
 
-        for i_setter, (name, setter) in enumerate(self.setters.items()):
-            field_pars = {"name": name}
-            if setter.special is not None:
-                field_pars["special"] = setter.special
-            field_pars.update(drop_none(setter.kwargs))
-            remove_if_doc_id_exists([i_setter])
-            format_table.insert(Document(field_pars, doc_id=i_setter))
+            kw = val.kwargs  # fixme: fix krutch
+            for k, v in kw.items():
+                if isinstance(v, Code):
+                    kw[k] = v.value
+                elif isinstance(v, dict):
+                    for k_, v_ in v.items():
+                        if isinstance(v_, Code):
+                            v[k_] = v_.value
+
+            mf_dict[sec_setters][opt] = StringEncoder.to_str(
+                dict(special=val.special, **val.kwargs)
+            )
+
+        with RWConfig(config) as rwc:
+
+            for sec in rwc.hapi.sections():
+                if sec.split(self.SEP)[0] == mf_name:
+                    rwc.hapi.remove_section(sec)
+            rwc.apply_changes()
+            rwc.write(mf_dict)
 
     def get(self, **update: dict[str, Any]) -> Message:
         """
         Get message instance with message format.
 
+        Keywords arguments must be in format FIELD={PARAMETER: VALUE}.
+
         Parameters
         ----------
         update: dict[str, Any]
-            dictinary of parameters to change.
+            dictionary of parameters to change.
 
         Returns
         -------
@@ -302,61 +337,74 @@ class MessageFormat(object):
         if len(update):
             for setter_name, fields in update.items():
                 setters[setter_name].kwargs.update(fields)
-        return Message(**self._msg_args).configure(**setters)
+        return Message(**self._message).configure(**setters)
 
     @classmethod
-    def read(cls, path: Path, fmt_name: str) -> MessageFormat:
+    def read(cls, config: Path, mf_name: str) -> MessageFormat:
         """
-        Read message format from a json database.
+        Read message format from a config.
 
         Parameters
         ----------
-        path: Path
+        config: Path
             path to json database.
-        fmt_name: str
-            name of format.
+        mf_name: str
+            name of message format.
 
         Returns
         -------
         MessageFormat
-            message format initilized with parameters from database.
+            message format initialized with parameters from database.
+
+        Raises
+        ------
+        ValueError
+            if config does now have required message format.
         """
 
-        with RWNoSqlJsonDatabase(path) as db:
-            if fmt_name not in db.tables():
-                raise ValueError(
-                    "The format not exists in the database: %s" % fmt_name
-                )
+        kw, setters = {}, {}
+        sec_message = f"{mf_name}{cls.SEP}message"
+        sec_setters = f"{mf_name}{cls.SEP}setters"
 
-            table = db.table(fmt_name)
-            msg = dict(table.get(doc_id=-1))
+        with RWConfig(config) as rwc:
+            sections = rwc.hapi.sections()
+            if sec_message not in sections or sec_setters not in sections:
+                raise ValueError("massage format not exists")
 
-            setters = {}
-            for field_id in range(len(table) - 1):
-                field = dict(table.get(doc_id=field_id))
-                setters[field.pop("name")] = FieldSetter(**field)
+            for sec in [sec_message, sec_setters]:
+                for opt in rwc.hapi.options(sec):
+                    val = StringEncoder.from_str(
+                        rwc.get(sec, opt, convert=False)
+                    )  # todo: StringEncoder to RWConfig
+                    if isinstance(val, str) and val[0] == StringEncoder.SOH:
+                        val = StringEncoder.from_str(val + "\t")
 
-        return cls(**msg, **setters)
+                    if sec == sec_message:
+                        kw[opt] = val
+                    elif sec == sec_setters:
+                        setters[opt] = FieldSetter(**val)
+
+        return cls(**kw, **setters)
 
     @property
-    def emark(self) -> AsymmetricResponseField:
+    def arf(self) -> AsymmetricResponseField:
         """
         Returns
         -------
         AsymmetricResponseField
             error mark.
         """
-        return self._emark
+        return self._arf
 
     @property
-    def msg_args(self) -> dict[str, Any]:
+    def message(self) -> dict[str, Any]:
         """
         Returns
         -------
         dict[str, Any]
             arguments for setting Message class.
         """
-        return self._msg_args
+        return self._message
 
     @property
     def setters(self) -> dict[str, FieldSetter]:

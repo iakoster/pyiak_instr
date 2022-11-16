@@ -1421,6 +1421,27 @@ class FieldSetter(object):
             default_code=default_code,
         )
 
+    def __eq__(self, other: Any) -> bool:
+        """
+        Compare this field to `other`.
+
+        If `other` is not FieldSetter instance return False.
+
+        Parameters
+        ----------
+        other: Any
+            comparison object.
+
+        Returns
+        -------
+        bool
+            comparison result
+        """
+        if isinstance(other, FieldSetter):
+            return self.special == other.special \
+                   and self.kwargs == other.kwargs
+        return False
+
     def __repr__(self) -> str:
         cls_name = self.__class__.__name__
         kwargs = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())

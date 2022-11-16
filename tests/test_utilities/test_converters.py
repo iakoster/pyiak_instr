@@ -41,7 +41,7 @@ class TestSplitComplexDict(unittest.TestCase):
         )
 
 
-class TestStringConverter(unittest.TestCase):
+class TestStringEncoder(unittest.TestCase):
 
     DATA = dict(
         empty_str=("", ""),
