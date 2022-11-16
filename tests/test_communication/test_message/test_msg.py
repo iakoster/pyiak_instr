@@ -139,7 +139,7 @@ class TestMessage(unittest.TestCase):
             )
         )
         for name, field in fields.items():
-            compare_objects(self, field, msg[name], wo_parent=False)
+            compare_objects(self, field, msg[name])
 
     def test_configure_middle_infinite(self):
         msg = Message(mf_name="inf").configure(
@@ -199,7 +199,7 @@ class TestMessage(unittest.TestCase):
         fields["footer"].stop_byte = None
 
         for name, field in fields.items():
-            compare_objects(self, field, msg[name], wo_parent=False)
+            compare_objects(self, field, msg[name])
         self.assertEqual(
             b"\x01\x06\x00\x01\x00\x17\x00\x04\xaa\x55\x00\x42",
             msg.to_bytes()

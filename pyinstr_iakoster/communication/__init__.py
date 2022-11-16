@@ -18,7 +18,7 @@ from ._message import (
     NotConfiguredMessageError,
     Register,
     RegisterMap,
-    MessageErrorMark,
+    AsymmetricResponseField,
     MessageFormat,
     PackageFormat,
 )
@@ -51,7 +51,7 @@ __all__ = [
     "NotConfiguredMessageError",
     "Register",
     "RegisterMap",
-    "MessageErrorMark",
+    "AsymmetricResponseField",
     "MessageFormat",
     "PackageFormat",
     "Connection",

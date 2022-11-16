@@ -7,7 +7,7 @@ import pandas as pd
 from .field import FieldSetter
 from .message import Message
 from .register import Register, RegisterMap
-from .message_format import MessageFormat, MessageErrorMark
+from .message_format import MessageFormat, AsymmetricResponseField
 from ...rwfile import (
     RWNoSqlJsonDatabase,
     RWSQLite,
@@ -178,9 +178,9 @@ class PackageFormat(object):
 
                 msg_args = table.get(doc_id=-1)
                 if table.contains(doc_id=-2):
-                    emark = MessageErrorMark(**table.get(doc_id=-2))
+                    emark = AsymmetricResponseField(**table.get(doc_id=-2))
                 else:
-                    emark = MessageErrorMark()
+                    emark = AsymmetricResponseField()
 
                 setters = {}
                 for i_setter in range(len(table)):

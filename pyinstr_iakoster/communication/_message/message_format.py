@@ -14,175 +14,145 @@ from ...rwfile import (
 
 
 __all__ = [
-    "MessageErrorMark",
-    "MessageFormat"
+    "AsymmetricResponseField",
+    "MessageFormat",
 ]
 
 
-class MessageErrorMark(object):  # todo: make only for asymmetric emark (bytes only)
+class AsymmetricResponseField(object):  # todo: add to fields
     """
-    A class for detecting the existence of an error mark in a message.
+    Represents class for detecting error code in an incoming message.
 
-    Attribute `operation` must be one of {'eq', 'neq'}.
-        - 'eq' -- equal. If equal to value that error mark in a message.
-        - 'neq' -- not equal. It not equal to value that error mark
-            in a message.
+    This class is supposed to be used when the asymmetric message format
+    is on the other side of the PC and this asymmetric field corresponds
+    to the status.
+
+    If `AsymmetricResponseField.is_empty` then there is no any checks.
+    Class is considered empty if the operand is an empty string.
+
+    Field will be cut from incoming message in range [start, stop).
 
     Parameters
     ----------
-    operation: str
-        match operation. If None, instance is considered empty
-        (all checks pass).
-    value: str or bytes or list of int or float
-        value for checking. Can be encoded with StringEncoder.
-    start_byte: int
-        start byte of the error mark in a message. Used for cutting
-        an error mark from a message in bytes.
-    stop_byte: int
-        stop byte (not included) of the error mark in a message. Used
-        for cutting an error mark from a message in bytes.
-    field_name: str
-        the name of the field in Message instance. Used for copying
-        an error mark from an initilized message.
+    operand: {'==', '!='}, default=''
+        How to behave when check .
+
+        * ''(empty string): this class is empty.
+        * ==: field is error when it is equal to value.
+        * !=: field is error when it is equal to value.
+    value: bytes
+        value for checking. Can be coded via StringEncoder to string.
+    start: int
+        start byte of the error mark in a message.
+    stop: int
+        stop byte (not included) of the field in a message.
 
     Raises
     ------
     ValueError
-        if `operation` not in {'eq', 'neq'};
-        if `field_name` not specified and one of `start_byte` or `stop_byte`
-            not specified too;
-        if `field_name`, `start_byte` and `stop_byte` is specified;
-        if `value` is string and cannot be converted from string
-            by StringEncoder.
+        if `operand` in not valid.
+        if `start` and `stop` is None.
     TypeError
-        if `start_byte` and `stop_byte` are specified and `value` not instance
-        of bytes type;
-        if `value` type is not bytes or list.
-
-    See Also
-    --------
-    MessageErrorMark.match: main method of this class.
+        if `value` cannot be converted from string to bytes by StringEncoder.
+        if `value` type is not bytes.
     """
 
     def __init__(
             self,
-            operation: str = None,
-            value: str | bytes | list[int | float] = b"",
-            start_byte: int = None,
-            stop_byte: int = None,
-            field_name: str = None,
+            operand: str = "",
+            value: str | bytes = None,
+            start: int = None,
+            stop: int = None,
     ):
-        self._oper = operation
-        if self.empty:
-            self._field_name, self._slice, self._val = None, slice(None), b""
+        if not len(operand):
+            self._oper, self._val, self._slice = "", b"", slice(None)
             return
 
-        if operation not in (None, "eq", "neq"):
-            raise ValueError("%r operation not in {'eq', 'neq'}" % operation)
-        if field_name is None and None in (start_byte, stop_byte):
-            raise ValueError(
-                "field name or start and stop bytes must be defined"
-            )
-        if None not in (field_name, start_byte, stop_byte):
-            raise ValueError(
-                "field_name, start_byte, stop_byte cannot be specified at "
-                "the same time"
-            )
-        self._field_name = field_name
-        self._slice = slice(start_byte, stop_byte)
+        if operand not in {"==", "!="}:
+            raise ValueError(f"invalid operand: %r" % operand)
+        if start is None or stop is None:
+            raise ValueError("start or stop is not specified")
+        if stop <= start:
+            raise ValueError("stop <= start")
+        self._oper, self._slice = operand, slice(start, stop)
 
         if isinstance(value, str):
             value = StringEncoder.from_str(value)
-            if isinstance(value, str):
-                raise ValueError("convert string is impossible")
-        if self.bytes_required and not isinstance(value, bytes):
-            raise TypeError("invalid type: %s, expected bytes" % type(value))
-        if not isinstance(value, bytes | list):
-            raise TypeError("invalid type: %s" % type(value))
+            if not isinstance(value, bytes):
+                raise TypeError(
+                    "value can't be converted from string to bytes"
+                )
+        elif not isinstance(value, bytes):
+            raise TypeError("invalid type of value")
         self._val = value
 
-    def exists(self, msg: bytes | Message) -> tuple[bytes | Message, bool]:
+    def match(self, msg: bytes) -> tuple[bytes | Message, bool]:
         """
-        Match error mark in a message.
+        Match field in a message.
 
         The second return value is a boolean value and indicates the presence
         of an error in the message (if True).
 
-        If `operation` is None (error mark is empty) returns message as is and
+        If `operand` is None (class is empty) returns message as is and
         False indicator.
-
-        If `start_byte` and `stop_byte` are specified, the message is expected
-        as bytes. This part of the message is cut from the message.
-
-        If `field_name` is specified, the message is expected as bytes.
 
         Parameters
         ----------
-        msg: bytes or Message
-            message for checking.
-
-        Raises
-        ------
-        TypeError
-            if `start_byte` and `stop_byte` are specified and message
-            not is instance of bytes type.
+        msg: bytes
+            message for check.
 
         Returns
         -------
         tuple of {bytes or Message, bool}
             the edited message (if part of it is cut out) and
             the error mark indicator.
+
+        Raises
+        ------
+        TypeError
+            if `msg` type is not bytes.
+
         """
-        if self._oper is None:
+        if self.is_empty:
             return msg, False
-        if self._field_name is None and not isinstance(msg, bytes):
-            raise TypeError("bytes type required")
+        if not isinstance(msg, bytes):
+            raise TypeError("bytes message required")
 
-        if isinstance(msg, bytes):
-            msg_mark = msg[self._slice]
-            msg = msg[:self._slice.start] + msg[self._slice.stop:]
+        return (
+            msg[:self.start] + msg[self.stop:],
+            self._validate_field(msg[self._slice])
+        )
 
-        else:
-            msg_mark = msg[self._field_name]
-            if isinstance(self._val, bytes):
-                msg_mark = msg_mark.content
-            else:
-                msg_mark = msg_mark.unpack().tolist()
-
-        if self._oper == "eq":
-            return msg, msg_mark == self._val # if mark == val, then mark is error mark
-        elif self._oper == "neq":
-            return msg, msg_mark != self._val # if mark != val, then mark is error mark
-
-    @property
-    def bytes_required(self) -> bool:
+    def _validate_field(self, field: bytes) -> bool:
         """
+        Compare field with value by operand.
+
+        Parameters
+        ----------
+        field: bytes
+            asymmetric response field.
+
         Returns
         -------
         bool
-            indicator that '.match' method expected message in bytes.
+            comparison result
         """
-        return self._field_name is None
+        match self._oper:
+            case "==":
+                return self._val == field
+            case "!=":
+                return self._val != field
+        assert False, f"invalid operand: {self._oper}"
 
     @property
-    def empty(self) -> bool:
+    def is_empty(self) -> bool:
         """
         Returns
         -------
         bool
             indicator that there is an empty error mark.
         """
-        return self._oper is None
-
-    @property
-    def field_name(self) -> str | None:
-        """
-        Returns
-        -------
-        str
-            the name of the field.
-        """
-        return self._field_name
+        return not len(self._oper)
 
     @property
     def kwargs(self) -> dict[str, str | int | bytes | None]:
@@ -194,26 +164,18 @@ class MessageErrorMark(object):  # todo: make only for asymmetric emark (bytes o
         dict[str, str | int | bytes | None]
             dictionary for writing to a package format file.
         """
-        if self._oper is None:
+        if self.is_empty:
             return {}
 
-        ret: dict[str, str | list[int | float] | bytes | None] = {
-            "operation": self._oper
-        }
-        if isinstance(self._val, bytes):
-            ret["value"] = StringEncoder.to_str(self._val)
-        else:
-            ret["value"] = self._val
-        if self.bytes_required:
-            ret["start_byte"] = self._slice.start
-            ret["stop_byte"] = self._slice.stop
-        else:
-            ret["field_name"] = self._field_name
-
-        return ret
+        return dict(
+            operand=self._oper,
+            value=self._val,
+            start=self.start,
+            stop=self.stop
+        )
 
     @property
-    def operation(self) -> str | None:
+    def operand(self) -> str | None:
         """
         Returns
         -------
@@ -223,7 +185,7 @@ class MessageErrorMark(object):  # todo: make only for asymmetric emark (bytes o
         return self._oper
 
     @property
-    def start_byte(self) -> int | None:
+    def start(self) -> int | None:
         """
         Returns
         -------
@@ -233,7 +195,7 @@ class MessageErrorMark(object):  # todo: make only for asymmetric emark (bytes o
         return self._slice.start
 
     @property
-    def stop_byte(self) -> int | None:
+    def stop(self) -> int | None:
         """
         Returns
         -------
@@ -243,7 +205,7 @@ class MessageErrorMark(object):  # todo: make only for asymmetric emark (bytes o
         return self._slice.stop
 
     @property
-    def value(self) -> bytes | list[int | float]:
+    def value(self) -> bytes:
         """
         Returns
         -------
@@ -259,7 +221,7 @@ class MessageFormat(object):
 
     Parameters
     ----------
-    emark: MessageErrorMark
+    emark: AsymmetricResponseField
         error mark for message.
     **settings: FieldSetter or Any
         settings for message. If there is a FieldSetter that it will be added
@@ -273,7 +235,7 @@ class MessageFormat(object):
 
     def __init__(
             self,
-            emark: MessageErrorMark = MessageErrorMark(),
+            emark: AsymmetricResponseField = AsymmetricResponseField(),
             **settings: FieldSetter | Any
     ):
         self._emark = emark
@@ -377,11 +339,11 @@ class MessageFormat(object):
         return cls(**msg, **setters)
 
     @property
-    def emark(self) -> MessageErrorMark:
+    def emark(self) -> AsymmetricResponseField:
         """
         Returns
         -------
-        MessageErrorMark
+        AsymmetricResponseField
             error mark.
         """
         return self._emark

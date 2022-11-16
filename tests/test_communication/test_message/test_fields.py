@@ -51,6 +51,7 @@ class TestField(unittest.TestCase):
             content=b"",
             words_count=0,
             check_attrs=True,
+            wo_attrs=["parent"],
         )
 
     def test_base_init_infinite(self):
@@ -295,7 +296,8 @@ class TestFieldSingle(unittest.TestCase):
             content=b"",
             default=b"",
             words_count=0,
-            check_attrs=True
+            check_attrs=True,
+            wo_attrs=["parent"],
         )
 
     def test_unpack(self):
@@ -338,7 +340,8 @@ class TestFieldStatic(unittest.TestCase):
             content=b"\x00\x00\xfa\x1c",
             default=b"\x00\x00\xfa\x1c",
             words_count=1,
-            check_attrs=True
+            check_attrs=True,
+            wo_attrs=["parent"],
         )
 
     def test_set(self):
@@ -382,7 +385,8 @@ class TestFieldAddress(unittest.TestCase):
             content=b"",
             default=b"",
             words_count=0,
-            check_attrs=True
+            check_attrs=True,
+            wo_attrs=["parent"],
         )
 
 
@@ -417,6 +421,7 @@ class TestCrcField(unittest.TestCase):
             algorithm=field.algorithm,
             algorithm_name="crc16-CCITT/XMODEM",
             check_attrs=True,
+            wo_attrs=["parent"],
         )
 
     def test_algorithms(self):
@@ -457,7 +462,8 @@ class TestFieldData(unittest.TestCase):
             content=b"",
             default=b"",
             words_count=0,
-            check_attrs=True
+            check_attrs=True,
+            wo_attrs=["parent"],
         )
 
 
@@ -501,7 +507,8 @@ class TestFieldDataLength(unittest.TestCase):
             words_count=0,
             units=0x10,
             additive=0,
-            check_attrs=True
+            check_attrs=True,
+            wo_attrs=["parent"],
         )
 
     def test_base_init_other(self):
@@ -529,7 +536,8 @@ class TestFieldDataLength(unittest.TestCase):
             words_count=0,
             units=0x11,
             additive=10,
-            check_attrs=True
+            check_attrs=True,
+            wo_attrs=["parent"],
         )
 
     def test_init_wrong_oper_core(self):
@@ -611,6 +619,7 @@ class TestFieldOperation(unittest.TestCase):
             desc_dict={'r': 0, 'w': 1, 'e': 2},
             desc_dict_r={0: 'r', 1: 'w', 2: 'e'},
             check_attrs=True,
+            wo_attrs=["parent"],
         )
 
     def test_base_init_custom_desc_dict(self):
@@ -740,6 +749,7 @@ class TestResponseField(unittest.TestCase):
             current_code=Code.RAISE,
             words_count=1,
             check_attrs=True,
+            wo_attrs=["parent"],
         )
         self.assertEqual(
             self.tf.codes,

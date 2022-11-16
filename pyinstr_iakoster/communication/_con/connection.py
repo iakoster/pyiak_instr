@@ -4,7 +4,7 @@ from typing import Any
 
 from .._message import (
     Message,
-    MessageErrorMark,
+    AsymmetricResponseField,
     MessageContentError
 )
 from ...core import Code
@@ -137,7 +137,7 @@ class Connection(object):  # todo: description and tests
     def send(
             self,
             message: Message,
-            emark: MessageErrorMark = MessageErrorMark()
+            emark: AsymmetricResponseField = AsymmetricResponseField()
     ) -> Message:
         """
         Send message to dst (see Message.dst).
@@ -211,7 +211,7 @@ class Connection(object):  # todo: description and tests
         if self._logger is not None:
             self._logger.info(entry)
 
-    def _read(self, msg: Message, emark: MessageErrorMark) -> Message:
+    def _read(self, msg: Message, emark: AsymmetricResponseField) -> Message:
         """
         Send message with read operation.
 
@@ -221,7 +221,7 @@ class Connection(object):  # todo: description and tests
         ----------
         msg: Message
             source message.
-        emark: MessageErrorMark
+        emark: AsymmetricResponseField
             error mark for asymmetric response.
 
         Returns
@@ -240,7 +240,7 @@ class Connection(object):  # todo: description and tests
         answer.set(data_length=msg.data_length.content)  # todo: .set in write. There is not needed?
         return answer
 
-    def _send(self, msg: Message, emark: MessageErrorMark) -> Message:
+    def _send(self, msg: Message, emark: AsymmetricResponseField) -> Message:
         """
         Send message and get response.
 
@@ -253,7 +253,7 @@ class Connection(object):  # todo: description and tests
         ----------
         msg: Message
             message for sending.
-        emark: MessageErrorMark
+        emark: AsymmetricResponseField
             asymmetric error field.
 
         Returns
@@ -328,7 +328,7 @@ class Connection(object):  # todo: description and tests
             self,
             tx_msg: Message,
             rx_msg: bytes,
-            emark: MessageErrorMark,
+            emark: AsymmetricResponseField,
     ) -> tuple[Message, Code]:
         """
         Validate raw received message.
@@ -341,7 +341,7 @@ class Connection(object):  # todo: description and tests
             transmitted message.
         rx_msg: bytes
             raw received message.
-        emark: MessageErrorMark
+        emark: AsymmetricResponseField
             asymmetric error mark.
 
         Returns
@@ -351,7 +351,7 @@ class Connection(object):  # todo: description and tests
         """
         emark_exists = False
         if emark.bytes_required:
-            rx_msg, emark_exists = emark.exists(rx_msg)
+            rx_msg, emark_exists = emark.match(rx_msg)
         # todo: check that bytes can be reformatted into a message
         rx_msg = tx_msg.get_same_instance().extract(rx_msg)\
             .set_src_dst(src=tx_msg.dst, dst=self._addr)
@@ -361,7 +361,7 @@ class Connection(object):  # todo: description and tests
         return rx_msg, Code.OK
 
     def _validate_message(
-            self, rx_msg: Message, emark: MessageErrorMark
+            self, rx_msg: Message, emark: AsymmetricResponseField
     ) -> Code | list[Code]:
         """
         validate converted to a class message.
@@ -370,7 +370,7 @@ class Connection(object):  # todo: description and tests
         ----------
         rx_msg: Message
             received message.
-        emark: MessageErrorMark
+        emark: AsymmetricResponseField
             asymmetric error mark.
 
         Returns
@@ -397,13 +397,13 @@ class Connection(object):  # todo: description and tests
 
         emark_exists = False
         if not emark.bytes_required:
-            _, emark_exists = emark.exists(rx_msg)  # todo: remove, response codes do it
+            _, emark_exists = emark.match(rx_msg)  # todo: remove, response codes do it
 
         if emark_exists:
             return Code.ERROR
         return Code.OK
 
-    def _write(self, msg: Message, emark: MessageErrorMark) -> Message:
+    def _write(self, msg: Message, emark: AsymmetricResponseField) -> Message:
         """
         Send message with write operation.
 
@@ -413,7 +413,7 @@ class Connection(object):  # todo: description and tests
         ----------
         msg: Message
             source message.
-        emark: MessageErrorMark
+        emark: AsymmetricResponseField
             asymmetric error mark.
 
         Returns
