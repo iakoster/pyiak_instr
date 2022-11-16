@@ -20,6 +20,7 @@ from ._message import (
     RegisterMap,
     AsymmetricResponseField,
     MessageFormat,
+    MessageFormatsMap,
     PackageFormat,
 )
 from ._con import (
@@ -53,6 +54,7 @@ __all__ = [
     "RegisterMap",
     "AsymmetricResponseField",
     "MessageFormat",
+    "MessageFormatsMap",
     "PackageFormat",
     "Connection",
     "IPV4_PATTERN",

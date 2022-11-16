@@ -27,6 +27,7 @@ from .register import (
 from .message_format import (
     AsymmetricResponseField,
     MessageFormat,
+    MessageFormatsMap,
 )
 from .package_format import (
     PackageFormat,
@@ -54,5 +55,6 @@ __all__ = [
     "RegisterMap",
     "AsymmetricResponseField",
     "MessageFormat",
+    "MessageFormatsMap",
     "PackageFormat",
 ]

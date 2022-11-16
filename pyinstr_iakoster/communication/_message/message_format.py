@@ -15,6 +15,7 @@ from ...rwfile import (
 __all__ = [
     "AsymmetricResponseField",
     "MessageFormat",
+    "MessageFormatsMap",
 ]
 
 
@@ -369,7 +370,7 @@ class MessageFormat(object):
         with RWConfig(config) as rwc:
             sections = rwc.hapi.sections()
             if sec_message not in sections or sec_setters not in sections:
-                raise ValueError("massage format not exists")
+                raise ValueError("format with name %r not exists" % mf_name)
 
             for sec in [sec_message, sec_setters]:
                 for opt in rwc.hapi.options(sec):
@@ -415,3 +416,86 @@ class MessageFormat(object):
             setters for Message.configure method.
         """
         return self._setters
+
+
+class MessageFormatsMap(object):
+    """
+    Represents class with Message formats.
+
+    Parameters
+    ----------
+    **formats: MessageFormat
+        message formats where key is a message format name.
+    """
+
+    def __init__(self, **formats: MessageFormat):
+        self._formats = formats
+
+    def get(self, mf_name: str) -> MessageFormat:
+        """
+        Get message format by name.
+
+        Parameters
+        ----------
+        mf_name: str
+            message format name.
+
+        Returns
+        -------
+        MessageFormat
+            message format instance.
+
+        Raises
+        ------
+        ValueError
+            if name not in formats list.
+        """
+        if mf_name not in self._formats:
+            raise ValueError("there is no format with name %r" % mf_name)
+        return self._formats[mf_name]
+
+    def write(self, config: Path) -> None:
+        """
+        Write formats to the config file.
+
+        Parameters
+        ----------
+        config: Path
+            path to config file.
+        """
+        with RWConfig(config) as rwc:
+            rwc.write({"master": {
+                "formats": StringEncoder.to_str(list(self._formats))
+            }})
+
+        for mf in self._formats.values():
+            mf.write(config)
+
+    @classmethod
+    def read(cls, config: Path) -> MessageFormatsMap:
+        """
+        Read message formats from config.
+        
+        Parameters
+        ----------
+        config: Path
+            path to the config file.
+
+        Returns
+        -------
+        MessageFormatsMap
+            class instance with formats from config.
+        """
+        with RWConfig(config) as rwc:
+            formats = StringEncoder.from_str(rwc.get("master", "formats", convert=False))
+        return cls(**{f: MessageFormat.read(config, f) for f in formats})
+
+    @property
+    def formats(self) -> dict[str, MessageFormat]:
+        """
+        Returns
+        -------
+        dict[str, MessageFormat]
+            dictionary of message formats, where key if format name.
+        """
+        return self._formats

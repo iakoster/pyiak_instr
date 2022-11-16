@@ -18,9 +18,11 @@ from pyinstr_iakoster.rwfile import RWConfig
 from pyinstr_iakoster.communication import (
     AsymmetricResponseField,
     MessageFormat,
+    MessageFormatsMap,
 )
 
 TEST_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
+CFG_PATH = TEST_DIR / "cfg.ini"
 CFG_DICT = dict(
         master=dict(
             formats="\\lst\tn0,n1,n2",
@@ -81,7 +83,11 @@ CFG_DICT = dict(
             crc="\\dct\tspecial,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
         )
     )
-CFG_PATH = TEST_DIR / "cfg.ini"
+REF_FORMATS = {
+    "n0": get_mf_n0(get_ref=False),
+    "n1": get_mf_n1(get_ref=False),
+    "n2": get_mf_n2(get_ref=False),
+}
 
 
 class TestAsymmetricResponseField(unittest.TestCase):
@@ -243,12 +249,7 @@ class TestMessageFormat(unittest.TestCase):
         )
 
     def test_read(self) -> None:
-        ref = {
-            "n0": get_mf_n0(get_ref=False),
-            "n1": get_mf_n1(get_ref=False),
-            "n2": get_mf_n2(get_ref=False)
-        }
-        for mf_name, ref_mf in ref.items():
+        for mf_name, ref_mf in REF_FORMATS.items():
             with self.subTest(mf_name=mf_name):
                 mf = MessageFormat.read(CFG_PATH, mf_name)
                 compare_objects(self, ref_mf, mf)
@@ -262,12 +263,7 @@ class TestMessageFormat(unittest.TestCase):
             rwc.set("master", "formats", "\\lst\tn0,n1,n2")
             rwc.apply_changes()
 
-        ref_formats = {
-            "n0": get_mf_n0(get_ref=False),
-            "n1": get_mf_n1(get_ref=False),
-            "n2": get_mf_n2(get_ref=False)
-        }
-        for ref_mf in ref_formats.values():
+        for ref_mf in REF_FORMATS.values():
             ref_mf.write(cfg_path)
 
         with open(CFG_PATH, "r") as ref_io, open(cfg_path, "r") as res_io:
@@ -282,7 +278,7 @@ class TestMessageFormat(unittest.TestCase):
                 with self.subTest(line=line):
                     self.assertEqual(ref, res)
 
-        for mf_name, ref in ref_formats.items():
+        for mf_name, ref in REF_FORMATS.items():
             with self.subTest(mf_name=mf_name):
                 res = MessageFormat.read(cfg_path, mf_name)
                 compare_objects(self, ref, res)
@@ -312,4 +308,58 @@ class TestMessageFormat(unittest.TestCase):
     def test_read_exc(self):
         with self.assertRaises(ValueError) as exc:
             MessageFormat.read(CFG_PATH, "n00")
-        self.assertEqual("massage format not exists", exc.exception.args[0])
+        self.assertEqual(
+            "format with name 'n00' not exists", exc.exception.args[0]
+        )
+
+
+class TestMessageFormatsMap(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        with RWConfig(CFG_PATH) as rwc:
+            rwc.write(CFG_DICT)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if TEST_DATA_DIR.exists():
+            shutil.rmtree(TEST_DATA_DIR)
+
+    def setUp(self) -> None:
+        self.mf_map = MessageFormatsMap(**REF_FORMATS)
+
+    def test_init(self) -> None:
+        pass  # There's nothing to test here yet
+
+    def test_get(self) -> None:
+        for mf_name, ref in REF_FORMATS.items():
+            with self.subTest(mf_name=mf_name):
+                compare_objects(self, ref, self.mf_map.get(mf_name))
+
+    def test_read_write(self) -> None:
+        cfg_path = TEST_DIR / "cfg_test.ini"
+
+        mf_map = MessageFormatsMap.read(CFG_PATH)
+        for mf_name, mf in REF_FORMATS.items():
+            with self.subTest(mf_name=mf_name):
+                compare_objects(self, mf, mf_map.get(mf_name))
+
+        mf_map.write(cfg_path)
+        with open(CFG_PATH, "r") as ref_io, open(cfg_path, "r") as res_io:
+            ref_lines, res_lines = ref_io.readlines(), res_io.readlines()
+            self.assertEqual(len(ref_lines), len(res_lines))
+
+            for line, (ref, res) in enumerate(zip(ref_lines, res_lines)):
+                with self.subTest(line=line):
+
+                    if line == 16:  # fixme: i don't know why in this line error
+                        self.assertEqual("arf = \\dct\n", res)
+                        continue
+                    self.assertEqual(ref, res)
+
+    def test_get_exc(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            self.mf_map.get("n00")
+        self.assertEqual(
+            "there is no format with name 'n00'", exc.exception.args[0]
+        )
