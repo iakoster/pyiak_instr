@@ -14,6 +14,8 @@ from pyinstr_iakoster.communication import (
     RegisterMap,
     AsymmetricResponseField,
     MessageFormat,
+    MessageFormatMap,
+    PackageFormat,
 )
 
 
@@ -38,7 +40,7 @@ MF_MSG_ARGS = [
         ),
         mf_name="n0",
         splitable=True,
-        slice_length=1024,
+        slice_length=256,
     ),
     dict(mf_name="n1", splitable=False, slice_length=1024),
     dict(mf_name="n2", splitable=False, slice_length=1024),
@@ -143,7 +145,7 @@ def get_register_map_data() -> pd.DataFrame:
         ("n0", 0x200, "rw", 1, ">H"),
         ("n0", 0x10, "ro", 20, None),
         ("n0", 0x100, "wo", 5, None),
-        ("n0", 0x1000, "rw", 7, None),
+        ("n0", 0x1000, "rw", 1024, None),
         ("n1", 0x500, "ro", 4, ">f"),
         ("n1", 0xf000, "rw", 6, ">I"),
         ("n2", 0x10, "rw", 1, None),
@@ -249,3 +251,13 @@ def compare_messages(
         compare_objects(case, ref_field, res_field, wo_attrs=["parent"])
     with case.subTest(test="content"):
         case.assertEqual(ref.hex(), res.hex())
+
+
+PF = PackageFormat(
+    registers=RegisterMap(get_register_map_data()),
+    formats=MessageFormatMap(
+        n0=get_mf_n0(get_ref=False),
+        n1=get_mf_n1(get_ref=False),
+        n2=get_mf_n2(get_ref=False),
+    ),
+)

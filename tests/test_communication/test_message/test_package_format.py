@@ -156,7 +156,7 @@ class TestPackageFormat(unittest.TestCase):
                 "t_4",
                 "n0",
                 0x1000,
-                7,
+                1024,
                 "rw",
                 description="Short 4. Long.",
                 mf=self.pf.get_format("n0"),

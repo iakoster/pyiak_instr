@@ -137,7 +137,7 @@ class Connection(object):  # todo: description and tests
     def send(
             self,
             message: Message,
-            emark: AsymmetricResponseField = AsymmetricResponseField()
+            arf: AsymmetricResponseField = AsymmetricResponseField()
     ) -> Message:
         """
         Send message to dst (see Message.dst).
@@ -146,7 +146,7 @@ class Connection(object):  # todo: description and tests
         ----------
         message: Message
             transmitted message.
-        emark: MessageErrorMark, default=MessageErrorMark()
+        arf: MessageErrorMark, default=MessageErrorMark()
             error mark for asymmetric response. Can be obtained from
             the current message format.
 
@@ -164,9 +164,9 @@ class Connection(object):  # todo: description and tests
             )
 
         if message.operation.base == "w":
-            answer = self._write(message, emark)
+            answer = self._write(message, arf)
         elif message.operation.base == "r":
-            answer = self._read(message, emark)
+            answer = self._read(message, arf)
         else:
             raise MessageContentError(
                 message.__class__.__name__,
@@ -211,7 +211,7 @@ class Connection(object):  # todo: description and tests
         if self._logger is not None:
             self._logger.info(entry)
 
-    def _read(self, msg: Message, emark: AsymmetricResponseField) -> Message:
+    def _read(self, msg: Message, arf: AsymmetricResponseField) -> Message:
         """
         Send message with read operation.
 
@@ -221,7 +221,7 @@ class Connection(object):  # todo: description and tests
         ----------
         msg: Message
             source message.
-        emark: AsymmetricResponseField
+        arf: AsymmetricResponseField
             error mark for asymmetric response.
 
         Returns
@@ -231,16 +231,16 @@ class Connection(object):  # todo: description and tests
             (when sending multiple messages using .split).
         """
         if not msg.splitable:
-            return self._send(msg, emark)
+            return self._send(msg, arf)
 
         msg_gen = msg.split()
-        answer = self._send(next(msg_gen), emark)
+        answer = self._send(next(msg_gen), arf)
         for tx_msg in msg_gen:
-            answer += self._send(tx_msg, emark)
-        answer.set(data_length=msg.data_length.content)  # todo: .set in write. There is not needed?
+            answer += self._send(tx_msg, arf)
+        # answer.set(data_length=msg.data_length.content)  # todo: .set in write. There is not needed?
         return answer
 
-    def _send(self, msg: Message, emark: AsymmetricResponseField) -> Message:
+    def _send(self, msg: Message, arf: AsymmetricResponseField) -> Message:
         """
         Send message and get response.
 
@@ -253,7 +253,7 @@ class Connection(object):  # todo: description and tests
         ----------
         msg: Message
             message for sending.
-        emark: AsymmetricResponseField
+        arf: AsymmetricResponseField
             asymmetric error field.
 
         Returns
@@ -302,11 +302,11 @@ class Connection(object):  # todo: description and tests
                         )
                         continue
 
-                    ans, code = self._validate_bytes_message(msg, ans, emark)
+                    ans, code = self._validate_bytes_message(msg, ans, arf)
                     if code == Code.ERROR:  # todo: if error transmit again
                         continue
 
-                    code = self._validate_message(ans, emark)
+                    code = self._validate_message(ans, arf)
                     self._log_info(repr(ans))
 
                     if code == Code.OK:
@@ -328,7 +328,7 @@ class Connection(object):  # todo: description and tests
             self,
             tx_msg: Message,
             rx_msg: bytes,
-            emark: AsymmetricResponseField,
+            arf: AsymmetricResponseField,
     ) -> tuple[Message, Code]:
         """
         Validate raw received message.
@@ -341,7 +341,7 @@ class Connection(object):  # todo: description and tests
             transmitted message.
         rx_msg: bytes
             raw received message.
-        emark: AsymmetricResponseField
+        arf: AsymmetricResponseField
             asymmetric error mark.
 
         Returns
@@ -349,19 +349,18 @@ class Connection(object):  # todo: description and tests
         tuple[Message, Code]
             message and code converted to a class (validation result).
         """
-        emark_exists = False
-        if emark.bytes_required:
-            rx_msg, emark_exists = emark.match(rx_msg)
-        # todo: check that bytes can be reformatted into a message
-        rx_msg = tx_msg.get_same_instance().extract(rx_msg)\
+        is_error = False
+        if not arf.is_empty:
+            rx_msg, is_error = arf.match(rx_msg)
+        rx_msg = tx_msg.get_same_instance().extract(rx_msg) \
             .set_src_dst(src=tx_msg.dst, dst=self._addr)
 
-        if emark_exists:
+        if is_error:
             return rx_msg, Code.ERROR
         return rx_msg, Code.OK
 
     def _validate_message(
-            self, rx_msg: Message, emark: AsymmetricResponseField
+            self, rx_msg: Message, arf: AsymmetricResponseField
     ) -> Code | list[Code]:
         """
         validate converted to a class message.
@@ -370,7 +369,7 @@ class Connection(object):  # todo: description and tests
         ----------
         rx_msg: Message
             received message.
-        emark: AsymmetricResponseField
+        arf: AsymmetricResponseField
             asymmetric error mark.
 
         Returns
@@ -391,19 +390,10 @@ class Connection(object):  # todo: description and tests
                 if code != ref_code:
                     return codes
             return ref_code
+        else:
+            return Code.OK
 
-        # else:
-        #     return Code.OK  # todo: uncomment after fix emark
-
-        emark_exists = False
-        if not emark.bytes_required:
-            _, emark_exists = emark.match(rx_msg)  # todo: remove, response codes do it
-
-        if emark_exists:
-            return Code.ERROR
-        return Code.OK
-
-    def _write(self, msg: Message, emark: AsymmetricResponseField) -> Message:
+    def _write(self, msg: Message, arf: AsymmetricResponseField) -> Message:
         """
         Send message with write operation.
 
@@ -413,7 +403,7 @@ class Connection(object):  # todo: description and tests
         ----------
         msg: Message
             source message.
-        emark: AsymmetricResponseField
+        arf: AsymmetricResponseField
             asymmetric error mark.
 
         Returns
@@ -422,12 +412,13 @@ class Connection(object):  # todo: description and tests
             first response message with source data length.
         """
         if not msg.splitable:
-            return self._send(msg, emark)
+            return self._send(msg, arf)
 
         msg_gen = msg.split()
-        answer = self._send(next(msg_gen), emark)
+        answer = self._send(next(msg_gen), arf)
         for tx_msg in msg_gen:
-            self._send(tx_msg, emark)
+            self._send(tx_msg, arf)
+        answer.set(data_length=msg.data_length[0])
         return answer
 
     @property

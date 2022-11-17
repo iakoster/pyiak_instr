@@ -34,7 +34,7 @@ CFG_DICT = dict(
                 "stop,16",
             mf_name="n0",
             splitable="True",
-            slice_length="1024",
+            slice_length="256",
         ),
         n0__setters=dict(
             address="\\dct\tspecial,None,fmt,>I",

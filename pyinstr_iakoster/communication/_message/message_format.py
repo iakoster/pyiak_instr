@@ -86,7 +86,7 @@ class AsymmetricResponseField(object):  # todo: add to fields
             raise TypeError("invalid type of value")
         self._val = value
 
-    def match(self, msg: bytes) -> tuple[bytes | Message, bool]:
+    def match(self, msg: bytes) -> tuple[bytes, bool]:
         """
         Match field in a message.
 

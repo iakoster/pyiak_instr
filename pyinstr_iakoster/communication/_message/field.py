@@ -779,6 +779,9 @@ class CrcField(SingleField):
             b"".join(field.content for field in msg if field is not self)
         )
 
+    def get_setter(self) -> FieldSetter:
+        return FieldSetter.crc(fmt=self._fmt, algorithm_name=self._alg_name)
+
     def update(self) -> None:
         """Update crc value using parent message."""
         self.set(self.calculate(self.parent))

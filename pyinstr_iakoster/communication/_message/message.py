@@ -565,7 +565,9 @@ class Message(BaseMessage):
         self._validate_content()
         return self
 
-    def split(self) -> Generator[Message, None, None]:  # todo: yield full message if not splitable
+    # todo: yield full message if not splitable,
+    #  parts count for bytes but split by data with int count of word
+    def split(self) -> Generator[Message, None, None]:
         """
         Split data field on slices.
 
