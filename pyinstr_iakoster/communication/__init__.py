@@ -23,7 +23,7 @@ from ._message import (
     MessageFormatMap,
     PackageFormat,
 )
-from ._con import (
+from ._conection import (
     Connection,
     IPV4_PATTERN,
     get_opened_connections,
