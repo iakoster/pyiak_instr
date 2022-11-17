@@ -65,10 +65,13 @@ def _validate_register_rw_input(invalid_type: str):
             if "address" in kwargs:
                 raise ValueError("setting the 'address' is not allowed")
 
-            if len(args) and func.__name__ == "write":
+            if len(args):
                 if len(args) > 1:
                     raise ValueError("to many arguments")
-                kwargs["data"] = args[0]
+                if func.__name__ == "write":
+                    kwargs["data"] = args[0]
+                elif func.__name__ == "read":
+                    kwargs["data_length"] = args[0]
 
             return func(self, **kwargs)
 
@@ -286,7 +289,14 @@ class Register(object):
             set_kw["data_length"] = self.length
         if "operation" not in set_kw:
             set_kw["operation"] = self._find_operation(msg, operation_base)
+        msg.set(**set_kw)
 
+        data_length = msg.data_length.unpack()[0]
+        if data_length > self.length:
+            raise ValueError(
+                "data length mote than register length: %d > %d"
+                % (data_length, self.length)
+            )
         return msg.set(**set_kw)
 
     @classmethod
@@ -333,9 +343,9 @@ class Register(object):
             if there is no operations starts with `base`.
         """
         assert len(base) == 1
-        for msg_oper in msg.operation.desc_dict:
-            if msg_oper[0] == base:
-                return msg_oper
+        for operation in msg.operation.desc_dict:
+            if operation[0] == base:
+                return operation
         raise ValueError("operation starts with %r not found" % base)
 
     @property
@@ -384,7 +394,7 @@ class RegisterMap(object):
         table with parameters for registers.
     """
 
-    EXPECTED_COLUMNS = (
+    EXPECTED_COLUMNS = [
         "external_name",
         "name",
         "format_name",
@@ -393,10 +403,12 @@ class RegisterMap(object):
         "length",
         "data__fmt",
         "description",
-    )
+    ]
     "tuple of expected columns in `register_table`"
 
-    def __init__(self, registers: pd.DataFrame):
+    def __init__(self, registers: pd.DataFrame = None):
+        if registers is None:
+            registers = pd.DataFrame(columns=self.EXPECTED_COLUMNS)
         self._tbl = self._validate_table(registers)
 
     def get(self, name: str, pf: PackageFormat = None) -> Register:
@@ -508,7 +520,7 @@ class RegisterMap(object):
         #  without dublicates in external_name and name
         #  without duplicates in address with the same msg_fmt
         #  addresses crossing by length?
-        return table.sort_values(by=["format_name", "address"])
+        return table.sort_values(by=["format_name", "address"], ignore_index=True)
 
     @classmethod
     def read(cls, database: str | Path | sqlite3.Connection) -> RegisterMap:

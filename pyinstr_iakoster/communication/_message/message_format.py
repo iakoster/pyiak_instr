@@ -15,7 +15,7 @@ from ...rwfile import (
 __all__ = [
     "AsymmetricResponseField",
     "MessageFormat",
-    "MessageFormatsMap",
+    "MessageFormatMap",
 ]
 
 
@@ -418,7 +418,7 @@ class MessageFormat(object):
         return self._setters
 
 
-class MessageFormatsMap(object):
+class MessageFormatMap(object):
     """
     Represents class with Message formats.
 
@@ -472,7 +472,7 @@ class MessageFormatsMap(object):
             mf.write(config)
 
     @classmethod
-    def read(cls, config: Path) -> MessageFormatsMap:
+    def read(cls, config: Path) -> MessageFormatMap:
         """
         Read message formats from config.
         
@@ -483,7 +483,7 @@ class MessageFormatsMap(object):
 
         Returns
         -------
-        MessageFormatsMap
+        MessageFormatMap
             class instance with formats from config.
         """
         with RWConfig(config) as rwc:
@@ -499,3 +499,19 @@ class MessageFormatsMap(object):
             dictionary of message formats, where key if format name.
         """
         return self._formats
+
+    def __getitem__(self, mf_name: str) -> MessageFormat:
+        """
+        Get message format by name.
+
+        Parameters
+        ----------
+        mf_name: str
+            the name of a MessageFormat.
+
+        Returns
+        -------
+        MessageFormat
+            message format instance.
+        """
+        return self.get(mf_name)

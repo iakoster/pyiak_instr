@@ -4,6 +4,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import pandas.testing
 
 from ..utils import (
     get_register_map_data,
@@ -182,6 +183,20 @@ class TestRegister(unittest.TestCase):
             "message format not specified", exc.exception.args[0]
         )
 
+        with self.assertRaises(ValueError) as exc:
+            self.reg.read(0x801)
+        self.assertEqual(
+            "data length mote than register length: 2049 > 2048",
+            exc.exception.args[0]
+        )
+
+        with self.assertRaises(ValueError) as exc:
+            self.reg.write([0] * 0x801)
+        self.assertEqual(
+            "data length mote than register length: 2049 > 2048",
+            exc.exception.args[0]
+        )
+
     def test_read_exceptions(self):
         with self.assertRaises(TypeError) as exc:
             self.wo_reg.read()
@@ -196,7 +211,7 @@ class TestRegister(unittest.TestCase):
 class TestRegisterMap(unittest.TestCase):
 
     DATA = get_register_map_data()
-    SORTED_DATA = DATA.sort_values(by=["format_name", "address"])
+    SORTED_DATA = DATA.sort_values(by=["format_name", "address"], ignore_index=True)
     DB_PATH = TEST_DIR / "regs.db"
 
     @classmethod
@@ -216,7 +231,7 @@ class TestRegisterMap(unittest.TestCase):
             np.all(self.rm.table.values == self.SORTED_DATA.values)
         )
 
-    def test_validate_table(self) -> None:
+    def test_validate_table_exc(self) -> None:
         with self.subTest(test="sort by format_name, address"):
             self.assertFalse(
                 np.all(self.rm.table.values == self.DATA.values),
@@ -236,7 +251,7 @@ class TestRegisterMap(unittest.TestCase):
         with self.subTest(test="not expected columns"):
             with self.assertRaises(ValueError) as exc:
                 RegisterMap(pd.DataFrame(
-                    columns=RegisterMap.EXPECTED_COLUMNS + ("data_fmt",)
+                    columns=RegisterMap.EXPECTED_COLUMNS + ["data_fmt"]
                 ))
             self.assertEqual(
                 "invalid columns: {'data_fmt'}",
@@ -246,7 +261,7 @@ class TestRegisterMap(unittest.TestCase):
     def test_read(self) -> None:
         with sqlite3.connect(self.DB_PATH) as con:
             self.SORTED_DATA.to_sql("registers", con, index=False)
-            res0 = RegisterMap.read(con).table.values
+            res0 = RegisterMap.read(con).table
 
             self.assertTupleEqual(
                 ("registers",),
@@ -255,11 +270,11 @@ class TestRegisterMap(unittest.TestCase):
                 ).fetchone()
             )
 
-        res1 = RegisterMap.read(self.DB_PATH).table.values
+        res1 = RegisterMap.read(self.DB_PATH).table
 
         for i_res, res in enumerate((res0, res1)):
             with self.subTest(res=i_res):
-                self.assertTrue(np.all(res == self.SORTED_DATA.values))
+                pandas.testing.assert_frame_equal(res, self.SORTED_DATA)
 
     def test_write(self) -> None:
 

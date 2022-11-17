@@ -5,6 +5,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pandas.testing
 
 from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
@@ -178,17 +179,16 @@ def get_object_attrs(
 def compare_values(case: TestCase, ref: Any, res: Any) -> None:
     if isinstance(ref, np.ndarray):
         case.assertTrue(np.all(ref, res))
-    elif isinstance(ref, (pd.Series, pd.DataFrame)):
-        case.assertTrue(np.all(ref.values == res.values))
+    elif isinstance(ref, pd.DataFrame):
+        pandas.testing.assert_frame_equal(ref, res)
+    elif isinstance(ref, pd.Series):
+        pandas.testing.assert_series_equal(ref, res)
     elif not hasattr(ref, "__eq__"):
         if len(get_object_attrs(ref)):
             compare_objects(case, ref, res)
         else:
             raise ValueError("values cannot be compared")
     else:
-        if "AddressField" in str(ref):
-            print(ref)
-            print(res)
         case.assertEqual(ref, res)
 
 

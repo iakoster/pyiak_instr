@@ -7,9 +7,12 @@ import pandas as pd
 from .field import FieldSetter
 from .message import Message
 from .register import Register, RegisterMap
-from .message_format import MessageFormat, AsymmetricResponseField
+from .message_format import (
+    AsymmetricResponseField,
+    MessageFormat,
+    MessageFormatMap,
+)
 from ...rwfile import (
-    RWNoSqlJsonDatabase,
     RWSQLite,
 )
 
@@ -25,52 +28,19 @@ class PackageFormat(object):
 
     Parameters
     ----------
-    **formats: MessageFormat
-        message formats. Key is a name of a message format.
+    registers: RegisterMap, default=RegisterMap()
+        registers map instance.
+    formats: MessageFormatMap, default=MessageFormatMap()
+        message formats map instance.
     """
 
     def __init__(
             self,
-            register_map: RegisterMap = None,
-            **formats: MessageFormat
+            registers: RegisterMap = RegisterMap(),
+            formats: MessageFormatMap = MessageFormatMap(),
     ):
-        if register_map is None:
-            register_map = RegisterMap(
-                pd.DataFrame(columns=RegisterMap.EXPECTED_COLUMNS)
-            )
-
-        self._formats = formats
-        for name, mf in self._formats.items():
-            self._formats[name].message["mf_name"] = name
-        self._reg_map = register_map
-
-    def write(
-            self,
-            message_format: Path,
-            register_map: Path = None
-    ) -> None:
-        """
-        Write parameters to the table.
-
-        The database will be cleared before writing the data.
-
-        Parameters
-        ----------
-        message_format: Path
-            save path for message_format database.
-        register_map: Path
-            save path for register map database.
-        """
-        with RWNoSqlJsonDatabase(message_format) as db:
-            db.hapi.drop_tables()
-            for name, format_ in self._formats.items():
-                format_.write(db[name])
-
-        if register_map is not None:
-            with RWSQLite(register_map) as db:
-                for table in db.tables:
-                    db.request(f"DROP TABLE {table};")
-                self._reg_map.write(db.connection)
+        self._reg_map = registers
+        self._mf_map = formats
 
     def get(self, mf_name: str, **update: dict[str, Any]) -> Message:
         """
@@ -88,7 +58,7 @@ class PackageFormat(object):
         Message
             message configured with selected message format.
         """
-        return self._formats[mf_name].get(**update)
+        return self._mf_map[mf_name].get(**update)
 
     def get_format(self, format_name: str) -> MessageFormat:
         """
@@ -104,7 +74,7 @@ class PackageFormat(object):
         MessageFormat
             selected message format.
         """
-        return self._formats[format_name]
+        return self._mf_map[format_name]
 
     def get_register(self, register: str) -> Register:
         """
@@ -122,85 +92,61 @@ class PackageFormat(object):
         """
         return self._reg_map[register, self]
 
-    def read_register_map(self, database: Path) -> PackageFormat:
+    def write(
+            self, *, formats: Path = None, registers: Path = None
+    ) -> None:
         """
-        Read register map from database.
+        Write parameters to the table.
+
+        The database will be cleared before writing the data.
 
         Parameters
         ----------
-        database: Path
-            path to the database.
-
-        Returns
-        -------
-        PackageFormat
-            self instance.
+        formats: Path, default=None
+            save path for message formats config.
+        registers: Path, default=None
+            save path for register map database.
         """
-        self._reg_map = RegisterMap.read(database)
-        return self
-
-    def set_register_map(self, reg_map: RegisterMap) -> PackageFormat:
-        """
-        Set register map.
-
-        Parameters
-        ----------
-        reg_map: RegisterMap
-            register map instance.
-
-        Returns
-        -------
-        PackageFormat
-            self instance.
-        """
-        self._reg_map = reg_map
-        return self
+        if formats is not None:
+            self._mf_map.write(formats)
+        if registers is not None:
+            self._reg_map.write(registers)
 
     @classmethod
-    def read(cls, database: Path) -> PackageFormat:
+    def read(
+            cls, *, formats: Path = None, registers: Path = None
+    ) -> PackageFormat:
         """
         Read all message formats from a json database.
 
         Parameters
         ----------
-        database: Path
-            path to json database.
+        formats: Path, default=None
+            path to message formats config.
+        registers: Path, default=None
+            path to registers database.
 
         Returns
         -------
         PackageFormat
-            package format initilized by database.
+            package format instance.
         """
-        formats = {}
-        with RWNoSqlJsonDatabase(database) as db:
-            for table_name in db.hapi.tables():
-                table = db[table_name]
-
-                msg_args = table.get(doc_id=-1)
-                if table.contains(doc_id=-2):
-                    emark = AsymmetricResponseField(**table.get(doc_id=-2))
-                else:
-                    emark = AsymmetricResponseField()
-
-                setters = {}
-                for i_setter in range(len(table)):
-                    if not table.contains(doc_id=i_setter):
-                        break
-                    setter_args = table.get(doc_id=i_setter)
-                    name = setter_args.pop("name")
-                    setters[name] = FieldSetter(**setter_args)
-                formats[table_name] = MessageFormat(arf=emark, **msg_args, **setters)
-        return cls(**formats)
+        kw = {}
+        if formats is not None:
+            kw["formats"] = MessageFormatMap.read(formats)
+        if registers is not None:
+            kw["registers"] = RegisterMap.read(registers)
+        return cls(**kw)
 
     @property
-    def formats(self) -> dict[str, MessageFormat]:
+    def message_format_map(self) -> MessageFormatMap:
         """
         Returns
         -------
         dict[str, MessageFormat]
             all existing message formats in the package format.
         """
-        return self._formats
+        return self._mf_map
 
     @property
     def register_map(self) -> RegisterMap:
@@ -212,29 +158,9 @@ class PackageFormat(object):
         """
         return self._reg_map
 
-    def __getattr__(self, register: str) -> Register:
-        """
-        Get register.
-
-        If not exists, exception will be raised.
-
-        Parameters
-        ----------
-        register: str
-            register name.
-
-        Returns
-        -------
-        Register
-            register instance.
-        """
-        return self.get_register(register)
-
     def __getitem__(self, register: str) -> Register:
         """
-        Get register.
-
-        If not exists, exception will be raised.
+        Get register by name.
 
         Parameters
         ----------

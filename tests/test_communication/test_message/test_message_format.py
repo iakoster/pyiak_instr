@@ -18,7 +18,7 @@ from pyinstr_iakoster.rwfile import RWConfig
 from pyinstr_iakoster.communication import (
     AsymmetricResponseField,
     MessageFormat,
-    MessageFormatsMap,
+    MessageFormatMap,
 )
 
 TEST_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
@@ -326,7 +326,7 @@ class TestMessageFormatsMap(unittest.TestCase):
             shutil.rmtree(TEST_DATA_DIR)
 
     def setUp(self) -> None:
-        self.mf_map = MessageFormatsMap(**REF_FORMATS)
+        self.mf_map = MessageFormatMap(**REF_FORMATS)
 
     def test_init(self) -> None:
         pass  # There's nothing to test here yet
@@ -339,7 +339,7 @@ class TestMessageFormatsMap(unittest.TestCase):
     def test_read_write(self) -> None:
         cfg_path = TEST_DIR / "cfg_test.ini"
 
-        mf_map = MessageFormatsMap.read(CFG_PATH)
+        mf_map = MessageFormatMap.read(CFG_PATH)
         for mf_name, mf in REF_FORMATS.items():
             with self.subTest(mf_name=mf_name):
                 compare_objects(self, mf, mf_map.get(mf_name))

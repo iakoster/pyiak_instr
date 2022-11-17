@@ -1,3 +1,4 @@
+import shutil
 import unittest
 
 import pandas.testing
@@ -6,84 +7,134 @@ from tests.env_vars import TEST_DATA_DIR
 from ..utils import (
     get_msg_n0,
     get_msg_n1,
+    get_msg_n2,
     get_mf_n0,
     get_mf_n1,
+    get_mf_n2,
     get_register_map_data,
     compare_objects,
     compare_messages,
 )
 
 from pyinstr_iakoster.communication import (
-    RegisterMap,
     Register,
-    PackageFormat
+    RegisterMap,
+    MessageFormat,
+    MessageFormatMap,
+    PackageFormat,
 )
 
-
-DATA_JSON_PATH = TEST_DATA_DIR / "test.json"
-DATA_DB_PATH = TEST_DATA_DIR / "test.db"
+TEST_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
+CFG_PATH = TEST_DIR / "cfg.ini"
+DB_PATH = TEST_DIR / "pf.db"
+CFG_DICT = dict(
+        master=dict(
+            formats="\\lst\tn0,n1,n2",
+        ),
+        n0__message=dict(
+            arf="\\dct\toperand,!=,"
+                "value,\\v(\\bts\t0,0,0,1),"
+                "start,12,"
+                "stop,16",
+            mf_name="n0",
+            splitable="True",
+            slice_length="1024",
+        ),
+        n0__setters=dict(
+            address="\\dct\tspecial,None,fmt,>I",
+            data_length="\\dct\tspecial,None,fmt,>I,units,17,additive,0",
+            operation="\\dct\tspecial,None,fmt,>I,"
+                      "desc_dict,\\v(\\dct\tw,0,r,1)",
+            data="\\dct\tspecial,None,expected,-1,fmt,>I",
+        ),
+        n1__message=dict(
+            arf="\\dct\t",
+            mf_name="n1",
+            splitable="False",
+            slice_length="1024",
+        ),
+        n1__setters=dict(
+            preamble="\\dct\tspecial,static,fmt,>H,default,43605",
+            operation="\\dct\tspecial,None,fmt,>B,"
+                      "desc_dict,\\v(\\dct\twp,1,rp,2,wn,3,rn,4)",
+            response="\\dct\tspecial,response,"
+                     "fmt,>B,"
+                     "codes,\\v(\\dct\t0,1280),"
+                     "default,0,"
+                     "default_code,1282",
+            address="\\dct\tspecial,None,fmt,>H",
+            data_length="\\dct\tspecial,None,fmt,>H,units,16,additive,0",
+            data="\\dct\tspecial,None,expected,-1,fmt,>f",
+            crc="\\dct\tspecial,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
+        ),
+        n2__message=dict(
+            arf="\\dct\t",
+            mf_name="n2",
+            splitable="False",
+            slice_length="1024",
+        ),
+        n2__setters=dict(
+            operation="\\dct\tspecial,None,fmt,>B,"
+                      "desc_dict,\\v(\\dct\tr,1,w,2)",
+            response="\\dct\tspecial,response,"
+                     "fmt,>B,"
+                     "codes,\\v(\\dct\t0,1280,4,1281),"
+                     "default,0,"
+                     "default_code,1282",
+            address="\\dct\tspecial,None,fmt,>H",
+            data_length="\\dct\tspecial,None,fmt,>H,units,16,additive,0",
+            data="\\dct\tspecial,None,expected,-1,fmt,>f",
+            crc="\\dct\tspecial,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
+        )
+    )
+REF_FORMATS = {
+    "n0": get_mf_n0(get_ref=False),
+    "n1": get_mf_n1(get_ref=False),
+    "n2": get_mf_n2(get_ref=False),
+}
 
 
 class TestPackageFormat(unittest.TestCase):
 
-    REG_MAP_DATA = get_register_map_data()
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if TEST_DATA_DIR.exists():
+            shutil.rmtree(TEST_DATA_DIR)
 
     def setUp(self) -> None:
         self.pf = PackageFormat(
-            register_map=RegisterMap(self.REG_MAP_DATA),
-            n0=get_mf_n0(False),
-            n1=get_mf_n1(False)
+            registers=RegisterMap(get_register_map_data()),
+            formats=MessageFormatMap(**REF_FORMATS)
         )
 
     def test_write_read(self):
-        self.pf.write(DATA_JSON_PATH, DATA_DB_PATH)
-        pf = PackageFormat.read(DATA_JSON_PATH)\
-            .read_register_map(DATA_DB_PATH)
-        for name, ref_mf in self.pf.formats.items():
-            mf = pf.get_format(name)
-            with self.subTest(name=name):
-                self.assertEqual(ref_mf.message, mf.message)
+        self.pf.write(formats=CFG_PATH, registers=DB_PATH)
+        pf = PackageFormat.read(formats=CFG_PATH, registers=DB_PATH)
 
-            with self.subTest(name):
-                self.assertDictEqual(ref_mf.arf.kwargs, mf.arf.kwargs)
-
-            with self.subTest(name=name, setter="all"):
-                self.assertEqual(len(ref_mf.setters), len(mf.setters))
-                for (ref_set_name, ref_setter), (set_name, setter) in zip(
-                    ref_mf.setters.items(), mf.setters.items()
-                ):
-                    with self.subTest(name=name, setter=name):
-                        self.assertEqual(name, name)
-                        self.assertEqual(ref_setter.special, setter.special)
-
-                        self.assertDictEqual(
-                            {k: v for k, v in ref_setter.kwargs.items()
-                             if v is not None},
-                            setter.kwargs
-                        )
-
-        with self.subTest(test="register_map"):
+        with self.subTest(test="register map"):
             pandas.testing.assert_frame_equal(
-                pf.register_map.table,
-                self.pf.register_map.table,
-                check_names=False
-            )
+                    pf.register_map.table, self.pf.register_map.table
+                )
 
-    def test_get_asm_basic(self):
-        ref = get_msg_n1().set(
+        for name, mf in self.pf.message_format_map.formats.items():
+            with self.subTest(test="message format", name=name):
+                compare_objects(self, self.pf.message_format_map.formats[name], mf)
+
+    def test_get_n0_basic(self):
+        ref = get_msg_n0().set(
             address=0x01020304,
             data_length=2,
             operation="w",
             data=[34, 52]
         )
-        res = self.pf.get("asm").extract(
+        res = self.pf.get("n0").extract(
             b"\x01\x02\x03\x04\x00\x00\x00\x02\x00\x00\x00\x00"
             b"\x00\x00\x00\x22\x00\x00\x00\x34"
         )
         compare_messages(self, ref, res)
 
-    def test_get_kpm_basic(self):
-        ref = get_msg_n1().set(
+    def test_get_n1_basic(self):
+        ref = get_msg_n1(data__fmt="B").set(
             operation="wp",
             response=0,
             address=0x33,
@@ -97,17 +148,18 @@ class TestPackageFormat(unittest.TestCase):
         compare_messages(self, ref, res)
 
     def test_get_register(self):
-        res = self.pf.get_register("tst_4")
+        res = self.pf.get_register("t_4")
         compare_objects(
             self,
             Register(
-                "tst_4",
-                "test_4",
+                "t4",
+                "t_4",
                 "n0",
                 0x1000,
                 7,
                 "rw",
-                description="test address 4. Other description."
+                description="Short 4. Long.",
+                mf=self.pf.get_format("n0"),
             ),
             res
         )
@@ -122,7 +174,7 @@ class TestPackageFormat(unittest.TestCase):
             res.write([10])
         )
 
-    def test_getattr(self):
+    def test_getitem(self):
         compare_messages(
             self,
             get_msg_n1(data__fmt=">H").set(
@@ -131,39 +183,40 @@ class TestPackageFormat(unittest.TestCase):
                 data_length=6,
                 data=[3, 11, 32]
             ),
-            self.pf.test_6.read(
-                data=[3, 11, 32], update={"data": {"fmt": ">H"}}
-            )
+            self.pf["t_6"].read(data=[3, 11, 32], data__fmt=">H")
         )
 
     def test_write_with_update(self):
-        self.assertEqual(
-            ">f",
-            self.pf.test_0.read(update={"data": {"fmt": ">f"}}).data.fmt
-        )
+        self.assertEqual(">f", self.pf["t_0"].read(data__fmt=">f").data.fmt)
 
-    def test_read_wo(self):
-        with self.assertRaises(TypeError) as exc:
-            self.pf.test_2.read()
-        self.assertEqual(
-            "writing only", exc.exception.args[0]
-        )
+    def test_common_exc(self):
 
-    def test_write_ro(self):
-        with self.assertRaises(TypeError) as exc:
-            self.pf.test_1.write()
-        self.assertEqual(
-            "reading only", exc.exception.args[0]
-        )
+        with self.subTest(test="write only"):
+            with self.assertRaises(TypeError) as exc:
+                self.pf["t_3"].read()
+            self.assertEqual(
+                "write only register", exc.exception.args[0]
+            )
 
-    def test_invalid_data_length(self):
-        with self.assertRaises(ValueError) as exc:
-            self.pf.test_1.read(21)
-        self.assertEqual(
-            "invalid data length: 21 > 20", exc.exception.args[0]
-        )
-        with self.assertRaises(ValueError) as exc:
-            self.pf.test_2.write([0] * 6)
-        self.assertEqual(
-            "invalid data length: 6 > 5", exc.exception.args[0]
-        )
+        with self.subTest(test="read only"):
+            with self.assertRaises(TypeError) as exc:
+                self.pf["t_2"].write()
+            self.assertEqual(
+                "read only register", exc.exception.args[0]
+            )
+
+        with self.subTest(test="read invalid length"):
+            with self.assertRaises(ValueError) as exc:
+                self.pf["t_2"].read(21)
+            self.assertEqual(
+                "data length mote than register length: 21 > 20",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(test="write invalid length"):
+            with self.assertRaises(ValueError) as exc:
+                self.pf["t_3"].write([0] * 6)
+            self.assertEqual(
+                "data length mote than register length: 6 > 5",
+                exc.exception.args[0]
+            )
