@@ -21,7 +21,8 @@ from ...utilities import split_complex_dict
 if TYPE_CHECKING:
     from .field import ContentType
     from .message import Message
-    from .package_format import MessageFormat, PackageFormat
+    from .message_format import MessageFormat
+    from .package_format import PackageFormat
 
 
 __all__ = [

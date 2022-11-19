@@ -465,7 +465,7 @@ class TestMessage(unittest.TestCase):
             operation=1,
             data_length=4,
             data=0x1234,
-            crc=255,
+            crc=0xbd70,
         )
         self.msg += msg
         self.assertEqual(
