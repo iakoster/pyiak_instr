@@ -1,3 +1,4 @@
+import time
 import unittest
 import datetime as dt
 from typing import Any
@@ -5,12 +6,15 @@ from typing import Any
 import numpy as np
 
 from pyinstr_iakoster.communication import (
+    FieldSetter,
     Message,
     Connection,
+    MessageContentError,
 )
 
 from ..utils import (
     PF,
+    get_msg_n0,
     validate_object,
     compare_messages,
 )
@@ -29,10 +33,24 @@ class TestApi(object):
 class ConnectionTestInstance(Connection):
 
     def __init__(
-            self, case: unittest.TestCase, address: str = SRC_ADDRESS
+            self,
+            case: unittest.TestCase,
+            address: str = SRC_ADDRESS,
+            receive_delay: float = 0,
+            log_entries: list[str] = None
     ):
         super().__init__(TestApi(), address)
+        self.set_timeouts(
+            transmit_timeout=0.04,
+            receive_timeout=0.02,
+        )
+        self._rx_delay = receive_delay
         self._case = case
+
+        if log_entries is None:
+            log_entries = []
+
+        self._i_log, self._log_entries = 0, log_entries
         self._i_tx, self._i_rx = 0, 0
         self._rx, self._tx = tuple(), tuple()
         self._rx_asym = []
@@ -41,16 +59,25 @@ class ConnectionTestInstance(Connection):
         pass
 
     def receive(self) -> tuple[bytes, Any]:
-        msg = self._rx[self._i_rx].to_bytes()
+        msg = self._rx[self._i_rx]
+        if msg is None:
+            self._i_rx += 1
+            time.sleep(self._rx_delay)
+            raise TimeoutError("timeout exceed")
+        msg = msg.to_bytes()
 
         if len(self._rx_asym):
             if isinstance(self._rx_asym, list):
-                i, asym = self._rx_asym[self._i_rx]
+                i_asym = self._rx_asym[self._i_rx]
             else:
-                i, asym = self._rx_asym
-            msg = msg[:i] + asym + msg[i:]
+                i_asym = self._rx_asym
+
+            if i_asym is not None:
+                i, asym = i_asym
+                msg = msg[:i] + asym + msg[i:]
 
         self._i_rx += 1
+        time.sleep(self._rx_delay)
         return msg, DST_ADDRESS
 
     def setup(self, *args: Any, **kwargs: Any) -> "ConnectionTestInstance":
@@ -63,9 +90,21 @@ class ConnectionTestInstance(Connection):
     def _bind(self, address: Any) -> None:
         ...
 
+    def _log_info(self, entry: str) -> None:
+        if not len(self._log_entries):
+            return
+
+        if self._i_log >= len(self._log_entries):
+            raise IndexError(f"there is no entry with index {self._i_log}")
+
+        ref = self._log_entries[self._i_log]
+        if ref is not None:
+            assert entry == ref, f"entry {self._i_log}: {entry}"
+        self._i_log += 1
+
     def set_rx_messages(
             self,
-            *messages: Message,
+            *messages: Message | None,
             asymmetric: list[tuple[int, bytes]] | tuple[int, bytes] = None
     ) -> "ConnectionTestInstance":
         assert len(messages), "messages list is empty"
@@ -95,7 +134,7 @@ class ConnectionTestInstance(Connection):
         if self._i_tx != len(self._tx) or self._i_rx != len(self._rx):
             raise ValueError(
                 "receive {}/{}, transmit {}/{}".format(
-                    self._i_tx, len(self._tx), self._i_rx, len(self._rx)
+                    self._i_rx, len(self._rx), self._i_tx, len(self._tx)
                 )
             )
 
@@ -112,13 +151,15 @@ class TestConnectionTestInstance(unittest.TestCase):
 
 class TestConnection(unittest.TestCase):
 
+    maxDiff = None
+
     def test_init(self) -> None:
         validate_object(
             self,
             ConnectionTestInstance(self),
             check_attrs=True,
-            transmit_timeout=dt.timedelta(seconds=15),
-            receive_timeout=dt.timedelta(seconds=5),
+            transmit_timeout=dt.timedelta(milliseconds=40),
+            receive_timeout=dt.timedelta(milliseconds=20),
             address=('127.0.0.1', 4242),
             hapi=TestApi(),
         )
@@ -204,6 +245,272 @@ class TestConnection(unittest.TestCase):
                         self.write("t4", ans=True, data_length=len(data)),
                         self.send(con, self.write("t4", data))
                     )
+
+    def test_write_several_ints(self) -> None:
+        with ConnectionTestInstance(self) as con:
+            con.set_tx_messages(
+                self.write("t4", range(256)),
+                self.write("t4", range(256, 512), shift=256),
+            )
+            con.set_rx_messages(
+                self.write("t4"),
+                self.write("t4", shift=256),
+                asymmetric=(12, b"\x00\x00\x00\x01")
+            )
+
+            compare_messages(
+                self,
+                self.write("t4", ans=True, data_length=512),
+                self.send(con, self.write("t4", range(512)))
+            )
+
+    def test_write_several_not_ints(self):
+        with ConnectionTestInstance(self) as con:
+            con.set_tx_messages(
+                self.write("t4", range(256)),
+                self.write("t4", range(256, 511), shift=256),
+            )
+            con.set_rx_messages(
+                self.write("t4", data_length=256),
+                self.write("t4", shift=256, data_length=255),
+                asymmetric=(12, b"\x00\x00\x00\x01")
+            )
+
+            compare_messages(
+                self,
+                self.write("t4", ans=True, data_length=511),
+                self.send(con, self.write("t4", range(511)))
+            )
+
+    def test_write_no_cuttable(self) -> None:
+        with ConnectionTestInstance(self) as con:
+            con.set_tx_messages(self.write("t8", 1.4782))
+            con.set_rx_messages(self.write("t8", data_length=4))
+
+            compare_messages(
+                self,
+                self.write("t8", ans=True, data_length=4),
+                self.send(con, self.write("t8", 1.4782))
+            )
+
+    def test_asymmetric_error_with_first(self) -> None:
+        with ConnectionTestInstance(self) as con:
+            con.set_tx_messages(self.write("t4", 0), self.write("t4", 0))
+            con.set_rx_messages(
+                self.write("t4", data_length=1),
+                self.write("t4", data_length=1),
+                asymmetric=[
+                    (12, b"\x00\x00\x00\x00"),
+                    (12, b"\x00\x00\x00\x01"),
+                ]
+            )
+
+            compare_messages(
+                self,
+                self.write("t4", ans=True, data_length=1),
+                self.send(con, self.write("t4", 0))
+            )
+
+    def test_asymmetric_all_error(self) -> None:
+        with ConnectionTestInstance(self, receive_delay=0.02) as con:
+            con.set_tx_messages(self.write("t4", 0), self.write("t4", 0))
+            con.set_rx_messages(
+                self.write("t4", data_length=1),
+                self.write("t4", data_length=1),
+                asymmetric=[
+                    (12, b"\x00\x00\x00\x03"),
+                    (12, b"\x00\x00\x00\x00"),
+                ]
+            )
+
+            with self.assertRaises(ConnectionError) as exc:
+                self.send(con, self.write("t4", 0))
+            self.assertEqual(
+                "time is up: received=2, invalid_received=2, transmitted=2",
+                exc.exception.args[0]
+            )
+
+    def test_timeout_first(self) -> None:
+        with ConnectionTestInstance(self, receive_delay=0.02) as con:
+            con.set_tx_messages(self.write("t4", 0), self.write("t4", 0))
+            con.set_rx_messages(
+                None,
+                self.write("t4", data_length=1),
+                asymmetric=(12, b"\x00\x00\x00\x01"),
+            )
+
+            compare_messages(
+                self,
+                self.write("t4", ans=True, data_length=1),
+                self.send(con, self.write("t4", 0))
+            )
+
+    def test_timeout_all(self) -> None:
+        with ConnectionTestInstance(self, receive_delay=0.02) as con:
+            con.set_tx_messages(self.write("t4", 0), self.write("t4", 0))
+            con.set_rx_messages(None, None)
+
+            with self.assertRaises(ConnectionError) as exc:
+                self.send(con, self.write("t4", 0))
+            self.assertEqual(
+                "time is up: received=0, invalid_received=0, transmitted=2",
+                exc.exception.args[0]
+            )
+
+    def test_skip_empty(self) -> None:
+        with ConnectionTestInstance(self) as con:
+            con.set_tx_messages(self.write("t4", 0))
+            con.set_rx_messages(
+                get_msg_n0(),
+                self.write("t4"),
+                asymmetric=[
+                    None, (12, b"\x00\x00\x00\x01")
+                ]
+            )
+
+            compare_messages(
+                self,
+                self.write("t4", ans=True, data_length=1),
+                self.send(con, self.write("t4", 0))
+            )
+
+    def test_receive_from_not_expected(self) -> None:
+
+        class ConnectionTestInstanceTemp(ConnectionTestInstance):
+
+            def receive(self) -> tuple[bytes, Any]:
+                time.sleep(self._rx_delay)
+                return b"\xfa", SRC_ADDRESS
+
+        with ConnectionTestInstanceTemp(
+            self,
+            receive_delay=0.02,
+            log_entries=[
+                "<Message(address=1000, data_length=1, operation=0, data=0), "
+                "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
+
+                "fa, src=('127.0.0.1', 4242), dst=('127.0.0.1', 4242)",
+
+                "message received from ('127.0.0.1', 4242), "
+                "but expected from ('127.0.0.1', 4224)",
+
+                "<Message(address=1000, data_length=1, operation=0, data=0), "
+                "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
+
+                "fa, src=('127.0.0.1', 4242), dst=('127.0.0.1', 4242)",
+
+                "message received from ('127.0.0.1', 4242), "
+                "but expected from ('127.0.0.1', 4224)",
+            ]
+        ) as con:
+            con.set_tx_messages(self.write("t4", 0), self.write("t4", 0))
+
+            with self.assertRaises(ConnectionError) as exc:
+                self.send(con, self.write("t4", 0))
+            self.assertEqual(
+                "time is up: received=2, invalid_received=2, transmitted=2",
+                exc.exception.args[0]
+            )
+
+    def test_response_wait(self) -> None:
+        with ConnectionTestInstance(self) as con:
+            con.set_tx_messages(self.read("t7", 4))
+            con.set_rx_messages(
+                self.read("t7", 0).set(response=4),
+                self.read("t7", 4, data=2.7),
+            )
+
+            compare_messages(
+                self,
+                self.read("t7", 4, ans=True, data=2.7),
+                self.send(con, self.read("t7"))
+            )
+
+    def test_response_other(self) -> None:
+        with ConnectionTestInstance(
+            self,
+            log_entries=[
+                "<Message(operation=1, response=0, address=10, "
+                "data_length=4, data=EMPTY, crc=4647), "
+                "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
+
+                "01 03 00 10 00 00 e8 11, "
+                "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)",
+
+                "<Message(operation=1, response=3, address=10, "
+                "data_length=0, data=EMPTY, crc=E811), "
+                "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
+
+                "receive with code(s): <Code.ERROR: 1282>",
+
+                "<Message(operation=1, response=0, address=10, "
+                "data_length=4, data=EMPTY, crc=4647), "
+                "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
+
+                "01 00 00 10 00 04 40 2c cc cd 17 db, "
+                "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)",
+
+                "<Message(operation=1, response=0, address=10, "
+                "data_length=4, data=402CCCCD, crc=17DB), "
+                "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
+            ]
+        ) as con:
+            con.set_tx_messages(self.read("t7", 4), self.read("t7", 4))
+            con.set_rx_messages(
+                self.read("t7", 0).set(response=3),
+                self.read("t7", 4, data=2.7),
+            )
+
+            compare_messages(
+                self,
+                self.read("t7", 4, ans=True, data=2.7),
+                self.send(con, self.read("t7"))
+            )
+
+    def test_exc_logger_not_self(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            Connection(hapi=None, logger="self_")
+        self.assertEqual(
+            "invalid logger: self_ != 'self'", exc.exception.args[0]
+        )
+
+    def test_exc_without_address(self) -> None:
+        with self.assertRaises(ConnectionError) as exc:
+            Connection(None).send(Message())
+        self.assertEqual(
+            "address not specified", exc.exception.args[0]
+        )
+
+    def test_exc_invalid_message_src(self) -> None:
+        with self.assertRaises(ConnectionError) as exc:
+            ConnectionTestInstance(self).send(
+                self.read("t1", ans=True)
+            )
+        self.assertEqual(
+            "addresses in message and connection is not equal: "
+            "('127.0.0.1', 4224) != ('127.0.0.1', 4242)",
+            exc.exception.args[0]
+        )
+
+    def test_exc_unknown_operation_base(self) -> None:
+
+        with self.assertRaises(MessageContentError) as exc:
+            ConnectionTestInstance(self).send(
+                Message().configure(
+                    address=FieldSetter.address(fmt=">I"),
+                    data_length=FieldSetter.data_length(
+                        fmt=">I", units=FieldSetter.WORDS
+                    ),
+                    operation=FieldSetter.operation(fmt=">I", desc_dict={"e": 0}),
+                    data=FieldSetter.data(expected=-1, fmt=">I")
+                ).set_src_dst(
+                    src=SRC_ADDRESS, dst=DST_ADDRESS
+                ).set(address=1, operation=0)
+            )
+        self.assertEqual(
+            "Error with operation in Message: unknown base 'e'",
+            exc.exception.args[0]
+        )
 
     @staticmethod
     def read(reg_name: str, *args, shift: int = 0, ans: bool = False, **kwargs) -> Message:

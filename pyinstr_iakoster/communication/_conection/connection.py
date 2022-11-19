@@ -156,7 +156,7 @@ class Connection(object):  # todo: description and tests
             response message
         """
         if self._addr is None:
-            raise ConnectionError("no address specified")
+            raise ConnectionError("address not specified")
         if message.src != self._addr:
             raise ConnectionError(
                 "addresses in message and connection is not equal: "
@@ -171,33 +171,39 @@ class Connection(object):  # todo: description and tests
             raise MessageContentError(
                 message.__class__.__name__,
                 message.operation.name,
-                clarification="unknown base"
+                clarification="unknown base %r" % message.operation.base
             )
         return answer
 
     def set_timeouts(
             self,
-            transmit_timeout: dt.timedelta | int = 15,
-            receive_timeout: dt.timedelta | int = 5,
+            transmit_timeout: int | float | dt.timedelta = 15,
+            receive_timeout: int | float | dt.timedelta = 5,
     ) -> None:
         """
         Set timeouts for waiting for a reply and sending a message.
 
+        If the input value is of integer type, the timeout will be
+        in seconds, and if it is of float type - in milliseconds.
+
         Parameters
         ----------
-        transmit_timeout: datetime.timedelta or int, default=15
+        transmit_timeout: int | float | datetime.timedelta, default=15
             the time for which the message transmission will be attempted
             until a response is received.
-        receive_timeout: datetime.timedelta or int, default=15
+        receive_timeout: int | float | datetime.timedelta, default=15
             the time in which you expect to receive an answer.
         """
-        if isinstance(transmit_timeout, int):
-            transmit_timeout = dt.timedelta(seconds=transmit_timeout)
-        if isinstance(receive_timeout, int):
-            receive_timeout = dt.timedelta(seconds=receive_timeout)
 
-        self._tx_to = transmit_timeout
-        self._rx_to = receive_timeout
+        def get_timedelta(value: dt.timedelta | int | float) -> dt.timedelta:
+            if isinstance(value, int):
+                value = dt.timedelta(seconds=value)
+            elif isinstance(value, float):
+                value = dt.timedelta(milliseconds=int(value * 1000))
+            return value
+
+        self._tx_to = get_timedelta(transmit_timeout)
+        self._rx_to = get_timedelta(receive_timeout)
 
     def _log_info(self, entry: str) -> None:
         """
@@ -277,9 +283,11 @@ class Connection(object):  # todo: description and tests
             self.transmit(msg)
             transmitted += 1
             self._log_info(repr(msg))
-            receive_start = dt.datetime.now()
+            transmit_again = False
 
-            while (dt.datetime.now() - receive_start) < self._rx_to:
+            receive_start = dt.datetime.now()
+            while not transmit_again \
+                    and (dt.datetime.now() - receive_start) < self._rx_to:
 
                 try:
                     ans, rec_from = self.receive()
@@ -303,10 +311,12 @@ class Connection(object):  # todo: description and tests
                         continue
 
                     ans, code = self._validate_bytes_message(msg, ans, arf)
-                    if code == Code.ERROR:  # todo: if error transmit again
+                    if code == Code.ERROR:
+                        invalid_received += 1
+                        transmit_again = True
                         continue
 
-                    code = self._validate_message(ans, arf)
+                    code = self._validate_message(ans)
                     self._log_info(repr(ans))
 
                     if code == Code.OK:
@@ -315,6 +325,8 @@ class Connection(object):  # todo: description and tests
                         receive_start = dt.datetime.now()
                     else:
                         invalid_received += 1
+                        transmit_again = True
+                        # todo: show response value and code
                         self._log_info(f"receive with code(s): %r" % code)
 
         raise ConnectionError(
@@ -359,9 +371,7 @@ class Connection(object):  # todo: description and tests
             return rx_msg, Code.ERROR
         return rx_msg, Code.OK
 
-    def _validate_message(
-            self, rx_msg: Message, arf: AsymmetricResponseField
-    ) -> Code | list[Code]:
+    def _validate_message(self, rx_msg: Message) -> Code | list[Code]:
         """
         validate converted to a class message.
 
@@ -369,8 +379,6 @@ class Connection(object):  # todo: description and tests
         ----------
         rx_msg: Message
             received message.
-        arf: AsymmetricResponseField
-            asymmetric error mark.
 
         Returns
         -------
@@ -385,7 +393,7 @@ class Connection(object):  # todo: description and tests
             if len(codes) == 1:
                 return codes[0]
 
-            ref_code = codes[0]
+            ref_code = codes[0]  # todo: tests (several response fields)
             for code in codes[1:]:
                 if code != ref_code:
                     return codes

@@ -148,8 +148,8 @@ def get_register_map_data() -> pd.DataFrame:
         ("n0", 0x1000, "rw", 1024, None),
         ("n1", 0x500, "ro", 4, ">f"),
         ("n1", 0xf000, "rw", 6, ">I"),
-        ("n2", 0x10, "rw", 1, None),
-        ("n2", 0x11, "rw", 1, ">I")
+        ("n2", 0x10, "rw", 4, None),
+        ("n2", 0x11, "rw", 4, ">I")
     ]):
         df_data.loc[i_addr] = get_line(i_addr, reg_args)
     return df_data
