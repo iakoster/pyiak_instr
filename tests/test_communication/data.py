@@ -43,7 +43,7 @@ SETTERS = [
             fmt=">B",
             codes={0: Code.OK, 4: Code.WAIT},
             default=0,
-            default_code=Code.ERROR
+            default_code=Code.UNDEFINED
         ),
         address=FieldSetter.address(fmt=">H"),
         data_length=FieldSetter.data_length(fmt=">H"),
@@ -186,7 +186,7 @@ MF_CFG_DICT = dict(
                  "fmt,>B,"
                  "codes,\\v(\\dct\t0,1280,4,1281),"
                  "default,0,"
-                 "default_code,1282",
+                 "default_code,255",
         address="\\dct\tspecial,None,fmt,>H",
         data_length="\\dct\tspecial,None,fmt,>H,units,16,additive,0",
         data="\\dct\tspecial,None,expected,-1,fmt,>f",

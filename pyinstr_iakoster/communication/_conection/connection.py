@@ -371,7 +371,7 @@ class Connection(object):  # todo: description and tests
             return rx_msg, Code.ERROR
         return rx_msg, Code.OK
 
-    def _validate_message(self, rx_msg: Message) -> Code | list[Code]:
+    def _validate_message(self, rx_msg: Message) -> Code | dict[str, Code]:
         """
         validate converted to a class message.
 
@@ -382,21 +382,22 @@ class Connection(object):  # todo: description and tests
 
         Returns
         -------
-        Code | list[Code]
+        Code | dict[str, Code]
             validation result in code. If message have ResponseField returns
             code from it. Returns all codes if there are several
             ResponseField and not all equal.
         """
 
-        codes = list(rx_msg.response_codes.values())
+        codes_dict = rx_msg.response_codes
+        codes = list(codes_dict.values())
         if len(codes):
             if len(codes) == 1:
                 return codes[0]
 
-            ref_code = codes[0]  # todo: tests (several response fields)
+            ref_code = codes[0]
             for code in codes[1:]:
                 if code != ref_code:
-                    return codes
+                    return codes_dict
             return ref_code
         else:
             return Code.OK

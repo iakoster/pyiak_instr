@@ -443,7 +443,7 @@ class TestConnection(unittest.TestCase):
                 "data_length=0, data=EMPTY, crc=E811), "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
 
-                "receive with code(s): <Code.ERROR: 1282>",
+                "receive with code(s): <Code.UNDEFINED: 255>",
 
                 "<Message(operation=1, response=0, address=10, "
                 "data_length=4, data=EMPTY, crc=4647), "
@@ -467,6 +467,46 @@ class TestConnection(unittest.TestCase):
                 self,
                 self.read("t7", 4, ans=True, data=2.7),
                 self.send(con, self.read("t7"))
+            )
+
+    def test_several_responses(self) -> None:
+        with ConnectionTestInstance(
+            self,
+            log_entries=[
+                "<Message(operation=1, response1=0, address=24, "
+                "data_length=4, data=EMPTY, response2=0), "
+                "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
+
+                None,
+
+                "<Message(operation=1, response1=3, address=24, "
+                "data_length=0, data=EMPTY, response2=0), "
+                "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
+
+                "receive with code(s): {'response1': <Code.ERROR: 1282>, "
+                "'response2': <Code.OK: 1280>}",
+
+                "<Message(operation=1, response1=0, address=24, "
+                "data_length=4, data=EMPTY, response2=0), "
+                "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
+
+                None,
+
+                "<Message(operation=1, response1=0, address=24, "
+                "data_length=4, data=2, response2=0), "
+                "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
+            ]
+        ) as con:
+            con.set_tx_messages(self.read("t9", 4), self.read("t9", 4))
+            con.set_rx_messages(
+                self.read("t9", 0).set(response1=3),
+                self.read("t9", 4, data=2.7),
+            )
+
+            compare_messages(
+                self,
+                self.read("t9", 4, ans=True, data=2.7),
+                self.send(con, self.read("t9"))
             )
 
     def test_exc_logger_not_self(self) -> None:
