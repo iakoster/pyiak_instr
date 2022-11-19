@@ -607,7 +607,7 @@ class Message(BaseMessage):
                 elif self.data_length.units == DataLengthField.BYTES:
                     msg.data.set(self.data.content[start:end])
                 else:
-                    raise TypeError('Unsuppoted data units')
+                    raise TypeError('Unsupported data units')
                 msg.data_length.update()
             msg.address.set(
                 self.address[0] + i_part * self._slice_length)

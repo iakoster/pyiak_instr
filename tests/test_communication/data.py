@@ -49,6 +49,24 @@ SETTERS = [
         data_length=FieldSetter.data_length(fmt=">H"),
         data=FieldSetter.data(expected=-1, fmt=">f"),
         crc=FieldSetter.crc(fmt=">H")
+    ),
+    dict(
+        operation=FieldSetter.operation(fmt="B", desc_dict={"r": 1, "w": 2}),
+        response1=FieldSetter.response(
+            fmt="B",
+            codes={0: Code.OK, 4: Code.WAIT},
+            default=0,
+            default_code=Code.ERROR
+        ),
+        address=FieldSetter.address(fmt="B"),
+        data_length=FieldSetter.data_length(fmt="B"),
+        data=FieldSetter.data(expected=-1, fmt="B"),
+        response2=FieldSetter.response(
+            fmt="B",
+            codes={0: Code.OK, 4: Code.WAIT},
+            default=0,
+            default_code=Code.ERROR
+        )
     )
 ]
 
@@ -66,6 +84,7 @@ MF_MSG_ARGS = [
     ),
     dict(mf_name="n1", splitable=False, slice_length=1024),
     dict(mf_name="n2", splitable=False, slice_length=1024),
+    dict(mf_name="n3", splitable=False, slice_length=1024),
 ]
 
 
@@ -103,7 +122,8 @@ for i, reg_args in enumerate([
     ("n1", 0x500, "ro", 4, ">f"),
     ("n1", 0xf000, "rw", 6, ">I"),
     ("n2", 0x10, "rw", 4, None),
-    ("n2", 0x11, "rw", 4, ">I")
+    ("n2", 0x11, "rw", 4, ">I"),
+    ("n3", 0x24, "rw", 4, None),
 ]):
     REGISTER_MAP_TABLE.loc[i] = [
         f"t{i}", f"t_{i}", *reg_args, f"Short {i}. Long."
@@ -115,7 +135,7 @@ MF_DICT: dict[str, MessageFormat] = {
 
 MF_CFG_DICT = dict(
     master=dict(
-        formats="\\lst\tn0,n1,n2",
+        formats="\\lst\tn0,n1,n2,n3",
     ),
     n0__message=dict(
         arf="\\dct\toperand,!=,"
@@ -171,6 +191,29 @@ MF_CFG_DICT = dict(
         data_length="\\dct\tspecial,None,fmt,>H,units,16,additive,0",
         data="\\dct\tspecial,None,expected,-1,fmt,>f",
         crc="\\dct\tspecial,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
+    ),
+    n3__message=dict(
+        arf="\\dct\t",
+        mf_name="n3",
+        splitable="False",
+        slice_length="1024",
+    ),
+    n3__setters=dict(
+        operation="\\dct\tspecial,None,fmt,B,"
+                  "desc_dict,\\v(\\dct\tr,1,w,2)",
+        response1="\\dct\tspecial,response,"
+                 "fmt,B,"
+                 "codes,\\v(\\dct\t0,1280,4,1281),"
+                 "default,0,"
+                 "default_code,1282",
+        address="\\dct\tspecial,None,fmt,B",
+        data_length="\\dct\tspecial,None,fmt,B,units,16,additive,0",
+        data="\\dct\tspecial,None,expected,-1,fmt,B",
+        response2="\\dct\tspecial,response,"
+                 "fmt,B,"
+                 "codes,\\v(\\dct\t0,1280,4,1281),"
+                 "default,0,"
+                 "default_code,1282",
     )
 )
 
