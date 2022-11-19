@@ -1,14 +1,16 @@
 import shutil
 import unittest
+from copy import deepcopy
 
 from tests.env_vars import TEST_DATA_DIR
+from ..data import (
+    SETTERS,
+    MF_DICT,
+    MF_CFG_DICT,
+    get_message,
+    get_mf,
+)
 from ..utils import (
-    get_msg_n0,
-    get_msg_n1,
-    get_msg_n2,
-    get_mf_n0,
-    get_mf_n1,
-    get_mf_n2,
     validate_object,
     compare_objects,
     compare_messages
@@ -23,71 +25,6 @@ from pyinstr_iakoster.communication import (
 
 TEST_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
 CFG_PATH = TEST_DIR / "cfg.ini"
-CFG_DICT = dict(
-        master=dict(
-            formats="\\lst\tn0,n1,n2",
-        ),
-        n0__message=dict(
-            arf="\\dct\toperand,!=,"
-                "value,\\v(\\bts\t0,0,0,1),"
-                "start,12,"
-                "stop,16",
-            mf_name="n0",
-            splitable="True",
-            slice_length="256",
-        ),
-        n0__setters=dict(
-            address="\\dct\tspecial,None,fmt,>I",
-            data_length="\\dct\tspecial,None,fmt,>I,units,17,additive,0",
-            operation="\\dct\tspecial,None,fmt,>I,"
-                      "desc_dict,\\v(\\dct\tw,0,r,1)",
-            data="\\dct\tspecial,None,expected,-1,fmt,>I",
-        ),
-        n1__message=dict(
-            arf="\\dct\t",
-            mf_name="n1",
-            splitable="False",
-            slice_length="1024",
-        ),
-        n1__setters=dict(
-            preamble="\\dct\tspecial,static,fmt,>H,default,43605",
-            operation="\\dct\tspecial,None,fmt,>B,"
-                      "desc_dict,\\v(\\dct\twp,1,rp,2,wn,3,rn,4)",
-            response="\\dct\tspecial,response,"
-                     "fmt,>B,"
-                     "codes,\\v(\\dct\t0,1280),"
-                     "default,0,"
-                     "default_code,1282",
-            address="\\dct\tspecial,None,fmt,>H",
-            data_length="\\dct\tspecial,None,fmt,>H,units,16,additive,0",
-            data="\\dct\tspecial,None,expected,-1,fmt,>f",
-            crc="\\dct\tspecial,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
-        ),
-        n2__message=dict(
-            arf="\\dct\t",
-            mf_name="n2",
-            splitable="False",
-            slice_length="1024",
-        ),
-        n2__setters=dict(
-            operation="\\dct\tspecial,None,fmt,>B,"
-                      "desc_dict,\\v(\\dct\tr,1,w,2)",
-            response="\\dct\tspecial,response,"
-                     "fmt,>B,"
-                     "codes,\\v(\\dct\t0,1280,4,1281),"
-                     "default,0,"
-                     "default_code,1282",
-            address="\\dct\tspecial,None,fmt,>H",
-            data_length="\\dct\tspecial,None,fmt,>H,units,16,additive,0",
-            data="\\dct\tspecial,None,expected,-1,fmt,>f",
-            crc="\\dct\tspecial,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
-        )
-    )
-REF_FORMATS = {
-    "n0": get_mf_n0(get_ref=False),
-    "n1": get_mf_n1(get_ref=False),
-    "n2": get_mf_n2(get_ref=False),
-}
 
 
 class TestAsymmetricResponseField(unittest.TestCase):
@@ -216,7 +153,7 @@ class TestMessageFormat(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         with RWConfig(CFG_PATH) as rwc:
-            rwc.write(CFG_DICT)
+            rwc.write(MF_CFG_DICT)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -225,7 +162,8 @@ class TestMessageFormat(unittest.TestCase):
 
     def test_init(self) -> None:
 
-        for mf, ref in (get_mf_n0(), get_mf_n1()):
+        for i_mf in range(2):
+            mf, ref = get_mf(i_mf)
             mf_name = mf.message["mf_name"]
 
             with self.subTest(mf_name=mf_name, test="msg_args"):
@@ -249,7 +187,7 @@ class TestMessageFormat(unittest.TestCase):
         )
 
     def test_read(self) -> None:
-        for mf_name, ref_mf in REF_FORMATS.items():
+        for mf_name, ref_mf in MF_DICT.items():
             with self.subTest(mf_name=mf_name):
                 mf = MessageFormat.read(CFG_PATH, mf_name)
                 compare_objects(self, ref_mf, mf)
@@ -263,7 +201,7 @@ class TestMessageFormat(unittest.TestCase):
             rwc.set("master", "formats", "\\lst\tn0,n1,n2")
             rwc.apply_changes()
 
-        for ref_mf in REF_FORMATS.values():
+        for ref_mf in MF_DICT.values():
             ref_mf.write(cfg_path)
 
         with open(CFG_PATH, "r") as ref_io, open(cfg_path, "r") as res_io:
@@ -278,31 +216,36 @@ class TestMessageFormat(unittest.TestCase):
                 with self.subTest(line=line):
                     self.assertEqual(ref, res)
 
-        for mf_name, ref in REF_FORMATS.items():
+        for mf_name, ref in MF_DICT.items():
             with self.subTest(mf_name=mf_name):
                 res = MessageFormat.read(cfg_path, mf_name)
                 compare_objects(self, ref, res)
 
     def test_get(self) -> None:
         test_data = [
-            (get_msg_n0(), get_mf_n0(get_ref=False).get()),
-            (get_msg_n1(), get_mf_n1(get_ref=False).get()),
-            (get_msg_n2(), get_mf_n2(get_ref=False).get()),
+            (get_message(0), get_mf(0, get_ref=False).get()),
+            (get_message(1), get_mf(1, get_ref=False).get()),
+            (get_message(2), get_mf(2, get_ref=False).get()),
         ]
         for i_test, (ref, res) in enumerate(test_data):
             with self.subTest(i_test=i_test):
                 compare_messages(self, ref, res)
 
     def test_get_with_update(self) -> None:
+        setters = deepcopy(SETTERS[1])
+        setters["data"].kwargs["fmt"] = ">I"
         compare_messages(
             self,
-            get_msg_n1(data__fmt=">I"),
-            get_mf_n1(get_ref=False).get(data={"fmt": ">I"})
+            get_message(1).configure(**setters),
+            get_mf(1, get_ref=False).get(data={"fmt": ">I"})
         )
+
+        setters = deepcopy(SETTERS[2])
+        setters["data"].kwargs["fmt"] = "B"
         compare_messages(
             self,
-            get_msg_n2(data__fmt="B"),
-            get_mf_n2(get_ref=False).get(data={"fmt": "B"})
+            get_message(2).configure(**setters),
+            get_mf(2, get_ref=False).get(data={"fmt": "B"})
         )
 
     def test_read_exc(self):
@@ -315,10 +258,7 @@ class TestMessageFormat(unittest.TestCase):
 
 class TestMessageFormatsMap(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        with RWConfig(CFG_PATH) as rwc:
-            rwc.write(CFG_DICT)
+    maxDiff = None
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -326,13 +266,15 @@ class TestMessageFormatsMap(unittest.TestCase):
             shutil.rmtree(TEST_DATA_DIR)
 
     def setUp(self) -> None:
-        self.mf_map = MessageFormatMap(**REF_FORMATS)
+        with RWConfig(CFG_PATH) as rwc:
+            rwc.write(MF_CFG_DICT)
+        self.mf_map = MessageFormatMap(**MF_DICT)
 
     def test_init(self) -> None:
         pass  # There's nothing to test here yet
 
     def test_get(self) -> None:
-        for mf_name, ref in REF_FORMATS.items():
+        for mf_name, ref in MF_DICT.items():
             with self.subTest(mf_name=mf_name):
                 compare_objects(self, ref, self.mf_map.get(mf_name))
 
@@ -340,7 +282,7 @@ class TestMessageFormatsMap(unittest.TestCase):
         cfg_path = TEST_DIR / "cfg_test.ini"
 
         mf_map = MessageFormatMap.read(CFG_PATH)
-        for mf_name, mf in REF_FORMATS.items():
+        for mf_name, mf in MF_DICT.items():
             with self.subTest(mf_name=mf_name):
                 compare_objects(self, mf, mf_map.get(mf_name))
 

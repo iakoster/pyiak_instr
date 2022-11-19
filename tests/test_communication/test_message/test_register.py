@@ -6,9 +6,11 @@ import numpy as np
 import pandas as pd
 import pandas.testing
 
+from ..data import (
+    REGISTER_MAP_TABLE,
+    get_mf,
+)
 from ..utils import (
-    get_register_map_data,
-    get_mf_n0,
     compare_objects,
     compare_messages,
     validate_object
@@ -25,7 +27,7 @@ TEST_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
 
 class TestRegister(unittest.TestCase):
 
-    MF = get_mf_n0(get_ref=False)
+    MF = get_mf(0, get_ref=False)
     REF_SERIES = pd.Series(
         index=RegisterMap.EXPECTED_COLUMNS,
         data=(
@@ -210,8 +212,9 @@ class TestRegister(unittest.TestCase):
 
 class TestRegisterMap(unittest.TestCase):
 
-    DATA = get_register_map_data()
-    SORTED_DATA = DATA.sort_values(by=["format_name", "address"], ignore_index=True)
+    SORTED_DATA = REGISTER_MAP_TABLE.sort_values(
+        by=["format_name", "address"], ignore_index=True
+    )
     DB_PATH = TEST_DIR / "regs.db"
 
     @classmethod
@@ -224,7 +227,7 @@ class TestRegisterMap(unittest.TestCase):
             shutil.rmtree(TEST_DATA_DIR)
 
     def setUp(self) -> None:
-        self.rm = RegisterMap(self.DATA)
+        self.rm = RegisterMap(REGISTER_MAP_TABLE)
 
     def test_init(self) -> None:
         self.assertTrue(
@@ -234,7 +237,7 @@ class TestRegisterMap(unittest.TestCase):
     def test_validate_table_exc(self) -> None:
         with self.subTest(test="sort by format_name, address"):
             self.assertFalse(
-                np.all(self.rm.table.values == self.DATA.values),
+                np.all(self.rm.table.values == REGISTER_MAP_TABLE.values),
                 "looks like RegisterMap not sort DataFrame"
             )
 
@@ -296,15 +299,16 @@ class TestRegisterMap(unittest.TestCase):
 
     def test_get(self):
         names = np.append(
-            self.DATA["name"].values, self.DATA["external_name"].values
+            REGISTER_MAP_TABLE["name"].values,
+            REGISTER_MAP_TABLE["external_name"].values
         )
         for name in names:
             compare_objects(
                 self,
                 Register.from_series(
-                    self.DATA[
-                        (self.DATA["external_name"] == name)
-                        | (self.DATA["name"] == name)
+                    REGISTER_MAP_TABLE[
+                        (REGISTER_MAP_TABLE["external_name"] == name)
+                        | (REGISTER_MAP_TABLE["name"] == name)
                         ].iloc[0]),
                 self.rm.get(name)
             )

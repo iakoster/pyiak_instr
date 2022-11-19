@@ -12,9 +12,11 @@ from pyinstr_iakoster.communication import (
     MessageContentError,
 )
 
-from ..utils import (
+from ..data import (
     PF,
-    get_msg_n0,
+    get_message,
+)
+from ..utils import (
     validate_object,
     compare_messages,
 )
@@ -361,7 +363,7 @@ class TestConnection(unittest.TestCase):
         with ConnectionTestInstance(self) as con:
             con.set_tx_messages(self.write("t4", 0))
             con.set_rx_messages(
-                get_msg_n0(),
+                get_message(0),
                 self.write("t4"),
                 asymmetric=[
                     None, (12, b"\x00\x00\x00\x01")
