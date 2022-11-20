@@ -263,16 +263,12 @@ class TestMessage(unittest.TestCase):
             msg.in_bytes()
         )
 
-    def test_get_same_instance(self):
+    def test_get_instance(self):
         msg: Message = self.msg.get_instance()
         self.assertEqual("std", msg.mf_name)
         for ref, res in zip(self.msg, msg):
             self.assertEqual(ref.name, res.name)
-            self.assertIn(str(res), ("1AA5", "0", ""))
-
-    def test_hex(self):
-        self.fill_content()
-        self.assertEqual("1aa5 00 00aa 01 04 ffeeddcc 3986", self.msg.hex())
+            self.assertIn(str(res), ("1AA5", "0", "EMPTY"))
 
     def test_to_bytes(self):
         content = self.fill_content()
@@ -418,14 +414,35 @@ class TestMessage(unittest.TestCase):
         self.assertEqual(content, bytes(self.msg))
 
     def test_magic_str(self):
+        self.assertEqual(
+            "<Message(address=EMPTY, operation=EMPTY, "
+            "data_length=EMPTY, data=EMPTY), src=None, dst=None>",
+            str(self.simple_msg)
+        )
+        self.assertEqual(
+            "<Message(preamble=1AA5, response=0, address=EMPTY, "
+            "operation=EMPTY, data_length=EMPTY, data=EMPTY, crc=EMPTY), "
+            "src=None, dst=None>",
+            str(self.msg)
+        )
         self.fill_content()
-        self.assertEqual("1AA5 0 AA 1 4 FFEEDDCC 3986", str(self.msg))
+        self.assertEqual(
+            "<Message(preamble=1AA5, response=0, address=AA, "
+            "operation=1, data_length=4, data=FFEEDDCC, crc=3986), "
+            "src=None, dst=None>",
+            str(self.msg)
+        )
 
     def test_magic_len(self):
         content = self.fill_content()
         self.assertEqual(len(content), len(self.msg))
 
     def test_magic_repr(self):
+        self.assertEqual(
+            "<Message(address=EMPTY, operation=EMPTY, "
+            "data_length=EMPTY, data=EMPTY), src=None, dst=None>",
+            repr(self.simple_msg)
+        )
         self.fill_content()
         self.assertEqual(
             "<Message(preamble=1AA5, response=0, address=AA, operation=1, "

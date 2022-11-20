@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 
-class Connection(object):  # todo: description and tests
+class Connection(object):
     """
     Represents base class for messaging with devices via ethernet, UART etc.
 
@@ -236,9 +236,6 @@ class Connection(object):  # todo: description and tests
             response with the sum of all data from all responses
             (when sending multiple messages using .split).
         """
-        if not msg.splittable:
-            return self._send(msg, arf)
-
         msg_gen = msg.split()
         answer = self._send(next(msg_gen), arf)
         for tx_msg in msg_gen:
@@ -326,7 +323,6 @@ class Connection(object):  # todo: description and tests
                     else:
                         invalid_received += 1
                         transmit_again = True
-                        # todo: show response value and code
                         self._log_info(f"receive with code(s): %r" % code)
 
         raise ConnectionError(
@@ -420,9 +416,6 @@ class Connection(object):  # todo: description and tests
         Message
             first response message with source data length.
         """
-        if not msg.splittable:
-            return self._send(msg, arf)
-
         msg_gen = msg.split()
         answer = self._send(next(msg_gen), arf)
         for tx_msg in msg_gen:

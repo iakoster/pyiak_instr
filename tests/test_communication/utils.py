@@ -106,4 +106,4 @@ def compare_messages(
     for ref_field, res_field in zip(ref, res):
         compare_objects(case, ref_field, res_field, wo_attrs=["parent"])
     with case.subTest(test="content"):
-        case.assertEqual(ref.hex(), res.hex())
+        case.assertEqual(str(ref), str(res))

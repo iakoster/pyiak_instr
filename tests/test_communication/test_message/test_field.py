@@ -79,13 +79,21 @@ class TestField(unittest.TestCase):
             expected=4,
             fmt=">B",
         )
-        tf.set(b"\x01\x02\x03\x04")
+
+        with self.subTest(method="repr empty"):
+            self.assertEqual(
+                "<Field(EMPTY, fmt='>B')>", repr(tf)
+            )
+
+        tf.set(b"\x00\x01\x23\xae")
         with self.subTest(method="bytes"):
-            self.assertEqual(b"\x01\x02\x03\x04", bytes(tf))
+            self.assertEqual(b"\x00\x01\x23\xae", bytes(tf))
         with self.subTest(method="len"):
             self.assertEqual(4, len(tf))
+        with self.subTest(method="str"):
+            self.assertEqual("0 1 23 AE", str(tf))
         with self.subTest(method="repr"):
-            self.assertEqual("<Field(1 2 3 4, fmt='>B')>", repr(tf))
+            self.assertEqual("<Field(0 1 23 AE, fmt='>B')>", repr(tf))
 
     def test_base_magic_additional(self):
         tf = Field(
@@ -243,10 +251,6 @@ class TestField(unittest.TestCase):
     def test_unpack_custom(self):
         self.tf.set(b"\xf4\xa9\x12\x8a")
         self.assertTrue(np.isclose([-1.0716238e+32], self.tf.unpack(">f")))
-
-    def test_hex(self):
-        self.tf.set(range(4))
-        self.assertEqual("0000 0001 0002 0003", self.tf.hex())
 
     def test_magic_iter(self):
         self.tf.set(range(4))

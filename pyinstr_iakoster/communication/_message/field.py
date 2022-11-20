@@ -112,26 +112,6 @@ class BaseField(object):
         """
         raise NotImplementedError()
 
-    def hex(self, sep: str = " ", sep_step: int = None) -> str:
-        """
-        Returns a string of hexadecimal numbers from the content.
-
-        Parameters
-        ----------
-        sep: str
-            separator between bytes.
-        sep_step: int
-            separator step. If None equals bytesize.
-
-        Returns
-        -------
-        str
-            hex string.
-        """
-        if sep_step is None:
-            sep_step = self.bytesize
-        return self._content.hex(sep=sep, bytes_per_sep=sep_step)
-
     def reset_to_default(self) -> None:
         """Set field content to default."""
         self._content = self._def
@@ -224,24 +204,26 @@ class BaseField(object):
 
     def __str__(self) -> str:
         """
-        Returns a string representing the content in a readable format.
+        Returns a string of hexadecimal numbers from the content.
 
         When converting, left insignificant zeros are removed and
         a space separator between words.
 
+        Returns 'EMPTY' in field have no content.
+
         Returns
         -------
         str
-            content as readable string.
+            string representing the content in a readable format.
         """
+        if not len(self._content):
+            return "EMPTY"
+
         words = []
         for start in range(0, len(self.content), self.bytesize):
-            word = self.content[
-                    start:start + self.bytesize
-            ].hex().lstrip("0").upper()
-            if not len(word):
-                word = "0"
-            words.append(word)
+            word = self.content[start:start + self.bytesize] \
+                .hex().lstrip("0").upper()
+            words.append(word if len(word) else "0")
         return " ".join(words)
 
     def __repr__(self) -> str:
@@ -252,6 +234,7 @@ class BaseField(object):
             )
         else:
             self_str = str(self)
+
         return f"<{self.__class__.__name__}({self_str}, fmt='{self._fmt}')>"
 
 
@@ -429,7 +412,7 @@ class Field(BaseField):
 
         return converted
 
-    def _unpack_bytes(self, bytes_: bytes, fmt: str = None) -> npt.NDArray: # todo: add complex fmt (e.g. >HH)
+    def _unpack_bytes(self, bytes_: bytes, fmt: str = None) -> npt.NDArray:  # todo: add complex fmt (e.g. >HH)
         """
         Returns bytes unpacked in fmt.
 

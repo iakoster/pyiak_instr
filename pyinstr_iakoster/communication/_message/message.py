@@ -1,6 +1,6 @@
 from __future__ import annotations
 from copy import deepcopy
-from typing import Generator, Any, overload
+from typing import Generator, Callable, Any, overload
 
 import numpy as np
 import numpy.typing as npt
@@ -49,24 +49,6 @@ class BaseMessage(object):
         self._slice_length = slice_length
 
         self._src, self._dst = None, None
-
-    def hex(self, sep: str = " ", sep_step: int = None) -> str:
-        """
-        Returns a string of hexadecimal numbers from the content.
-
-        Parameters
-        ----------
-        sep: str
-            separator between bytes, words or fields.
-        sep_step: int
-            separator step.
-
-        Returns
-        -------
-        str
-            hex string.
-        """
-        raise NotImplementedError()
 
     def set(self, *args, **kwargs) -> BaseMessage:
         """
@@ -279,9 +261,7 @@ class BaseMessage(object):
             self._dst
         )
 
-    def __str__(self) -> str:
-        """Returns fields converted to string."""
-        return self.hex().upper()
+    __str__ = __repr__
 
 
 class BytesMessage(BaseMessage):  # todo: tests
@@ -299,9 +279,6 @@ class BytesMessage(BaseMessage):  # todo: tests
             slice_length=slice_length,
         )
         self._content = content
-
-    def hex(self, sep: str = " ", sep_step: int = None) -> str:
-        return self._content.hex(sep=sep, bytes_per_sep=sep_step)
 
     def set(self, content: bytes) -> BytesMessage:
         """
@@ -341,7 +318,7 @@ class BytesMessage(BaseMessage):  # todo: tests
         return np.frombuffer(self._content, dtype="B")
 
     def _content_repr(self) -> str:
-        return self.hex()
+        return self._content.hex(sep=" ")
 
     def __add__(self, other: BytesMessage | bytes) -> BytesMessage:
         self._content += bytes(other)
@@ -510,14 +487,6 @@ class Message(BaseMessage):
             **{n: f.get_setter() for n, f in self._fields.items()}
         )
 
-    def hex(self, sep: str = " ", sep_step: int = None) -> str:
-        fields_hex = []
-        for field in self:
-            field_hex = field.hex(sep=sep, sep_step=sep_step)
-            if field_hex != "":
-                fields_hex.append(field_hex)
-        return sep.join(fields_hex)
-
     @overload
     def set(
             self,
@@ -572,16 +541,10 @@ class Message(BaseMessage):
         ------
         Message
             message part.
-
-        Raises
-        ------
-        TypeError
-            if message is not cutable by data.
         """
-        if not self._splittable:  # todo: if not splittable yield self
-            raise TypeError(
-                f"{self.__class__.__name__} cannot be cut into parts"
-            )
+        if not self._splittable:
+            yield self
+            return
 
         parts_count = int(np.ceil(
             self.data_length[0] / self._slice_length
@@ -623,15 +586,16 @@ class Message(BaseMessage):
         return unpacked
 
     def _content_repr(self) -> str:
-        gen = zip(self._fields, self)
-        content_repr = "%s=%s" % next(gen)
-        for name, field in gen:
-            content_repr += ", %s=" % name
-            if field.words_count:
-                content_repr += str(field)
-            else:
-                content_repr += "EMPTY"
-        return content_repr
+        """
+        Convert content to string
+
+        Returns
+        -------
+
+        """
+        return ", ".join(map(
+            lambda x: "%s=%s" % x, self._fields.items()
+        ))
 
     def _get_field(
             self, name: str, start_byte: int, setter: FieldSetter
@@ -839,8 +803,3 @@ class Message(BaseMessage):
         """
         for field in self._fields.values():
             yield field
-
-    # todo: check with other str methods (hex, __str__, __repr__)
-    #  in Field and Message
-    def __str__(self) -> str:
-        return " ".join(str(field) for field in self if len(str(field)))
