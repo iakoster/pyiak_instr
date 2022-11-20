@@ -79,12 +79,12 @@ MF_MSG_ARGS = [
             value=b"\x00\x00\x00\x01"
         ),
         mf_name="n0",
-        splitable=True,
+        splittable=True,
         slice_length=256,
     ),
-    dict(mf_name="n1", splitable=False, slice_length=1024),
-    dict(mf_name="n2", splitable=False, slice_length=1024),
-    dict(mf_name="n3", splitable=False, slice_length=1024),
+    dict(mf_name="n1", splittable=False, slice_length=1024),
+    dict(mf_name="n2", splittable=False, slice_length=1024),
+    dict(mf_name="n3", splittable=False, slice_length=1024),
 ]
 
 
@@ -143,7 +143,7 @@ MF_CFG_DICT = dict(
             "start,12,"
             "stop,16",
         mf_name="n0",
-        splitable="True",
+        splittable="True",
         slice_length="256",
     ),
     n0__setters=dict(
@@ -156,7 +156,7 @@ MF_CFG_DICT = dict(
     n1__message=dict(
         arf="\\dct\t",
         mf_name="n1",
-        splitable="False",
+        splittable="False",
         slice_length="1024",
     ),
     n1__setters=dict(
@@ -176,7 +176,7 @@ MF_CFG_DICT = dict(
     n2__message=dict(
         arf="\\dct\t",
         mf_name="n2",
-        splitable="False",
+        splittable="False",
         slice_length="1024",
     ),
     n2__setters=dict(
@@ -195,7 +195,7 @@ MF_CFG_DICT = dict(
     n3__message=dict(
         arf="\\dct\t",
         mf_name="n3",
-        splitable="False",
+        splittable="False",
         slice_length="1024",
     ),
     n3__setters=dict(

@@ -23,7 +23,7 @@ from ...exceptions import (
     MessageContentError,
     NotConfiguredMessageError,
 )
-from pyinstr_iakoster.core import Code
+from ...core import Code
 
 
 __all__ = [
@@ -41,11 +41,11 @@ class BaseMessage(object):
     def __init__(
             self,
             mf_name: str = "std",
-            splitable: bool = False,
+            splittable: bool = False,
             slice_length: int = 1024,
     ):
         self._mf_name = mf_name
-        self._splitable = splitable
+        self._splittable = splittable
         self._slice_length = slice_length
 
         self._src, self._dst = None, None
@@ -171,7 +171,7 @@ class BaseMessage(object):
         """
         return self.__class__(
             mf_name=self._mf_name,
-            splitable=self._splitable,
+            splittable=self._splittable,
             slice_length=self._slice_length,
         )
 
@@ -246,7 +246,7 @@ class BaseMessage(object):
         return self._slice_length
 
     @property
-    def splitable(self) -> bool:
+    def splittable(self) -> bool:
         """
         Indicates that the message can be splited.
 
@@ -255,7 +255,7 @@ class BaseMessage(object):
         bool
             pointer to the possibility of separation
         """
-        return self._splitable
+        return self._splittable
 
     @property
     def src(self) -> Any:
@@ -301,18 +301,18 @@ class BaseMessage(object):
         return self.hex().upper()
 
 
-class BytesMessage(BaseMessage):
+class BytesMessage(BaseMessage):  # todo: tests
 
     def __init__(
             self,
             mf_name: str = "std",
             content: bytes = b"",
-            splitable: bool = False,
+            splittable: bool = False,
             slice_length: int = 1024,
     ):
         super().__init__(
             mf_name=mf_name,
-            splitable=splitable,
+            splittable=splittable,
             slice_length=slice_length,
         )
         self._content = content
@@ -366,7 +366,7 @@ class Message(BaseMessage):
     ----------
     mf_name: str
         name of the message format.
-    splitable: bool
+    splittable: bool
         shows that the message can be divided by the data.
     slice_length: int
         max length of the data in one slice.
@@ -388,12 +388,12 @@ class Message(BaseMessage):
     def __init__(
             self,
             mf_name: str = "std",
-            splitable: bool = False,
+            splittable: bool = False,
             slice_length: int = 1024
     ):
         super().__init__(
             mf_name=mf_name,
-            splitable=splitable,
+            splittable=splittable,
             slice_length=slice_length,
         )
 
@@ -581,7 +581,7 @@ class Message(BaseMessage):
         TypeError
             if message is not cutable by data.
         """
-        if not self._splitable:
+        if not self._splittable:  # todo: if not splittable yield self
             raise TypeError(
                 f"{self.__class__.__name__} cannot be cut into parts"
             )

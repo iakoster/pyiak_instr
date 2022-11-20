@@ -31,13 +31,13 @@ class AnotherMessage(Message):
     def __init__(
             self,
             mf_name: str = "new_def",
-            splitable: bool = False,
+            splittable: bool = False,
             slice_length: int = 1024
     ):
         Message.__init__(
             self,
             mf_name=mf_name,
-            splitable=splitable,
+            splittable=splittable,
             slice_length=slice_length
         )
 
@@ -358,7 +358,7 @@ class TestMessage(unittest.TestCase):
     def test_split(self):
 
         def get_test_msg() -> Message:
-            new_msg = Message(splitable=True, slice_length=64)
+            new_msg = Message(splittable=True, slice_length=64)
             new_msg.configure(
                 preamble=FieldSetter.static(fmt=">H", default=0x102),
                 address=FieldSetter.address(fmt=">I"),

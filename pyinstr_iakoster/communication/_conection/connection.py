@@ -236,7 +236,7 @@ class Connection(object):  # todo: description and tests
             response with the sum of all data from all responses
             (when sending multiple messages using .split).
         """
-        if not msg.splitable:
+        if not msg.splittable:
             return self._send(msg, arf)
 
         msg_gen = msg.split()
@@ -420,7 +420,7 @@ class Connection(object):  # todo: description and tests
         Message
             first response message with source data length.
         """
-        if not msg.splitable:
+        if not msg.splittable:
             return self._send(msg, arf)
 
         msg_gen = msg.split()
