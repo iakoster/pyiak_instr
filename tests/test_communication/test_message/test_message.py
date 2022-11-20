@@ -202,11 +202,11 @@ class TestMessage(unittest.TestCase):
             compare_objects(self, field, msg[name])
         self.assertEqual(
             b"\x01\x06\x00\x01\x00\x17\x00\x04\xaa\x55\x00\x42",
-            msg.to_bytes()
+            msg.in_bytes()
         )
         self.assertEqual(
             b"".join(f.content for f in fields.values()),
-            msg.to_bytes()
+            msg.in_bytes()
         )
 
     def test_extract(self):
@@ -260,17 +260,11 @@ class TestMessage(unittest.TestCase):
         self.assertEqual("r", msg.operation.desc)
         self.assertEqual(
             b"\x1a\xa5\x32\x04\xff\xff\xf1\xfexAf3\x01\x55\x00\xee\xdd",
-            msg.to_bytes()
+            msg.in_bytes()
         )
 
-    def test_get_instance(self):
-        msg: Message = self.msg.get_instance(mf_name="def")
-        self.assertEqual("def", msg.mf_name)
-        for _ in msg:
-            self.assertFalse(True, "there is cannot be fields")
-
     def test_get_same_instance(self):
-        msg: Message = self.msg.get_same_instance()
+        msg: Message = self.msg.get_instance()
         self.assertEqual("std", msg.mf_name)
         for ref, res in zip(self.msg, msg):
             self.assertEqual(ref.name, res.name)
@@ -282,7 +276,7 @@ class TestMessage(unittest.TestCase):
 
     def test_to_bytes(self):
         content = self.fill_content()
-        self.assertEqual(content, self.msg.to_bytes())
+        self.assertEqual(content, self.msg.in_bytes())
 
     def test_unpack(self):
         self.fill_content()
@@ -352,7 +346,7 @@ class TestMessage(unittest.TestCase):
                 data_length=10,
                 operation="w",
                 data=[]
-            ).to_bytes()
+            ).in_bytes()
         )
 
     def test_split(self):
@@ -457,7 +451,7 @@ class TestMessage(unittest.TestCase):
 
     def test_magic_add_message(self):
         self.fill_content()
-        msg = self.msg.get_same_instance()
+        msg = self.msg.get_instance()
         msg.set(
             preamble=0x1aa5,
             response=0,
@@ -476,7 +470,7 @@ class TestMessage(unittest.TestCase):
 
     def test_madic_add_errors(self):
         with self.assertRaises(TypeError) as exc:
-            self.msg += self.msg.get_instance(mf_name="new")
+            self.msg += self.msg.__class__(mf_name="new")
         self.assertEqual(
             "messages have different formats: new != std",
             exc.exception.args[0]
@@ -495,7 +489,7 @@ class TestMessage(unittest.TestCase):
             data_length=FieldSetter.data_length(fmt=">B"),
             data=FieldSetter.data(expected=-1, fmt=">B"),
         )
-        msg_2 = msg_1.get_same_instance()
+        msg_2 = msg_1.get_instance()
         for msg in (msg_1, msg_2):
             msg.set(
                 address=0x1a,

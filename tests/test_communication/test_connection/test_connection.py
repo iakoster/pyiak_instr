@@ -66,7 +66,7 @@ class ConnectionTestInstance(Connection):
             self._i_rx += 1
             time.sleep(self._rx_delay)
             raise TimeoutError("timeout exceed")
-        msg = msg.to_bytes()
+        msg = msg.in_bytes()
 
         if len(self._rx_asym):
             if isinstance(self._rx_asym, list):

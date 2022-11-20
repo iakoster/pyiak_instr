@@ -364,7 +364,7 @@ class Connection(object):  # todo: description and tests
         is_error = False
         if not arf.is_empty:
             rx_msg, is_error = arf.match(rx_msg)
-        rx_msg = tx_msg.get_same_instance().extract(rx_msg) \
+        rx_msg = tx_msg.get_instance().extract(rx_msg) \
             .set_src_dst(src=tx_msg.dst, dst=self._addr)
 
         if is_error:

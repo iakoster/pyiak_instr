@@ -57,7 +57,7 @@ class BaseMessage(object):
         Parameters
         ----------
         sep: str
-            separator between bytes/words and fields.
+            separator between bytes, words or fields.
         sep_step: int
             separator step.
 
@@ -74,7 +74,7 @@ class BaseMessage(object):
 
         Returns
         -------
-        BytesMessage
+        BaseMessage
             self class instance.
         """
         raise NotImplementedError()
@@ -90,7 +90,7 @@ class BaseMessage(object):
         """
         raise NotImplementedError()
 
-    def to_bytes(self) -> bytes:
+    def in_bytes(self) -> bytes:
         """
         Returns
         -------
@@ -142,31 +142,14 @@ class BaseMessage(object):
         """Set src and dst to None."""
         self._dst, self._src = None, None
 
-    def get_instance(self, **kwargs: Any) -> BaseMessage:
-        """
-        Get the same class as the current object, initialized with
-        the specified arguments.
-
-        Parameters
-        ----------
-        **kwargs: Any
-            initial keywords arguments.
-
-        Returns
-        -------
-        Message
-            new class instance.
-        """
-        return self.__class__(**kwargs)
-
-    def get_same_instance(self) -> BaseMessage:
+    def get_instance(self) -> BaseMessage:
         """
         Get the same class as the current object, initialized with
         the same arguments, but with empty content.
 
         Returns
         -------
-        Message
+        BaseMessage
             new class instance.
         """
         return self.__class__(
@@ -281,11 +264,11 @@ class BaseMessage(object):
 
     def __bytes__(self) -> bytes:
         """Returns message content."""
-        return self.to_bytes()
+        return self.in_bytes()
 
     def __len__(self) -> int:
         """Returns length of the message in bytes."""
-        return len(self.to_bytes())
+        return len(self.in_bytes())
 
     def __repr__(self) -> str:
         """Returns string representation of the message."""
@@ -337,7 +320,21 @@ class BytesMessage(BaseMessage):  # todo: tests
         self._content = content
         return self
 
-    def to_bytes(self) -> bytes:
+    def split(self) -> Generator[BytesMessage, None, None]:
+        if not self._splittable:
+            yield self
+            return
+
+        parts_count = int(np.ceil(len(self) // self._slice_length))
+        for i_part in range(parts_count):
+            yield self.get_instance().set(
+                self._content[
+                    i_part * self._slice_length:
+                    (i_part + 1) * self._slice_length
+                ]
+            )
+
+    def in_bytes(self) -> bytes:
         return self._content
 
     def unpack(self) -> npt.NDArray:
@@ -508,8 +505,8 @@ class Message(BaseMessage):
         self._validate_content()
         return self
 
-    def get_same_instance(self) -> Message:
-        return super().get_same_instance().configure(
+    def get_instance(self) -> Message:
+        return super().get_instance().configure(
             **{n: f.get_setter() for n, f in self._fields.items()}
         )
 
@@ -614,7 +611,7 @@ class Message(BaseMessage):
             msg.set_src_dst(self._src, self._dst)
             yield msg
 
-    def to_bytes(self) -> bytes:
+    def in_bytes(self) -> bytes:
         return b"".join(
             bytes(field) for field in self._fields.values()
         )
