@@ -261,6 +261,113 @@ class TestRegisterMap(unittest.TestCase):
                 exc.exception.args[0]
             )
 
+    def test_registers(self) -> None:
+        res = RegisterMap.from_registers(
+            Register(
+                external_name="t0",
+                name="t_0",
+                format_name="n0",
+                address=0x1,
+                register_type="rw",
+                length=1,
+                data__fmt=None,
+                description="Short 0. Long."
+            ),
+            Register(
+                external_name="t1",
+                name="t_1",
+                format_name="n0",
+                address=0x200,
+                register_type="rw",
+                length=1,
+                data__fmt=">H",
+                description="Short 1. Long."
+            ),
+            Register(
+                external_name="t2",
+                name="t_2",
+                format_name="n0",
+                address=0x10,
+                register_type="ro",
+                length=20,
+                data__fmt=None,
+                description="Short 2. Long."
+            ),
+            Register(
+                external_name="t3",
+                name="t_3",
+                format_name="n0",
+                address=0x100,
+                register_type="wo",
+                length=5,
+                data__fmt=None,
+                description="Short 3. Long."
+            ),
+            Register(
+                external_name="t4",
+                name="t_4",
+                format_name="n0",
+                address=0x1000,
+                register_type="rw",
+                length=1024,
+                data__fmt=None,
+                description="Short 4. Long."
+            ),
+            Register(
+                external_name="t5",
+                name="t_5",
+                format_name="n1",
+                address=0x500,
+                register_type="ro",
+                length=4,
+                data__fmt=">f",
+                description="Short 5. Long."
+            ),
+            Register(
+                external_name="t6",
+                name="t_6",
+                format_name="n1",
+                address=0xf000,
+                register_type="rw",
+                length=6,
+                data__fmt=">I",
+                description="Short 6. Long."
+            ),
+            Register(
+                external_name="t7",
+                name="t_7",
+                format_name="n2",
+                address=0x10,
+                register_type="rw",
+                length=4,
+                data__fmt=None,
+                description="Short 7. Long."
+            ),
+            Register(
+                external_name="t8",
+                name="t_8",
+                format_name="n2",
+                address=0x11,
+                register_type="rw",
+                length=4,
+                data__fmt=">I",
+                description="Short 8. Long."
+            ),
+            Register(
+                external_name="t9",
+                name="t_9",
+                format_name="n3",
+                address=0x24,
+                register_type="rw",
+                length=4,
+                data__fmt=None,
+                description="Short 9. Long."
+            ),
+        )
+        pandas.testing.assert_frame_equal(
+            self.SORTED_DATA, res.table, check_dtype=False
+        )
+
     def test_read(self) -> None:
         with sqlite3.connect(self.DB_PATH) as con:
             self.SORTED_DATA.to_sql("registers", con, index=False)

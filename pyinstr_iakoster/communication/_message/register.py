@@ -110,7 +110,7 @@ class Register(object):
     register_type: str = "rw"
     "register type. Can be one of {'rw', 'ro', 'wo'}"
 
-    data__fmt: str = None
+    data__fmt: str | None = None
     "format of a data in the register."
 
     description: str = ""
@@ -522,6 +522,26 @@ class RegisterMap(object):
         #  without duplicates in address with the same msg_fmt
         #  addresses crossing by length?
         return table.sort_values(by=["format_name", "address"], ignore_index=True)
+
+    @classmethod
+    def from_registers(cls, *registers: Register) -> RegisterMap:
+        """
+        Get RegisterMap from registers tuple.
+
+        Parameters
+        ----------
+        *registers: Register
+            registers for new RegisterMap.
+
+        Returns
+        -------
+        RegisterMap
+            class instance.
+        """
+        table = pd.DataFrame(columns=cls.EXPECTED_COLUMNS)
+        for register in registers:
+            table.loc[len(table)] = register.series
+        return cls(table)
 
     @classmethod
     def read(cls, database: str | Path | sqlite3.Connection) -> RegisterMap:
