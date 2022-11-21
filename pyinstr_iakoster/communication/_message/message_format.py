@@ -243,9 +243,14 @@ class MessageFormat(object):
     ----------
     arf: AsymmetricResponseField
         asymmetric field for message or kwargs for it.
-    **settings: FieldSetter or Any
-        settings for message. If there is a FieldSetter that it will be added
-        to setters dict and to msg_args in other cases.
+    mf_name: str, default='std'
+        name of the message format.
+    splittable: bool, default=True
+        shows that the message can be divided by the data.
+    slice_length: int, default=1024
+        max length of the data in one slice.
+    **setters: FieldSetter
+        setters for message.
 
     Raises
     ------
@@ -259,18 +264,20 @@ class MessageFormat(object):
     def __init__(
             self,
             arf: dict[str, Any] | AsymmetricResponseField = AsymmetricResponseField(),
-            **settings: FieldSetter | Any
+            mf_name: str = "std",
+            splittable: bool = False,
+            slice_length: int = 1024,
+            **setters: FieldSetter
     ):
         if isinstance(arf, dict):
             arf = AsymmetricResponseField(**arf)
         self._arf = arf
-        self._message = {}
-        self._setters = {}
-        for k, v in settings.items():
-            if isinstance(v, FieldSetter):
-                self._setters[k] = v
-            else:
-                self._message[k] = v
+        self._message = dict(
+            mf_name=mf_name,
+            splittable=splittable,
+            slice_length=slice_length
+        )
+        self._setters = setters
 
         setters_diff = set(Message.REQ_FIELDS) - set(self._setters)
         if len(setters_diff):
@@ -424,12 +431,12 @@ class MessageFormatMap(object):
 
     Parameters
     ----------
-    **formats: MessageFormat
+    *formats: MessageFormat
         message formats where key is a message format name.
     """
 
-    def __init__(self, **formats: MessageFormat):
-        self._formats = formats
+    def __init__(self, *formats: MessageFormat):
+        self._formats = {mf.message["mf_name"]: mf for mf in formats}
 
     def get(self, mf_name: str) -> MessageFormat:
         """
@@ -488,7 +495,7 @@ class MessageFormatMap(object):
         """
         with RWConfig(config) as rwc:
             formats = StringEncoder.from_str(rwc.get("master", "formats", convert=False))
-        return cls(**{f: MessageFormat.read(config, f) for f in formats})
+        return cls(*(MessageFormat.read(config, f) for f in formats))
 
     @property
     def formats(self) -> dict[str, MessageFormat]:

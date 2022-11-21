@@ -338,11 +338,11 @@ class Message(BaseMessage):
 
     Parameters
     ----------
-    mf_name: str
+    mf_name: str, default='std'
         name of the message format.
-    splittable: bool
+    splittable: bool, default=True
         shows that the message can be divided by the data.
-    slice_length: int
+    slice_length: int, default=1024
         max length of the data in one slice.
     """
 

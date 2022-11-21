@@ -268,7 +268,7 @@ class TestMessageFormatsMap(unittest.TestCase):
     def setUp(self) -> None:
         with RWConfig(CFG_PATH) as rwc:
             rwc.write(MF_CFG_DICT)
-        self.mf_map = MessageFormatMap(**MF_DICT)
+        self.mf_map = MessageFormatMap(*MF_DICT.values())
 
     def test_init(self) -> None:
         pass  # There's nothing to test here yet

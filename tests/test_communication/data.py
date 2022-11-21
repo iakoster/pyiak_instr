@@ -219,5 +219,5 @@ MF_CFG_DICT = dict(
 
 PF = PackageFormat(
     registers=RegisterMap(REGISTER_MAP_TABLE),
-    formats=MessageFormatMap(**MF_DICT),
+    formats=MessageFormatMap(*MF_DICT.values()),
 )
