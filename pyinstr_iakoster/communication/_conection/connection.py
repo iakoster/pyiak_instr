@@ -289,6 +289,7 @@ class Connection(object):
                 try:
                     ans, rec_from = self.receive()
                     if len(ans) == 0:
+                        self._log_info(f"empty message from {rec_from}")
                         continue
                     received += 1
                     self._log_info("{}, src={}, dst={}".format(
@@ -318,12 +319,13 @@ class Connection(object):
 
                     if code == Code.OK:
                         return ans
-                    elif code == Code.WAIT:
-                        receive_start = dt.datetime.now()
                     else:
-                        invalid_received += 1
-                        transmit_again = True
-                        self._log_info(f"receive with code(s): %r" % code)
+                        self._log_info("receive with code(s): %r" % code)
+                        if code == Code.WAIT:
+                            receive_start = dt.datetime.now()
+                        else:
+                            invalid_received += 1
+                            transmit_again = True
 
         raise ConnectionError(
             "time is up: "

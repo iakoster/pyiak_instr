@@ -74,6 +74,9 @@ def _validate_register_rw_input(invalid_type: str):
                 elif func.__name__ == "read":
                     kwargs["data_length"] = args[0]
 
+            if "data__fmt" not in kwargs and self.data__fmt is not None:
+                kwargs["data__fmt"] = self.data__fmt
+
             return func(self, **kwargs)
 
         return wrapper
@@ -172,6 +175,10 @@ class Register(object):
             description=self.description,
             mf=self.mf
         )
+
+    @overload
+    def read(self, data_length: int, **update: Any) -> Message:
+        ...
 
     @_validate_register_rw_input("wo")
     def read(self, **update: Any) -> Message:

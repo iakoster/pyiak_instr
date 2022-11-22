@@ -1,5 +1,4 @@
 psutil >= 5.9.2, <= 5.9.3
 numpy
 pandas
-tinydb
 deprecation

@@ -69,7 +69,9 @@ class TestRegister(unittest.TestCase):
             0x100,
             0x800,
             register_type="wo",
+            data__fmt=">f",
             description="short desc. Long desc.",
+            mf=self.MF
         )
 
     def test_init(self):
@@ -153,6 +155,13 @@ class TestRegister(unittest.TestCase):
             data={"fmt": ">f"}
         ).set(address=0x100, operation=0, data=[0.1])
         res = self.reg.write([0.1], data__fmt=">f")
+        compare_messages(self, ref, res)
+
+    def test_write_another_data__fmt(self) -> None:
+        ref = self.MF.get(data={"fmt": ">f"}).set(
+            address=0x100, operation=0, data=22
+        )
+        res = self.wo_reg.write(22)
         compare_messages(self, ref, res)
 
     def test_from_series(self) -> None:
