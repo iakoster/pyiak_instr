@@ -205,7 +205,7 @@ class Connection(object):
         self._tx_to = get_timedelta(transmit_timeout)
         self._rx_to = get_timedelta(receive_timeout)
 
-    def _log_info(self, entry: str) -> None:
+    def _log_info(self, entry: str) -> None:  # todo: tests for correct entries
         """
         Log entry to logger if logger is not None.
 
@@ -309,7 +309,8 @@ class Connection(object):
                         continue
 
                     ans, code = self._validate_bytes_message(msg, ans, arf)
-                    if code == Code.ERROR:
+                    if code != Code.OK:
+                        self._log_info("receive with code(s): %r" % code)
                         invalid_received += 1
                         transmit_again = True
                         continue
