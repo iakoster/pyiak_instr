@@ -6,7 +6,7 @@ from ..utils import compare_objects
 
 from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
-    Message,
+    FieldMessage,
     FieldSetter,
     SingleField,
     StaticField,
@@ -26,7 +26,7 @@ RESPONSE_CODES = {
 }
 
 
-class AnotherMessage(Message):
+class AnotherMessage(FieldMessage):
 
     def __init__(
             self,
@@ -34,7 +34,7 @@ class AnotherMessage(Message):
             splittable: bool = False,
             slice_length: int = 1024
     ):
-        Message.__init__(
+        FieldMessage.__init__(
             self,
             mf_name=mf_name,
             splittable=splittable,
@@ -50,7 +50,7 @@ class TestMessage(unittest.TestCase):
         return content
 
     def setUp(self) -> None:
-        self.msg: Message = Message().configure(
+        self.msg: FieldMessage = FieldMessage().configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
@@ -59,7 +59,7 @@ class TestMessage(unittest.TestCase):
             data=FieldSetter.data(expected=1, fmt=">I"),
             crc=FieldSetter.crc(fmt=">H"),
         )
-        self.simple_msg: Message = Message().configure(
+        self.simple_msg: FieldMessage = FieldMessage().configure(
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(
@@ -69,7 +69,7 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_init(self):
-        msg = Message()
+        msg = FieldMessage()
         self.assertEqual("std", msg.mf_name)
         with self.assertRaises(KeyError) as exc:
             msg.data.unpack()
@@ -78,7 +78,7 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_configure(self):
-        msg = Message(mf_name="not_def").configure(
+        msg = FieldMessage(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
@@ -142,7 +142,7 @@ class TestMessage(unittest.TestCase):
             compare_objects(self, field, msg[name])
 
     def test_configure_middle_infinite(self):
-        msg = Message(mf_name="inf").configure(
+        msg = FieldMessage(mf_name="inf").configure(
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
             data=FieldSetter.data(expected=-1, fmt=">H"),
@@ -210,7 +210,7 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_extract(self):
-        msg: Message = Message(mf_name="not_def").configure(
+        msg: FieldMessage = FieldMessage(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.single(fmt=">B"),
             address=FieldSetter.address(fmt=">H"),
@@ -234,7 +234,7 @@ class TestMessage(unittest.TestCase):
         self.assertEqual("w", msg.operation.desc)
 
     def test_extract_middle_infinite(self):
-        msg: Message = Message(mf_name="not_def").configure(
+        msg: FieldMessage = FieldMessage(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             data_length=FieldSetter.data_length(fmt=">B"),
@@ -264,7 +264,7 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_get_instance(self):
-        msg: Message = self.msg.get_instance()
+        msg: FieldMessage = self.msg.get_instance()
         self.assertEqual("std", msg.mf_name)
         for ref, res in zip(self.msg, msg):
             self.assertEqual(ref.name, res.name)
@@ -308,7 +308,7 @@ class TestMessage(unittest.TestCase):
                 self.simple_msg.set(
                     address=0, operation=b"", data_length=1, data=[0x11]
                 )
-            self.assertEqual("Error with operation in Message: field is empty", exc.exception.args[0])
+            self.assertEqual("Error with operation in FieldMessage: field is empty", exc.exception.args[0])
 
         with self.subTest(name="invalid data length"):
             with self.assertRaises(MessageContentError) as exc:
@@ -316,7 +316,7 @@ class TestMessage(unittest.TestCase):
                     address=0, operation="w", data_length=1, data=[0, 1]
                 )
             self.assertEqual(
-                "Error with data_length in Message: invalid length",
+                "Error with data_length in FieldMessage: invalid length",
                 exc.exception.args[0]
             )
 
@@ -330,7 +330,7 @@ class TestMessage(unittest.TestCase):
                     crc=10,
                 )
             self.assertIn(
-                "Error with crc in Message: invalid crc value, ",
+                "Error with crc in FieldMessage: invalid crc value, ",
                 exc.exception.args[0]
             )
 
@@ -347,8 +347,8 @@ class TestMessage(unittest.TestCase):
 
     def test_split(self):
 
-        def get_test_msg() -> Message:
-            new_msg = Message(splittable=True, slice_length=64)
+        def get_test_msg() -> FieldMessage:
+            new_msg = FieldMessage(splittable=True, slice_length=64)
             new_msg.configure(
                 preamble=FieldSetter.static(fmt=">H", default=0x102),
                 address=FieldSetter.address(fmt=">I"),
@@ -415,19 +415,19 @@ class TestMessage(unittest.TestCase):
 
     def test_magic_str(self):
         self.assertEqual(
-            "<Message(address=EMPTY, operation=EMPTY, "
+            "<FieldMessage(address=EMPTY, operation=EMPTY, "
             "data_length=EMPTY, data=EMPTY), src=None, dst=None>",
             str(self.simple_msg)
         )
         self.assertEqual(
-            "<Message(preamble=1AA5, response=0, address=EMPTY, "
+            "<FieldMessage(preamble=1AA5, response=0, address=EMPTY, "
             "operation=EMPTY, data_length=EMPTY, data=EMPTY, crc=EMPTY), "
             "src=None, dst=None>",
             str(self.msg)
         )
         self.fill_content()
         self.assertEqual(
-            "<Message(preamble=1AA5, response=0, address=AA, "
+            "<FieldMessage(preamble=1AA5, response=0, address=AA, "
             "operation=1, data_length=4, data=FFEEDDCC, crc=3986), "
             "src=None, dst=None>",
             str(self.msg)
@@ -439,19 +439,19 @@ class TestMessage(unittest.TestCase):
 
     def test_magic_repr(self):
         self.assertEqual(
-            "<Message(address=EMPTY, operation=EMPTY, "
+            "<FieldMessage(address=EMPTY, operation=EMPTY, "
             "data_length=EMPTY, data=EMPTY), src=None, dst=None>",
             repr(self.simple_msg)
         )
         self.fill_content()
         self.assertEqual(
-            "<Message(preamble=1AA5, response=0, address=AA, operation=1, "
+            "<FieldMessage(preamble=1AA5, response=0, address=AA, operation=1, "
             "data_length=4, data=FFEEDDCC, crc=3986), src=None, dst=None>",
             repr(self.msg)
         )
         self.msg.set_src_dst(src="COM4", dst=("192.168.0.1", 3202))
         self.assertEqual(
-            "<Message(preamble=1AA5, response=0, address=AA, operation=1, "
+            "<FieldMessage(preamble=1AA5, response=0, address=AA, operation=1, "
             "data_length=4, data=FFEEDDCC, crc=3986), "
             "src=COM4, dst=('192.168.0.1', 3202)>",
             repr(self.msg)
@@ -524,7 +524,7 @@ class TestMessage(unittest.TestCase):
 class TestFields(unittest.TestCase):
 
     def test_data_length_unpdate(self):
-        msg: Message = Message(mf_name="not_def").configure(
+        msg: FieldMessage = FieldMessage(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
@@ -540,7 +540,7 @@ class TestFields(unittest.TestCase):
         self.assertListEqual([4], list(dlen.unpack()))
 
     def test_operation_compare(self):
-        msg: Message = Message(mf_name="not_def").configure(
+        msg: FieldMessage = FieldMessage(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),

@@ -6,7 +6,7 @@ import pandas as pd
 from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
     FieldSetter,
-    Message,
+    FieldMessage,
     RegisterMap,
     AsymmetricResponseField,
     MessageFormat,
@@ -92,11 +92,11 @@ def get_setters(num: int) -> dict[str, FieldSetter]:
     return SETTERS[num]
 
 
-def get_message(num: int) -> Message:
+def get_message(num: int) -> FieldMessage:
     msg_args = deepcopy(MF_MSG_ARGS[num])
     if "arf" in msg_args:
         msg_args.pop("arf")
-    return Message(**msg_args).configure(**SETTERS[num])
+    return FieldMessage(**msg_args).configure(**SETTERS[num])
 
 
 def get_mf(num: int, get_ref=True):

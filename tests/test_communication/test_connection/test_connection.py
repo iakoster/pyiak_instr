@@ -7,7 +7,7 @@ import numpy as np
 
 from pyinstr_iakoster.communication import (
     FieldSetter,
-    Message,
+    FieldMessage,
     Connection,
     MessageContentError,
 )
@@ -85,7 +85,7 @@ class ConnectionTestInstance(Connection):
     def setup(self, *args: Any, **kwargs: Any) -> "ConnectionTestInstance":
         return self
 
-    def transmit(self, message: Message) -> None:
+    def transmit(self, message: FieldMessage) -> None:
         compare_messages(self._case, self._tx[self._i_tx], message)
         self._i_tx += 1
 
@@ -106,7 +106,7 @@ class ConnectionTestInstance(Connection):
 
     def set_rx_messages(
             self,
-            *messages: Message | None,
+            *messages: FieldMessage | None,
             asymmetric: list[tuple[int, bytes]] | tuple[int, bytes] = None
     ) -> "ConnectionTestInstance":
         assert len(messages), "messages list is empty"
@@ -119,7 +119,7 @@ class ConnectionTestInstance(Connection):
         return self
 
     def set_tx_messages(
-            self, *messages: Message
+            self, *messages: FieldMessage
     ) -> "ConnectionTestInstance":
         assert len(messages), "messages list is empty"
         self._tx = messages
@@ -146,8 +146,8 @@ class TestConnectionTestInstance(unittest.TestCase):
     def test_exit(self):
         with self.assertRaises(ValueError) as exc:
             with ConnectionTestInstance(self) as con:
-                con.set_tx_messages(Message())
-                con.set_rx_messages(Message())
+                con.set_tx_messages(FieldMessage())
+                con.set_rx_messages(FieldMessage())
         self.assertEqual("receive 0/1, transmit 0/1", exc.exception.args[0])
 
 
@@ -388,7 +388,7 @@ class TestConnection(unittest.TestCase):
             self,
             receive_delay=0.02,
             log_entries=[
-                "<Message(address=1000, data_length=1, operation=0, data=0), "
+                "<FieldMessage(address=1000, data_length=1, operation=0, data=0), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 "fa, src=('127.0.0.1', 4242), dst=('127.0.0.1', 4242)",
@@ -396,7 +396,7 @@ class TestConnection(unittest.TestCase):
                 "message received from ('127.0.0.1', 4242), "
                 "but expected from ('127.0.0.1', 4224)",
 
-                "<Message(address=1000, data_length=1, operation=0, data=0), "
+                "<FieldMessage(address=1000, data_length=1, operation=0, data=0), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 "fa, src=('127.0.0.1', 4242), dst=('127.0.0.1', 4242)",
@@ -432,27 +432,27 @@ class TestConnection(unittest.TestCase):
         with ConnectionTestInstance(
             self,
             log_entries=[
-                "<Message(operation=1, response=0, address=10, "
+                "<FieldMessage(operation=1, response=0, address=10, "
                 "data_length=4, data=EMPTY, crc=4647), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 "01 03 00 10 00 00 e8 11, "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)",
 
-                "<Message(operation=1, response=3, address=10, "
+                "<FieldMessage(operation=1, response=3, address=10, "
                 "data_length=0, data=EMPTY, crc=E811), "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
 
                 "receive with code(s): <Code.UNDEFINED: 255>",
 
-                "<Message(operation=1, response=0, address=10, "
+                "<FieldMessage(operation=1, response=0, address=10, "
                 "data_length=4, data=EMPTY, crc=4647), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 "01 00 00 10 00 04 40 2c cc cd 17 db, "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)",
 
-                "<Message(operation=1, response=0, address=10, "
+                "<FieldMessage(operation=1, response=0, address=10, "
                 "data_length=4, data=402CCCCD, crc=17DB), "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
             ]
@@ -473,26 +473,26 @@ class TestConnection(unittest.TestCase):
         with ConnectionTestInstance(
             self,
             log_entries=[
-                "<Message(operation=1, response1=0, address=24, "
+                "<FieldMessage(operation=1, response1=0, address=24, "
                 "data_length=4, data=EMPTY, response2=0), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 None,
 
-                "<Message(operation=1, response1=3, address=24, "
+                "<FieldMessage(operation=1, response1=3, address=24, "
                 "data_length=0, data=EMPTY, response2=0), "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
 
                 "receive with code(s): {'response1': <Code.ERROR: 1282>, "
                 "'response2': <Code.OK: 1280>}",
 
-                "<Message(operation=1, response1=0, address=24, "
+                "<FieldMessage(operation=1, response1=0, address=24, "
                 "data_length=4, data=EMPTY, response2=0), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 None,
 
-                "<Message(operation=1, response1=0, address=24, "
+                "<FieldMessage(operation=1, response1=0, address=24, "
                 "data_length=4, data=2, response2=0), "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
             ]
@@ -518,7 +518,7 @@ class TestConnection(unittest.TestCase):
 
     def test_exc_without_address(self) -> None:
         with self.assertRaises(ConnectionError) as exc:
-            Connection(None).send(Message())
+            Connection(None).send(FieldMessage())
         self.assertEqual(
             "address not specified", exc.exception.args[0]
         )
@@ -538,7 +538,7 @@ class TestConnection(unittest.TestCase):
 
         with self.assertRaises(MessageContentError) as exc:
             ConnectionTestInstance(self).send(
-                Message().configure(
+                FieldMessage().configure(
                     address=FieldSetter.address(fmt=">I"),
                     data_length=FieldSetter.data_length(
                         fmt=">I", units=FieldSetter.WORDS
@@ -550,12 +550,12 @@ class TestConnection(unittest.TestCase):
                 ).set(address=1, operation=0)
             )
         self.assertEqual(
-            "Error with operation in Message: unknown base 'e'",
+            "Error with operation in FieldMessage: unknown base 'e'",
             exc.exception.args[0]
         )
 
     @staticmethod
-    def read(reg_name: str, *args, shift: int = 0, ans: bool = False, **kwargs) -> Message:
+    def read(reg_name: str, *args, shift: int = 0, ans: bool = False, **kwargs) -> FieldMessage:
         if ans:
             src_dst = {"src": DST_ADDRESS, "dst": SRC_ADDRESS}
         else:
@@ -565,11 +565,11 @@ class TestConnection(unittest.TestCase):
         ).set_src_dst(**src_dst)
 
     @staticmethod
-    def send(con: ConnectionTestInstance, message: Message) -> Message:
+    def send(con: ConnectionTestInstance, message: FieldMessage) -> FieldMessage:
         return con.send(message, PF.get_format(message.mf_name).arf)
 
     @staticmethod
-    def write(reg_name: str, *args, shift: int = 0, ans: bool = False, **kwargs) -> Message:
+    def write(reg_name: str, *args, shift: int = 0, ans: bool = False, **kwargs) -> FieldMessage:
         if ans:
             src_dst = {"src": DST_ADDRESS, "dst": SRC_ADDRESS}
         else:

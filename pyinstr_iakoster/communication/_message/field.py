@@ -19,7 +19,7 @@ from ...exceptions import (
     FieldContentError
 )
 if TYPE_CHECKING:
-    from .message import Message
+    from .message import FieldMessage
 
 
 __all__ = [
@@ -67,7 +67,7 @@ class BaseField(object):
         is calculated from the format.
     content: bytes
         field content in bytes.
-    parent: Message or None
+    parent: FieldMessage or None
         parent message.
     """
 
@@ -82,7 +82,7 @@ class BaseField(object):
             fmt: str,
             content: bytes,
             default: ContentType,
-            parent: Message,
+            parent: FieldMessage,
     ):
         self._mf_name = mf_name
         self._name = name
@@ -161,7 +161,7 @@ class BaseField(object):
         return self._name
 
     @property
-    def parent(self) -> Message | None:
+    def parent(self) -> FieldMessage | None:
         return self._parent
 
     @property
@@ -260,7 +260,7 @@ class Field(BaseField):
         field content.
     may_be_empty: bool, default=False
         if True then field can be empty in a message.
-    parent: Message or None
+    parent: FieldMessage or None
             parent message.
 
     See Also
@@ -278,7 +278,7 @@ class Field(BaseField):
             fmt: str,
             default: ContentType = b"",
             may_be_empty: bool = False,
-            parent: Message = None,
+            parent: FieldMessage = None,
     ):
         BaseField.__init__(
             self,
@@ -537,7 +537,7 @@ class SingleField(Field):
         is calculated from the format.
     may_be_empty: bool, default=False
         if True then field can be empty in a message.
-    parent: Message or None
+    parent: FieldMessage or None
         parent message.
 
     Notes
@@ -558,7 +558,7 @@ class SingleField(Field):
             fmt: str,
             default: ContentType = b"",
             may_be_empty: bool = False,
-            parent: Message = None,
+            parent: FieldMessage = None,
     ):
         Field.__init__(
             self,
@@ -597,7 +597,7 @@ class StaticField(SingleField):
         is calculated from the format.
     default: Content, default=b""
         field content.
-    parent: Message or None
+    parent: FieldMessage or None
         parent message.
 
     Notes
@@ -617,7 +617,7 @@ class StaticField(SingleField):
             start_byte: int,
             fmt: str,
             default: ContentType,
-            parent: Message = None,
+            parent: FieldMessage = None,
     ):
         SingleField.__init__(
             self,
@@ -661,7 +661,7 @@ class AddressField(SingleField):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    parent: Message or None
+    parent: FieldMessage or None
         parent message.
 
     See Also
@@ -675,7 +675,7 @@ class AddressField(SingleField):
             *,
             start_byte: int,
             fmt: str,
-            parent: Message = None,
+            parent: FieldMessage = None,
     ):
         SingleField.__init__(
             self,
@@ -711,7 +711,7 @@ class CrcField(SingleField):
         is calculated from the format.
     algorithm_name: str
         the name of the algorithm by which the crc is counted.
-    parent: Message or None
+    parent: FieldMessage or None
         parent message.
 
     See Also
@@ -727,7 +727,7 @@ class CrcField(SingleField):
             start_byte: int,
             fmt: str,
             algorithm_name: str = "crc16-CCITT/XMODEM",
-            parent: Message = None,
+            parent: FieldMessage = None,
     ):
         if algorithm_name not in self.CRC_ALGORITHMS:
             raise ValueError("invalid algorithm name: %s" % algorithm_name)
@@ -743,14 +743,14 @@ class CrcField(SingleField):
         self._alg_name = algorithm_name
         self._alg = self.CRC_ALGORITHMS[algorithm_name]
 
-    def calculate(self, msg: Message) -> int:
+    def calculate(self, msg: FieldMessage) -> int:
         """
         Calculate a crc value of a message with all fields except this
         field instance.
 
         Parameters
         ----------
-        msg: Message
+        msg: FieldMessage
             message.
 
         Returns
@@ -832,7 +832,7 @@ class DataField(Field):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    parent: Message or None
+    parent: FieldMessage or None
         parent message.
 
     See Also
@@ -847,7 +847,7 @@ class DataField(Field):
             start_byte: int,
             expected: int,
             fmt: str,
-            parent: Message = None
+            parent: FieldMessage = None
     ):
         Field.__init__(
             self,
@@ -893,7 +893,7 @@ class DataLengthField(SingleField):
         data length units. Data can be measured in bytes or words.
     additive: int
         additional value to the length of the data.
-    parent: Message or None
+    parent: FieldMessage or None
         parent message.
 
     Raises
@@ -919,7 +919,7 @@ class DataLengthField(SingleField):
             fmt: str,
             units: int = BYTES,
             additive: int = 0,
-            parent: Message = None
+            parent: FieldMessage = None
     ):
         if units not in (self.BYTES, self.WORDS):
             raise ValueError("invalid units: %d" % units)
@@ -1024,7 +1024,7 @@ class OperationField(SingleField):
     desc_dict: dict of {str, int}, optional
         dictionary of correspondence between the operation base and
         the value in the content.
-    parent: Message or None
+    parent: FieldMessage or None
         parent message.
 
     Notes
@@ -1047,7 +1047,7 @@ class OperationField(SingleField):
             start_byte: int,
             fmt: str,
             desc_dict: dict[str, int] = None,
-            parent: Message = None,
+            parent: FieldMessage = None,
     ):
         if desc_dict is None:
             self._desc_dict = {"r": 0, "w": 1, "e": 2}
@@ -1200,7 +1200,7 @@ class ResponseField(SingleField):
         matching dictionary value and codes.
     default_code: int or Code or None
         default code if value undefined.
-    parent: Message or None
+    parent: FieldMessage or None
         parent message.
 
     See Also
@@ -1230,7 +1230,7 @@ class ResponseField(SingleField):
             codes: dict[int, Code | int],
             default: ContentType = 0,
             default_code: int | Code | None = UNDEFINED,
-            parent: Message = None,
+            parent: FieldMessage = None,
     ):
         super().__init__(
             mf_name,

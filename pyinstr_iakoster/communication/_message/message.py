@@ -28,7 +28,7 @@ from ...core import Code
 
 __all__ = [
     "BytesMessage",
-    "Message",
+    "FieldMessage",
     "MessageContentError",
     "NotConfiguredMessageError",
 ]
@@ -116,12 +116,12 @@ class BaseMessage(object):
         """
         raise NotImplementedError()
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Any, None, None]:
         """Iteration by message."""
         raise NotImplementedError()
 
     def clear_src_dst(self) -> None:
-        """Set src and dst to None."""
+        """Set `src` and `dst` to None."""
         self._dst, self._src = None, None
 
     def get_instance(self) -> BaseMessage:
@@ -155,7 +155,7 @@ class BaseMessage(object):
 
         Returns
         -------
-        Message
+        FieldMessage
             object message instance.
         """
         self._src, self._dst = src, dst
@@ -314,7 +314,7 @@ class BytesMessage(BaseMessage):  # todo: tests
     def in_bytes(self) -> bytes:
         return self._content
 
-    def unpack(self) -> npt.NDArray:
+    def unpack(self) -> npt.NDArray[np.uint8]:
         return np.frombuffer(self._content, dtype="B")
 
     def _content_repr(self) -> str:
@@ -332,7 +332,7 @@ class BytesMessage(BaseMessage):  # todo: tests
             yield byte
 
 
-class Message(BaseMessage):
+class FieldMessage(BaseMessage):
     """
     Represents a message for communication between devices.
 
@@ -382,10 +382,10 @@ class Message(BaseMessage):
             data: FieldSetter = FieldSetter(),
             data_length: FieldSetter = FieldSetter(),
             **fields: FieldSetter
-    ) -> Message:
+    ) -> FieldMessage:
         ...
 
-    def configure(self, **fields: FieldSetter) -> Message:
+    def configure(self, **fields: FieldSetter) -> FieldMessage:
         """
         Configure fields parameters in the message.
 
@@ -396,7 +396,7 @@ class Message(BaseMessage):
 
         Returns
         -------
-        Message
+        FieldMessage
             object message instance.
         """
         fields_diff = set(self.REQ_FIELDS) - set(fields)
@@ -453,7 +453,7 @@ class Message(BaseMessage):
 
         return self
 
-    def extract(self, message: bytes) -> Message:
+    def extract(self, message: bytes) -> FieldMessage:
         """
         Extract fields content from a message.
 
@@ -466,7 +466,7 @@ class Message(BaseMessage):
 
         Returns
         -------
-        Message
+        FieldMessage
             self class instance.
 
         Raises
@@ -482,7 +482,7 @@ class Message(BaseMessage):
         self._validate_content()
         return self
 
-    def get_instance(self) -> Message:
+    def get_instance(self) -> FieldMessage:
         return super().get_instance().configure(
             **{n: f.get_setter() for n, f in self._fields.items()}
         )
@@ -496,10 +496,10 @@ class Message(BaseMessage):
             data: ContentType = b"",
             data_length: ContentType = b"",
             **fields: ContentType
-    ) -> Message:
+    ) -> FieldMessage:
         ...
 
-    def set(self, **fields: ContentType) -> Message:
+    def set(self, **fields: ContentType) -> FieldMessage:
         """
         Set field content by names.
 
@@ -510,7 +510,7 @@ class Message(BaseMessage):
 
         Returns
         -------
-        Message
+        FieldMessage
             self class instance.
 
         Raises
@@ -531,9 +531,8 @@ class Message(BaseMessage):
         self._validate_content()
         return self
 
-    # todo: yield full message if not splitable,
-    #  parts count for bytes but split by data with int count of word
-    def split(self) -> Generator[Message, None, None]:
+    # todo: parts count for bytes but split by data with int count of word
+    def split(self) -> Generator[FieldMessage, None, None]:
         """
         Split data field on slices.
 
@@ -731,7 +730,7 @@ class Message(BaseMessage):
                 codes[field.name] = field.current_code
         return codes
 
-    def __add__(self, other: Message | bytes) -> Message:
+    def __add__(self, other: FieldMessage | bytes) -> FieldMessage:
         """
         Add new data to the data field.
 
@@ -747,17 +746,17 @@ class Message(BaseMessage):
 
         Parameters
         ----------
-        other: bytes or Message
+        other: bytes or FieldMessage
             additional data or message.
 
         Returns
         -------
-        Message
+        FieldMessage
             self instance.
         """
 
         match other:
-            case Message():
+            case FieldMessage():
                 if other.mf_name != self._mf_name:
                     raise TypeError(
                         "messages have different formats: %s != %s" % (

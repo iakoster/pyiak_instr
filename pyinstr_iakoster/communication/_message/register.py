@@ -20,7 +20,7 @@ from ...utilities import split_complex_dict
 
 if TYPE_CHECKING:
     from .field import ContentType
-    from .message import Message
+    from .message import FieldMessage
     from .message_format import MessageFormat
     from .package_format import PackageFormat
 
@@ -58,7 +58,7 @@ def _validate_register_rw_input(invalid_type: str):
         @wraps(func)
         def wrapper(
                 self: Register, *args: ContentType, **kwargs: Any
-        ) -> Message:
+        ) -> FieldMessage:
             if self.register_type == invalid_type:
                 if invalid_type == "ro":
                     raise TypeError("read only register")
@@ -177,11 +177,11 @@ class Register(object):
         )
 
     @overload
-    def read(self, data_length: int, **update: Any) -> Message:
+    def read(self, data_length: int, **update: Any) -> FieldMessage:
         ...
 
     @_validate_register_rw_input("wo")
-    def read(self, **update: Any) -> Message:
+    def read(self, **update: Any) -> FieldMessage:
         """
         Get message with read operation.
 
@@ -201,7 +201,7 @@ class Register(object):
 
         Returns
         -------
-        Message
+        FieldMessage
             message for reading data from register.
 
         Raises
@@ -221,11 +221,11 @@ class Register(object):
         )
 
     @overload
-    def write(self, data: ContentType, **update: ContentType) -> Message:
+    def write(self, data: ContentType, **update: ContentType) -> FieldMessage:
         ...
 
     @_validate_register_rw_input("ro")
-    def write(self, **update: ContentType) -> Message:
+    def write(self, **update: ContentType) -> FieldMessage:
         """
         Get message with write operation.
 
@@ -246,7 +246,7 @@ class Register(object):
 
         Returns
         -------
-        Message
+        FieldMessage
             message for writing data from register.
 
         Raises
@@ -265,7 +265,7 @@ class Register(object):
             operation_base: str,
             configure_kw: dict[str, dict[str, Any]],
             set_kw: dict[str, Any]
-    ) -> Message:
+    ) -> FieldMessage:
         """
         Get message from message format.
 
@@ -280,7 +280,7 @@ class Register(object):
 
         Returns
         -------
-        Message
+        FieldMessage
             filled message with specified message format.
 
         Raises
@@ -329,13 +329,13 @@ class Register(object):
         return cls(**series.to_dict(), mf=mf)
 
     @staticmethod
-    def _find_operation(msg: Message, base: str) -> str:
+    def _find_operation(msg: FieldMessage, base: str) -> str:
         """
         Find operation from `desc_dict` from `operation` field by base.
 
         Parameters
         ----------
-        msg: Message
+        msg: FieldMessage
             message.
         base: str
             operation base.

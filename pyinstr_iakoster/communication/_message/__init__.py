@@ -16,7 +16,7 @@ from .field import (
 
 from .message import (
     BytesMessage,
-    Message,
+    FieldMessage,
     MessageContentError,
     NotConfiguredMessageError,
 )
@@ -48,7 +48,7 @@ __all__ = [
     "FieldType",
     "FieldContentError",
     "BytesMessage",
-    "Message",
+    "FieldMessage",
     "MessageContentError",
     "NotConfiguredMessageError",
     "Register",

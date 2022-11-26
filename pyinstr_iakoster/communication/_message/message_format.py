@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from .field import FieldSetter
-from .message import Message
+from .message import FieldMessage
 from ...core import Code
 from ...utilities import StringEncoder
 from ...rwfile import (
@@ -279,7 +279,7 @@ class MessageFormat(object):
         )
         self._setters = setters
 
-        setters_diff = set(Message.REQ_FIELDS) - set(self._setters)
+        setters_diff = set(FieldMessage.REQ_FIELDS) - set(self._setters)
         if len(setters_diff):
             raise ValueError(f"missing the required setters: {setters_diff}")
 
@@ -325,7 +325,7 @@ class MessageFormat(object):
             rwc.apply_changes()
             rwc.write(mf_dict)
 
-    def get(self, **update: dict[str, Any]) -> Message:
+    def get(self, **update: dict[str, Any]) -> FieldMessage:
         """
         Get message instance with message format.
 
@@ -338,14 +338,14 @@ class MessageFormat(object):
 
         Returns
         -------
-        Message
+        FieldMessage
             message configured with message format.
         """
         setters = deepcopy(self._setters)
         if len(update):
             for setter_name, fields in update.items():
                 setters[setter_name].kwargs.update(fields)
-        return Message(**self._message).configure(**setters)
+        return FieldMessage(**self._message).configure(**setters)
 
     @classmethod
     def read(cls, config: Path, mf_name: str) -> MessageFormat:

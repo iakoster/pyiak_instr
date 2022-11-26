@@ -3,7 +3,7 @@ import datetime as dt
 from typing import Any
 
 from .._message import (
-    Message,
+    FieldMessage,
     AsymmetricResponseField,
     MessageContentError
 )
@@ -89,7 +89,7 @@ class Connection(object):
         """
         raise NotImplementedError()
 
-    def transmit(self, message: Message) -> None:
+    def transmit(self, message: FieldMessage) -> None:
         """
         Transmit message to hapi.
 
@@ -98,7 +98,7 @@ class Connection(object):
 
         Parameters
         ----------
-        message: Message
+        message: FieldMessage
             transmission message.
         """
         raise NotImplementedError()
@@ -136,15 +136,15 @@ class Connection(object):
 
     def send(
             self,
-            message: Message,
+            message: FieldMessage,
             arf: AsymmetricResponseField = AsymmetricResponseField()
-    ) -> Message:
+    ) -> FieldMessage:
         """
         Send message to dst (see Message.dst).
 
         Parameters
         ----------
-        message: Message
+        message: FieldMessage
             transmitted message.
         arf: MessageErrorMark, default=MessageErrorMark()
             error mark for asymmetric response. Can be obtained from
@@ -152,7 +152,7 @@ class Connection(object):
 
         Returns
         -------
-        Message
+        FieldMessage
             response message
         """
         if self._addr is None:
@@ -217,7 +217,7 @@ class Connection(object):
         if self._logger is not None:
             self._logger.info(entry)
 
-    def _read(self, msg: Message, arf: AsymmetricResponseField) -> Message:
+    def _read(self, msg: FieldMessage, arf: AsymmetricResponseField) -> FieldMessage:
         """
         Send message with read operation.
 
@@ -225,14 +225,14 @@ class Connection(object):
 
         Parameters
         ----------
-        msg: Message
+        msg: FieldMessage
             source message.
         arf: AsymmetricResponseField
             error mark for asymmetric response.
 
         Returns
         -------
-        Message
+        FieldMessage
             response with the sum of all data from all responses
             (when sending multiple messages using .split).
         """
@@ -243,7 +243,7 @@ class Connection(object):
         # answer.set(data_length=msg.data_length.content)  # todo: .set in write. There is not needed?
         return answer
 
-    def _send(self, msg: Message, arf: AsymmetricResponseField) -> Message:
+    def _send(self, msg: FieldMessage, arf: AsymmetricResponseField) -> FieldMessage:
         """
         Send message and get response.
 
@@ -254,14 +254,14 @@ class Connection(object):
 
         Parameters
         ----------
-        msg: Message
+        msg: FieldMessage
             message for sending.
         arf: AsymmetricResponseField
             asymmetric error field.
 
         Returns
         -------
-        Message
+        FieldMessage
             response message.
 
         Raises
@@ -337,10 +337,10 @@ class Connection(object):
 
     def _validate_bytes_message(
             self,
-            tx_msg: Message,
+            tx_msg: FieldMessage,
             rx_msg: bytes,
             arf: AsymmetricResponseField,
-    ) -> tuple[Message, Code]:
+    ) -> tuple[FieldMessage, Code]:
         """
         Validate raw received message.
 
@@ -348,7 +348,7 @@ class Connection(object):
 
         Parameters
         ----------
-        tx_msg: Message
+        tx_msg: FieldMessage
             transmitted message.
         rx_msg: bytes
             raw received message.
@@ -370,13 +370,13 @@ class Connection(object):
             return rx_msg, Code.ERROR
         return rx_msg, Code.OK
 
-    def _validate_message(self, rx_msg: Message) -> Code | dict[str, Code]:
+    def _validate_message(self, rx_msg: FieldMessage) -> Code | dict[str, Code]:
         """
         validate converted to a class message.
 
         Parameters
         ----------
-        rx_msg: Message
+        rx_msg: FieldMessage
             received message.
 
         Returns
@@ -401,7 +401,7 @@ class Connection(object):
         else:
             return Code.OK
 
-    def _write(self, msg: Message, arf: AsymmetricResponseField) -> Message:
+    def _write(self, msg: FieldMessage, arf: AsymmetricResponseField) -> FieldMessage:
         """
         Send message with write operation.
 
@@ -409,14 +409,14 @@ class Connection(object):
 
         Parameters
         ----------
-        msg: Message
+        msg: FieldMessage
             source message.
         arf: AsymmetricResponseField
             asymmetric error mark.
 
         Returns
         -------
-        Message
+        FieldMessage
             first response message with source data length.
         """
         msg_gen = msg.split()

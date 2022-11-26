@@ -7,7 +7,7 @@ import pandas as pd
 import pandas.testing
 
 from pyinstr_iakoster.communication import (
-    Message,
+    FieldMessage,
 )
 
 
@@ -96,7 +96,7 @@ def compare_objects(
 
 
 def compare_messages(
-        case: TestCase, ref: Message, res: Message, wo_attrs: list[str] = None
+        case: TestCase, ref: FieldMessage, res: FieldMessage, wo_attrs: list[str] = None
 ) -> None:
     if wo_attrs is None:
         wo_attrs = ["address", "operation", "data_length", "data", "parent"]

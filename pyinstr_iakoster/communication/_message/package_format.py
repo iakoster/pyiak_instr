@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .message import Message
+from .message import FieldMessage
 from .register import Register, RegisterMap
 from .message_format import (
     MessageFormat,
@@ -35,7 +35,7 @@ class PackageFormat(object):
         self._reg_map = registers
         self._mf_map = formats
 
-    def get(self, mf_name: str, **update: dict[str, Any]) -> Message:
+    def get(self, mf_name: str, **update: dict[str, Any]) -> FieldMessage:
         """
         Get message instance with message format.
 
@@ -48,7 +48,7 @@ class PackageFormat(object):
 
         Returns
         -------
-        Message
+        FieldMessage
             message configured with selected message format.
         """
         return self._mf_map[mf_name].get(**update)
