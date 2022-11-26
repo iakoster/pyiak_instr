@@ -47,7 +47,7 @@ ContentType = (
 
 class BaseField(object):
     """
-    Represents a basic class for single field of a Message.
+    Represents a basic class for single field with all required properties.
 
     Parameters
     ----------
@@ -81,7 +81,7 @@ class BaseField(object):
             may_be_empty: bool,
             fmt: str,
             content: bytes,
-            default: ContentType,
+            default: bytes,
             parent: FieldMessage,
     ):
         self._mf_name = mf_name
@@ -98,23 +98,6 @@ class BaseField(object):
         else:
             stop_byte = None
         self._slice = slice(start_byte, stop_byte)
-
-    def get_setter(self) -> FieldSetter:
-        """
-        Returns
-        -------
-        FieldSetter
-            field setter for a message configure method.
-
-        See Also
-        --------
-        Message.get_same_instance: where it used.
-        """
-        raise NotImplementedError()
-
-    def reset_to_default(self) -> None:
-        """Set field content to default."""
-        self._content = self._def
 
     @property
     def bytesize(self) -> int:
@@ -194,49 +177,6 @@ class BaseField(object):
         """The length of the field in words."""
         return len(self._content) // self.bytesize
 
-    def __bytes__(self) -> bytes:
-        """Returns field content"""
-        return self._content
-
-    def __len__(self) -> int:
-        """Returns the length of the content in bytes"""
-        return len(self._content)
-
-    def __str__(self) -> str:
-        """
-        Returns a string of hexadecimal numbers from the content.
-
-        When converting, left insignificant zeros are removed and
-        a space separator between words.
-
-        Returns 'EMPTY' in field have no content.
-
-        Returns
-        -------
-        str
-            string representing the content in a readable format.
-        """
-        if not len(self._content):
-            return "EMPTY"
-
-        words = []
-        for start in range(0, len(self.content), self.bytesize):
-            word = self.content[start:start + self.bytesize] \
-                .hex().lstrip("0").upper()
-            words.append(word if len(word) else "0")
-        return " ".join(words)
-
-    def __repr__(self) -> str:
-        """Returns string representation of the field instance"""
-        if self.words_count > 16:
-            self_str = "{} ...({})".format(
-                " ".join(str(self).split(" ")[:8]), self.words_count - 8
-            )
-        else:
-            self_str = str(self)
-
-        return f"<{self.__class__.__name__}({self_str}, fmt='{self._fmt}')>"
-
 
 class Field(BaseField):
     """
@@ -304,25 +244,6 @@ class Field(BaseField):
             may_be_empty=self._may_be_empty
         )
 
-    def set(self, content: ContentType) -> None:
-        """
-        Set the field content.
-
-        If the received content is not of type bytes, then there will be
-        an attempt to convert the received variable into type bytes,
-        otherwise an exception will be raised.
-
-        Parameters
-        ----------
-        content: Content type
-            new field content.
-
-        See Also
-        --------
-        _validate_content: method of validating new content.
-        """
-        self._content = self._validate_content(self._convert_content(content))
-
     def extract(self, message: bytes) -> None:
         """
         Extract new content from a message in range self.slice.
@@ -350,6 +271,29 @@ class Field(BaseField):
                 "Unable to extract because the incoming message is empty"
             )
         self.set(message[self._slice])
+
+    def reset_to_default(self) -> None:
+        """Set field content to default."""
+        self._content = self._def
+
+    def set(self, content: ContentType) -> None:
+        """
+        Set the field content.
+
+        If the received content is not of type bytes, then there will be
+        an attempt to convert the received variable into type bytes,
+        otherwise an exception will be raised.
+
+        Parameters
+        ----------
+        content: Content type
+            new field content.
+
+        See Also
+        --------
+        _validate_content: method of validating new content.
+        """
+        self._content = self._validate_content(self._convert_content(content))
 
     def unpack(self, fmt: str = None) -> npt.NDArray:
         """
@@ -491,6 +435,10 @@ class Field(BaseField):
 
         return content
 
+    def __bytes__(self) -> bytes:
+        """Returns field content"""
+        return self._content
+
     def __getitem__(self, word_index: int | slice) -> int | float | npt.NDArray:
         """
         Returns from the field a word or a slice of words unpacked in fmt.
@@ -518,6 +466,45 @@ class Field(BaseField):
         """
         for word in self.unpack():
             yield word
+
+    def __len__(self) -> int:
+        """Returns the length of the content in bytes"""
+        return len(self._content)
+
+    def __str__(self) -> str:
+        """
+        Returns a string of hexadecimal numbers from the content.
+
+        When converting, left insignificant zeros are removed and
+        a space separator between words.
+
+        Returns 'EMPTY' in field have no content.
+
+        Returns
+        -------
+        str
+            string representing the content in a readable format.
+        """
+        if not len(self._content):
+            return "EMPTY"
+
+        words = []
+        for start in range(0, len(self.content), self.bytesize):
+            word = self.content[start:start + self.bytesize] \
+                .hex().lstrip("0")
+            words.append(word.upper() if len(word) else "0")
+        return " ".join(words)
+
+    def __repr__(self) -> str:
+        """Returns string representation of the field instance"""
+        if self.words_count > 16:
+            self_str = "{} ...({})".format(
+                " ".join(str(self).split(" ")[:8]), self.words_count - 8
+            )
+        else:
+            self_str = str(self)
+
+        return f"<{self.__class__.__name__}({self_str}, fmt='{self._fmt}')>"
 
 
 class SingleField(Field):
@@ -625,9 +612,10 @@ class StaticField(SingleField):
             name,
             start_byte=start_byte,
             fmt=fmt,
-            parent=parent
+            default=default,
+            may_be_empty=False,
+            parent=parent,
         )
-        self.set(default)
 
     def get_setter(self) -> FieldSetter:
         return FieldSetter.static(
@@ -644,8 +632,7 @@ class StaticField(SingleField):
                 "the new content: %r != %r" % (self._content, content)
             )
         else:
-            self._content = self._validate_content(content)
-            self._def = self._content
+            super().set(content)
 
 
 class AddressField(SingleField):
@@ -656,6 +643,8 @@ class AddressField(SingleField):
     ----------
     mf_name: str
         the name of package format to which the field belongs.
+    name: str
+        the name of the field.
     start_byte: int
         the number of bytes in the message from which the fields begin.
     fmt: str
@@ -672,6 +661,7 @@ class AddressField(SingleField):
     def __init__(
             self,
             mf_name: str,
+            name: str,
             *,
             start_byte: int,
             fmt: str,
@@ -680,7 +670,7 @@ class AddressField(SingleField):
         SingleField.__init__(
             self,
             mf_name,
-            "address",
+            name,
             start_byte=start_byte,
             fmt=fmt,
             parent=parent
@@ -827,6 +817,8 @@ class DataField(Field):
     ----------
     mf_name: str
         the name of package format to which the field belongs.
+    name: str
+        the name of the field.
     start_byte: int
         the number of bytes in the message from which the fields begin.
     fmt: str
@@ -843,6 +835,7 @@ class DataField(Field):
     def __init__(
             self,
             mf_name: str,
+            name: str,
             *,
             start_byte: int,
             expected: int,
@@ -852,7 +845,7 @@ class DataField(Field):
         Field.__init__(
             self,
             mf_name,
-            "data",
+            name,
             start_byte=start_byte,
             expected=expected,
             fmt=fmt,
@@ -884,6 +877,8 @@ class DataLengthField(SingleField):
     ----------
     mf_name: str
         the name of package format to which the field belongs.
+    name: str
+        the name of the field.
     start_byte: int
         the number of bytes in the message from which the fields begin.
     fmt: str
@@ -908,12 +903,13 @@ class DataLengthField(SingleField):
     SingleField: parent class.
     """
 
-    BYTES = 0x10
+    BYTES = 0x10  # todo: to Code
     WORDS = 0x11
 
     def __init__(
             self,
             mf_name: str,
+            name: str,
             *,
             start_byte: int,
             fmt: str,
@@ -932,7 +928,7 @@ class DataLengthField(SingleField):
         SingleField.__init__(
             self,
             mf_name,
-            "data_length",
+            name,
             start_byte=start_byte,
             fmt=fmt,
             parent=parent
@@ -1016,6 +1012,8 @@ class OperationField(SingleField):
     ----------
     mf_name: str
         the name of package format to which the field belongs.
+    name: str
+        the name of the field.
     start_byte: int
         the number of bytes in the message from which the fields begin.
     fmt: str
@@ -1036,13 +1034,14 @@ class OperationField(SingleField):
     FieldSingle: parent class.
     """
 
-    READ = "r"
+    READ = "r"  # todo: to codes
     WRITE = "w"
     ERROR = "e"
 
     def __init__(
             self,
             mf_name: str,
+            name: str,
             *,
             start_byte: int,
             fmt: str,
@@ -1058,7 +1057,7 @@ class OperationField(SingleField):
         SingleField.__init__(
             self,
             mf_name,
-            "operation",
+            name,
             start_byte=start_byte,
             fmt=fmt,
             parent=parent
@@ -1316,12 +1315,23 @@ class FieldSetter(object):
     BYTES = DataLengthField.BYTES
     WORDS = DataLengthField.WORDS
 
+    FIELDS = dict(
+        single=SingleField,
+        static=StaticField,
+        address=AddressField,
+        crc=CrcField,
+        data=DataField,
+        data_length=DataLengthField,
+        operation=OperationField,
+        response=ResponseField,
+    )
+
     def __init__(
             self,
-            special: str = None,
+            field_type: str = None,
             **kwargs: Any,
     ):
-        self.special = special
+        self.field_type = field_type
         if "default" in kwargs and isinstance(kwargs["default"], bytes):
             raise TypeError(
                 "%s not recommended bytes type for 'default' argument" % type(
@@ -1360,7 +1370,7 @@ class FieldSetter(object):
         if default is None:
             default = []
         return cls(
-            special="single",
+            field_type="single",
             fmt=fmt,
             default=default,
             may_be_empty=may_be_empty
@@ -1368,27 +1378,29 @@ class FieldSetter(object):
 
     @classmethod
     def static(cls, *, fmt: str, default: ContentType):
-        return cls(special="static", fmt=fmt, default=default)
+        return cls(field_type="static", fmt=fmt, default=default)
 
     @classmethod
     def address(cls, *, fmt: str):
-        return cls(fmt=fmt)
+        return cls(field_type="address", fmt=fmt)
 
     @classmethod
     def crc(cls, *, fmt: str, algorithm_name: str = "crc16-CCITT/XMODEM"):
-        return cls(special="crc", fmt=fmt, algorithm_name=algorithm_name)
+        return cls(field_type="crc", fmt=fmt, algorithm_name=algorithm_name)
 
     @classmethod
     def data(cls, *, expected: int, fmt: str):
-        return cls(expected=expected, fmt=fmt)
+        return cls(field_type="data", expected=expected, fmt=fmt)
 
     @classmethod
     def data_length(cls, *, fmt: str, units: int = BYTES, additive: int = 0):
-        return cls(fmt=fmt, units=units, additive=additive)
+        return cls(
+            field_type="data_length", fmt=fmt, units=units, additive=additive
+        )
 
     @classmethod
     def operation(cls, *, fmt: str, desc_dict: dict[str, int] = None):
-        return cls(fmt=fmt, desc_dict=desc_dict)
+        return cls(field_type="operation", fmt=fmt, desc_dict=desc_dict)
 
     @classmethod
     def response(
@@ -1400,7 +1412,7 @@ class FieldSetter(object):
             default_code: int | Code | None = Code.UNDEFINED,
     ):
         return cls(
-            special="response",
+            field_type="response",
             fmt=fmt,
             codes=codes,
             default=default,
@@ -1424,7 +1436,7 @@ class FieldSetter(object):
             comparison result
         """
         if isinstance(other, FieldSetter):
-            return self.special == other.special \
+            return self.field_type == other.field_type \
                    and self.kwargs == other.kwargs
         return False
 
@@ -1433,7 +1445,7 @@ class FieldSetter(object):
         kwargs = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
         if len(kwargs):
             kwargs = ", " + kwargs
-        return f"<{cls_name}(special={self.special}{kwargs})>"
+        return f"<{cls_name}(special={self.field_type}{kwargs})>"
 
     __str__ = __repr__
 
@@ -1456,11 +1468,12 @@ class MessageType(Protocol):
 
     @property
     def address(self) -> AddressField:
-        return AddressField("", start_byte=0, fmt="i")
+        return AddressField("", "", start_byte=0, fmt="i")
 
     @property
     def data(self) -> DataField:
         return DataField(
+            "",
             "",
             start_byte=0,
             expected=-1,
@@ -1469,11 +1482,11 @@ class MessageType(Protocol):
 
     @property
     def data_length(self) -> DataLengthField:
-        return DataLengthField("", start_byte=0, fmt="i")
+        return DataLengthField("", "", start_byte=0, fmt="i")
 
     @property
     def operation(self) -> OperationField:
-        return OperationField("", start_byte=0, fmt="i")
+        return OperationField("", "", start_byte=0, fmt="i")
 
     def __getitem__(self, field: str) -> FieldType: ...
 

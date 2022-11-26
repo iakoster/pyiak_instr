@@ -1,4 +1,5 @@
 import unittest
+from typing import Any
 
 import numpy as np
 
@@ -373,6 +374,7 @@ class TestFieldAddress(unittest.TestCase):
             self,
             AddressField(
                 "format",
+                "address",
                 start_byte=0,
                 fmt=">I",
             ),
@@ -449,6 +451,7 @@ class TestFieldData(unittest.TestCase):
             self,
             DataField(
                 "format",
+                "data",
                 start_byte=0,
                 expected=2,
                 fmt=">I",
@@ -476,13 +479,22 @@ class TestFieldDataLength(unittest.TestCase):
     @staticmethod
     def get_tf(units: int, additive: int) -> DataLengthField:
         return DataLengthField(
-            "f", start_byte=0, fmt=">H", units=units, additive=additive
+            "f",
+            "data_length",
+            start_byte=0,
+            fmt=">H",
+            units=units,
+            additive=additive
         )
 
     @staticmethod
     def get_tf_data(content):
         tf = DataField(
-            "f", start_byte=0, expected=2, fmt=">H"
+            "f",
+            "data",
+            start_byte=0,
+            expected=2,
+            fmt=">H",
         )
         tf.set(content)
         return tf
@@ -492,6 +504,7 @@ class TestFieldDataLength(unittest.TestCase):
             self,
             DataLengthField(
                 "format",
+                "data_length",
                 start_byte=0,
                 fmt=">H",
                 additive=0,
@@ -520,6 +533,7 @@ class TestFieldDataLength(unittest.TestCase):
             self,
             DataLengthField(
                 "format",
+                "data_length",
                 start_byte=0,
                 fmt=">H",
                 units=0x11,
@@ -547,14 +561,14 @@ class TestFieldDataLength(unittest.TestCase):
     def test_init_wrong_oper_core(self):
         with self.assertRaises(ValueError) as exc:
             DataLengthField(
-                "f", start_byte=0, fmt="b", units=0x12
+                "f", "data_length", start_byte=0, fmt="b", units=0x12
             )
         self.assertEqual("invalid units: 18", exc.exception.args[0])
 
     def test_init_wrong_additive(self):
         with self.assertRaises(ValueError) as exc:
             DataLengthField(
-                "f", start_byte=0, fmt="b", additive=-1
+                "f", "data_length", start_byte=0, fmt="b", additive=-1
             )
         self.assertEqual(
             "additive number must be integer and positive, got -1",
@@ -592,12 +606,13 @@ class TestFieldOperation(unittest.TestCase):
     @staticmethod
     def get_tf(desc_dict=None) -> OperationField:
         return OperationField(
-            "f", start_byte=0, fmt=">H", desc_dict=desc_dict
+            "f", "operation", start_byte=0, fmt=">H", desc_dict=desc_dict
         )
 
     def test_base_init(self):
         tf = OperationField(
                 "format",
+                "operation",
                 start_byte=0,
                 fmt=">H"
             )
@@ -629,6 +644,7 @@ class TestFieldOperation(unittest.TestCase):
     def test_base_init_custom_desc_dict(self):
         tf = OperationField(
                 "format",
+                "operation",
                 start_byte=0,
                 fmt=">H",
                 desc_dict={"r1": 0x2, "r2": 0xf1, "w1": 0xf}
@@ -818,73 +834,93 @@ class TestResponseField(unittest.TestCase):
         self.assertFalse(self.tf != Code.OK)
 
 
-class TestFieldSetter(unittest.TestCase):
+class TestFieldSetter(unittest.TestCase):  # todo: test init field by FieldSetter
 
     def validate_setter(
             self,
             fs: FieldSetter,
-            kwargs: dict,
-            special: str = None
+            field_type: str = None,
+            **kwargs: Any
     ):
         self.assertDictEqual(kwargs, fs.kwargs)
-        self.assertEqual(special, fs.special)
+        self.assertEqual(field_type, fs.field_type)
 
     def test_init(self):
-        self.validate_setter(
-            FieldSetter(a=0, b=3),
-            {"a": 0, "b": 3}
-        )
+        self.validate_setter(FieldSetter(a=0, b=3), a=0, b=3)
 
     def test_base(self):
         self.validate_setter(
             FieldSetter.base(expected=1, fmt="i"),
-            {
-                "expected": 1,
-                "fmt": "i",
-                "default": [],
-                'may_be_empty': False
-            }
+            expected=1,
+            fmt="i",
+            default=[],
+            may_be_empty=False,
         )
 
     def test_single(self):
         self.validate_setter(
             FieldSetter.single(fmt="i"),
-            {
-                "fmt": "i",
-                "default": [],
-                'may_be_empty': False
-            },
-            special="single"
+            field_type="single",
+            fmt="i",
+            default=[],
+            may_be_empty=False,
         )
 
     def test_static(self):
         self.validate_setter(
             FieldSetter.static(fmt="i", default=[]),
-            {"fmt": "i", "default": []},
-            special="static"
+            field_type="static",
+            fmt="i",
+            default=[],
         )
 
     def test_address(self):
         self.validate_setter(
             FieldSetter.address(fmt="i"),
-            {"fmt": "i"}
+            field_type="address",
+            fmt="i",
+        )
+
+    def test_crc(self) -> None:
+        self.validate_setter(
+            FieldSetter.crc(fmt="i"),
+            field_type="crc",
+            fmt="i",
+            algorithm_name="crc16-CCITT/XMODEM",
         )
 
     def test_data(self):
         self.validate_setter(
             FieldSetter.data(expected=3, fmt="i"),
-            {"expected": 3, "fmt": "i"}
+            field_type="data",
+            expected=3,
+            fmt="i",
         )
 
     def test_data_length(self):
         self.validate_setter(
             FieldSetter.data_length(fmt="i"),
-            {"fmt": "i", "additive": 0, "units": 16}
+            field_type="data_length",
+            fmt="i",
+            additive=0,
+            units=16,
         )
 
     def test_operation(self):
         self.validate_setter(
             FieldSetter.operation(fmt="i"),
-            {"fmt": "i", "desc_dict": None}
+            field_type="operation",
+            fmt="i",
+            desc_dict=None,
+        )
+
+    def test_response(self) -> None:
+        self.validate_setter(
+            FieldSetter.response(fmt="i", codes={0: Code.OK}),
+            field_type="response",
+            fmt="i",
+            default=0,
+            codes={0: Code.OK},
+            default_code=Code.UNDEFINED,
         )
 

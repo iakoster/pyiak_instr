@@ -346,18 +346,7 @@ class FieldMessage(BaseMessage):
         max length of the data in one slice.
     """
 
-    REQ_FIELDS = {
-        "address": AddressField,
-        "data": DataField,
-        "data_length": DataLengthField,
-        "operation": OperationField,
-    }
-    SPECIAL_FIELDS = {
-        "crc": CrcField,
-        "single": SingleField,
-        "static": StaticField,
-        "response": ResponseField,
-    }
+    REQUIRED_FIELDS = {"address", "data", "data_length", "operation"}
 
     def __init__(
             self,
@@ -399,7 +388,7 @@ class FieldMessage(BaseMessage):
         FieldMessage
             object message instance.
         """
-        fields_diff = set(self.REQ_FIELDS) - set(fields)
+        fields_diff = set(self.REQUIRED_FIELDS) - set(fields)
         if len(fields_diff):
             raise ValueError(
                 f"not all requared fields were got: %s are missing" %
@@ -617,14 +606,7 @@ class FieldMessage(BaseMessage):
         FieldType
             field instance.
         """
-        if name in self.REQ_FIELDS:
-            return self.REQ_FIELDS[name](
-                self._mf_name,
-                start_byte=start_byte,
-                parent=self,
-                **setter.kwargs
-            )
-        return self.SPECIAL_FIELDS.get(setter.special, Field)(
+        return FieldSetter.FIELDS.get(setter.field_type, Field)(
             self._mf_name,
             name,
             start_byte=start_byte,

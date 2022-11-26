@@ -107,24 +107,28 @@ class TestMessage(unittest.TestCase):
             ),
             address=AddressField(
                 "not_def",
+                "address",
                 start_byte=3,
                 fmt=">H",
                 parent=msg,
             ),
             operation=OperationField(
                 "not_def",
+                "operation",
                 start_byte=5,
                 fmt=">B",
                 parent=msg,
             ),
             data_length=DataLengthField(
                 "not_def",
+                "data_length",
                 start_byte=6,
                 fmt=">B",
                 parent=msg,
             ),
             data=DataField(
                 "not_def",
+                "data",
                 start_byte=7,
                 expected=4,
                 fmt=">I",
@@ -158,18 +162,21 @@ class TestMessage(unittest.TestCase):
         fields = dict(
             operation=OperationField(
                 "inf",
+                "operation",
                 start_byte=0,
                 fmt=">B",
                 parent=msg,
             ),
             data_length=DataLengthField(
                 "inf",
+                "data_length",
                 start_byte=1,
                 fmt=">B",
                 parent=msg,
             ),
             data=DataField(
                 "inf",
+                "data",
                 start_byte=2,
                 expected=-1,
                 fmt=">H",
@@ -177,6 +184,7 @@ class TestMessage(unittest.TestCase):
             ),
             address=AddressField(
                 "inf",
+                "address",
                 start_byte=3,
                 fmt=">H",
                 parent=msg,
@@ -534,7 +542,7 @@ class TestFields(unittest.TestCase):
             crc=FieldSetter.base(expected=1, fmt=">H"),
         )
         msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x04\xff\xff\xf1\xfe\xee\xdd")
-        dlen = DataLengthField("def", start_byte=0, fmt=">H")
+        dlen = DataLengthField("def", "data_length", start_byte=0, fmt=">H")
         self.assertListEqual([], list(dlen.unpack()))
         dlen.set(dlen.calculate(msg.data))
         self.assertListEqual([4], list(dlen.unpack()))
@@ -550,7 +558,7 @@ class TestFields(unittest.TestCase):
             crc=FieldSetter.base(expected=1, fmt=">H"),
         )
         msg.extract(b"\x1a\xa5\x32\x01\x55\x01\x04\xff\xff\xf1\xfe\xee\xdd")
-        oper = OperationField("def", start_byte=0, fmt=">H")
+        oper = OperationField("def", "operation", start_byte=0, fmt=">H")
         self.assertFalse(oper.compare(msg))
         oper.set("w")
         self.assertTrue(oper.compare(msg))

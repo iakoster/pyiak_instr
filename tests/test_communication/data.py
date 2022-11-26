@@ -101,7 +101,7 @@ def get_message(num: int) -> FieldMessage:
 
 def get_mf(num: int, get_ref=True):
     def unpack_setter(setter: FieldSetter) -> dict[str, Any]:
-        return dict(special=setter.special, kwargs=setter.kwargs)
+        return dict(field_type=setter.field_type, kwargs=setter.kwargs)
 
     mf = MessageFormat(**MF_MSG_ARGS[num], **SETTERS[num])
     if get_ref:
@@ -147,11 +147,11 @@ MF_CFG_DICT = dict(
         slice_length="256",
     ),
     n0__setters=dict(
-        address="\\dct\tspecial,None,fmt,>I",
-        data_length="\\dct\tspecial,None,fmt,>I,units,17,additive,0",
-        operation="\\dct\tspecial,None,fmt,>I,"
+        address="\\dct\tfield_type,address,fmt,>I",
+        data_length="\\dct\tfield_type,data_length,fmt,>I,units,17,additive,0",
+        operation="\\dct\tfield_type,operation,fmt,>I,"
                   "desc_dict,\\v(\\dct\tw,0,r,1)",
-        data="\\dct\tspecial,None,expected,-1,fmt,>I",
+        data="\\dct\tfield_type,data,expected,-1,fmt,>I",
     ),
     n1__message=dict(
         arf="\\dct\t",
@@ -160,18 +160,18 @@ MF_CFG_DICT = dict(
         slice_length="1024",
     ),
     n1__setters=dict(
-        preamble="\\dct\tspecial,static,fmt,>H,default,43605",
-        operation="\\dct\tspecial,None,fmt,>B,"
+        preamble="\\dct\tfield_type,static,fmt,>H,default,43605",
+        operation="\\dct\tfield_type,operation,fmt,>B,"
                   "desc_dict,\\v(\\dct\twp,1,rp,2,wn,3,rn,4)",
-        response="\\dct\tspecial,response,"
+        response="\\dct\tfield_type,response,"
                  "fmt,>B,"
                  "codes,\\v(\\dct\t0,1280),"
                  "default,0,"
                  "default_code,1282",
-        address="\\dct\tspecial,None,fmt,>H",
-        data_length="\\dct\tspecial,None,fmt,>H,units,16,additive,0",
-        data="\\dct\tspecial,None,expected,-1,fmt,>f",
-        crc="\\dct\tspecial,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
+        address="\\dct\tfield_type,address,fmt,>H",
+        data_length="\\dct\tfield_type,data_length,fmt,>H,units,16,additive,0",
+        data="\\dct\tfield_type,data,expected,-1,fmt,>f",
+        crc="\\dct\tfield_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
     ),
     n2__message=dict(
         arf="\\dct\t",
@@ -180,17 +180,17 @@ MF_CFG_DICT = dict(
         slice_length="1024",
     ),
     n2__setters=dict(
-        operation="\\dct\tspecial,None,fmt,>B,"
+        operation="\\dct\tfield_type,operation,fmt,>B,"
                   "desc_dict,\\v(\\dct\tr,1,w,2)",
-        response="\\dct\tspecial,response,"
+        response="\\dct\tfield_type,response,"
                  "fmt,>B,"
                  "codes,\\v(\\dct\t0,1280,4,1281),"
                  "default,0,"
                  "default_code,255",
-        address="\\dct\tspecial,None,fmt,>H",
-        data_length="\\dct\tspecial,None,fmt,>H,units,16,additive,0",
-        data="\\dct\tspecial,None,expected,-1,fmt,>f",
-        crc="\\dct\tspecial,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
+        address="\\dct\tfield_type,address,fmt,>H",
+        data_length="\\dct\tfield_type,data_length,fmt,>H,units,16,additive,0",
+        data="\\dct\tfield_type,data,expected,-1,fmt,>f",
+        crc="\\dct\tfield_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
     ),
     n3__message=dict(
         arf="\\dct\t",
@@ -199,21 +199,21 @@ MF_CFG_DICT = dict(
         slice_length="1024",
     ),
     n3__setters=dict(
-        operation="\\dct\tspecial,None,fmt,B,"
+        operation="\\dct\tfield_type,operation,fmt,B,"
                   "desc_dict,\\v(\\dct\tr,1,w,2)",
-        response1="\\dct\tspecial,response,"
-                 "fmt,B,"
-                 "codes,\\v(\\dct\t0,1280,4,1281),"
-                 "default,0,"
-                 "default_code,1282",
-        address="\\dct\tspecial,None,fmt,B",
-        data_length="\\dct\tspecial,None,fmt,B,units,16,additive,0",
-        data="\\dct\tspecial,None,expected,-1,fmt,B",
-        response2="\\dct\tspecial,response,"
-                 "fmt,B,"
-                 "codes,\\v(\\dct\t0,1280,4,1281),"
-                 "default,0,"
-                 "default_code,1282",
+        response1="\\dct\tfield_type,response,"
+                  "fmt,B,"
+                  "codes,\\v(\\dct\t0,1280,4,1281),"
+                  "default,0,"
+                  "default_code,1282",
+        address="\\dct\tfield_type,address,fmt,B",
+        data_length="\\dct\tfield_type,data_length,fmt,B,units,16,additive,0",
+        data="\\dct\tfield_type,data,expected,-1,fmt,B",
+        response2="\\dct\tfield_type,response,"
+                  "fmt,B,"
+                  "codes,\\v(\\dct\t0,1280,4,1281),"
+                  "default,0,"
+                  "default_code,1282",
     )
 )
 

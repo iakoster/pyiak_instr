@@ -178,6 +178,7 @@ class TestMessageFormat(unittest.TestCase):
                     with self.subTest(mf_name=mf_name, setter=name):
                         self.assertEqual(ref_name, name)
                         validate_object(self, setter, **ref_setter)
+                    break
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:

@@ -279,7 +279,7 @@ class MessageFormat(object):
         )
         self._setters = setters
 
-        setters_diff = set(FieldMessage.REQ_FIELDS) - set(self._setters)
+        setters_diff = set(FieldMessage.REQUIRED_FIELDS) - set(self._setters)
         if len(setters_diff):
             raise ValueError(f"missing the required setters: {setters_diff}")
 
@@ -314,7 +314,7 @@ class MessageFormat(object):
                             v[k_] = v_.value
 
             mf_dict[sec_setters][opt] = StringEncoder.to_str(
-                dict(special=val.special, **val.kwargs)
+                dict(field_type=val.field_type, **val.kwargs)
             )
 
         with RWConfig(config) as rwc:
