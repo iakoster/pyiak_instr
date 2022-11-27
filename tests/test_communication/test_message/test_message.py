@@ -1,11 +1,12 @@
 import unittest
-from typing import get_args
+from typing import Any, get_args
 
 import numpy as np
 
-from ..utils import compare_objects
+from ..utils import validate_object, compare_objects
 
 from pyinstr_iakoster.core import Code
+from pyinstr_iakoster.communication._message.message import BaseMessage
 from pyinstr_iakoster.communication import (
     BytesMessage,
     FieldMessage,
@@ -30,6 +31,81 @@ RESPONSE_CODES = {
 }
 
 
+def test_common_methods(
+        case: unittest.TestCase,
+        res: BaseMessage,
+        *,
+        mf_name: str,
+        splittable: bool,
+        slice_length: int,
+        src: Any,
+        dst: Any,
+) -> None:
+    with case.subTest(test="base init"):
+        res_base = res.__class__()
+        for name, ref in dict(
+            mf_name="std",
+            splittable=False,
+            slice_length=1024,
+            src=None,
+            dst=None,
+        ).items():
+            with case.subTest(name=name):
+                case.assertEqual(ref, getattr(res_base, name))
+
+    # todo: get_instance, get_message_setter, __bytes__, __len__, __repr__,
+    #  __str__
+
+
+class TestBaseMessage(unittest.TestCase):
+
+    def test_init(self) -> None:
+        res = BaseMessage()
+        for name, ref in dict(
+            mf_name="std",
+            splittable=False,
+            slice_length=1024,
+            src=None,
+            dst=None,
+        ).items():
+            with self.subTest(name=name):
+                self.assertEqual(ref, getattr(res, name))
+
+    def test_src_dst(self) -> None:
+        res = BytesMessage()
+        self.assertTupleEqual((None, None), (res.src, res.dst))
+
+        res.src = "PC"
+        self.assertTupleEqual(("PC", None), (res.src, res.dst))
+
+        res.dst = "COM1"
+        self.assertTupleEqual(("PC", "COM1"), (res.src, res.dst))
+
+        res.set_src_dst("COM1", "PC")
+        self.assertTupleEqual(("COM1", "PC"), (res.src, res.dst))
+
+        res.clear_src_dst()
+        self.assertTupleEqual((None, None), (res.src, res.dst))
+
+    def test_get_instance(self) -> None:
+        ref = BaseMessage(mf_name="test", slice_length=512)
+        ref.set_src_dst("PC", "COM1")
+        res = ref.get_instance()
+
+        for name in {"mf_name", "splittable", "slice_length"}:
+            with self.subTest(name=name):
+                self.assertEqual(getattr(ref, name), getattr(res, name))
+        with self.subTest(test="src_dst"):
+            self.assertTupleEqual((None, None), (res.src, res.dst))
+
+    def test_get_message_class_exception(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            BaseMessage().get_setter()
+        self.assertEqual(
+            "BaseMessage not supported by setter", exc.exception.args[0]
+        )
+
+
 class AnotherMessage(FieldMessage):
 
     def __init__(
@@ -47,6 +123,11 @@ class AnotherMessage(FieldMessage):
 
 
 class TestMessage(unittest.TestCase):
+
+    def test_get_message_class(self) -> None:
+        compare_objects(
+            self, MessageSetter("field"), FieldMessage().get_setter()
+        )
 
     def fill_content(self) -> bytes:
         content = b"\x1a\xa5\x00\x00\xaa\x01\x04\xff\xee\xdd\xcc\x39\x86"
@@ -591,11 +672,20 @@ class TestMessageSetter(unittest.TestCase):
         for message_type, ref in zip(
             MessageSetter.MESSAGE_TYPES,
             (
+                None,
                 BytesMessage,
                 FieldMessage,
             )
         ):
             with self.subTest(message_type=message_type):
+                if message_type == "base":
+                    with self.assertRaises(ValueError) as exc:
+                        MessageSetter(message_type)
+                    self.assertEqual(
+                        "BaseMessage not supported by setter",
+                        exc.exception.args[0]
+                    )
+                    continue
                 res = MessageSetter(message_type).get_message_class()
                 self.assertIs(res, ref)
                 self.assertIn(

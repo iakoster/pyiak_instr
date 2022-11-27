@@ -237,6 +237,14 @@ class Field(BaseField):
             self._def = self._content
 
     def get_setter(self) -> FieldSetter:
+        """
+        Get setter of the field instance.
+
+        Returns
+        -------
+        FieldSetter
+            setter for this field instance.
+        """
         return FieldSetter.base(
             expected=self._exp,
             fmt=self._fmt,

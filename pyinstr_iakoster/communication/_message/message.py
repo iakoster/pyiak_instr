@@ -143,6 +143,30 @@ class BaseMessage(object):
             slice_length=self._slice_length,
         )
 
+    def get_setter(self) -> MessageSetter:
+        """
+        Get setter of the message instance.
+
+        Returns
+        -------
+        MessageSetter
+            setter for this message instance.
+        """
+        if self.__class__ is BaseMessage:
+            raise ValueError("BaseMessage not supported by setter")
+
+        types = MessageSetter.MESSAGE_TYPES
+        message_type = list(types.keys())[
+            list(types.values()).index(self.__class__)
+        ]
+        return MessageSetter(
+            message_type=message_type,
+            mf_name=self._mf_name,
+            splittable=self._splittable,
+            slice_length=self.slice_length,
+        )
+
+
     def set_src_dst(self, src: Any, dst: Any) -> BaseMessage:
         """
         Set src and dst addresses.
@@ -813,12 +837,15 @@ class MessageSetter(object):
     slice_length: int = 1024
     "max length of the data in one slice."
 
-    MESSAGE_TYPES: ClassVar[dict[str, type[MessageType]]] = {
+    MESSAGE_TYPES: ClassVar[dict[str, type[BaseMessage | MessageType]]] = {
+        "base": BaseMessage,
         "bytes": BytesMessage,
         "field": FieldMessage,
     }
 
     def __post_init__(self):
+        if self.message_type == "base":
+            raise ValueError("BaseMessage not supported by setter")
         if self.message_type not in self.MESSAGE_TYPES:
             raise ValueError("invalid message type: %r" % self.message_type)
 
