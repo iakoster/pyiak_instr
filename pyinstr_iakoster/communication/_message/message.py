@@ -30,6 +30,8 @@ from ...core import Code
 __all__ = [
     "BytesMessage",
     "FieldMessage",
+    "MessageType",
+    "MessageSetter",
     "MessageContentError",
     "NotConfiguredMessageError",
 ]
