@@ -1315,7 +1315,7 @@ class FieldSetter(object):
     BYTES = DataLengthField.BYTES
     WORDS = DataLengthField.WORDS
 
-    FIELDS = dict(
+    FIELD_TYPES = dict(
         single=SingleField,
         static=StaticField,
         address=AddressField,
@@ -1418,6 +1418,23 @@ class FieldSetter(object):
             default=default,
             default_code=default_code,
         )
+
+    @classmethod
+    def get_field_class(cls, field_type: str) -> type[FieldType]:
+        """
+        Get field class by field type name.
+
+        Parameters
+        ----------
+        field_type: str
+            field type name.
+
+        Returns
+        -------
+        FieldType
+            field class instance
+        """
+        return cls.FIELD_TYPES.get(field_type, Field)
 
     def __eq__(self, other: Any) -> bool:
         """

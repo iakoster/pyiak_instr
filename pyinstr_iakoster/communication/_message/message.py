@@ -606,7 +606,7 @@ class FieldMessage(BaseMessage):
         FieldType
             field instance.
         """
-        return FieldSetter.FIELDS.get(setter.field_type, Field)(
+        return FieldSetter.get_field_class(setter.field_type)(
             self._mf_name,
             name,
             start_byte=start_byte,
