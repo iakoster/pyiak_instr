@@ -1,5 +1,5 @@
 import unittest
-from typing import Any
+from typing import Any, get_args
 
 import numpy as np
 
@@ -16,6 +16,7 @@ from pyinstr_iakoster.communication import (
     DataLengthField,
     OperationField,
     ResponseField,
+    FieldType,
     FieldSetter,
     FieldContentError
 )
@@ -848,6 +849,15 @@ class TestFieldSetter(unittest.TestCase):  # todo: test init field by FieldSette
     def test_init(self):
         self.validate_setter(FieldSetter(a=0, b=3), a=0, b=3)
 
+    def test_init_with_default_bytes(self) -> None:
+        with self.assertRaises(TypeError) as exc:
+            FieldSetter(default=b"")
+        self.assertEqual(
+            "<class 'bytes'> not recommended bytes type for 'default' "
+            "argument",
+            exc.exception.args[0]
+        )
+
     def test_base(self):
         self.validate_setter(
             FieldSetter.base(expected=1, fmt="i"),
@@ -924,3 +934,44 @@ class TestFieldSetter(unittest.TestCase):  # todo: test init field by FieldSette
             default_code=Code.UNDEFINED,
         )
 
+    def test_get_field_class(self) -> None:
+        for field_type, ref in zip(
+            [None] + list(FieldSetter.FIELD_TYPES),
+            [
+                Field,
+                SingleField,
+                StaticField,
+                AddressField,
+                CrcField,
+                DataField,
+                DataLengthField,
+                OperationField,
+                ResponseField,
+            ]
+        ):
+            with self.subTest(field_type=field_type):
+                res = FieldSetter(field_type=field_type).get_field_class()
+                self.assertIs(res, ref)
+                self.assertIn(
+                    res,
+                    get_args(FieldType),
+                    f"FieldType not supports {res.__name__}"
+                )
+            break
+
+    def test_magic_eq(self) -> None:
+        ref = FieldSetter(field_type="lol", a=5)
+        res = FieldSetter(field_type="lol", a=5)
+        self.assertEqual(ref, res)
+
+        res2 = FieldSetter(a=5)
+        self.assertNotEqual(ref, res2)
+        self.assertNotEqual(ref, 5)
+
+    def test_magic_repr_str(self) -> None:
+        for ref, res in [
+            ("<FieldSetter(field_type=None)>", FieldSetter()),
+            ("<FieldSetter(field_type=a, a=19)>", FieldSetter(field_type="a", a=19))
+        ]:
+            self.assertEqual(ref, repr(res))
+            self.assertEqual(ref, str(res))

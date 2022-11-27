@@ -1459,7 +1459,7 @@ class FieldSetter(object):
         kwargs = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
         if len(kwargs):
             kwargs = ", " + kwargs
-        return f"<{cls_name}(special={self.field_type}{kwargs})>"
+        return f"<{cls_name}(field_type={self.field_type}{kwargs})>"
 
     __str__ = __repr__
 
