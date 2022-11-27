@@ -796,7 +796,7 @@ MessageType = (
 
 
 @dataclass
-class MessageSetter(object):  # todo: test to default values
+class MessageSetter(object):
     """
     Represent setter, which contain keyword arguments for setting message.
     """
@@ -820,7 +820,7 @@ class MessageSetter(object):  # todo: test to default values
 
     def __post_init__(self):
         if self.message_type not in self.MESSAGE_TYPES:
-            raise ValueError("invalid message type: %s" % self.message_type)
+            raise ValueError("invalid message type: %r" % self.message_type)
 
     def get_message_class(self) -> type[MessageType]:
         """

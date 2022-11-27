@@ -1,4 +1,5 @@
 import unittest
+from typing import get_args
 
 import numpy as np
 
@@ -6,8 +7,10 @@ from ..utils import compare_objects
 
 from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
+    BytesMessage,
     FieldMessage,
-    FieldSetter,
+    MessageType,
+    MessageSetter,
     SingleField,
     StaticField,
     AddressField,
@@ -16,7 +19,8 @@ from pyinstr_iakoster.communication import (
     DataLengthField,
     OperationField,
     ResponseField,
-    MessageContentError
+    FieldSetter,
+    MessageContentError,
 )
 
 
@@ -564,3 +568,38 @@ class TestFields(unittest.TestCase):
         self.assertTrue(oper.compare(msg))
         oper.set("r")
         self.assertFalse(oper.compare(msg))
+
+
+class TestMessageSetter(unittest.TestCase):
+
+    def test_init(self) -> None:
+        res = MessageSetter("bytes")
+        self.assertEqual("bytes", res.message_type)
+        self.assertDictEqual(
+            {"mf_name": "std", "slice_length": 1024, "splittable": False},
+            res.kwargs
+        )
+
+    def test_invalid_message_type(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            MessageSetter("test")
+        self.assertEqual(
+            "invalid message type: 'test'", exc.exception.args[0]
+        )
+
+    def test_get_message_class(self) -> None:
+        for message_type, ref in zip(
+            MessageSetter.MESSAGE_TYPES,
+            (
+                BytesMessage,
+                FieldMessage,
+            )
+        ):
+            with self.subTest(message_type=message_type):
+                res = MessageSetter(message_type).get_message_class()
+                self.assertIs(res, ref)
+                self.assertIn(
+                    res,
+                    get_args(MessageType),
+                    "MessageType not supports %r" % message_type
+                )
