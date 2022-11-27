@@ -1330,7 +1330,7 @@ class FieldSetter(object):
             self,
             field_type: str = None,
             **kwargs: Any,
-    ):
+    ):  # todo: test to default values
         self.field_type = field_type
         if "default" in kwargs and isinstance(kwargs["default"], bytes):
             raise TypeError(
@@ -1339,6 +1339,20 @@ class FieldSetter(object):
                 )
             )
         self.kwargs = kwargs
+
+    def get_field_class(self) -> type[FieldType]:  # todo: tests
+        """
+        Get field class by field type name.
+
+        If `field_type` is None or another non-existent field type name -
+        Field class is returned.
+
+        Returns
+        -------
+        type[FieldType]
+            field class instance.
+        """
+        return self.FIELD_TYPES.get(self.field_type, Field)
 
     @classmethod
     def base(
@@ -1418,23 +1432,6 @@ class FieldSetter(object):
             default=default,
             default_code=default_code,
         )
-
-    @classmethod
-    def get_field_class(cls, field_type: str) -> type[FieldType]:
-        """
-        Get field class by field type name.
-
-        Parameters
-        ----------
-        field_type: str
-            field type name.
-
-        Returns
-        -------
-        FieldType
-            field class instance
-        """
-        return cls.FIELD_TYPES.get(field_type, Field)
 
     def __eq__(self, other: Any) -> bool:
         """

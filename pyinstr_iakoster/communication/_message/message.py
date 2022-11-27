@@ -1,6 +1,7 @@
 from __future__ import annotations
 from copy import deepcopy
-from typing import Generator, Callable, Any, overload
+from dataclasses import dataclass
+from typing import Generator, ClassVar, Any, overload
 
 import numpy as np
 import numpy.typing as npt
@@ -43,7 +44,7 @@ class BaseMessage(object):
             mf_name: str = "std",
             splittable: bool = False,
             slice_length: int = 1024,
-    ):
+    ):  # todo: test to default values
         self._mf_name = mf_name
         self._splittable = splittable
         self._slice_length = slice_length
@@ -272,7 +273,7 @@ class BytesMessage(BaseMessage):  # todo: tests
             content: bytes = b"",
             splittable: bool = False,
             slice_length: int = 1024,
-    ):
+    ):  # todo: test to default values
         super().__init__(
             mf_name=mf_name,
             splittable=splittable,
@@ -353,7 +354,7 @@ class FieldMessage(BaseMessage):
             mf_name: str = "std",
             splittable: bool = False,
             slice_length: int = 1024
-    ):
+    ):  # todo: test to default values
         super().__init__(
             mf_name=mf_name,
             splittable=splittable,
@@ -606,7 +607,7 @@ class FieldMessage(BaseMessage):
         FieldType
             field instance.
         """
-        return FieldSetter.get_field_class(setter.field_type)(
+        return setter.get_field_class()(
             self._mf_name,
             name,
             start_byte=start_byte,
@@ -784,3 +785,62 @@ class FieldMessage(BaseMessage):
         """
         for field in self._fields.values():
             yield field
+
+
+MessageType = (
+    BytesMessage
+    | FieldMessage
+)
+
+
+@dataclass
+class MessageSetter(object):  # todo: test to default values
+    """
+    Represent setter, which contain keyword arguments for setting message.
+    """
+
+    message_type: str
+    "type of a message class."
+
+    mf_name: str = "std"
+    "name of the message format."
+
+    splittable: bool = False
+    "shows that the message can be divided by the data."
+
+    slice_length: int = 1024
+    "max length of the data in one slice."
+
+    MESSAGE_TYPES: ClassVar[dict[str, type[MessageType]]] = {
+        "bytes": BytesMessage,
+        "field": FieldMessage,
+    }
+
+    def __post_init__(self):
+        if self.message_type not in self.MESSAGE_TYPES:
+            raise ValueError("invalid message type: %s" % self.message_type)
+
+    def get_message_class(self) -> type[MessageType]:
+        """
+        Get message class by message type name.
+
+        Returns
+        -------
+        type[MessageType]
+            message class instance.
+        """
+        return self.MESSAGE_TYPES[self.message_type]
+
+    @property
+    def kwargs(self) -> dict[str, Any]:
+        """
+        Returns
+        -------
+        dict[str, Any]
+            keywords arguments for setting a message.
+        """
+        return dict(
+            mf_name=self.mf_name,
+            splittable=self.splittable,
+            slice_length=self.slice_length,
+        )
