@@ -6,11 +6,12 @@ import numpy as np
 from ..utils import validate_object, compare_objects
 
 from pyinstr_iakoster.core import Code
-from pyinstr_iakoster.communication._message.message import BaseMessage
 from pyinstr_iakoster.communication import (
+    MessageType,
+    BaseMessage,
     BytesMessage,
     FieldMessage,
-    MessageType,
+    StrongFieldMessage,
     MessageSetter,
     SingleField,
     StaticField,
@@ -35,23 +36,52 @@ def test_common_methods(
         case: unittest.TestCase,
         res: BaseMessage,
         *,
-        mf_name: str,
-        splittable: bool,
-        slice_length: int,
-        src: Any,
-        dst: Any,
+        get_instance: BaseMessage,
+        setter: MessageSetter,
+        bytes_: bytes,
+        length: int,
+        string: str,
+        init_mf_name: str = "std",
+        init_splittable: bool = False,
+        init_slice_length: int = 1024,
 ) -> None:
     with case.subTest(test="base init"):
         res_base = res.__class__()
         for name, ref in dict(
-            mf_name="std",
-            splittable=False,
-            slice_length=1024,
+            mf_name=init_mf_name,
+            splittable=init_splittable,
+            slice_length=init_slice_length,
             src=None,
             dst=None,
         ).items():
             with case.subTest(name=name):
                 case.assertEqual(ref, getattr(res_base, name))
+
+    with case.subTest(test="get_instance"):
+        instance = res.get_instance()
+        case.assertIsInstance(instance, type(res))
+        validate_object(
+            case,
+            instance,
+            mf_name=res.mf_name,
+            splittable=res.splittable,
+            slice_length=res.slice_length,
+        )
+
+    with case.subTest(test="setter"):
+        case.assertEqual(setter, res.get_setter())
+
+    with case.subTest(test="bytes"):
+        case.assertEqual(bytes_, bytes(res))
+
+    with case.subTest(test="len"):
+        case.assertEqual(length, len(res))
+
+    with case.subTest(test="str"):
+        case.assertEqual(string, str(res))
+
+    with case.subTest(test="repr"):
+        case.assertEqual(string, repr(res))
 
     # todo: get_instance, get_message_setter, __bytes__, __len__, __repr__,
     #  __str__
@@ -60,16 +90,16 @@ def test_common_methods(
 class TestBaseMessage(unittest.TestCase):
 
     def test_init(self) -> None:
-        res = BaseMessage()
-        for name, ref in dict(
+        validate_object(
+            self,
+            BaseMessage(),
             mf_name="std",
             splittable=False,
             slice_length=1024,
             src=None,
             dst=None,
-        ).items():
-            with self.subTest(name=name):
-                self.assertEqual(ref, getattr(res, name))
+            check_attrs=True,
+        )
 
     def test_src_dst(self) -> None:
         res = BytesMessage()
@@ -92,18 +122,50 @@ class TestBaseMessage(unittest.TestCase):
         ref.set_src_dst("PC", "COM1")
         res = ref.get_instance()
 
-        for name in {"mf_name", "splittable", "slice_length"}:
-            with self.subTest(name=name):
-                self.assertEqual(getattr(ref, name), getattr(res, name))
+        compare_objects(
+            self, ref, res, attrs=["mf_name", "splittable", "slice_length"]
+        )
         with self.subTest(test="src_dst"):
             self.assertTupleEqual((None, None), (res.src, res.dst))
 
-    def test_get_message_class_exception(self) -> None:
+    def test_get_setter(self) -> None:
         with self.assertRaises(ValueError) as exc:
             BaseMessage().get_setter()
         self.assertEqual(
             "BaseMessage not supported by setter", exc.exception.args[0]
         )
+
+    def test_not_implemented(self) -> None:
+        obj = BaseMessage()
+
+        for method in [
+            "set",
+            "split",
+            "in_bytes",
+            "unpack",
+            "_content_repr",
+        ]:
+            with self.subTest(method=method):
+                with self.assertRaises(NotImplementedError):
+                    getattr(obj, method)()
+
+        with self.subTest(method="__add__"):
+            with self.assertRaises(NotImplementedError):
+                obj += 1
+
+        with self.subTest(method="__getitem__"):
+            with self.assertRaises(NotImplementedError):
+                a = obj[""]
+
+        with self.subTest(method="__iter__"):
+            with self.assertRaises(NotImplementedError):
+                for _ in obj:
+                    ...
+
+        for func in [len, bytes, repr, str]:
+            with self.subTest(method=func.__name__):
+                with self.assertRaises(NotImplementedError):
+                    func(obj)
 
 
 class AnotherMessage(FieldMessage):
@@ -119,6 +181,84 @@ class AnotherMessage(FieldMessage):
             mf_name=mf_name,
             splittable=splittable,
             slice_length=slice_length
+        )
+
+
+class TestBytesMessage(unittest.TestCase):
+
+    def test_init(self) -> None:
+        validate_object(
+            self,
+            BytesMessage(),
+            mf_name="std",
+            splittable=True,
+            slice_length=1280,
+            src=None,
+            dst=None,
+            check_attrs=True,
+        )
+
+    def test_set(self) -> None:
+        msg = BytesMessage(mf_name="test", content=b"\x01\x03\xff")
+        self.assertEqual(b"\x01\x03\xff", msg.in_bytes())
+
+        msg.set(bytearray(b"\x01\x03\xff"))
+        self.assertListEqual([1, 3, 255], list(msg.unpack()))
+
+    def test_split(self) -> None:
+        msg = BytesMessage(splittable=False).set(
+            bytearray(i % 256 for i in range(3, 2000))
+        )
+        for res in msg.split():
+            with self.subTest(test="not splittable"):
+                self.assertIs(msg, res)
+
+        msg = BytesMessage().set(bytearray(i % 256 for i in range(3, 2000)))
+        for part, ref in zip(
+                msg.split(),
+                (
+                    [i % 256 for i in range(3, 1283)],
+                    [i % 256 for i in range(1283, 2000)],
+                ),
+        ):
+            with self.subTest(test="splittable"):
+                self.assertListEqual(ref, list(part.unpack()))
+
+    def test_add(self) -> None:
+        msg = BytesMessage(content=b"\x01\xff\xa1")
+        self.assertEqual([1, 255, 161], list(msg.unpack()))
+
+        msg += b"\x17"
+        self.assertEqual([1, 255, 161, 23], list(msg.unpack()))
+
+        msg += BytesMessage(content=b"\xbb")
+        self.assertEqual([1, 255, 161, 23, 187], list(msg.unpack()))
+
+    def test_getitem(self) -> None:
+        msg = BytesMessage(content=b"\x01\xff\xa1")
+        self.assertEqual(255, msg[1])
+        self.assertEqual(b"\xff\xa1", msg[1:])
+
+    def test_iter(self) -> None:
+        msg = BytesMessage(content=b"\x01\xff\xa1")
+        for ref, res in zip([1, 255, 161], msg):
+            self.assertEqual(ref, res)
+
+    def test_common_methods(self) -> None:
+        test_common_methods(
+            self,
+            BytesMessage(
+                mf_name="test",
+                content=b"\x01\xff\xa1",
+            ),
+            get_instance=BytesMessage(mf_name="test"),
+            setter=MessageSetter("bytes", "test", True, 1280),
+            bytes_=b"\x01\xff\xa1",
+            length=3,
+            string="<BytesMessage(01 ff a1), src=None, dst=None>",
+            init_mf_name="std",
+            init_splittable=True,
+            init_slice_length=1280,
         )
 
 
@@ -654,11 +794,19 @@ class TestFields(unittest.TestCase):
 class TestMessageSetter(unittest.TestCase):
 
     def test_init(self) -> None:
-        res = MessageSetter("bytes")
+        res = MessageSetter()
         self.assertEqual("bytes", res.message_type)
         self.assertDictEqual(
-            {"mf_name": "std", "slice_length": 1024, "splittable": False},
+            dict(mf_name="std", slice_length=1024, splittable=False),
             res.kwargs
+        )
+
+    def test_init_base(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            MessageSetter("base")
+        self.assertEqual(
+            "BaseMessage not supported by setter",
+            exc.exception.args[0]
         )
 
     def test_invalid_message_type(self) -> None:
@@ -668,28 +816,25 @@ class TestMessageSetter(unittest.TestCase):
             "invalid message type: 'test'", exc.exception.args[0]
         )
 
-    def test_get_message_class(self) -> None:
-        for message_type, ref in zip(
-            MessageSetter.MESSAGE_TYPES,
-            (
-                None,
-                BytesMessage,
-                FieldMessage,
-            )
-        ):
-            with self.subTest(message_type=message_type):
-                if message_type == "base":
-                    with self.assertRaises(ValueError) as exc:
-                        MessageSetter(message_type)
-                    self.assertEqual(
-                        "BaseMessage not supported by setter",
-                        exc.exception.args[0]
-                    )
+    def test_message(self) -> None:
+        for msg_type, msg_class in MessageSetter.MESSAGE_TYPES.items():
+            with self.subTest(message_type=msg_type):
+                if msg_type == "base":
                     continue
-                res = MessageSetter(message_type).get_message_class()
-                self.assertIs(res, ref)
+                self.assertIsInstance(
+                    MessageSetter(msg_type).message, msg_class
+                )
+
+    def test_message_class(self) -> None:
+        for msg_type, msg_class in MessageSetter.MESSAGE_TYPES.items():
+            with self.subTest(message_type=msg_type):
+                if msg_type == "base":
+                    continue
+
+                res_class = MessageSetter(msg_type).message_class
+                self.assertIs(res_class, msg_class)
                 self.assertIn(
-                    res,
+                    res_class,
                     get_args(MessageType),
-                    "MessageType not supports %r" % message_type
+                    "MessageType not supports %r" % msg_type
                 )

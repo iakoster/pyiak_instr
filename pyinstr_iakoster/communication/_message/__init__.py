@@ -15,9 +15,11 @@ from .field import (
 )
 
 from .message import (
+    MessageType,
+    BaseMessage,
     BytesMessage,
     FieldMessage,
-    MessageType,
+    StrongFieldMessage,
     MessageSetter,
     MessageContentError,
     NotConfiguredMessageError,
@@ -49,9 +51,11 @@ __all__ = [
     "FieldSetter",
     "FieldType",
     "FieldContentError",
+    "MessageType",
+    "BaseMessage",
     "BytesMessage",
     "FieldMessage",
-    "MessageType",
+    "StrongFieldMessage",
     "MessageSetter",
     "MessageContentError",
     "NotConfiguredMessageError",

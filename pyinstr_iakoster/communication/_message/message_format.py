@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from .field import FieldSetter
-from .message import FieldMessage
+from .message import FieldMessage, MessageSetter
 from ...core import Code
 from ...utilities import StringEncoder
 from ...rwfile import (
@@ -263,20 +263,14 @@ class MessageFormat(object):
 
     def __init__(
             self,
+            message_setter: MessageSetter = MessageSetter(),
             arf: dict[str, Any] | AsymmetricResponseField = AsymmetricResponseField(),
-            mf_name: str = "std",
-            splittable: bool = False,
-            slice_length: int = 1024,
             **setters: FieldSetter
     ):
         if isinstance(arf, dict):
             arf = AsymmetricResponseField(**arf)
         self._arf = arf
-        self._message = dict(
-            mf_name=mf_name,
-            splittable=splittable,
-            slice_length=slice_length
-        )
+        self._msg_set = message_setter
         self._setters = setters
 
         setters_diff = set(FieldMessage.REQUIRED_FIELDS) - set(self._setters)
@@ -293,12 +287,14 @@ class MessageFormat(object):
             path to the config file.
         """
 
-        mf_name, mf_dict = self._message["mf_name"], {}
+        mf_name, mf_dict = self._msg_set.kwargs["mf_name"], {}
         sec_message = f"{mf_name}{self.SEP}message"
         sec_setters = f"{mf_name}{self.SEP}setters"
 
         mf_dict[sec_message] = {}
-        for opt, val in dict(arf=self.arf.kwargs, **self._message).items():
+        for opt, val in dict(
+                arf=self.arf.kwargs, **self._msg_set.kwargs
+        ).items():
             mf_dict[sec_message][opt] = StringEncoder.to_str(val)
 
         mf_dict[sec_setters] = {}
@@ -345,7 +341,7 @@ class MessageFormat(object):
         if len(update):
             for setter_name, fields in update.items():
                 setters[setter_name].kwargs.update(fields)
-        return FieldMessage(**self._message).configure(**setters)
+        return FieldMessage(**self._msg_set.kwargs).configure(**setters)
 
     @classmethod
     def read(cls, config: Path, mf_name: str) -> MessageFormat:
@@ -405,14 +401,14 @@ class MessageFormat(object):
         return self._arf
 
     @property
-    def message(self) -> dict[str, Any]:
+    def message_setter(self) -> MessageSetter:
         """
         Returns
         -------
-        dict[str, Any]
-            arguments for setting Message class.
+        MessageSetter
+            message settter instance.
         """
-        return self._message
+        return self._msg_set
 
     @property
     def setters(self) -> dict[str, FieldSetter]:
@@ -436,7 +432,9 @@ class MessageFormatMap(object):
     """
 
     def __init__(self, *formats: MessageFormat):
-        self._formats = {mf.message["mf_name"]: mf for mf in formats}
+        self._formats = {
+            mf.message_setter.kwargs["mf_name"]: mf for mf in formats
+        }
 
     def get(self, mf_name: str) -> MessageFormat:
         """

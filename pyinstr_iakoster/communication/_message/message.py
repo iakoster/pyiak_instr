@@ -28,9 +28,11 @@ from ...core import Code
 
 
 __all__ = [
+    "MessageType",
+    "BaseMessage",
     "BytesMessage",
     "FieldMessage",
-    "MessageType",
+    "StrongFieldMessage",
     "MessageSetter",
     "MessageContentError",
     "NotConfiguredMessageError",
@@ -166,7 +168,6 @@ class BaseMessage(object):
             slice_length=self.slice_length,
         )
 
-
     def set_src_dst(self, src: Any, dst: Any) -> BaseMessage:
         """
         Set src and dst addresses.
@@ -291,14 +292,14 @@ class BaseMessage(object):
     __str__ = __repr__
 
 
-class BytesMessage(BaseMessage):  # todo: tests
+class BytesMessage(BaseMessage):
 
     def __init__(
             self,
             mf_name: str = "std",
+            splittable: bool = True,
+            slice_length: int = 1280,
             content: bytes = b"",
-            splittable: bool = False,
-            slice_length: int = 1024,
     ):  # todo: test to default values
         super().__init__(
             mf_name=mf_name,
@@ -307,13 +308,13 @@ class BytesMessage(BaseMessage):  # todo: tests
         )
         self._content = content
 
-    def set(self, content: bytes) -> BytesMessage:
+    def set(self, content: bytes | bytearray) -> BytesMessage:
         """
         Set message content.
 
         Parameters
         ----------
-        content: bytes
+        content: bytes | bytearray
             new message content.
 
         Returns
@@ -321,6 +322,8 @@ class BytesMessage(BaseMessage):  # todo: tests
         BytesMessage
             self instance.
         """
+        if isinstance(content, bytearray):
+            content = bytes(content)
         self._content = content
         return self
 
@@ -329,13 +332,12 @@ class BytesMessage(BaseMessage):  # todo: tests
             yield self
             return
 
-        parts_count = int(np.ceil(len(self) // self._slice_length))
-        for i_part in range(parts_count):
+        parts_count = int(np.ceil(len(self) / self._slice_length))
+        for start in range(
+            0, parts_count * self._slice_length, self._slice_length
+        ):
             yield self.get_instance().set(
-                self._content[
-                    i_part * self._slice_length:
-                    (i_part + 1) * self._slice_length
-                ]
+                self._content[start: start + self._slice_length]
             )
 
     def in_bytes(self) -> bytes:
@@ -348,7 +350,9 @@ class BytesMessage(BaseMessage):  # todo: tests
         return self._content.hex(sep=" ")
 
     def __add__(self, other: BytesMessage | bytes) -> BytesMessage:
-        self._content += bytes(other)
+        if isinstance(other, BytesMessage):
+            other = bytes(other)
+        self._content += other
         return self
 
     def __getitem__(self, item: int | slice) -> int | bytes:
@@ -813,9 +817,14 @@ class FieldMessage(BaseMessage):
             yield field
 
 
+class StrongFieldMessage(FieldMessage):
+    ...
+
+
 MessageType = (
     BytesMessage
     | FieldMessage
+    | StrongFieldMessage
 )
 
 
@@ -825,7 +834,7 @@ class MessageSetter(object):
     Represent setter, which contain keyword arguments for setting message.
     """
 
-    message_type: str
+    message_type: str = "bytes"
     "type of a message class."
 
     mf_name: str = "std"
@@ -841,6 +850,7 @@ class MessageSetter(object):
         "base": BaseMessage,
         "bytes": BytesMessage,
         "field": FieldMessage,
+        "strong_field": StrongFieldMessage,
     }
 
     def __post_init__(self):
@@ -848,17 +858,6 @@ class MessageSetter(object):
             raise ValueError("BaseMessage not supported by setter")
         if self.message_type not in self.MESSAGE_TYPES:
             raise ValueError("invalid message type: %r" % self.message_type)
-
-    def get_message_class(self) -> type[MessageType]:
-        """
-        Get message class by message type name.
-
-        Returns
-        -------
-        type[MessageType]
-            message class instance.
-        """
-        return self.MESSAGE_TYPES[self.message_type]
 
     @property
     def kwargs(self) -> dict[str, Any]:
@@ -873,3 +872,23 @@ class MessageSetter(object):
             splittable=self.splittable,
             slice_length=self.slice_length,
         )
+
+    @property
+    def message(self) -> MessageType:
+        """
+        Returns
+        -------
+        MessageType
+            initialized message.
+        """
+        return self.message_class(**self.kwargs)
+
+    @property
+    def message_class(self) -> type[MessageType]:
+        """
+        Returns
+        -------
+        type[MessageType]
+            message class by message type.
+        """
+        return self.MESSAGE_TYPES[self.message_type]
