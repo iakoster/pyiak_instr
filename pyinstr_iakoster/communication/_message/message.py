@@ -297,8 +297,8 @@ class BytesMessage(BaseMessage):
     def __init__(
             self,
             mf_name: str = "std",
-            splittable: bool = True,
-            slice_length: int = 1280,
+            splittable: bool = False,
+            slice_length: int = 1024,
             content: bytes = b"",
     ):  # todo: test to default values
         super().__init__(

@@ -168,7 +168,7 @@ class TestBaseMessage(unittest.TestCase):
                     func(obj)
 
 
-class AnotherMessage(FieldMessage):
+class AnotherMessage(StrongFieldMessage):
 
     def __init__(
             self,
@@ -176,7 +176,7 @@ class AnotherMessage(FieldMessage):
             splittable: bool = False,
             slice_length: int = 1024
     ):
-        FieldMessage.__init__(
+        StrongFieldMessage.__init__(
             self,
             mf_name=mf_name,
             splittable=splittable,
@@ -186,13 +186,21 @@ class AnotherMessage(FieldMessage):
 
 class TestBytesMessage(unittest.TestCase):
 
+    def test_get_setter(self) -> None:
+        compare_objects(
+            self,
+            MessageSetter("bytes"),
+            BytesMessage().get_setter(),
+            wo_attrs=["message"],
+        )
+
     def test_init(self) -> None:
         validate_object(
             self,
             BytesMessage(),
             mf_name="std",
-            splittable=True,
-            slice_length=1280,
+            splittable=False,
+            slice_length=1024,
             src=None,
             dst=None,
             check_attrs=True,
@@ -206,19 +214,20 @@ class TestBytesMessage(unittest.TestCase):
         self.assertListEqual([1, 3, 255], list(msg.unpack()))
 
     def test_split(self) -> None:
-        msg = BytesMessage(splittable=False).set(
+        msg = BytesMessage().set(
             bytearray(i % 256 for i in range(3, 2000))
         )
         for res in msg.split():
             with self.subTest(test="not splittable"):
                 self.assertIs(msg, res)
 
-        msg = BytesMessage().set(bytearray(i % 256 for i in range(3, 2000)))
+        msg = BytesMessage(splittable=True)\
+            .set(bytearray(i % 256 for i in range(3, 2000)))
         for part, ref in zip(
                 msg.split(),
                 (
-                    [i % 256 for i in range(3, 1283)],
-                    [i % 256 for i in range(1283, 2000)],
+                    [i % 256 for i in range(3, 1027)],
+                    [i % 256 for i in range(1027, 2000)],
                 ),
         ):
             with self.subTest(test="splittable"):
@@ -252,30 +261,20 @@ class TestBytesMessage(unittest.TestCase):
                 content=b"\x01\xff\xa1",
             ),
             get_instance=BytesMessage(mf_name="test"),
-            setter=MessageSetter("bytes", "test", True, 1280),
+            setter=MessageSetter("bytes", "test", False, 1024),
             bytes_=b"\x01\xff\xa1",
             length=3,
             string="<BytesMessage(01 ff a1), src=None, dst=None>",
             init_mf_name="std",
-            init_splittable=True,
-            init_slice_length=1280,
+            init_splittable=False,
+            init_slice_length=1024,
         )
 
 
-class TestMessage(unittest.TestCase):
-
-    def test_get_message_class(self) -> None:
-        compare_objects(
-            self, MessageSetter("field"), FieldMessage().get_setter()
-        )
-
-    def fill_content(self) -> bytes:
-        content = b"\x1a\xa5\x00\x00\xaa\x01\x04\xff\xee\xdd\xcc\x39\x86"
-        self.msg.extract(content)
-        return content
+class TestStrongFieldMessage(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.msg: FieldMessage = FieldMessage().configure(
+        self.msg: StrongFieldMessage = StrongFieldMessage().configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
@@ -284,7 +283,7 @@ class TestMessage(unittest.TestCase):
             data=FieldSetter.data(expected=1, fmt=">I"),
             crc=FieldSetter.crc(fmt=">H"),
         )
-        self.simple_msg: FieldMessage = FieldMessage().configure(
+        self.simple_msg: StrongFieldMessage = StrongFieldMessage().configure(
             address=FieldSetter.address(fmt=">H"),
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(
@@ -293,8 +292,21 @@ class TestMessage(unittest.TestCase):
             data=FieldSetter.data(expected=-1, fmt=">H")
         )
 
+    def test_get_message_class(self) -> None:
+        compare_objects(
+            self,
+            MessageSetter("strong_field"),
+            StrongFieldMessage().get_setter(),
+            wo_attrs=["message"]
+        )
+
+    def fill_content(self) -> bytes:
+        content = b"\x1a\xa5\x00\x00\xaa\x01\x04\xff\xee\xdd\xcc\x39\x86"
+        self.msg.extract(content)
+        return content
+
     def test_init(self):
-        msg = FieldMessage()
+        msg = StrongFieldMessage()
         self.assertEqual("std", msg.mf_name)
         with self.assertRaises(KeyError) as exc:
             msg.data.unpack()
@@ -303,7 +315,7 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_configure(self):
-        msg = FieldMessage(mf_name="not_def").configure(
+        msg = StrongFieldMessage(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
@@ -371,7 +383,7 @@ class TestMessage(unittest.TestCase):
             compare_objects(self, field, msg[name])
 
     def test_configure_middle_infinite(self):
-        msg = FieldMessage(mf_name="inf").configure(
+        msg = StrongFieldMessage(mf_name="inf").configure(
             operation=FieldSetter.operation(fmt=">B"),
             data_length=FieldSetter.data_length(fmt=">B"),
             data=FieldSetter.data(expected=-1, fmt=">H"),
@@ -443,7 +455,9 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_extract(self):
-        msg: FieldMessage = FieldMessage(mf_name="not_def").configure(
+        msg: StrongFieldMessage = StrongFieldMessage(
+            mf_name="not_def"
+        ).configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.single(fmt=">B"),
             address=FieldSetter.address(fmt=">H"),
@@ -467,7 +481,9 @@ class TestMessage(unittest.TestCase):
         self.assertEqual("w", msg.operation.desc)
 
     def test_extract_middle_infinite(self):
-        msg: FieldMessage = FieldMessage(mf_name="not_def").configure(
+        msg: StrongFieldMessage = StrongFieldMessage(
+            mf_name="not_def"
+        ).configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             data_length=FieldSetter.data_length(fmt=">B"),
@@ -497,7 +513,7 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_get_instance(self):
-        msg: FieldMessage = self.msg.get_instance()
+        msg: StrongFieldMessage = self.msg.get_instance()
         self.assertEqual("std", msg.mf_name)
         for ref, res in zip(self.msg, msg):
             self.assertEqual(ref.name, res.name)
@@ -541,7 +557,7 @@ class TestMessage(unittest.TestCase):
                 self.simple_msg.set(
                     address=0, operation=b"", data_length=1, data=[0x11]
                 )
-            self.assertEqual("Error with operation in FieldMessage: field is empty", exc.exception.args[0])
+            self.assertEqual("Error with operation in StrongFieldMessage: field is empty", exc.exception.args[0])
 
         with self.subTest(name="invalid data length"):
             with self.assertRaises(MessageContentError) as exc:
@@ -549,7 +565,7 @@ class TestMessage(unittest.TestCase):
                     address=0, operation="w", data_length=1, data=[0, 1]
                 )
             self.assertEqual(
-                "Error with data_length in FieldMessage: invalid length",
+                "Error with data_length in StrongFieldMessage: invalid length",
                 exc.exception.args[0]
             )
 
@@ -563,7 +579,7 @@ class TestMessage(unittest.TestCase):
                     crc=10,
                 )
             self.assertIn(
-                "Error with crc in FieldMessage: invalid crc value, ",
+                "Error with crc in StrongFieldMessage: invalid crc value, ",
                 exc.exception.args[0]
             )
 
@@ -580,8 +596,8 @@ class TestMessage(unittest.TestCase):
 
     def test_split(self):
 
-        def get_test_msg() -> FieldMessage:
-            new_msg = FieldMessage(splittable=True, slice_length=64)
+        def get_test_msg() -> StrongFieldMessage:
+            new_msg = StrongFieldMessage(splittable=True, slice_length=64)
             new_msg.configure(
                 preamble=FieldSetter.static(fmt=">H", default=0x102),
                 address=FieldSetter.address(fmt=">I"),
@@ -648,19 +664,19 @@ class TestMessage(unittest.TestCase):
 
     def test_magic_str(self):
         self.assertEqual(
-            "<FieldMessage(address=EMPTY, operation=EMPTY, "
+            "<StrongFieldMessage(address=EMPTY, operation=EMPTY, "
             "data_length=EMPTY, data=EMPTY), src=None, dst=None>",
             str(self.simple_msg)
         )
         self.assertEqual(
-            "<FieldMessage(preamble=1AA5, response=0, address=EMPTY, "
+            "<StrongFieldMessage(preamble=1AA5, response=0, address=EMPTY, "
             "operation=EMPTY, data_length=EMPTY, data=EMPTY, crc=EMPTY), "
             "src=None, dst=None>",
             str(self.msg)
         )
         self.fill_content()
         self.assertEqual(
-            "<FieldMessage(preamble=1AA5, response=0, address=AA, "
+            "<StrongFieldMessage(preamble=1AA5, response=0, address=AA, "
             "operation=1, data_length=4, data=FFEEDDCC, crc=3986), "
             "src=None, dst=None>",
             str(self.msg)
@@ -672,19 +688,19 @@ class TestMessage(unittest.TestCase):
 
     def test_magic_repr(self):
         self.assertEqual(
-            "<FieldMessage(address=EMPTY, operation=EMPTY, "
+            "<StrongFieldMessage(address=EMPTY, operation=EMPTY, "
             "data_length=EMPTY, data=EMPTY), src=None, dst=None>",
             repr(self.simple_msg)
         )
         self.fill_content()
         self.assertEqual(
-            "<FieldMessage(preamble=1AA5, response=0, address=AA, operation=1, "
+            "<StrongFieldMessage(preamble=1AA5, response=0, address=AA, operation=1, "
             "data_length=4, data=FFEEDDCC, crc=3986), src=None, dst=None>",
             repr(self.msg)
         )
         self.msg.set_src_dst(src="COM4", dst=("192.168.0.1", 3202))
         self.assertEqual(
-            "<FieldMessage(preamble=1AA5, response=0, address=AA, operation=1, "
+            "<StrongFieldMessage(preamble=1AA5, response=0, address=AA, operation=1, "
             "data_length=4, data=FFEEDDCC, crc=3986), "
             "src=COM4, dst=('192.168.0.1', 3202)>",
             repr(self.msg)
@@ -757,7 +773,7 @@ class TestMessage(unittest.TestCase):
 class TestFields(unittest.TestCase):
 
     def test_data_length_unpdate(self):
-        msg: FieldMessage = FieldMessage(mf_name="not_def").configure(
+        msg: StrongFieldMessage = StrongFieldMessage(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
@@ -773,7 +789,7 @@ class TestFields(unittest.TestCase):
         self.assertListEqual([4], list(dlen.unpack()))
 
     def test_operation_compare(self):
-        msg: FieldMessage = FieldMessage(mf_name="not_def").configure(
+        msg: StrongFieldMessage = StrongFieldMessage(mf_name="not_def").configure(
             preamble=FieldSetter.static(fmt=">H", default=0x1aa5),
             response=FieldSetter.response(fmt=">B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt=">H"),
