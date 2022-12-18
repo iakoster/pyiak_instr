@@ -7,6 +7,7 @@ import pandas as pd
 import pandas.testing
 
 from pyinstr_iakoster.communication import (
+    FieldType,
     FieldMessage,
 )
 
@@ -70,6 +71,28 @@ def validate_object(
     for attr, ref in attrs.items():
         with case.subTest(class_=obj.__class__.__name__, attr=attr):
             case.assertEqual(ref, getattr(obj, attr))
+
+
+def validate_fields(
+        case: TestCase,
+        message: FieldMessage,
+        fields: list[FieldType],
+        attrs: list[str] = None,
+        wo_attrs: list[str] | None = None,
+        wo_consts: bool = True,
+
+) -> None:
+    msg_fields = list(message)
+    case.assertEqual(len(fields), len(msg_fields))
+    for ref, res in zip(fields, msg_fields):
+        compare_objects(
+            case,
+            ref,
+            res,
+            attrs=attrs,
+            wo_attrs=wo_attrs,
+            wo_consts=wo_consts,
+        )
 
 
 def compare_objects(

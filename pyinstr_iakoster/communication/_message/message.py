@@ -537,7 +537,7 @@ class FieldMessage(BaseMessage):
 
         self._fields = {n: self._get_field(n, s) for n, s in fields.items()}
 
-        infinite_exists = False
+        infinite_exists = False  # todo: create _validate_fields
         for field in self:
             if not field.finite:
                 if infinite_exists:
@@ -610,7 +610,7 @@ class FieldMessage(BaseMessage):
     @overload
     def set(
             self, data: ContentType = b"", **fields: ContentType
-    ) -> FieldMessage:
+    ) -> FieldMessage:  # todo: check that data is DataField
         ...
 
     def set(self, **fields: ContentType) -> FieldMessage:
@@ -760,9 +760,6 @@ class FieldMessage(BaseMessage):
                 break
 
         if i_infinite < 0:
-            return
-        elif i_infinite == 0 and len(fields) == 1:
-            fields[0].stop_byte = None
             return
 
         next_start_byte = 0

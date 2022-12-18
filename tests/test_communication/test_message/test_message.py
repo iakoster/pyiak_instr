@@ -3,26 +3,41 @@ from typing import Any, get_args
 
 import numpy as np
 
-from ..utils import validate_object, compare_objects
+from ..utils import (
+    validate_object,
+    compare_objects,
+    validate_fields,
+)
 
 from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
+    ContentType,
+    Field,
+    SingleField,
+    StaticField,
+    AddressField,
+    CrcField,
+    DataField,
+    DataLengthField,
+    OperationField,
+    ResponseField,
+    FieldSetter,
+    FieldType,
+    FieldContentError,
     MessageType,
     BaseMessage,
     BytesMessage,
     FieldMessage,
     StrongFieldMessage,
     MessageSetter,
-    SingleField,
-    StaticField,
-    AddressField,
-    DataField,
-    CrcField,
-    DataLengthField,
-    OperationField,
-    ResponseField,
-    FieldSetter,
     MessageContentError,
+    NotConfiguredMessageError,
+    Register,
+    RegisterMap,
+    AsymmetricResponseField,
+    MessageFormat,
+    MessageFormatMap,
+    PackageFormat,
 )
 
 
@@ -36,7 +51,6 @@ def test_common_methods(
         case: unittest.TestCase,
         res: BaseMessage,
         *,
-        get_instance: BaseMessage,
         setter: MessageSetter,
         bytes_: bytes,
         length: int,
@@ -268,6 +282,205 @@ class TestBytesMessage(unittest.TestCase):
             init_mf_name="std",
             init_splittable=False,
             init_slice_length=1024,
+        )
+
+
+class TestFieldMessage(unittest.TestCase):
+
+    def test_base_init(self) -> None:
+        validate_object(
+            self,
+            FieldMessage(),
+            mf_name="std",
+            splittable=False,
+            slice_length=1024,
+        )
+
+    def test_configure_one_finite(self) -> None:
+        msg = FieldMessage().configure(
+            data=FieldSetter.data(expected=4, fmt="B")
+        )
+        validate_object(
+            self,
+            msg,
+            mf_name="std",
+            splittable=False,
+            slice_length=1024,
+            src=None,
+            dst=None,
+            response_codes={},
+            wo_attrs=["has", "data"],
+            check_attrs=True,
+        )
+        validate_fields(
+            self,
+            msg,
+            [DataField(
+                "std",
+                "data",
+                start_byte=0,
+                expected=4,
+                fmt="B",
+            )],
+            wo_attrs=["parent"]
+        )
+        validate_object(
+            self,
+            msg.has,
+            DataField=True,
+            ResponseField=False,
+            OperationField=False,
+            infinite=False,
+            DataLengthField=False,
+            CrcField=False,
+            AddressField=False,
+            check_attrs=True,
+        )
+
+    def test_configure_one_infinite(self) -> None:
+        msg = FieldMessage().configure(
+            data=FieldSetter.data(expected=-1, fmt="B")
+        )
+
+        validate_fields(
+            self,
+            msg,
+            [DataField(
+                "std",
+                "data",
+                start_byte=0,
+                expected=-1,
+                fmt="B",
+            )],
+            wo_attrs=["parent"]
+        )
+        validate_object(
+            self,
+            msg.has,
+            DataField=True,
+            ResponseField=False,
+            OperationField=False,
+            infinite=True,
+            DataLengthField=False,
+            CrcField=False,
+            AddressField=False,
+            check_attrs=True,
+        )
+
+    def test_configure_first_infinite(self) -> None:
+        msg = FieldMessage().configure(
+            data=FieldSetter.data(expected=-1, fmt="B"),
+            footer=FieldSetter.address(fmt=">H"),
+            next=FieldSetter.static(fmt=">I", default=0x12345678)
+        )
+
+        fields = []
+        f = DataField("std", "data", start_byte=0, expected=-1, fmt="B")
+        f.stop_byte = -6
+        fields.append(f)
+
+        f = AddressField("std", "footer", start_byte=-6, fmt=">H")
+        f.stop_byte = -4
+        fields.append(f)
+
+        f = StaticField(
+            "std", "next", start_byte=-4, fmt=">I", default=0x12345678
+        )
+        f.stop_byte = None
+        fields.append(f)
+
+        validate_fields(self, msg, fields, wo_attrs=["parent"])
+        validate_object(
+            self,
+            msg.has,
+            DataField=True,
+            ResponseField=False,
+            OperationField=False,
+            infinite=True,
+            DataLengthField=False,
+            CrcField=False,
+            AddressField=True,
+            check_attrs=True,
+        )
+
+    def test_configure_middle_infinite(self) -> None:
+        msg = FieldMessage().configure(
+            head=FieldSetter.operation(fmt=">H"),
+            data=FieldSetter.data(expected=-1, fmt="B"),
+            footer=FieldSetter.address(fmt=">I"),
+        )
+
+        fields = [OperationField("std", "head", start_byte=0, fmt=">H")]
+
+        f = DataField("std", "data", start_byte=2, expected=-1, fmt="B")
+        f.stop_byte = -4
+        fields.append(f)
+
+        f = AddressField("std", "footer", start_byte=-4, fmt=">I")
+        f.stop_byte = None
+        fields.append(f)
+
+        validate_fields(self, msg, fields, wo_attrs=["parent"])
+        validate_object(
+            self,
+            msg.has,
+            DataField=True,
+            ResponseField=False,
+            OperationField=True,
+            infinite=True,
+            DataLengthField=False,
+            CrcField=False,
+            AddressField=True,
+            check_attrs=True,
+        )
+
+    def test_configure_last_infinite(self) -> None:
+        msg = FieldMessage().configure(
+            head=FieldSetter.operation(fmt=">H"),
+            next=FieldSetter.address(fmt=">I"),
+            data=FieldSetter.data(expected=-1, fmt="B"),
+        )
+
+        fields = [OperationField("std", "head", start_byte=0, fmt=">H")]
+        f = AddressField("std", "next", start_byte=2, fmt=">I")
+        f.stop_byte = 6
+        fields.append(f)
+
+        f = DataField("std", "data", start_byte=6, expected=-1, fmt="B")
+        f.stop_byte = None
+        fields.append(f)
+
+        validate_fields(self, msg, fields, wo_attrs=["parent"])
+        validate_object(
+            self,
+            msg.has,
+            DataField=True,
+            ResponseField=False,
+            OperationField=True,
+            infinite=True,
+            DataLengthField=False,
+            CrcField=False,
+            AddressField=True,
+            check_attrs=True,
+        )
+
+    def test_configure_not_all_fields_exc(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            FieldMessage().configure()
+        self.assertEqual(
+            "not all required fields were got: data are missing",
+            exc.exception.args[0]
+        )
+
+    def test_configure_two_infinite_exc(self) -> None:
+        with self.assertRaises(MessageContentError) as exc:
+            FieldMessage().configure(
+                data=FieldSetter.data(expected=-1, fmt="B"),
+                data2=FieldSetter.base(expected=-1, fmt="B"),
+            )
+        self.assertEqual(
+            "Error with data2 in FieldMessage: second infinite field",
+            exc.exception.args[0]
         )
 
 
