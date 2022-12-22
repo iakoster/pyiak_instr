@@ -326,7 +326,7 @@ class TestFieldMessage(unittest.TestCase):
             src=None,
             dst=None,
             response_codes={},
-            wo_attrs=["has", "data"],
+            wo_attrs=["get", "has", "data"],
             check_attrs=True,
         )
         validate_fields(
@@ -556,12 +556,17 @@ class TestFieldMessage(unittest.TestCase):
             ("n2", AddressField),
         ]:
             with self.subTest(field_class=cls.__name__):
-                field = msg.get_field_by_type(cls)
+                field = msg.get.field_by_type(cls)
                 self.assertIsNotNone(field)
                 self.assertEqual(name, field.name)
 
-        with self.subTest(field_class="None"):
-            self.assertIsNone(msg.get_field_by_type(OperationField))
+        with self.subTest(field_class="not exists"):
+            with self.assertRaises(TypeError) as exc:
+                self.assertIsNone(msg.get.OperationField)
+            self.assertEqual(
+                "there is no field with type OperationField",
+                exc.exception.args[0]
+            )
 
     def test_get_instance(self) -> None:
         ref = FieldMessage().configure(
@@ -579,7 +584,7 @@ class TestFieldMessage(unittest.TestCase):
             dst=None,
             response_codes={},
             check_attrs=True,
-            wo_attrs=["has", "data"]
+            wo_attrs=["get", "has", "data"]
         )
         validate_object(
             self,

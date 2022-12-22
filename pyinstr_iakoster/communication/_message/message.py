@@ -3,7 +3,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import (
     Generator,
-    Set,
     ClassVar,
     Any,
     overload,
@@ -369,6 +368,126 @@ class BytesMessage(BaseMessage):
             yield byte
 
 
+class MessageFieldsGetParser(object):
+    """
+    Represents parser to get the field from message.
+
+    Parameters
+    ----------
+    fields: dict[str, FieldType]
+        dictionary of fields in the message.
+    types: dict[type[FieldType], str]
+        set of field types in the message.
+    """
+
+    def __init__(
+            self,
+            fields: dict[str, FieldType],
+            types: dict[type[FieldType], str],
+    ):
+        self._fields, self._types = fields, types
+
+    def field_by_type(self, type_: type[FieldType]) -> FieldType:
+        """
+        Get first field with specified type.
+
+        Parameters
+        ----------
+        type_: type[FieldType]
+
+        Returns
+        -------
+        FieldType
+            field if specified type.
+
+        Raises
+        ------
+        TypeError
+            if type not found in fields list.
+        """
+        if type_ not in self._types:
+            raise TypeError("there is no field with type %s" % type_.__name__)
+        return self[self._types[type_]]
+
+    @property
+    def AddressField(self) -> AddressField:
+        """
+        Returns
+        -------
+        AddressField
+            address field instance.
+        """
+        return self.field_by_type(AddressField)
+
+    @property
+    def CrcField(self) -> CrcField:
+        """
+        Returns
+        -------
+        CrcField
+            crc field instance.
+        """
+        return self.field_by_type(CrcField)
+
+    @property
+    def DataField(self) -> DataField:
+        """
+        Returns
+        -------
+        DataField
+            data field instance.
+        """
+        return self.field_by_type(DataField)
+
+    @property
+    def DataLengthField(self) -> DataLengthField:
+        """
+        Returns
+        -------
+        DataLengthField
+            data length field instance.
+        """
+        return self.field_by_type(DataLengthField)
+
+    @property
+    def OperationField(self) -> OperationField:
+        """
+        Returns
+        -------
+        OperationField
+            operation length field instance.
+        """
+        return self.field_by_type(OperationField)
+
+    @property
+    def ResponseField(self) -> ResponseField:
+        """
+        Returns
+        -------
+        ResponseField
+            response length field instance.
+        """
+        return self.field_by_type(ResponseField)
+
+    def __getitem__(self, name: str) -> FieldType:
+        """
+        Get field by unique name.
+
+        Parameters
+        ----------
+        name: str
+            field name.
+
+        Returns
+        -------
+        FieldType
+            field instance.
+        """
+        if name not in self._fields:
+            raise ValueError("there is no field with name %s" % name)
+        return self._fields[name]
+
+
 class MessageFieldsHasParser(object):
     """
     Represents parser to check the parameters of the fields in the message.
@@ -377,22 +496,24 @@ class MessageFieldsHasParser(object):
     ----------
     fields: dict[str, FieldType]
         dictionary of fields in the message.
-    types: set[type[FieldType]]
+    types: dict[type[FieldType], str]
         set of field types in the message.
     """
 
     def __init__(
-            self, fields: dict[str, FieldType], types: Set[type[FieldType]]
+            self,
+            fields: dict[str, FieldType],
+            types: dict[type[FieldType], str],
     ):
         self._fields, self._types = fields, types
 
-    def field_type(self, field_type: type[FieldType]) -> bool:
+    def field_type(self, type_: type[FieldType]) -> bool:
         """
         Check that message has field of specified type.
 
         Parameters
         ----------
-        field_type: type[FieldType]
+        type_: type[FieldType]
             the type of field whose existence is to be checked.
 
         Returns
@@ -400,7 +521,7 @@ class MessageFieldsHasParser(object):
         bool
             True - if field type exists, False - not.
         """
-        return field_type in self._types
+        return type_ in self._types
 
     @property
     def AddressField(self) -> bool:
@@ -410,7 +531,7 @@ class MessageFieldsHasParser(object):
         bool
             True -- AddressField exists among fields.
         """
-        return AddressField in self._types
+        return self.field_type(AddressField)
 
     @property
     def CrcField(self) -> bool:
@@ -420,7 +541,7 @@ class MessageFieldsHasParser(object):
         bool
             True -- CrcField exists among fields.
         """
-        return CrcField in self._types
+        return self.field_type(CrcField)
 
     @property
     def DataField(self) -> bool:
@@ -430,7 +551,7 @@ class MessageFieldsHasParser(object):
         bool
             True -- DataField exists among fields.
         """
-        return DataField in self._types
+        return self.field_type(DataField)
 
     @property
     def DataLengthField(self) -> bool:
@@ -440,7 +561,7 @@ class MessageFieldsHasParser(object):
         bool
             True -- DataField exists among fields.
         """
-        return DataLengthField in self._types
+        return self.field_type(DataLengthField)
 
     @property
     def OperationField(self) -> bool:
@@ -450,7 +571,7 @@ class MessageFieldsHasParser(object):
         bool
             True -- DataField exists among fields.
         """
-        return OperationField in self._types
+        return self.field_type(OperationField)
 
     @property
     def ResponseField(self) -> bool:
@@ -460,7 +581,7 @@ class MessageFieldsHasParser(object):
         bool
             True -- DataField exists among fields.
         """
-        return ResponseField in self._types
+        return self.field_type(ResponseField)
 
     @property
     def infinite(self) -> bool:
@@ -506,7 +627,7 @@ class FieldMessage(BaseMessage):
         )
 
         self._fields: dict[str, FieldType] = {}
-        self._field_types: set[type[FieldType]] = set()
+        self._field_types: dict[type[FieldType], str] = {}
 
     @overload
     def configure(
@@ -548,7 +669,10 @@ class FieldMessage(BaseMessage):
                     )
                 infinite_exists = True
 
-        self._field_types = {f.__class__ for f in self}
+        self._field_types.clear()
+        for field in self:
+            if field.__class__ not in self._field_types:
+                self._field_types[field.__class__] = field.name
         self._set_field_ranges()
         return self
 
@@ -580,27 +704,6 @@ class FieldMessage(BaseMessage):
             field.extract(message)
         self._validate_content()
         return self
-
-    def get_field_by_type(
-            self, field_type: type[FieldType]
-    ) -> FieldType | None:
-        """
-        Get first field by field type.
-
-        Parameters
-        ----------
-        field_type: type[FieldType]
-            the type of field that wanted to find.
-
-        Returns
-        -------
-        FieldType | None
-            field or None if the message has no field of this type.
-        """
-        for field in self:
-            if isinstance(field, field_type):
-                return field
-        return None
 
     def get_instance(self) -> FieldMessage:
         return super().get_instance().configure(
@@ -639,7 +742,7 @@ class FieldMessage(BaseMessage):
             self[name].set(content)
 
         if self.has.CrcField:
-            crc = self.get_field_by_type(CrcField)
+            crc = self.get.CrcField
             if crc.name not in fields:
                 crc.update()
 
@@ -663,9 +766,9 @@ class FieldMessage(BaseMessage):
         if self.has.AddressField \
                 and self.has.OperationField \
                 and self.has.DataLengthField:  # todo: refactor
-            address = self.get_field_by_type(AddressField)
-            operation = self.get_field_by_type(OperationField)
-            data_length = self.get_field_by_type(DataLengthField)
+            address = self.get.AddressField
+            operation = self.get.OperationField
+            data_length = self.get.DataLengthField
             parts_count = int(np.ceil(
                 data_length[0] / self._slice_length
             ))
@@ -679,7 +782,7 @@ class FieldMessage(BaseMessage):
                 msg = deepcopy(self)
 
                 if operation.base == 'r':
-                    msg.get_field_by_type(DataLengthField).set(data_len)
+                    msg.get.DataLengthField.set(data_len)
                 elif operation.base == 'w':
                     start = i_part * self._slice_length
                     end = start + data_len
@@ -689,8 +792,8 @@ class FieldMessage(BaseMessage):
                         msg.data.set(self.data.content[start:end])
                     else:
                         raise TypeError('Unsupported data units')
-                    msg.get_field_by_type(DataLengthField).update()
-                msg.get_field_by_type(AddressField).set(
+                    msg.get.DataLengthField.update()
+                msg.get.AddressField.set(
                     address[0] + i_part * self._slice_length)
                 msg.set_src_dst(self._src, self._dst)
                 yield msg
@@ -790,8 +893,8 @@ class FieldMessage(BaseMessage):
                 )
 
         if self.has.OperationField and self.has.DataLengthField:
-            operation = self.get_field_by_type(OperationField)
-            data_length = self.get_field_by_type(DataLengthField)
+            operation = self.get.OperationField
+            data_length = self.get.DataLengthField
 
             if operation.base == "w" and (
                     not self.data.may_be_empty or self.data.words_count
@@ -803,7 +906,7 @@ class FieldMessage(BaseMessage):
                 )
 
         if self.has.CrcField:
-            crc = self.get_field_by_type(CrcField)
+            crc = self.get.CrcField
             res_crc, ref_crc = crc.calculate(self), crc[0]
             if ref_crc != res_crc:
                 raise MessageContentError(
@@ -821,6 +924,16 @@ class FieldMessage(BaseMessage):
             data field instance.
         """
         return self._fields["data"]
+
+    @property
+    def get(self) -> MessageFieldsGetParser:
+        """
+        Returns
+        -------
+        MessageFieldsGetParser
+            parser for getting fields instance.
+        """
+        return MessageFieldsGetParser(self._fields, self._field_types)
 
     @property
     def has(self) -> MessageFieldsHasParser:
@@ -894,16 +1007,16 @@ class FieldMessage(BaseMessage):
 
         self.data.append(other)
         if self.has.DataLengthField:
-            self.get_field_by_type(DataLengthField).update()
+            self.get.DataLengthField.update()
         return self
 
-    def __getitem__(self, item: str) -> FieldType:
+    def __getitem__(self, name: str) -> FieldType:
         """
         Returns a field instance by field name.
 
         Parameters
         ----------
-        item : str
+        name : str
             field name.
 
         Returns
@@ -911,7 +1024,7 @@ class FieldMessage(BaseMessage):
         FieldType
             field instance.
         """
-        return self._fields[item]
+        return self.get[name]
 
     def __iter__(self) -> Generator[FieldType, None, None]:
         """

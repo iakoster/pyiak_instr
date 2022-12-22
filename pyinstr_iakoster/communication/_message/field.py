@@ -45,7 +45,7 @@ ContentType = (
 )
 
 
-class BaseField(object):
+class BaseField(object):  # todo: unique parameter
     """
     Represents a basic class for single field with all required properties.
 
