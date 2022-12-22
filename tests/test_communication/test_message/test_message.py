@@ -274,7 +274,6 @@ class TestBytesMessage(unittest.TestCase):
                 mf_name="test",
                 content=b"\x01\xff\xa1",
             ),
-            get_instance=BytesMessage(mf_name="test"),
             setter=MessageSetter("bytes", "test", False, 1024),
             bytes_=b"\x01\xff\xa1",
             length=3,
@@ -631,6 +630,13 @@ class TestFieldMessage(unittest.TestCase):
                 exc.exception.args[0]
             )
 
+    def test_set_with_data_length(self) -> None:
+        msg = FieldMessage().configure(
+            dlen=FieldSetter.data_length(fmt="B"),
+            data=FieldSetter.data(expected=1, fmt="I"),
+        ).set(data=0x12345678)
+        self.assertEqual(4, msg.get.DataLengthField[0])
+
     def test_set_not_configured_exc(self) -> None:
         with self.assertRaises(NotConfiguredMessageError) as exc:
             FieldMessage().set()
@@ -899,12 +905,12 @@ class TestStrongFieldMessage(unittest.TestCase):
         return content
 
     def test_init(self):
-        msg = StrongFieldMessage()
+        msg = StrongFieldMessage().set_src_dst("", "")
         self.assertEqual("std", msg.mf_name)
-        with self.assertRaises(KeyError) as exc:
+        with self.assertRaises(TypeError) as exc:
             msg.data.unpack()
         self.assertEqual(
-            "data", exc.exception.args[0]
+            "there is no field with type DataField", exc.exception.args[0]
         )
 
     def test_configure(self):

@@ -134,7 +134,7 @@ class BaseMessage(object):
         """Set `src` and `dst` to None."""
         self._dst, self._src = None, None
 
-    def get_instance(self) -> BaseMessage:
+    def get_instance(self) -> BaseMessage | MessageType:
         """
         Get the same class as the current object, initialized with
         the same arguments, but with empty content.
@@ -741,6 +741,11 @@ class FieldMessage(BaseMessage):
         for name, content in fields.items():
             self[name].set(content)
 
+        if self.has.DataLengthField:
+            data_length = self.get.DataLengthField
+            if data_length.name not in fields:
+                data_length.update()
+
         if self.has.CrcField:
             crc = self.get.CrcField
             if crc.name not in fields:
@@ -923,7 +928,7 @@ class FieldMessage(BaseMessage):
         DataField
             data field instance.
         """
-        return self._fields["data"]
+        return self.get.DataField
 
     @property
     def get(self) -> MessageFieldsGetParser:
@@ -1074,87 +1079,8 @@ class StrongFieldMessage(FieldMessage):
         ...
 
     def set(self, **fields: ContentType) -> StrongFieldMessage:
-        if not len(self._fields):
-            raise NotConfiguredMessageError(self.__class__.__name__)
-
-        for name, content in fields.items():
-            self[name].set(content)
-        if "data_length" not in fields:
-            self.data_length.update()
-        if "crc" in self._fields and "crc" not in fields \
-                and isinstance(self["crc"], CrcField):
-            self["crc"].update()
-        self._validate_content()
+        super().set(**fields)
         return self
-
-    # todo: parts count for bytes but split by data with int count of word
-    def split(self) -> Generator[FieldMessage, None, None]:
-        """
-        Split data field on slices.
-
-        Yields
-        ------
-        Message
-            message part.
-        """
-        if not self._splittable:
-            yield self
-            return
-
-        parts_count = int(np.ceil(
-            self.data_length[0] / self._slice_length
-        ))
-        for i_part in range(parts_count):
-            if i_part == parts_count - 1:
-                data_len = self.data_length[0] - i_part * self._slice_length
-            else:
-                data_len = self._slice_length
-
-            msg = deepcopy(self)
-
-            if msg.operation.base == 'r':
-                msg.data_length.set(data_len)
-            elif msg.operation.base == 'w':
-                start = i_part * self._slice_length
-                end = start + data_len
-                if self.data_length.units == DataLengthField.WORDS:
-                    msg.data.set(self.data[start:end])
-                elif self.data_length.units == DataLengthField.BYTES:
-                    msg.data.set(self.data.content[start:end])
-                else:
-                    raise TypeError('Unsupported data units')
-                msg.data_length.update()
-            msg.address.set(
-                self.address[0] + i_part * self._slice_length)
-            msg.set_src_dst(self._src, self._dst)
-            yield msg
-
-    def _validate_content(self) -> None:
-        """Validate content."""
-        for field in self:
-            if not (field.words_count or field.may_be_empty):
-                raise MessageContentError(
-                    self.__class__.__name__, field.name, "field is empty"
-                )
-
-        if self.operation.base == "w" and (
-                not self.data.may_be_empty or self.data.words_count
-        ) and self.data_length[0] != self.data_length.calculate(self.data):
-            raise MessageContentError(
-                self.__class__.__name__,
-                self.data_length.name,
-                "invalid length"
-            )
-
-        if "crc" in self._fields and isinstance(self["crc"], CrcField):
-            crc: CrcField = self["crc"]
-            res_crc, ref_crc = crc.calculate(self), crc.unpack()[0]
-            if ref_crc != res_crc:
-                raise MessageContentError(
-                    self.__class__.__name__,
-                    crc.name,
-                    "invalid crc value, '%x' != '%x'" % (ref_crc, res_crc)
-                )
 
     @property
     def address(self) -> AddressField:
@@ -1164,7 +1090,7 @@ class StrongFieldMessage(FieldMessage):
         AddressField
             address field instance.
         """
-        return self._fields["address"]
+        return self.get.AddressField
 
     @property
     def data_length(self) -> DataLengthField:
@@ -1174,7 +1100,7 @@ class StrongFieldMessage(FieldMessage):
         DataLengthField
             data length field instance.
         """
-        return self._fields["data_length"]
+        return self.get.DataLengthField
 
     @property
     def operation(self) -> OperationField:
@@ -1184,12 +1110,7 @@ class StrongFieldMessage(FieldMessage):
         OperationField
             operation field instance.
         """
-        return self._fields["operation"]
-
-    def __add__(self, other: FieldMessage | bytes) -> FieldMessage:
-        super().__add__(other)
-        self.data_length.update()
-        return self
+        return self.get.OperationField
 
 
 MessageType = (
