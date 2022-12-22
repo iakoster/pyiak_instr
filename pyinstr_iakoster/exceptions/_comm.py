@@ -47,6 +47,6 @@ class NotConfiguredMessageError(MessageError):  # nodesc
     def __init__(self, message: str):
         MessageError.__init__(
             self,
-            "fields in %s instanse not configured" % message,
+            "fields in %s instance not configured" % message,
             message
         )

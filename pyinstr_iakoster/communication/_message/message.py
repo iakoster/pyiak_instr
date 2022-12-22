@@ -369,7 +369,7 @@ class BytesMessage(BaseMessage):
             yield byte
 
 
-class MessageFieldsParser(object):
+class MessageFieldsHasParser(object):
     """
     Represents parser to check the parameters of the fields in the message.
 
@@ -662,7 +662,7 @@ class FieldMessage(BaseMessage):
 
         if self.has.AddressField \
                 and self.has.OperationField \
-                and self.has.DataLengthField:
+                and self.has.DataLengthField:  # todo: refactor
             address = self.get_field_by_type(AddressField)
             operation = self.get_field_by_type(OperationField)
             data_length = self.get_field_by_type(DataLengthField)
@@ -823,14 +823,14 @@ class FieldMessage(BaseMessage):
         return self._fields["data"]
 
     @property
-    def has(self) -> MessageFieldsParser:
+    def has(self) -> MessageFieldsHasParser:
         """
         Returns
         -------
-        MessageFieldsParser
+        MessageFieldsHasParser
             parser to check the parameters of the fields in the message.
         """
-        return MessageFieldsParser(self._fields, self._field_types)
+        return MessageFieldsHasParser(self._fields, self._field_types)
 
     @property
     def response_codes(self) -> dict[str, Code]:
@@ -843,6 +843,9 @@ class FieldMessage(BaseMessage):
             If there is no ResponseField in the message,
             the dictionary will be empty.
         """
+        if ResponseField not in self._field_types:
+            return {}
+
         codes = {}
         for field in self._fields.values():
             if isinstance(field, ResponseField):

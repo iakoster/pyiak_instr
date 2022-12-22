@@ -7,6 +7,7 @@ from ..utils import (
     validate_object,
     compare_objects,
     validate_fields,
+    compare_messages,
 )
 
 from pyinstr_iakoster.core import Code
@@ -97,8 +98,7 @@ def test_common_methods(
     with case.subTest(test="repr"):
         case.assertEqual(string, repr(res))
 
-    # todo: get_instance, get_message_setter, __bytes__, __len__, __repr__,
-    #  __str__
+    # todo: get_instance
 
 
 class TestBaseMessage(unittest.TestCase):
@@ -287,6 +287,8 @@ class TestBytesMessage(unittest.TestCase):
 
 class TestFieldMessage(unittest.TestCase):
 
+    maxDiff = None
+
     def test_base_init(self) -> None:
         validate_object(
             self,
@@ -294,6 +296,21 @@ class TestFieldMessage(unittest.TestCase):
             mf_name="std",
             splittable=False,
             slice_length=1024,
+        )
+
+    def test_common_methods(self) -> None:
+        test_common_methods(
+            self,
+            FieldMessage(mf_name="test").configure(
+                data=FieldSetter.data(expected=2, fmt="B")
+            ).set(data=[0, 1]),
+            setter=MessageSetter("field", "test", False, 1024),
+            bytes_=b"\x00\x01",
+            length=2,
+            string="<FieldMessage(data=0 1), src=None, dst=None>",
+            init_mf_name="std",
+            init_splittable=False,
+            init_slice_length=1024,
         )
 
     def test_configure_one_finite(self) -> None:
@@ -482,6 +499,364 @@ class TestFieldMessage(unittest.TestCase):
             "Error with data2 in FieldMessage: second infinite field",
             exc.exception.args[0]
         )
+
+    def test_extract(self) -> None:
+        msg = FieldMessage().configure(
+            data=FieldSetter.data(expected=3, fmt=">H"),
+            footer=FieldSetter.static(fmt=">I", default=0x1051291)
+        ).extract(b"\x12\x23\x12\x89\x45\x12\x01\x05\x12\x91")
+
+        df = DataField(
+            mf_name="std",
+            name="data",
+            start_byte=0,
+            expected=3,
+            fmt=">H",
+        )
+        df.set(b"\x12\x23\x12\x89\x45\x12")
+        validate_fields(
+            self,
+            msg,
+            [
+                df,
+                StaticField(
+                    mf_name="std",
+                    name="footer",
+                    start_byte=6,
+                    fmt=">I",
+                    default=0x1051291
+                )
+            ],
+            wo_attrs=["parent"]
+        )
+
+    def test_extract_not_configured_exc(self) -> None:
+        with self.assertRaises(NotConfiguredMessageError) as exc:
+            FieldMessage().extract(b"1234")
+        self.assertEqual(
+            "fields in FieldMessage instance not configured",
+            exc.exception.args[0],
+        )
+
+    def test_get_field_by_type(self) -> None:
+        msg = FieldMessage().configure(
+            n1=FieldSetter.base(expected=1, fmt="b"),
+            n2=FieldSetter.address(fmt="b"),
+            data=FieldSetter.data(expected=1, fmt="b"),
+            n3=FieldSetter.response(fmt="b", codes={}),
+            n4=FieldSetter.base(expected=1, fmt="b"),
+            n5=FieldSetter.address(fmt="b"),
+        )
+        for name, cls in [
+            ("n1", Field),
+            ("n2", AddressField),
+            ("data", DataField),
+            ("n3", ResponseField),
+            ("n1", Field),
+            ("n2", AddressField),
+        ]:
+            with self.subTest(field_class=cls.__name__):
+                field = msg.get_field_by_type(cls)
+                self.assertIsNotNone(field)
+                self.assertEqual(name, field.name)
+
+        with self.subTest(field_class="None"):
+            self.assertIsNone(msg.get_field_by_type(OperationField))
+
+    def test_get_instance(self) -> None:
+        ref = FieldMessage().configure(
+            data=FieldSetter.data(expected=-1, fmt="b")
+        ).set(data=255).set_src_dst(src="PC", dst="COM12")
+        res = ref.get_instance()
+        self.assertEqual(0, len(res))
+        validate_object(
+            self,
+            res,
+            mf_name="std",
+            splittable=False,
+            slice_length=1024,
+            src=None,
+            dst=None,
+            response_codes={},
+            check_attrs=True,
+            wo_attrs=["has", "data"]
+        )
+        validate_object(
+            self,
+            res.data,
+            may_be_empty=True,
+            fmt="b",
+            finite=False,
+            default=b"",
+            name="data",
+            expected=-1,
+            stop_byte=None,
+            words_count=0,
+            content=b"",
+            slice=slice(0, None),
+            mf_name="std",
+            start_byte=0,
+            bytesize=1,
+            check_attrs=True,
+            wo_attrs=["parent"]
+        )
+
+    def test_set(self) -> None:
+        msg = FieldMessage().configure(
+            data=FieldSetter.data(expected=1, fmt="B")
+        )
+        msg.set(data=124)
+        self.assertEqual(b"\x7c", msg.data.content)
+
+    def test_set_with_crc(self) -> None:
+        msg = FieldMessage().configure(
+            data=FieldSetter.data(expected=1, fmt="B"),
+            crc_name=FieldSetter.crc(fmt=">H"),
+        )
+        with self.subTest(test="auto crc"):
+            msg.set(data=124)
+            self.assertEqual(b"\xbf\x1b", msg["crc_name"].content)
+
+        with self.subTest(test="manual crc"):
+            with self.assertRaises(MessageContentError) as exc:
+                msg.get_instance().set(data=123, crc_name=0xbf1c)
+            self.assertEqual(
+                "Error with crc_name in FieldMessage: "
+                "invalid crc value, 'bf1c' != 'cffc'",
+                exc.exception.args[0]
+            )
+
+    def test_set_not_configured_exc(self) -> None:
+        with self.assertRaises(NotConfiguredMessageError) as exc:
+            FieldMessage().set()
+        self.assertEqual(
+            "fields in FieldMessage instance not configured",
+            exc.exception.args[0],
+        )
+
+    def test_split(self):
+
+        def get_mess(
+                addr: int,
+                oper: int,
+                data_len: int,
+                data=None,
+                units=FieldSetter.WORDS,
+        ):
+            if data is None:
+                data = b""
+            return FieldMessage(
+                splittable=True, slice_length=64
+            ).configure(
+                preamble=FieldSetter.static(fmt="B", default=0x12),
+                address=FieldSetter.address(fmt="I"),
+                data_length=FieldSetter.data_length(fmt="B", units=units),
+                test_field=FieldSetter.base(expected=1, fmt="B"),
+                operation=FieldSetter.operation(fmt="B"),
+                data=FieldSetter.data(expected=-1, fmt=">H")
+            ).set(
+                address=addr,
+                data_length=data_len,
+                test_field=0xff,
+                operation=oper,
+                data=data,
+            )
+
+        test_data = {
+            0: (get_mess(0, 0, 34), (get_mess(0, 0, 34),)),
+            1: (get_mess(0, 0, 64), (get_mess(0, 0, 64),)),
+            2: (
+                get_mess(0, 0, 128),
+                (get_mess(0, 0, 64), get_mess(64, 0, 64)),
+            ),
+            3: (
+                get_mess(0, 0, 127),
+                (get_mess(0, 0, 64), get_mess(64, 0, 63)),
+            ),
+            4: (
+                get_mess(0, 1, 34, range(34)),
+                (get_mess(0, 1, 34, range(34)),),
+            ),
+            5: (
+                get_mess(0, 1, 64, range(64)),
+                (get_mess(0, 1, 64, range(64)),),
+            ),
+            6: (
+                get_mess(0, 1, 128, range(128)),
+                (
+                    get_mess(0, 1, 64, range(64)),
+                    get_mess(64, 1, 64, range(64, 128))
+                ),
+            ),
+            7: (
+                get_mess(0, 1, 127, range(127)),
+                (
+                    get_mess(0, 1, 64, range(64)),
+                    get_mess(64, 1, 63, range(64, 127))
+                ),
+            ),
+            8: (
+                get_mess(0, 1, 126, range(63), units=FieldSetter.BYTES),
+                (
+                    get_mess(0, 1, 64, range(32), units=FieldSetter.BYTES),
+                    get_mess(64, 1, 62, range(32, 63), units=FieldSetter.BYTES)
+                ),
+            )
+        }
+
+        for i_mess, (res, refs) in test_data.items():
+            msgs = list(res.split())
+            with self.subTest(test="split count", i_mess=i_mess):
+                self.assertEqual(len(refs), len(msgs))
+                for i_part, (msg, ref) in enumerate(zip(msgs, refs)):
+                    with self.subTest(test="parts comparsion", i_part=i_part):
+                        self.assertEqual(str(ref), str(msg))
+                        self.assertEqual(ref.mf_name, msg.mf_name)
+
+    def test_split_not_splittable(self) -> None:
+        msg = FieldMessage(slice_length=2).configure(
+            data=FieldSetter.data(expected=4, fmt="B")
+        ).set(data=range(4))
+
+        res = list(msg.split())
+        self.assertEqual(1, len(res))
+        self.assertIs(msg, res[0])
+
+    def test_unpack(self):
+        msg = FieldMessage(slice_length=2).configure(
+            data=FieldSetter.data(expected=4, fmt="B")
+        ).set(data=range(4))
+
+        res = msg.unpack()
+        self.assertIsInstance(res, np.ndarray)
+        self.assertListEqual([0, 1, 2, 3], list(res))
+
+    def test_validate_content(self) -> None:
+        msg1 = FieldMessage().configure(
+            preamble=FieldSetter.static(fmt="B", default=0xa5),
+            response=FieldSetter.response(fmt="B", codes=RESPONSE_CODES),
+            address=FieldSetter.address(fmt="B"),
+            operation=FieldSetter.operation(fmt="B"),
+            data_length=FieldSetter.data_length(fmt="B"),
+            data=FieldSetter.data(expected=1, fmt="I"),
+            crc=FieldSetter.crc(fmt="H"),
+        ).set(
+            response=0,
+            address=0,
+            operation=0,
+            data_length=0
+        )
+        msg2 = FieldMessage().configure(
+            address=FieldSetter.address(fmt="B"),
+            operation=FieldSetter.operation(fmt="B"),
+            data_length=FieldSetter.data_length(
+                fmt="B", units=FieldSetter.WORDS
+            ),
+            data=FieldSetter.data(expected=-1, fmt="B")
+        ).set(address=0x12, operation=0x01, data_length=2)
+
+        with self.subTest(name="may_be_empty"):
+            msg2.set(data=[0x12, 0x56])
+            self.assertListEqual([0x12, 0x56], list(msg2.data.unpack()))
+
+            msg2.set(data=[])
+            self.assertListEqual([], list(msg2.data.unpack()))
+
+            with self.assertRaises(MessageContentError) as exc:
+                msg2.set(operation=b"")
+            self.assertEqual(
+                "Error with operation in FieldMessage: field is empty",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(name="invalid data length"):
+            with self.assertRaises(MessageContentError) as exc:
+                msg2.set(address=0, operation="w", data_length=1, data=[0, 1])
+            self.assertEqual(
+                "Error with data_length in FieldMessage: invalid length",
+                exc.exception.args[0]
+            )
+
+        with self.subTest(name="invalid crc"):
+            with self.assertRaises(MessageContentError) as exc:
+                msg1.set(crc=10)
+            self.assertIn(
+                "Error with crc in FieldMessage: invalid crc value, ",
+                exc.exception.args[0]
+            )
+
+    def test_prop_response_codes(self) -> None:
+        self.assertDictEqual(
+            dict(
+                pc_status=Code.OK, link_status=Code.WAIT
+            ),
+            FieldMessage().configure(
+                data=FieldSetter.data(expected=1, fmt="B"),
+                pc_status=FieldSetter.response(fmt="B", codes={1: Code.OK}),
+                link_status=FieldSetter.response(
+                    fmt="B", codes={3: Code.WAIT}
+                )
+            ).extract(b"\x05\x01\x03").response_codes
+        )
+
+        self.assertDictEqual(
+            {},
+            FieldMessage().configure(
+                data=FieldSetter.data(expected=1, fmt="B")
+            ).extract(b"1").response_codes
+        )
+
+    def test_magic_add(self):
+
+        msg = FieldMessage().configure(
+            preamble=FieldSetter.static(fmt="B", default=0x15),
+            data=FieldSetter.data(expected=-1, fmt="B"),
+        ).set(data=range(2))
+        ref = [0, 1]
+
+        with self.subTest(test="add bytes"):
+            msg += b"\x23\x11"
+            ref += [35, 17]
+            self.assertListEqual(ref, list(msg.data))
+
+        with self.subTest(test="add message"):
+            msg += msg.get_instance().set(data=[12, 99])
+            ref += [12, 99]
+            self.assertListEqual(ref, list(msg.data))
+
+        msg = FieldMessage().configure(
+            data_length=FieldSetter.data_length(fmt="B"),
+            data=FieldSetter.data(expected=-1, fmt=">H"),
+        ).set(data=range(2), data_length=4)
+        ref = [0, 1]
+
+        with self.subTest(test="update data_length"):
+            self.assertEqual(4, msg["data_length"][0])
+            msg += b"\x00\x12\x10\x44"
+            ref += [0x12, 0x1044]
+            self.assertListEqual(ref, list(msg.data))
+            self.assertEqual(8, msg["data_length"][0])
+
+    def test_magic_add_exc(self) -> None:
+        msg = FieldMessage().configure(
+            data=FieldSetter.data(expected=-1, fmt="B"),
+        ).set()
+
+        with self.subTest(test="add other mf_name"):
+            with self.assertRaises(TypeError) as exc:
+                msg += FieldMessage(mf_name="not_std")
+            self.assertEqual(
+                "messages have different formats: not_std != std",
+                exc.exception.args[0]
+            )
+
+        with self.subTest(test="add invalid type"):
+            with self.assertRaises(TypeError) as exc:
+                msg += BytesMessage()
+            self.assertIn(
+                ".BytesMessage'> cannot be added to the message",
+                exc.exception.args[0]
+            )
 
 
 class TestStrongFieldMessage(unittest.TestCase):
@@ -870,54 +1245,6 @@ class TestStrongFieldMessage(unittest.TestCase):
                     self.assertEqual(
                         expected[i_mess][i_part].mf_name, mess.mf_name
                     )
-
-    def test_magic_bytes(self):
-        content = self.fill_content()
-        self.assertEqual(content, bytes(self.msg))
-
-    def test_magic_str(self):
-        self.assertEqual(
-            "<StrongFieldMessage(address=EMPTY, operation=EMPTY, "
-            "data_length=EMPTY, data=EMPTY), src=None, dst=None>",
-            str(self.simple_msg)
-        )
-        self.assertEqual(
-            "<StrongFieldMessage(preamble=1AA5, response=0, address=EMPTY, "
-            "operation=EMPTY, data_length=EMPTY, data=EMPTY, crc=EMPTY), "
-            "src=None, dst=None>",
-            str(self.msg)
-        )
-        self.fill_content()
-        self.assertEqual(
-            "<StrongFieldMessage(preamble=1AA5, response=0, address=AA, "
-            "operation=1, data_length=4, data=FFEEDDCC, crc=3986), "
-            "src=None, dst=None>",
-            str(self.msg)
-        )
-
-    def test_magic_len(self):
-        content = self.fill_content()
-        self.assertEqual(len(content), len(self.msg))
-
-    def test_magic_repr(self):
-        self.assertEqual(
-            "<StrongFieldMessage(address=EMPTY, operation=EMPTY, "
-            "data_length=EMPTY, data=EMPTY), src=None, dst=None>",
-            repr(self.simple_msg)
-        )
-        self.fill_content()
-        self.assertEqual(
-            "<StrongFieldMessage(preamble=1AA5, response=0, address=AA, operation=1, "
-            "data_length=4, data=FFEEDDCC, crc=3986), src=None, dst=None>",
-            repr(self.msg)
-        )
-        self.msg.set_src_dst(src="COM4", dst=("192.168.0.1", 3202))
-        self.assertEqual(
-            "<StrongFieldMessage(preamble=1AA5, response=0, address=AA, operation=1, "
-            "data_length=4, data=FFEEDDCC, crc=3986), "
-            "src=COM4, dst=('192.168.0.1', 3202)>",
-            repr(self.msg)
-        )
 
     def test_magic_add_bytes(self):
         self.fill_content()
