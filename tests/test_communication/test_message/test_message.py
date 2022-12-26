@@ -894,7 +894,7 @@ class TestMessageSetter(unittest.TestCase):
 
     def test_init(self) -> None:
         res = MessageSetter()
-        self.assertEqual("bytes", res.message_type)
+        self.assertEqual("field", res.message_type)
         self.assertDictEqual(
             dict(mf_name="std", slice_length=1024, splittable=False),
             res.kwargs

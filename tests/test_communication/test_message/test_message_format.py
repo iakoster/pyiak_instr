@@ -164,10 +164,10 @@ class TestMessageFormat(unittest.TestCase):
 
         for i_mf in range(2):
             mf, ref = get_mf(i_mf)
-            mf_name = mf.message["mf_name"]
+            mf_name = mf.setter.mf_name
 
             with self.subTest(mf_name=mf_name, test="msg_args"):
-                self.assertDictEqual(ref["message"], mf.message)
+                self.assertEqual(ref["message_setter"], mf.setter)
 
             with self.subTest(mf_name=mf_name, setter="all"):
                 self.assertEqual(len(ref["setters"]), len(mf.setters))
@@ -210,7 +210,7 @@ class TestMessageFormat(unittest.TestCase):
             self.assertEqual(len(ref_lines), len(res_lines))
 
             for line, (ref, res) in enumerate(zip(ref_lines, res_lines)):
-                if line in (16, 31):  # fixme: i don't know why in this line error
+                if line in (15, 28):  # fixme: i don't know why in this line error
                     self.assertEqual("arf = \\dct\n", res)
                     continue
 
@@ -295,7 +295,7 @@ class TestMessageFormatsMap(unittest.TestCase):
             for line, (ref, res) in enumerate(zip(ref_lines, res_lines)):
                 with self.subTest(line=line):
 
-                    if line in (16, 31):  # fixme: i don't know why in this line error
+                    if line in (15, 28):  # fixme: i don't know why in this line error
                         self.assertEqual("arf = \\dct\n", res)
                         continue
                     self.assertEqual(ref, res)

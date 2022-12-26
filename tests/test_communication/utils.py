@@ -122,7 +122,15 @@ def compare_messages(
         case: TestCase, ref: FieldMessage, res: FieldMessage, wo_attrs: list[str] = None
 ) -> None:
     if wo_attrs is None:
-        wo_attrs = ["address", "operation", "data_length", "data", "parent"]
+        wo_attrs = [
+            "get",
+            "has",
+            "address",
+            "operation",
+            "data_length",
+            "data",
+            "parent",
+        ]
     attrs = get_object_attrs(ref, wo_attrs=wo_attrs)
 
     compare_objects(case, ref, res, attrs=attrs)

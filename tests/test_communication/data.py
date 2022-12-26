@@ -6,9 +6,10 @@ import pandas as pd
 from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.communication import (
     FieldSetter,
-    FieldMessage,
     RegisterMap,
     AsymmetricResponseField,
+    MessageType,
+    MessageSetter,
     MessageFormat,
     MessageFormatMap,
     PackageFormat,
@@ -72,19 +73,43 @@ SETTERS = [
 
 MF_MSG_ARGS = [
     dict(
+        setter=MessageSetter(
+            message_type="strong",
+            mf_name="n0",
+            splittable=True,
+            slice_length=256,
+        ),
         arf=AsymmetricResponseField(
             operand="!=",
             start=12,
             stop=16,
             value=b"\x00\x00\x00\x01"
-        ),
-        mf_name="n0",
-        splittable=True,
-        slice_length=256,
+        )
     ),
-    dict(mf_name="n1", splittable=False, slice_length=1024),
-    dict(mf_name="n2", splittable=False, slice_length=1024),
-    dict(mf_name="n3", splittable=False, slice_length=1024),
+    dict(
+        setter=MessageSetter(
+            message_type="strong",
+            mf_name="n1",
+            splittable=False,
+            slice_length=1024,
+        ),
+    ),
+    dict(
+        setter=MessageSetter(
+            message_type="strong",
+            mf_name="n2",
+            splittable=False,
+            slice_length=1024,
+        ),
+    ),
+    dict(
+        setter=MessageSetter(
+            message_type="strong",
+            mf_name="n3",
+            splittable=False,
+            slice_length=1024,
+        ),
+    ),
 ]
 
 
@@ -92,11 +117,10 @@ def get_setters(num: int) -> dict[str, FieldSetter]:
     return SETTERS[num]
 
 
-def get_message(num: int) -> FieldMessage:
+def get_message(num: int) -> MessageType:
     msg_args = deepcopy(MF_MSG_ARGS[num])
-    if "arf" in msg_args:
-        msg_args.pop("arf")
-    return FieldMessage(**msg_args).configure(**SETTERS[num])
+    setter = msg_args["setter"]
+    return setter.message.configure(**SETTERS[num])
 
 
 def get_mf(num: int, get_ref=True):
@@ -106,7 +130,7 @@ def get_mf(num: int, get_ref=True):
     mf = MessageFormat(**MF_MSG_ARGS[num], **SETTERS[num])
     if get_ref:
         return mf, dict(
-            message=mf.message,
+            message_setter=mf.setter,
             setters={n: unpack_setter(s) for n, s in mf.setters.items()}
         )
     return mf
@@ -138,13 +162,12 @@ MF_CFG_DICT = dict(
         formats="\\lst\tn0,n1,n2,n3",
     ),
     n0__message=dict(
+        setter="\\dct\tmessage_type,strong,mf_name,n0,splittable,True,"
+               "slice_length,256",
         arf="\\dct\toperand,!=,"
             "value,\\v(\\bts\t0,0,0,1),"
             "start,12,"
             "stop,16",
-        mf_name="n0",
-        splittable="True",
-        slice_length="256",
     ),
     n0__setters=dict(
         address="\\dct\tfield_type,address,fmt,>I",
@@ -154,10 +177,9 @@ MF_CFG_DICT = dict(
         data="\\dct\tfield_type,data,expected,-1,fmt,>I",
     ),
     n1__message=dict(
+        setter="\\dct\tmessage_type,strong,mf_name,n1,splittable,False,"
+               "slice_length,1024",
         arf="\\dct\t",
-        mf_name="n1",
-        splittable="False",
-        slice_length="1024",
     ),
     n1__setters=dict(
         preamble="\\dct\tfield_type,static,fmt,>H,default,43605",
@@ -174,10 +196,9 @@ MF_CFG_DICT = dict(
         crc="\\dct\tfield_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
     ),
     n2__message=dict(
+        setter="\\dct\tmessage_type,strong,mf_name,n2,splittable,False,"
+               "slice_length,1024",
         arf="\\dct\t",
-        mf_name="n2",
-        splittable="False",
-        slice_length="1024",
     ),
     n2__setters=dict(
         operation="\\dct\tfield_type,operation,fmt,>B,"
@@ -193,10 +214,9 @@ MF_CFG_DICT = dict(
         crc="\\dct\tfield_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
     ),
     n3__message=dict(
+        setter="\\dct\tmessage_type,strong,mf_name,n3,splittable,False,"
+               "slice_length,1024",
         arf="\\dct\t",
-        mf_name="n3",
-        splittable="False",
-        slice_length="1024",
     ),
     n3__setters=dict(
         operation="\\dct\tfield_type,operation,fmt,B,"

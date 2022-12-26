@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from .field import FieldSetter
-from .message import FieldMessage, MessageSetter
+from .message import MessageType, MessageSetter
 from ...core import Code
 from ...utilities import StringEncoder
 from ...rwfile import (
@@ -241,14 +241,10 @@ class MessageFormat(object):
 
     Parameters
     ----------
+    setter: MessageSetter
+        message setter for specified format.
     arf: AsymmetricResponseField
         asymmetric field for message or kwargs for it.
-    mf_name: str, default='std'
-        name of the message format.
-    splittable: bool, default=True
-        shows that the message can be divided by the data.
-    slice_length: int, default=1024
-        max length of the data in one slice.
     **setters: FieldSetter
         setters for message.
 
@@ -263,17 +259,22 @@ class MessageFormat(object):
 
     def __init__(
             self,
-            message_setter: MessageSetter = MessageSetter(),
+            setter: dict[str, Any] | MessageSetter = MessageSetter(),
             arf: dict[str, Any] | AsymmetricResponseField = AsymmetricResponseField(),
             **setters: FieldSetter
     ):
         if isinstance(arf, dict):
             arf = AsymmetricResponseField(**arf)
+        if isinstance(setter, dict):
+            setter = MessageSetter(**setter)
+
         self._arf = arf
-        self._msg_set = message_setter
+        self._msg_set = setter
         self._setters = setters
 
-        setters_diff = set(FieldMessage.REQUIRED_FIELDS) - set(self._setters)
+        setters_diff = set(
+            self._msg_set.message_class.REQUIRED_FIELDS
+        ) - set(self._setters)
         if len(setters_diff):
             raise ValueError(f"missing the required setters: {setters_diff}")
 
@@ -293,7 +294,11 @@ class MessageFormat(object):
 
         mf_dict[sec_message] = {}
         for opt, val in dict(
-                arf=self.arf.kwargs, **self._msg_set.kwargs
+                setter=dict(
+                    message_type=self._msg_set.message_type,
+                    **self._msg_set.kwargs,
+                ),
+                arf=self.arf.kwargs,
         ).items():
             mf_dict[sec_message][opt] = StringEncoder.to_str(val)
 
@@ -321,7 +326,7 @@ class MessageFormat(object):
             rwc.apply_changes()
             rwc.write(mf_dict)
 
-    def get(self, **update: dict[str, Any]) -> FieldMessage:
+    def get(self, **update: dict[str, Any]) -> MessageType:
         """
         Get message instance with message format.
 
@@ -334,14 +339,14 @@ class MessageFormat(object):
 
         Returns
         -------
-        FieldMessage
+        MessageType
             message configured with message format.
         """
         setters = deepcopy(self._setters)
         if len(update):
             for setter_name, fields in update.items():
                 setters[setter_name].kwargs.update(fields)
-        return FieldMessage(**self._msg_set.kwargs).configure(**setters)
+        return self._msg_set.message.configure(**setters)
 
     @classmethod
     def read(cls, config: Path, mf_name: str) -> MessageFormat:
@@ -401,12 +406,12 @@ class MessageFormat(object):
         return self._arf
 
     @property
-    def message_setter(self) -> MessageSetter:
+    def setter(self) -> MessageSetter:
         """
         Returns
         -------
         MessageSetter
-            message settter instance.
+            message setter instance.
         """
         return self._msg_set
 
@@ -433,7 +438,7 @@ class MessageFormatMap(object):
 
     def __init__(self, *formats: MessageFormat):
         self._formats = {
-            mf.message_setter.kwargs["mf_name"]: mf for mf in formats
+            mf.setter.kwargs["mf_name"]: mf for mf in formats
         }
 
     def get(self, mf_name: str) -> MessageFormat:
