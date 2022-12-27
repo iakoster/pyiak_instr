@@ -388,7 +388,7 @@ class TestConnection(unittest.TestCase):
             self,
             receive_delay=0.02,
             log_entries=[
-                "<FieldMessage(address=1000, data_length=1, operation=0, data=0), "
+                "<StrongFieldMessage(address=1000, data_length=1, operation=0, data=0), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 "fa, src=('127.0.0.1', 4242), dst=('127.0.0.1', 4242)",
@@ -396,7 +396,7 @@ class TestConnection(unittest.TestCase):
                 "message received from ('127.0.0.1', 4242), "
                 "but expected from ('127.0.0.1', 4224)",
 
-                "<FieldMessage(address=1000, data_length=1, operation=0, data=0), "
+                "<StrongFieldMessage(address=1000, data_length=1, operation=0, data=0), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 "fa, src=('127.0.0.1', 4242), dst=('127.0.0.1', 4242)",
@@ -432,27 +432,27 @@ class TestConnection(unittest.TestCase):
         with ConnectionTestInstance(
             self,
             log_entries=[
-                "<FieldMessage(operation=1, response=0, address=10, "
+                "<StrongFieldMessage(operation=1, response=0, address=10, "
                 "data_length=4, data=EMPTY, crc=4647), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 "01 03 00 10 00 00 e8 11, "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)",
 
-                "<FieldMessage(operation=1, response=3, address=10, "
+                "<StrongFieldMessage(operation=1, response=3, address=10, "
                 "data_length=0, data=EMPTY, crc=E811), "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
 
                 "receive with code(s): <Code.UNDEFINED: 255>",
 
-                "<FieldMessage(operation=1, response=0, address=10, "
+                "<StrongFieldMessage(operation=1, response=0, address=10, "
                 "data_length=4, data=EMPTY, crc=4647), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 "01 00 00 10 00 04 40 2c cc cd 17 db, "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)",
 
-                "<FieldMessage(operation=1, response=0, address=10, "
+                "<StrongFieldMessage(operation=1, response=0, address=10, "
                 "data_length=4, data=402CCCCD, crc=17DB), "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
             ]
@@ -473,26 +473,26 @@ class TestConnection(unittest.TestCase):
         with ConnectionTestInstance(
             self,
             log_entries=[
-                "<FieldMessage(operation=1, response1=0, address=24, "
+                "<StrongFieldMessage(operation=1, response1=0, address=24, "
                 "data_length=4, data=EMPTY, response2=0), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 None,
 
-                "<FieldMessage(operation=1, response1=3, address=24, "
+                "<StrongFieldMessage(operation=1, response1=3, address=24, "
                 "data_length=0, data=EMPTY, response2=0), "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
 
                 "receive with code(s): {'response1': <Code.ERROR: 1282>, "
                 "'response2': <Code.OK: 1280>}",
 
-                "<FieldMessage(operation=1, response1=0, address=24, "
+                "<StrongFieldMessage(operation=1, response1=0, address=24, "
                 "data_length=4, data=EMPTY, response2=0), "
                 "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
 
                 None,
 
-                "<FieldMessage(operation=1, response1=0, address=24, "
+                "<StrongFieldMessage(operation=1, response1=0, address=24, "
                 "data_length=4, data=2, response2=0), "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
             ]
@@ -531,26 +531,6 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(
             "addresses in message and connection is not equal: "
             "('127.0.0.1', 4224) != ('127.0.0.1', 4242)",
-            exc.exception.args[0]
-        )
-
-    def test_exc_unknown_operation_base(self) -> None:
-
-        with self.assertRaises(MessageContentError) as exc:
-            ConnectionTestInstance(self).send(
-                FieldMessage().configure(
-                    address=FieldSetter.address(fmt=">I"),
-                    data_length=FieldSetter.data_length(
-                        fmt=">I", units=FieldSetter.WORDS
-                    ),
-                    operation=FieldSetter.operation(fmt=">I", desc_dict={"e": 0}),
-                    data=FieldSetter.data(expected=-1, fmt=">I")
-                ).set_src_dst(
-                    src=SRC_ADDRESS, dst=DST_ADDRESS
-                ).set(address=1, operation=0)
-            )
-        self.assertEqual(
-            "Error with operation in FieldMessage: unknown base 'e'",
             exc.exception.args[0]
         )
 
