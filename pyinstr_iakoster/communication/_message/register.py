@@ -20,7 +20,7 @@ from ...utilities import split_complex_dict
 
 if TYPE_CHECKING:
     from .field import ContentType
-    from .message import FieldMessage
+    from .message import MessageType
     from .message_format import MessageFormat
     from .package_format import PackageFormat
 
@@ -58,7 +58,7 @@ def _validate_register_rw_input(invalid_type: str):
         @wraps(func)
         def wrapper(
                 self: Register, *args: ContentType, **kwargs: Any
-        ) -> FieldMessage:
+        ) -> MessageType:
             if self.register_type == invalid_type:
                 if invalid_type == "ro":
                     raise TypeError("read only register")
@@ -177,11 +177,11 @@ class Register(object):
         )
 
     @overload
-    def read(self, data_length: int, **update: Any) -> FieldMessage:
+    def read(self, data_length: int, **update: Any) -> MessageType:
         ...
 
     @_validate_register_rw_input("wo")
-    def read(self, **update: Any) -> FieldMessage:
+    def read(self, **update: Any) -> MessageType:
         """
         Get message with read operation.
 
@@ -201,7 +201,7 @@ class Register(object):
 
         Returns
         -------
-        FieldMessage
+        MessageType
             message for reading data from register.
 
         Raises
@@ -221,11 +221,11 @@ class Register(object):
         )
 
     @overload
-    def write(self, data: ContentType, **update: ContentType) -> FieldMessage:
+    def write(self, data: ContentType, **update: ContentType) -> MessageType:
         ...
 
     @_validate_register_rw_input("ro")
-    def write(self, **update: ContentType) -> FieldMessage:
+    def write(self, **update: ContentType) -> MessageType:
         """
         Get message with write operation.
 
@@ -246,7 +246,7 @@ class Register(object):
 
         Returns
         -------
-        FieldMessage
+        MessageType
             message for writing data from register.
 
         Raises
@@ -265,7 +265,7 @@ class Register(object):
             operation_base: str,
             configure_kw: dict[str, dict[str, Any]],
             set_kw: dict[str, Any]
-    ) -> FieldMessage:
+    ) -> MessageType:
         """
         Get message from message format.
 
@@ -280,7 +280,7 @@ class Register(object):
 
         Returns
         -------
-        FieldMessage
+        MessageType
             filled message with specified message format.
 
         Raises
@@ -292,19 +292,28 @@ class Register(object):
             raise AttributeError("message format not specified")  # todo: custom exception
         msg = self.mf.get(**configure_kw)
 
-        set_kw["address"] = self.address
-        if operation_base != "w" and "data_length" not in set_kw:
+        if msg.has.AddressField:
+            set_kw["address"] = self.address
+
+        if msg.has.DataLengthField \
+                and operation_base != "w" \
+                and "data_length" not in set_kw:
             set_kw["data_length"] = self.length
-        if "operation" not in set_kw:
+        elif not msg.has.DataLengthField and "data_length" in set_kw:
+            set_kw.pop("data_length")
+
+        if msg.has.DataLengthField and "operation" not in set_kw:
             set_kw["operation"] = self._find_operation(msg, operation_base)
+
         msg.set(**set_kw)
 
-        data_length = msg.data_length.unpack()[0]
-        if data_length > self.length:
-            raise ValueError(
-                "data length mote than register length: %d > %d"
-                % (data_length, self.length)
-            )
+        if msg.has.DataLengthField:  # todo: if not has -> check with data.words_count
+            data_length = msg.get.DataLengthField[0]
+            if data_length > self.length:
+                raise ValueError(
+                    "data length mote than register length: %d > %d"
+                    % (data_length, self.length)
+                )
         return msg.set(**set_kw)
 
     @classmethod
@@ -329,13 +338,13 @@ class Register(object):
         return cls(**series.to_dict(), mf=mf)
 
     @staticmethod
-    def _find_operation(msg: FieldMessage, base: str) -> str:
+    def _find_operation(msg: MessageType, base: str) -> str:
         """
         Find operation from `desc_dict` from `operation` field by base.
 
         Parameters
         ----------
-        msg: FieldMessage
+        msg: MessageType
             message.
         base: str
             operation base.

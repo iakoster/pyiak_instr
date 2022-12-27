@@ -6,10 +6,9 @@ from typing import Any
 import numpy as np
 
 from pyinstr_iakoster.communication import (
-    FieldSetter,
     FieldMessage,
+    MessageType,
     Connection,
-    MessageContentError,
 )
 
 from ..data import (
@@ -85,7 +84,7 @@ class ConnectionTestInstance(Connection):
     def setup(self, *args: Any, **kwargs: Any) -> "ConnectionTestInstance":
         return self
 
-    def transmit(self, message: FieldMessage) -> None:
+    def transmit(self, message: MessageType) -> None:
         compare_messages(self._case, self._tx[self._i_tx], message)
         self._i_tx += 1
 
@@ -106,7 +105,7 @@ class ConnectionTestInstance(Connection):
 
     def set_rx_messages(
             self,
-            *messages: FieldMessage | None,
+            *messages: MessageType | None,
             asymmetric: list[tuple[int, bytes]] | tuple[int, bytes] = None
     ) -> "ConnectionTestInstance":
         assert len(messages), "messages list is empty"
@@ -119,7 +118,7 @@ class ConnectionTestInstance(Connection):
         return self
 
     def set_tx_messages(
-            self, *messages: FieldMessage
+            self, *messages: MessageType
     ) -> "ConnectionTestInstance":
         assert len(messages), "messages list is empty"
         self._tx = messages
@@ -509,6 +508,28 @@ class TestConnection(unittest.TestCase):
                 self.send(con, self.read("t9"))
             )
 
+    def test_field_message(self) -> None:
+        with ConnectionTestInstance(
+            self,
+            log_entries=[
+                "<FieldMessage(id=4D2, address=1123, data=EMPTY), "
+                "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
+
+                None,
+
+                "<FieldMessage(id=4D2, address=1123, data=EMPTY), "
+                "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
+            ]
+        ) as con:
+            con.set_tx_messages(self.read("t10", 256, id=1234))
+            con.set_rx_messages(self.read("t10", 256, id=1234))
+
+            compare_messages(
+                self,
+                self.read("t10", 256, ans=True, id=1234),
+                self.send(con, self.read("t10", id=1234))
+            )
+
     def test_exc_logger_not_self(self) -> None:
         with self.assertRaises(ValueError) as exc:
             Connection(hapi=None, logger="self_")
@@ -535,7 +556,9 @@ class TestConnection(unittest.TestCase):
         )
 
     @staticmethod
-    def read(reg_name: str, *args, shift: int = 0, ans: bool = False, **kwargs) -> FieldMessage:
+    def read(
+            reg_name: str, *args, shift: int = 0, ans: bool = False, **kwargs
+    ) -> MessageType:
         if ans:
             src_dst = {"src": DST_ADDRESS, "dst": SRC_ADDRESS}
         else:
@@ -545,11 +568,13 @@ class TestConnection(unittest.TestCase):
         ).set_src_dst(**src_dst)
 
     @staticmethod
-    def send(con: ConnectionTestInstance, message: FieldMessage) -> FieldMessage:
+    def send(con: ConnectionTestInstance, message: MessageType) -> MessageType:
         return con.send(message, PF.get_format(message.mf_name).arf)
 
     @staticmethod
-    def write(reg_name: str, *args, shift: int = 0, ans: bool = False, **kwargs) -> FieldMessage:
+    def write(
+            reg_name: str, *args, shift: int = 0, ans: bool = False, **kwargs
+    ) -> MessageType:
         if ans:
             src_dst = {"src": DST_ADDRESS, "dst": SRC_ADDRESS}
         else:

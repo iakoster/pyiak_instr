@@ -372,6 +372,16 @@ class TestRegisterMap(unittest.TestCase):
                 data__fmt=None,
                 description="Short 9. Long."
             ),
+            Register(
+                external_name="t10",
+                name="t_10",
+                format_name="n4",
+                address=0x1123,
+                register_type="rw",
+                length=256,
+                data__fmt=None,
+                description="Short 10. Long."
+            ),
         )
         pandas.testing.assert_frame_equal(
             self.SORTED_DATA, res.table, check_dtype=False

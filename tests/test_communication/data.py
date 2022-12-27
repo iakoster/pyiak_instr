@@ -68,7 +68,12 @@ SETTERS = [
             default=0,
             default_code=Code.ERROR
         )
-    )
+    ),
+    dict(
+        id=FieldSetter.single(fmt=">I"),
+        address=FieldSetter.address(fmt=">I"),
+        data=FieldSetter.data(expected=-1, fmt=">I"),
+    ),
 ]
 
 MF_MSG_ARGS = [
@@ -110,6 +115,14 @@ MF_MSG_ARGS = [
             slice_length=1024,
         ),
     ),
+    dict(
+        setter=MessageSetter(
+            message_type="field",
+            mf_name="n4",
+            splittable=False,
+            slice_length=1024,
+        )
+    ),
 ]
 
 
@@ -148,6 +161,7 @@ for i, reg_args in enumerate([
     ("n2", 0x10, "rw", 4, None),
     ("n2", 0x11, "rw", 4, ">I"),
     ("n3", 0x24, "rw", 4, None),
+    ("n4", 0x1123, "rw", 256, None),
 ]):
     REGISTER_MAP_TABLE.loc[i] = [
         f"t{i}", f"t_{i}", *reg_args, f"Short {i}. Long."
@@ -159,7 +173,7 @@ MF_DICT: dict[str, MessageFormat] = {
 
 MF_CFG_DICT = dict(
     master=dict(
-        formats="\\lst\tn0,n1,n2,n3",
+        formats="\\lst\tn0,n1,n2,n3,n4",
     ),
     n0__message=dict(
         setter="\\dct\tmessage_type,strong,mf_name,n0,splittable,True,"
@@ -234,6 +248,17 @@ MF_CFG_DICT = dict(
                   "codes,\\v(\\dct\t0,1280,4,1281),"
                   "default,0,"
                   "default_code,1282",
+    ),
+    n4__message=dict(
+        setter="\\dct\tmessage_type,field,mf_name,n4,splittable,False,"
+               "slice_length,1024",
+        arf="\\dct\t",
+    ),
+    n4__setters=dict(
+        id="\\dct\tfield_type,single,fmt,>I,default,\\v(\lst	),"
+           "may_be_empty,False",
+        address="\\dct\tfield_type,address,fmt,>I",
+        data="\\dct\tfield_type,data,expected,-1,fmt,>I",
     )
 )
 

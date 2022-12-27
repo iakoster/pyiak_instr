@@ -199,7 +199,7 @@ class TestMessageFormat(unittest.TestCase):
         with RWConfig(cfg_path) as rwc:
             if "master" not in rwc.hapi.sections():
                 rwc.hapi.add_section("master")
-            rwc.set("master", "formats", "\\lst\tn0,n1,n2,n3")
+            rwc.set("master", "formats", "\\lst\tn0,n1,n2,n3,n4")
             rwc.apply_changes()
 
         for ref_mf in MF_DICT.values():
@@ -210,7 +210,7 @@ class TestMessageFormat(unittest.TestCase):
             self.assertEqual(len(ref_lines), len(res_lines))
 
             for line, (ref, res) in enumerate(zip(ref_lines, res_lines)):
-                if line in (15, 28):  # fixme: i don't know why in this line error
+                if line in (15, 28, 40):  # fixme: i don't know why in this line error
                     self.assertEqual("arf = \\dct\n", res)
                     continue
 
@@ -295,7 +295,7 @@ class TestMessageFormatsMap(unittest.TestCase):
             for line, (ref, res) in enumerate(zip(ref_lines, res_lines)):
                 with self.subTest(line=line):
 
-                    if line in (15, 28):  # fixme: i don't know why in this line error
+                    if line in (15, 28, 40):  # fixme: i don't know why in this line error
                         self.assertEqual("arf = \\dct\n", res)
                         continue
                     self.assertEqual(ref, res)
