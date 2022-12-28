@@ -219,14 +219,14 @@ class TestConnection(unittest.TestCase):
                 self.send(con, self.read("t4", 767))
             )
 
-    def test_read_no_cuttable(self) -> None:
+    def test_read_no_cuttable(self) -> None:  # fixme: data_length is 6 when data is empty
         with ConnectionTestInstance(self) as con:
             con.set_tx_messages(self.read("t6"))
-            con.set_rx_messages(self.read("t6").set(data=1.4782))
+            con.set_rx_messages(self.read("t6").set(data=1))
 
             compare_messages(
                 self,
-                self.read("t6", ans=True).set(data=1.4782),
+                self.read("t6", ans=True).set(data=1),
                 self.send(con, self.read("t6"))
             )
 

@@ -18,7 +18,8 @@ from pyinstr_iakoster.communication import (
     ResponseField,
     FieldType,
     FieldSetter,
-    FieldContentError
+    FieldMessage,
+    FieldContentError,
 )
 
 
@@ -425,18 +426,32 @@ class TestCrcField(unittest.TestCase):
             content=b"",
             default=b"",
             words_count=0,
+            wo_fields={"crc"},
             algorithm=field.algorithm,
             algorithm_name="crc16-CCITT/XMODEM",
             check_attrs=True,
             wo_attrs=["parent"],
         )
 
+    def test_calculate(self) -> None:
+        msg = FieldMessage().configure(
+            preamble=FieldSetter.static(fmt=">H", default=0xaa55),
+            address=FieldSetter.address(fmt=">B"),
+            data=FieldSetter.data(expected=-1, fmt=">B"),
+            crc=FieldSetter.crc(fmt=">H", wo_fields={"preamble"}),
+        ).set(
+            address=1,
+            data=[0] * 5
+        )
+        self.assertEqual(0x45a0, msg["crc"][0])
+
     def test_algorithms(self):
         check_data = {
             "crc16-CCITT/XMODEM": [
                 (b"\x10\x01\x20\x04", 0x6af5),
                 (bytes(range(15)), 0x9b92),
-                (bytes(i % 256 for i in range(1500)), 0x9243)
+                (bytes(i % 256 for i in range(1500)), 0x9243),
+                (b"\x01\x00\x00\x00\x00\x00", 0x45a0),
             ]
         }
         for name, algorithm in CrcField.CRC_ALGORITHMS.items():
@@ -897,6 +912,7 @@ class TestFieldSetter(unittest.TestCase):  # todo: test init field by FieldSette
             field_type="crc",
             fmt="i",
             algorithm_name="crc16-CCITT/XMODEM",
+            wo_fields=None
         )
 
     def test_data(self):

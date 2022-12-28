@@ -36,7 +36,7 @@ SETTERS = [
         address=FieldSetter.address(fmt=">H"),
         data_length=FieldSetter.data_length(fmt=">H"),
         data=FieldSetter.data(expected=-1, fmt=">f"),
-        crc=FieldSetter.crc(fmt=">H")
+        crc=FieldSetter.crc(fmt=">H", wo_fields={"preamble"})
     ),
     dict(
         operation=FieldSetter.operation(fmt=">B", desc_dict={"r": 1, "w": 2}),
@@ -207,7 +207,8 @@ MF_CFG_DICT = dict(
         address="\\dct\tfield_type,address,fmt,>H",
         data_length="\\dct\tfield_type,data_length,fmt,>H,units,16,additive,0",
         data="\\dct\tfield_type,data,expected,-1,fmt,>f",
-        crc="\\dct\tfield_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
+        crc="\\dct\tfield_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
+            "wo_fields,\\v(\\set\tcrc,preamble)",  # todo: check set order
     ),
     n2__message=dict(
         setter="\\dct\tmessage_type,strong,mf_name,n2,splittable,False,"
@@ -225,7 +226,8 @@ MF_CFG_DICT = dict(
         address="\\dct\tfield_type,address,fmt,>H",
         data_length="\\dct\tfield_type,data_length,fmt,>H,units,16,additive,0",
         data="\\dct\tfield_type,data,expected,-1,fmt,>f",
-        crc="\\dct\tfield_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM",
+        crc="\\dct\tfield_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
+            "wo_fields,None",
     ),
     n3__message=dict(
         setter="\\dct\tmessage_type,strong,mf_name,n3,splittable,False,"

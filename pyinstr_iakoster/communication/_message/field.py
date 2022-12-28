@@ -707,9 +707,11 @@ class CrcField(SingleField):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
-    algorithm_name: str
+    wo_fields: set[str], default=None
+        list of the field names, which will not included for crc calculation.
+    algorithm_name: str, default='crc16-CCITT/XMODEM'
         the name of the algorithm by which the crc is counted.
-    parent: FieldMessage or None
+    parent: FieldMessage | None, default=None
         parent message.
 
     See Also
@@ -725,10 +727,15 @@ class CrcField(SingleField):
             start_byte: int,
             fmt: str,
             algorithm_name: str = "crc16-CCITT/XMODEM",
+            wo_fields: set[str] = None,
             parent: FieldMessage = None,
     ):
         if algorithm_name not in self.CRC_ALGORITHMS:
             raise ValueError("invalid algorithm name: %s" % algorithm_name)
+
+        if wo_fields is None:
+            wo_fields = set()
+        wo_fields.add(name)
 
         SingleField.__init__(
             self,
@@ -738,9 +745,11 @@ class CrcField(SingleField):
             fmt=fmt,
             parent=parent
         )
+        self._wo_fields = wo_fields
         self._alg_name = algorithm_name
         self._alg = self.CRC_ALGORITHMS[algorithm_name]
 
+    # todo: check that too many calls when creating message
     def calculate(self, msg: FieldMessage) -> int:
         """
         Calculate a crc value of a message with all fields except this
@@ -756,12 +765,18 @@ class CrcField(SingleField):
         int
             crc value.
         """
-        return self._alg(
-            b"".join(field.content for field in msg if field is not self)
-        )
+        content = b""
+        for field in msg:
+            if field.name not in self._wo_fields:
+                content += field.content
+        return self._alg(content)
 
     def get_setter(self) -> FieldSetter:
-        return FieldSetter.crc(fmt=self._fmt, algorithm_name=self._alg_name)
+        return FieldSetter.crc(
+            fmt=self._fmt,
+            algorithm_name=self._alg_name,
+            wo_fields=self._wo_fields,
+        )
 
     def update(self) -> None:
         """Update crc value using parent message."""
@@ -815,6 +830,16 @@ class CrcField(SingleField):
             algorithm name.
         """
         return self._alg_name
+
+    @property
+    def wo_fields(self) -> set[str]:
+        """
+        Returns
+        -------
+        set[str]
+            list of the field names, which will not included for crc calculation.
+        """
+        return self._wo_fields
 
 
 class DataField(Field):
@@ -1407,8 +1432,19 @@ class FieldSetter(object):
         return cls(field_type="address", fmt=fmt)
 
     @classmethod
-    def crc(cls, *, fmt: str, algorithm_name: str = "crc16-CCITT/XMODEM"):
-        return cls(field_type="crc", fmt=fmt, algorithm_name=algorithm_name)
+    def crc(
+            cls,
+            *,
+            fmt: str,
+            algorithm_name: str = "crc16-CCITT/XMODEM",
+            wo_fields: set[str] | None = None
+    ):
+        return cls(
+            field_type="crc",
+            fmt=fmt,
+            algorithm_name=algorithm_name,
+            wo_fields=wo_fields,
+        )
 
     @classmethod
     def data(cls, *, expected: int, fmt: str):

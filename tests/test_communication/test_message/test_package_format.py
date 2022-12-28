@@ -67,10 +67,10 @@ class TestPackageFormat(unittest.TestCase):
             address=0x33,
             data_length=2,
             data=[17, 32],
-            crc=0xedbc
+            crc=0xdfaf
         )
         res = PF.get("n1", data={"fmt": "B"}).extract(
-            b"\xaa\x55\x01\x00\x00\x33\x00\x02\x11\x20\xed\xbc"
+            b"\xaa\x55\x01\x00\x00\x33\x00\x02\x11\x20\xdf\xaf"
         )
         compare_messages(self, ref, res)
 
