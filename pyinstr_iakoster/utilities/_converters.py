@@ -315,7 +315,7 @@ class StringEncoder(object):
         if not isinstance(val, str) or not len(val):
             return val
 
-        elif val[0] == cls.SOH:
+        elif cls._soh_exists(val):
             return cls.from_str(val)
 
         elif cls.INT.match(val) is not None:

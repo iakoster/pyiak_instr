@@ -1,5 +1,4 @@
 import io
-import re
 import configparser
 from pathlib import Path
 from typing import overload, Any
@@ -96,7 +95,9 @@ class RWConfig(RWFile):
             return StringEncoder.from_str(value)
         return value
 
-    def set(self, section: str, option: str, value: Any) -> None:
+    def set(
+            self, section: str, option: str, value: Any, convert: bool = True
+    ) -> None:
         """
         Set the value to the configparser.
 
@@ -111,19 +112,25 @@ class RWConfig(RWFile):
             option name.
         value: Any
             value to be set.
+        convert: bool
+            convert the resulting value to str by StringEncoder.
 
         See Also
         --------
         _any2str: method to convert the value to a str.
         """
-        self._hapi.set(section, option, StringEncoder.to_str(value))
+        if convert:
+            value = StringEncoder.to_str(value)
+        self._hapi.set(section, option, value)
 
     def update_config(self) -> None:
         """Re-read the configfile from specified and writes to the class."""
         self._hapi = self._read_config()
 
     @overload
-    def write(self, section: str, option: str, value: Any) -> None:
+    def write(
+            self, section: str, option: str, value: Any, convert: bool = True
+    ) -> None:
         """
         Parameters
         ----------
@@ -133,20 +140,26 @@ class RWConfig(RWFile):
             option name.
         value: Any
             value for writing.
+        convert: bool
+            convert the resulting value to str by StringEncoder.
         """
         ...
 
     @overload
-    def write(self, dictionary: dict) -> None:
+    def write(
+            self, dictionary: dict[str, dict[str, Any]], convert: bool = True
+    ) -> None:
         """
         Parameters
         ----------
         dictionary: dict of {str: {str: Any}}
             dictionary of values in format {section: {option: value}}.
+        convert: bool
+            convert the resulting value to str by StringEncoder.
         """
         ...
 
-    def write(self, *args) -> None:
+    def write(self, *args, convert: bool = True) -> None:
         """
         write(section: str, option: str, value: Any) -> None.
         write(dictionary: dict) -> None.
@@ -159,13 +172,16 @@ class RWConfig(RWFile):
         ----------
         *args
             arguments for sets value to section, option
+        convert: bool
+            convert the resulting value to str by StringEncoder.
         """
 
         cfg = self._read_config()
 
         match args:
             case (str() as sec, str() as opt, val):
-                val = StringEncoder.to_str(val)
+                if convert:
+                    val = StringEncoder.to_str(val)
                 cfg.set(sec, opt, val)
                 self.set(sec, opt, val)
 
@@ -175,7 +191,9 @@ class RWConfig(RWFile):
                     if sec not in vals:
                         vals[sec] = {}
                     for opt, val in item.items():
-                        vals[sec][opt] = StringEncoder.to_str(val)
+                        if convert:
+                            val = StringEncoder.to_str(val)
+                        vals[sec][opt] = val
                 cfg.read_dict(vals)
                 self._hapi.read_dict(vals)
 

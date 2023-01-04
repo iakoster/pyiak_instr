@@ -1,5 +1,6 @@
 import shutil
 import unittest
+import configparser
 from copy import deepcopy
 
 from tests.env_vars import TEST_DATA_DIR
@@ -47,7 +48,7 @@ class TestAsymmetricResponseField(unittest.TestCase):
             ),
             2: AsymmetricResponseField(
                 operand="==",
-                value="\\bts\t241,32",
+                value=b"\xf1\x20",
                 start=2,
                 stop=4,
             )
@@ -127,11 +128,6 @@ class TestAsymmetricResponseField(unittest.TestCase):
                 dict(operand="==", start=0, stop=1, value=1),
                 TypeError("invalid type of value"),
             ),
-            (
-                "invalid string",
-                dict(operand="==", start=0, stop=1, value="test"),
-                TypeError("value can't be converted from string to bytes"),
-            )
         ]
 
         for name, kwargs, err in test_data:
@@ -152,8 +148,13 @@ class TestMessageFormat(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        with RWConfig(CFG_PATH) as rwc:
-            rwc.write(MF_CFG_DICT)
+        if not TEST_DIR.exists():
+            TEST_DIR.mkdir(parents=True, exist_ok=True)
+
+        cfg = configparser.ConfigParser()
+        cfg.read_dict(MF_CFG_DICT)
+        with open(CFG_PATH, "w") as file:
+            cfg.write(file)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -199,7 +200,9 @@ class TestMessageFormat(unittest.TestCase):
         with RWConfig(cfg_path) as rwc:
             if "master" not in rwc.hapi.sections():
                 rwc.hapi.add_section("master")
-            rwc.set("master", "formats", "\\lst\tn0,n1,n2,n3,n4")
+            rwc.set(
+                "master", "formats", "\\lst(n0,n1,n2,n3,n4)", convert=False
+            )
             rwc.apply_changes()
 
         for ref_mf in MF_DICT.values():
@@ -210,10 +213,6 @@ class TestMessageFormat(unittest.TestCase):
             self.assertEqual(len(ref_lines), len(res_lines))
 
             for line, (ref, res) in enumerate(zip(ref_lines, res_lines)):
-                if line in (15, 28, 40):  # fixme: i don't know why in this line error
-                    self.assertEqual("arf = \\dct\n", res)
-                    continue
-
                 with self.subTest(line=line):
                     self.assertEqual(ref, res)
 
@@ -267,8 +266,13 @@ class TestMessageFormatsMap(unittest.TestCase):
             shutil.rmtree(TEST_DATA_DIR)
 
     def setUp(self) -> None:
-        with RWConfig(CFG_PATH) as rwc:
-            rwc.write(MF_CFG_DICT)
+        if not TEST_DIR.exists():
+            TEST_DIR.mkdir(parents=True, exist_ok=True)
+
+        cfg = configparser.ConfigParser()
+        cfg.read_dict(MF_CFG_DICT)
+        with open(CFG_PATH, "w") as file:
+            cfg.write(file)
         self.mf_map = MessageFormatMap(*MF_DICT.values())
 
     def test_init(self) -> None:
@@ -292,13 +296,9 @@ class TestMessageFormatsMap(unittest.TestCase):
             ref_lines, res_lines = ref_io.readlines(), res_io.readlines()
             self.assertEqual(len(ref_lines), len(res_lines))
 
-            for line, (ref, res) in enumerate(zip(ref_lines, res_lines)):
-                with self.subTest(line=line):
-
-                    if line in (15, 28, 40):  # fixme: i don't know why in this line error
-                        self.assertEqual("arf = \\dct\n", res)
-                        continue
-                    self.assertEqual(ref, res)
+        for line, (ref, res) in enumerate(zip(ref_lines, res_lines)):
+            with self.subTest(line=line):
+                self.assertEqual(ref, res)
 
     def test_get_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:

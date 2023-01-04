@@ -6,7 +6,6 @@ from typing import Any
 from .field import FieldSetter
 from .message import MessageType, MessageSetter
 from ...core import Code
-from ...utilities import StringEncoder
 from ...rwfile import (
     RWConfig,
 )
@@ -76,13 +75,7 @@ class AsymmetricResponseField(object):  # todo: add to fields
             raise ValueError("stop <= start")
         self._oper, self._slice = operand, slice(start, stop)
 
-        if isinstance(value, str):
-            value = StringEncoder.from_str(value)
-            if not isinstance(value, bytes):
-                raise TypeError(
-                    "value can't be converted from string to bytes"
-                )
-        elif not isinstance(value, bytes):
+        if not isinstance(value, bytes):
             raise TypeError("invalid type of value")
         self._val = value
 
@@ -300,7 +293,7 @@ class MessageFormat(object):
                 ),
                 arf=self.arf.kwargs,
         ).items():
-            mf_dict[sec_message][opt] = StringEncoder.to_str(val)
+            mf_dict[sec_message][opt] = val
 
         mf_dict[sec_setters] = {}
         for opt, val in self._setters.items():
@@ -314,9 +307,7 @@ class MessageFormat(object):
                         if isinstance(v_, Code):
                             v[k_] = v_.value
 
-            mf_dict[sec_setters][opt] = StringEncoder.to_str(
-                dict(field_type=val.field_type, **val.kwargs)
-            )
+            mf_dict[sec_setters][opt] = dict(field_type=val.field_type, **val.kwargs)
 
         with RWConfig(config) as rwc:
 
@@ -382,12 +373,7 @@ class MessageFormat(object):
 
             for sec in [sec_message, sec_setters]:
                 for opt in rwc.hapi.options(sec):
-                    val = StringEncoder.from_str(
-                        rwc.get(sec, opt, convert=False)
-                    )  # todo: StringEncoder to RWConfig
-                    if isinstance(val, str) and val[0] == StringEncoder.SOH:
-                        val = StringEncoder.from_str(val + "\t")
-
+                    val = rwc.get(sec, opt)
                     if sec == sec_message:
                         kw[opt] = val
                     elif sec == sec_setters:
@@ -475,7 +461,7 @@ class MessageFormatMap(object):
         """
         with RWConfig(config) as rwc:
             rwc.write({"master": {
-                "formats": StringEncoder.to_str(list(self._formats))
+                "formats": list(self._formats)
             }})
 
         for mf in self._formats.values():
@@ -497,7 +483,7 @@ class MessageFormatMap(object):
             class instance with formats from config.
         """
         with RWConfig(config) as rwc:
-            formats = StringEncoder.from_str(rwc.get("master", "formats", convert=False))
+            formats = rwc.get("master", "formats")
         return cls(*(MessageFormat.read(config, f) for f in formats))
 
     @property

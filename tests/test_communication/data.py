@@ -173,94 +173,94 @@ MF_DICT: dict[str, MessageFormat] = {
 
 MF_CFG_DICT = dict(
     master=dict(
-        formats="\\lst\tn0,n1,n2,n3,n4",
+        formats="\\lst(n0,n1,n2,n3,n4)",
     ),
     n0__message=dict(
-        setter="\\dct\tmessage_type,strong,mf_name,n0,splittable,True,"
-               "slice_length,256",
-        arf="\\dct\toperand,!=,"
-            "value,\\v(\\bts\t0,0,0,1),"
+        setter="\\dct(message_type,strong,mf_name,n0,splittable,True,"
+               "slice_length,256)",
+        arf="\\dct(operand,!=,"
+            "value,\\bts(0,0,0,1),"
             "start,12,"
-            "stop,16",
+            "stop,16)",
     ),
     n0__setters=dict(
-        address="\\dct\tfield_type,address,fmt,>I",
-        data_length="\\dct\tfield_type,data_length,fmt,>I,units,17,additive,0",
-        operation="\\dct\tfield_type,operation,fmt,>I,"
-                  "desc_dict,\\v(\\dct\tw,0,r,1)",
-        data="\\dct\tfield_type,data,expected,-1,fmt,>I",
+        address="\\dct(field_type,address,fmt,>I)",
+        data_length="\\dct(field_type,data_length,fmt,>I,units,17,additive,0)",
+        operation="\\dct(field_type,operation,fmt,>I,"
+                  "desc_dict,\\dct(w,0,r,1))",
+        data="\\dct(field_type,data,expected,-1,fmt,>I)",
     ),
     n1__message=dict(
-        setter="\\dct\tmessage_type,strong,mf_name,n1,splittable,False,"
-               "slice_length,1024",
-        arf="\\dct\t",
+        setter="\\dct(message_type,strong,mf_name,n1,splittable,False,"
+               "slice_length,1024)",
+        arf="\\dct()",
     ),
     n1__setters=dict(
-        preamble="\\dct\tfield_type,static,fmt,>H,default,43605",
-        operation="\\dct\tfield_type,operation,fmt,>B,"
-                  "desc_dict,\\v(\\dct\twp,1,rp,2,wn,3,rn,4)",
-        response="\\dct\tfield_type,response,"
+        preamble="\\dct(field_type,static,fmt,>H,default,43605)",
+        operation="\\dct(field_type,operation,fmt,>B,"
+                  "desc_dict,\\dct(wp,1,rp,2,wn,3,rn,4))",
+        response="\\dct(field_type,response,"
                  "fmt,>B,"
-                 "codes,\\v(\\dct\t0,1280),"
+                 "codes,\\dct(0,1280),"
                  "default,0,"
-                 "default_code,1282",
-        address="\\dct\tfield_type,address,fmt,>H",
-        data_length="\\dct\tfield_type,data_length,fmt,>H,units,16,additive,0",
-        data="\\dct\tfield_type,data,expected,-1,fmt,>f",
-        crc="\\dct\tfield_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
-            "wo_fields,\\v(\\set\tcrc,preamble)",  # todo: check set order
+                 "default_code,1282)",
+        address="\\dct(field_type,address,fmt,>H)",
+        data_length="\\dct(field_type,data_length,fmt,>H,units,16,additive,0)",
+        data="\\dct(field_type,data,expected,-1,fmt,>f)",
+        crc="\\dct(field_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
+            "wo_fields,\\set(crc,preamble))",  # todo: check set order
     ),
     n2__message=dict(
-        setter="\\dct\tmessage_type,strong,mf_name,n2,splittable,False,"
-               "slice_length,1024",
-        arf="\\dct\t",
+        setter="\\dct(message_type,strong,mf_name,n2,splittable,False,"
+               "slice_length,1024)",
+        arf="\\dct()",
     ),
     n2__setters=dict(
-        operation="\\dct\tfield_type,operation,fmt,>B,"
-                  "desc_dict,\\v(\\dct\tr,1,w,2)",
-        response="\\dct\tfield_type,response,"
+        operation="\\dct(field_type,operation,fmt,>B,"
+                  "desc_dict,\\dct(r,1,w,2))",
+        response="\\dct(field_type,response,"
                  "fmt,>B,"
-                 "codes,\\v(\\dct\t0,1280,4,1281),"
+                 "codes,\\dct(0,1280,4,1281),"
                  "default,0,"
-                 "default_code,255",
-        address="\\dct\tfield_type,address,fmt,>H",
-        data_length="\\dct\tfield_type,data_length,fmt,>H,units,16,additive,0",
-        data="\\dct\tfield_type,data,expected,-1,fmt,>f",
-        crc="\\dct\tfield_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
-            "wo_fields,None",
+                 "default_code,255)",
+        address="\\dct(field_type,address,fmt,>H)",
+        data_length="\\dct(field_type,data_length,fmt,>H,units,16,additive,0)",
+        data="\\dct(field_type,data,expected,-1,fmt,>f)",
+        crc="\\dct(field_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
+            "wo_fields,None)",
     ),
     n3__message=dict(
-        setter="\\dct\tmessage_type,strong,mf_name,n3,splittable,False,"
-               "slice_length,1024",
-        arf="\\dct\t",
+        setter="\\dct(message_type,strong,mf_name,n3,splittable,False,"
+               "slice_length,1024)",
+        arf="\\dct()",
     ),
     n3__setters=dict(
-        operation="\\dct\tfield_type,operation,fmt,B,"
-                  "desc_dict,\\v(\\dct\tr,1,w,2)",
-        response1="\\dct\tfield_type,response,"
+        operation="\\dct(field_type,operation,fmt,B,"
+                  "desc_dict,\\dct(r,1,w,2))",
+        response1="\\dct(field_type,response,"
                   "fmt,B,"
-                  "codes,\\v(\\dct\t0,1280,4,1281),"
+                  "codes,\\dct(0,1280,4,1281),"
                   "default,0,"
-                  "default_code,1282",
-        address="\\dct\tfield_type,address,fmt,B",
-        data_length="\\dct\tfield_type,data_length,fmt,B,units,16,additive,0",
-        data="\\dct\tfield_type,data,expected,-1,fmt,B",
-        response2="\\dct\tfield_type,response,"
+                  "default_code,1282)",
+        address="\\dct(field_type,address,fmt,B)",
+        data_length="\\dct(field_type,data_length,fmt,B,units,16,additive,0)",
+        data="\\dct(field_type,data,expected,-1,fmt,B)",
+        response2="\\dct(field_type,response,"
                   "fmt,B,"
-                  "codes,\\v(\\dct\t0,1280,4,1281),"
+                  "codes,\\dct(0,1280,4,1281),"
                   "default,0,"
-                  "default_code,1282",
+                  "default_code,1282)",
     ),
     n4__message=dict(
-        setter="\\dct\tmessage_type,field,mf_name,n4,splittable,False,"
-               "slice_length,1024",
-        arf="\\dct\t",
+        setter="\\dct(message_type,field,mf_name,n4,splittable,False,"
+               "slice_length,1024)",
+        arf="\\dct()",
     ),
     n4__setters=dict(
-        id="\\dct\tfield_type,single,fmt,>I,default,\\v(\lst	),"
-           "may_be_empty,False",
-        address="\\dct\tfield_type,address,fmt,>I",
-        data="\\dct\tfield_type,data,expected,-1,fmt,>I",
+        id="\\dct(field_type,single,fmt,>I,default,\\lst(),"
+           "may_be_empty,False)",
+        address="\\dct(field_type,address,fmt,>I)",
+        data="\\dct(field_type,data,expected,-1,fmt,>I)",
     )
 )
 
