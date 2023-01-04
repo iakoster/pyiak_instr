@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import overload, Any
 
 from ._core import RWFile
+from ..utilities import StringEncoder
 
 
 __all__ = ['RWConfig']
@@ -24,70 +25,11 @@ class RWConfig(RWFile):
 
     _hapi: configparser.ConfigParser
 
-    LIST_DELIMITER = ','
-    LIST_PATTERN = re.compile(LIST_DELIMITER)
-    TUPLE_DELIMITER = ';'
-    TUPLE_PATTERN = re.compile(TUPLE_DELIMITER)
-
-    INT_PATTERN = re.compile('^\d+$')
-    FLOAT_PATTERN = re.compile('^\d+\.\d+$')
-    EFLOAT_PATTERN = re.compile('^\d\.\d+[eE][+-]\d+$')
-
     FILE_SUFFIXES = {".ini"}
 
     def __init__(self, filepath: Path | str):
         super().__init__(filepath)
-        self._hapi = self.read_config()
-
-    def update_config(self) -> None:
-        """
-        Re-reads the config file from specified and
-        writes to the class.
-        """
-        self._hapi = self.read_config()
-
-    def read_config(self) -> configparser.ConfigParser:
-        """
-        Read config from filepath.
-
-        If the config on the specified path does not exist,
-        creates an empty config file.
-
-        Returns
-        -------
-        configparser.ConfigParser
-            config contains settings from file path.
-        """
-
-        config = configparser.ConfigParser()
-        if self._fp.exists():
-            config.read(self._fp)
-        else:
-            with io.open(self._fp, 'w') as cfg_file:
-                config.write(cfg_file)
-        return config
-
-    def set(self, section: str, option: str, value: Any) -> None:
-        """
-        Set the value to the configparser.
-
-        Does not change value in the configfile.
-        Converts value to string by ._any2str method.
-
-        Parameters
-        ----------
-        section: str
-            section name.
-        option: str
-            option name.
-        value: Any
-            value to be set.
-
-        See Also
-        --------
-        _any2str: method to convert the value to a str.
-        """
-        self._hapi.set(section, option, self._any2str(value))
+        self._hapi = self._read_config()
 
     def apply_changes(self) -> None:
         """
@@ -101,8 +43,7 @@ class RWConfig(RWFile):
     def close(self):
         pass
 
-    def get(self, section: str, option: str,
-            convert: bool = True) -> Any:
+    def get(self, section: str, option: str, convert: bool = True) -> Any:
         """
         Get value from the configparser.
 
@@ -127,7 +68,59 @@ class RWConfig(RWFile):
             resulting value from configfile.
         """
         value = self._hapi.get(section, option)
-        return self._str2any(value) if convert else value
+        if convert:
+            return StringEncoder.from_str(value)
+        return value
+
+    def read(self, section: str, option: str, convert: bool = True) -> Any:
+        """
+        Read value from the configfile.
+
+        Parameters
+        ----------
+        section: str
+            section name.
+        option: str
+            option name.
+        convert: bool
+            convert the resulting value from str.
+
+        Returns
+        -------
+        Any
+            value from the configfile.
+        """
+
+        value = self._read_config().get(section, option)
+        if convert:
+            return StringEncoder.from_str(value)
+        return value
+
+    def set(self, section: str, option: str, value: Any) -> None:
+        """
+        Set the value to the configparser.
+
+        Does not change value in the configfile.
+        Converts value to string by ._any2str method.
+
+        Parameters
+        ----------
+        section: str
+            section name.
+        option: str
+            option name.
+        value: Any
+            value to be set.
+
+        See Also
+        --------
+        _any2str: method to convert the value to a str.
+        """
+        self._hapi.set(section, option, StringEncoder.to_str(value))
+
+    def update_config(self) -> None:
+        """Re-read the configfile from specified and writes to the class."""
+        self._hapi = self._read_config()
 
     @overload
     def write(self, section: str, option: str, value: Any) -> None:
@@ -139,7 +132,7 @@ class RWConfig(RWFile):
         option: str
             option name.
         value: Any
-            value to be write.
+            value for writing.
         """
         ...
 
@@ -155,7 +148,7 @@ class RWConfig(RWFile):
 
     def write(self, *args) -> None:
         """
-        write(section: str, option: str, value: Qny) -> None.
+        write(section: str, option: str, value: Any) -> None.
         write(dictionary: dict) -> None.
 
         Write value or dict to the configfile.
@@ -168,136 +161,50 @@ class RWConfig(RWFile):
             arguments for sets value to section, option
         """
 
+        cfg = self._read_config()
+
         match args:
-            case (str() as section, str() as option, value):
-                conv_value = self._any2str(value)
-                config = configparser.ConfigParser()
-                config.read(self._fp)
-                config.set(section, option, conv_value)
-                self.set(section, option, conv_value)
-                with io.open(self._fp, 'w') as cnfg_file:
-                    config.write(cnfg_file)
+            case (str() as sec, str() as opt, val):
+                val = StringEncoder.to_str(val)
+                cfg.set(sec, opt, val)
+                self.set(sec, opt, val)
 
             case (dict() as dictionary,):
-                conv_dict = {}
-                for section, item in dictionary.items():
-                    conv_dict[section] = {}
-                    for option, raw_value in item.items():
-                        conv_dict[section][option] = self._any2str(raw_value)
-                self._hapi.read_dict(conv_dict)
-                with io.open(self._fp, 'w') as cnfg_file:
-                    self._hapi.write(cnfg_file)
+                vals = {}
+                for sec, item in dictionary.items():
+                    if sec not in vals:
+                        vals[sec] = {}
+                    for opt, val in item.items():
+                        vals[sec][opt] = StringEncoder.to_str(val)
+                cfg.read_dict(vals)
+                self._hapi.read_dict(vals)
 
             case _:
-                raise TypeError('Wrong args for write method')
+                raise TypeError(f"invalid arguments {args}")
 
-    def _any2str(self, value) -> str:
+        with io.open(self._fp, 'w') as cnfg_file:
+            cfg.write(cnfg_file)
+
+    def _read_config(self) -> configparser.ConfigParser:
         """
-        Convert any value to the string.
+        Read config from filepath.
 
-        There is a specific rules for converting
-        dict, tuple and list.
-
-        Parameters
-        ----------
-        value: Any
-            value for converting.
+        If the config on the specified path does not exist,
+        creates an empty config file.
 
         Returns
         -------
-        str
-            value as str
-        """
-
-        def val2str(val: int | float | str) -> str:
-            return str(val)
-
-        if isinstance(value, dict):
-            return self.LIST_DELIMITER.join(
-                [self.TUPLE_DELIMITER.join(val2str(i) for i in item)
-                 for item in value.items()])
-
-        elif isinstance(value, tuple):
-            return self.TUPLE_DELIMITER.join(
-                val2str(v) for v in value)
-
-        elif isinstance(value, list):
-            return self.LIST_DELIMITER.join(
-                val2str(v) for v in value)
-
-        else:
-            return val2str(value)
-
-    def read(self, section: str, option: str) -> Any:
-        """
-        Read value from the configfile.
-
-        Parameters
-        ----------
-        section: str
-            section name.
-        option: str
-            option name.
-
-        Returns
-        -------
-        Any
-            value from the configfile.
+        configparser.ConfigParser
+            config contains settings from file path.
         """
 
         config = configparser.ConfigParser()
-        config.read(self._fp)
-        return self._str2any(config.get(section, option))
-
-    def _str2any(self, value: str) -> Any:
-        """
-        Convert string value to any.
-
-        If there are no templates to convert, then returns
-        the value 'as is' as a string.
-
-        Parameters
-        ----------
-        value: str
-            string value.
-
-        Returns
-        -------
-        Any
-            Converted value.
-        """
-
-        def val2any(val: str) -> int | float | str | bool:
-            if self.INT_PATTERN.match(val) is not None:
-                return int(val)
-
-            elif (self.FLOAT_PATTERN.match(val) or
-                  self.EFLOAT_PATTERN.match(val)) is not None:
-                return float(val)
-
-            elif val in ('True', 'False', 'None'):
-                return eval(val)
-
-            else:
-                return val
-
-        if None not in (self.TUPLE_PATTERN.search(value),
-                        self.LIST_PATTERN.search(value)):
-            raw_dict = [item.split(self.TUPLE_DELIMITER)
-                        for item in value.split(self.LIST_DELIMITER)]
-            return {val2any(raw_key): val2any(raw_val)
-                    for (raw_key, raw_val) in raw_dict}
-
-        elif self.TUPLE_PATTERN.search(value) is not None:
-            return tuple(val2any(v) for v in
-                         value.split(self.TUPLE_DELIMITER))
-
-        elif self.LIST_PATTERN.search(value) is not None:
-            return [val2any(v) for v in
-                    value.split(self.LIST_DELIMITER)]
-
+        if self._fp.exists():
+            config.read(self._fp)
         else:
-            return val2any(value)
+            with io.open(self._fp, 'w') as cfg_file:
+                config.write(cfg_file)
+        return config
 
     @property
     def hapi(self) -> configparser.ConfigParser:

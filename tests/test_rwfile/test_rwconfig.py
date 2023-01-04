@@ -9,79 +9,61 @@ from tests.env_vars import TEST_DATA_DIR
 
 CONFIG_NAME = 'test_config.ini'
 CONFIG_PATH = TEST_DATA_DIR / CONFIG_NAME
-TEST_DICT_STR = {
-    'test_str': {
-        'test_letter': 'a',
-        'test_word': 'abcde',
+REF_CONFIG_CONTENT = {
+    "single": {
+        "letter": "a",
+        "word": "abcde",
+        "str_int": "\\str(1)",
+        "int": "1",
+        "float": "5.4321",
+        "efloat_small": "5.4321e-99",
+        "efloat_huge": "5.4321e+99",
+        "bool": "True",
+        "none": "None",
     },
-    'test_single': {
-        'test_int': '1',
-        'test_float': '5.4321',
-        'test_efloat_small': '5.4321e-99',
-        'test_efloat_huge': '5.4321e+99',
-        'test_bool': 'True',
-        'test_none': 'None'
+    "list": {
+        "empty": "\\lst()",
+        "all_types": "\\lst(a,2,3.3,4.4e-99,5.5e+99)",
     },
-    'test_list': {
-        'test_str': 'a,b,c,d,e',
-        'test_int': '1,2,3,4,5',
-        'test_float': '1.1,2.2,3.3,4.4,5.5',
-        'test_efloat_small':
-            '1.1e-99,2.2e-99,3.3e-99,4.4e-99,5.5e-99',
-        'test_efloat_huge':
-            '1.1e+99,2.2e+99,3.3e+99,4.4e+99,5.5e+99'
+    "tuple": {
+        "empty": "\\tpl()",
+        "all_types": "\\tpl(a,2,3.3,4.4e-99,5.5e+99)",
     },
-    'test_tuple': {
-        'test_str': 'a;b;c;d;e',
-        'test_int': '1;2;3;4;5'
-    },
-    'test_dict': {
-        'test_str_str': 'a;z,b;y,c;x,d;w,e;v',
-        'test_str_int': 'a;1,b;2,c;3,d;4,e;5',
-        'test_float_str': '1.1;z,2.2;y,3.3;x,4.4;w,5.5;v',
-        'test_int_efloat':
-            '1;1.1e+45,2;2.2e+99,3;3.3e-99,40;4.4,576;5.5'
+    "dict": {
+        "all_types": r"\dct(a,2,3.3,4.4e-99,5.5e+99,\str(1))",
+        "empty": "\\dct()",
     }
 }
-TEST_DICT_CONV = {
-    'test_str': {
-        'test_letter': 'a',
-        'test_word': 'abcde',
+CONFIG_DATA = {
+    "single": {
+        "letter": "a",
+        "word": "abcde",
+        "str_int": "1",
+        "int": 1,
+        "float": 5.4321,
+        "efloat_small": 5.4321e-99,
+        "efloat_huge": 5.4321e+99,
+        "bool": True,
+        "none": None,
     },
-    'test_single': {
-        'test_int': 1,
-        'test_float': 5.4321,
-        'test_efloat_small': 5.4321e-99,
-        'test_efloat_huge': 5.4321e+99,
-        'test_bool': True,
-        'test_none': None
+    "list": {
+        "empty": [],
+        "all_types": ["a", 2, 3.3, 4.4e-99, 5.5e+99],
     },
-    'test_list': {
-        'test_str': ['a', 'b', 'c', 'd', 'e'],
-        'test_int': [1, 2, 3, 4, 5],
-        'test_float': [1.1, 2.2, 3.3, 4.4, 5.5],
-        'test_efloat_small':
-            [1.1e-99, 2.2e-99, 3.3e-99, 4.4e-99, 5.5e-99],
-        'test_efloat_huge':
-            [1.1e+99, 2.2e+99, 3.3e+99, 4.4e+99, 5.5e+99]
+    "tuple": {
+        "empty": (),
+        "all_types": ("a", 2, 3.3, 4.4e-99, 5.5e+99),
     },
-    'test_tuple': {
-        'test_str': ('a', 'b', 'c', 'd', 'e'),
-        'test_int': (1, 2, 3, 4, 5)
-    },
-    'test_dict': {
-        'test_str_str': {
-            'a': 'z', 'b': 'y', 'c': 'x', 'd': 'w', 'e': 'v'},
-        'test_str_int': {'a': 1, 'b': 2, 'c': 3, 'd': 4, 'e': 5},
-        'test_float_str': {
-            1.1: 'z', 2.2: 'y', 3.3: 'x', 4.4: 'w', 5.5: 'v'},
-        'test_int_efloat': {
-            1: 1.1e+45, 2: 2.2e+99, 3: 3.3e-99, 40: 4.4, 576: 5.5}
+    "dict": {
+        "all_types": {"a": 2, 3.3: 4.4e-99, 5.5e+99: "1"},
+        "empty": {},
     }
 }
 
 
 class TestRWConfig(unittest.TestCase):
+
+    maxDiff = None
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -90,6 +72,9 @@ class TestRWConfig(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
         shutil.rmtree(TEST_DATA_DIR)
+
+    def setUp(self) -> None:
+        self.rwc.write(CONFIG_DATA)
 
     def test_file_creation(self):
         RWConfig(CONFIG_PATH)
@@ -100,75 +85,26 @@ class TestRWConfig(unittest.TestCase):
         self.assertTrue(CONFIG_PATH.exists())
 
     def test_write_single(self):
-        options = ['test_int', 'test_float',
-                   'test_efloat_small', 'test_efloat_huge']
+        options = ["int", "float", "efloat_small", "efloat_huge"]
         vals = [10, 254.641685, 1.12476e-123, 5.4165e+123]
-        vals_str = ['10', '254.641685', '1.12476e-123', '5.4165e+123']
+        vals_str = ["10", "254.641685", "1.12476e-123", "5.4165e+123"]
         for i in range(len(options)):
             with self.subTest(option=options[i]):
-                self.rwc.write(
-                    'test_single', options[i], vals[i])
+                self.rwc.write("single", options[i], vals[i])
                 readed_config = configparser.ConfigParser()
                 readed_config.read(CONFIG_PATH)
                 self.assertEqual(
                     vals_str[i],
-                    readed_config.get('test_single', options[i])
+                    readed_config.get("single", options[i])
                 )
-
-    def test_write_dict_conv(self):
-        with self.rwc as cfg:
-            cfg.write(TEST_DICT_CONV)
-        readed_config = configparser.ConfigParser()
-        readed_config.read(CONFIG_PATH)
-        self.assertDictEqual(
-            TEST_DICT_STR,
-            {s: dict(readed_config.items(s))
-             for s in readed_config.sections()}
-        )
-
-    def test_write_dict_str(self):
-        self.rwc.write(TEST_DICT_STR)
-        readed_config = configparser.ConfigParser()
-        readed_config.read(CONFIG_PATH)
-        self.assertDictEqual(
-            TEST_DICT_STR,
-            {s: dict(readed_config.items(s))
-             for s in readed_config.sections()}
-        )
-
-    def test_write_dict_part(self):
-        test_dict = {'test_single': {
-            'test_int': 2,
-            'test_float': 5.4321,
-            'test_efloat_small': 5.4321e-99,
-            'test_efloat_huge': 5.4321e+99,
-        }}
-
-        self.rwc.write(test_dict)
-        readed_config = configparser.ConfigParser()
-        readed_config.read(CONFIG_PATH)
-        red_dict = TEST_DICT_STR
-        red_dict['test_single']['test_int'] = '2'
-        self.assertDictEqual(
-            red_dict,
-            {s: dict(readed_config.items(s))
-             for s in readed_config.sections()}
-        )
 
     def test_write_wrong_args(self):
         with self.assertRaises(TypeError) as exc:
-            self.rwc.write('', '')
-        self.assertEqual(
-            exc.exception.args[0],
-            'Wrong args for write method'
-        )
-
-    def setUp(self) -> None:
-        self.rwc.write(TEST_DICT_STR)
+            self.rwc.write("", "")
+        self.assertEqual(exc.exception.args[0], "invalid arguments ('', '')")
 
     def test_read_conversion(self) -> None:
-        high_items = TEST_DICT_CONV.items()
-        for section, option_dict in high_items:
+        for section, option_dict in CONFIG_DATA.items():
             for option, conv_value in option_dict.items():
                 with self.subTest(section=section, option=option):
                     self.assertIsInstance(
@@ -181,53 +117,65 @@ class TestRWConfig(unittest.TestCase):
                     )
 
     def test_get(self) -> None:
-        section = 'test_single'
-        option = 'test_int'
-        self.assertEqual(
-            TEST_DICT_CONV[section][option],
-            self.rwc.get(section, option)
-        )
+        sec, opt = "single", "int"
+        self.assertEqual(CONFIG_DATA[sec][opt], self.rwc.get(sec, opt))
 
     def test_set(self) -> None:
-        section = 'test_single'
-        option = 'test_int'
-        value = 12345
-        self.rwc.set(section, option, value)
-        self.assertEqual(
-            value,
-            self.rwc.get(section, option)
-        )
+        sec, opt, val = "single", "int", 12345
+        self.rwc.set(sec, opt, val)
+        self.assertEqual(val, self.rwc.get(sec, opt))
 
     def test_set_isolation(self) -> None:
 
-        section = 'test_single'
-        option = 'test_int'
-        value = 12345
-        self.rwc.set(section, option, value)
-        self.assertEqual(
-            value,
-            self.rwc.get(section, option)
-        )
-        self.assertEqual(
-            TEST_DICT_CONV[section][option],
-            self.rwc.read(section, option)
-        )
+        sec, opt, val = "single", "int", 12345
+        self.rwc.set(sec, opt, val)
+        self.assertEqual(val, self.rwc.get(sec, opt))
+        self.assertEqual(CONFIG_DATA[sec][opt], self.rwc.read(sec, opt))
 
     def test_apply_changes(self) -> None:
 
-        section = 'test_single'
-        option = 'test_int'
-        value = 12345
-        self.rwc.set(section, option, value)
+        sec, opt, val = "single", "int", 12345
+        self.assertEqual(CONFIG_DATA[sec][opt], self.rwc.get(sec, opt))
+        self.rwc.set(sec, opt, val)
         self.rwc.apply_changes()
-        self.assertEqual(
-            value,
-            self.rwc.read(section, option)
-        )
-        self.assertEqual(
-            value,
-            self.rwc.get(section, option)
-        )
+        self.assertEqual(val, self.rwc.read(sec, opt))
+        self.assertEqual(val, self.rwc.get(sec, opt))
+
+    def test_correct_writing(self) -> None:
+        with open(CONFIG_PATH, "r") as file:
+            res = file.readlines()
+
+        i_line = 0
+        for sec, options in REF_CONFIG_CONTENT.items():
+
+            if i_line:
+                self.assertEqual("\n", res[i_line])
+                i_line += 1
+
+            with self.subTest(line=i_line, sec=sec):
+                self.assertEqual(f"[{sec}]\n", res[i_line])
+            i_line += 1
+
+            for opt, val in options.items():
+
+                line = res[i_line]
+                with self.subTest(line=i_line, sec=sec, opt=opt):
+                    self.assertEqual(f"{opt} = {val}\n", line)
+                i_line += 1
+
+    def test_correct_raw_reading(self) -> None:
+        for sec, options in REF_CONFIG_CONTENT.items():
+            for opt, ref in options.items():
+                val = self.rwc.get(sec, opt, convert=False)
+                with self.subTest(sec=sec, opt=opt):
+                    self.assertEqual(ref, val)
+
+    def test_correct_reading(self) -> None:
+        for sec, options in CONFIG_DATA.items():
+            for opt, ref in options.items():
+                val = self.rwc.get(sec, opt)
+                with self.subTest(sec=sec, opt=opt):
+                    self.assertEqual(ref, val)
 
     def test_str_magic(self):
         self.assertEqual(
