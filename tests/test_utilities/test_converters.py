@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 
+from pyinstr_iakoster.core import Code
 from pyinstr_iakoster.utilities import split_complex_dict, StringEncoder
 
 
@@ -48,59 +49,90 @@ class TestStringEncoder(unittest.TestCase):
         letter=("a", "a"),
         word=("lol", "lol"),
         sentence=("lol kek!!!", "lol kek!!!"),
-        bytes=("\\bts\t1,3,255,50,120", b"\x01\x03\xff\x32\x78"),
+        bytes=("\\bts(1,3,255,50,120)", b"\x01\x03\xff\x32\x78"),
         int=("1", 1),
         int_neg=("-1", -1),
-        int_str=("\\str\t3", "3"),
+        int_str=("\\str(3)", "3"),
         float=("5.4321", 5.4321),
         float_neg=("-5.4321", -5.4321),
-        float_str=("\\str\t3.7", "3.7"),
+        float_str=("\\str(3.7)", "3.7"),
         efloat_small=("5.4321e-99", 5.4321e-99),
         efloat_small_neg=("-5.4321e-99", -5.4321e-99),
-        efloat_str=("\\str\t4.321e-107", "4.321e-107"),
+        efloat_str=("\\str(4.321e-107)", "4.321e-107"),
         efloat_large=("5.4321e+99", 5.4321e+99),
         true=("True", True),
-        true_str=("\\str\tTrue", "True"),
+        true_str=("\\str(True)", "True"),
         false=("False", False),
-        false_str=("\\str\tFalse", "False"),
+        false_str=("\\str(False)", "False"),
         none=("None", None),
-        none_str=("\\str\tNone", "None"),
-        list_empty=("\\lst\t", []),
+        none_str=("\\str(None)", "None"),
+        list_empty=("\\lst()", []),
         list_diff=(
-            "\\lst\ta,1,1.1,1.1e-99,1.1e+99", ["a", 1, 1.1, 1.1e-99, 1.1e+99]
+            "\\lst(a,1,1.1,1.1e-99,1.1e+99)", ["a", 1, 1.1, 1.1e-99, 1.1e+99]
         ),
-        tuple_empty=("\\tpl\t", ()),
+        list_str_int=("\\lst(\\str(1))", ["1"]),
+        tuple_empty=("\\tpl()", ()),
         tuple_diff=(
-            "\\tpl\ta,1,1.1,1.1e-99,1.1e+99", ("a", 1, 1.1, 1.1e-99, 1.1e+99)
+            "\\tpl(a,1,1.1,1.1e-99,1.1e+99)", ("a", 1, 1.1, 1.1e-99, 1.1e+99)
         ),
-        dict_empty=("\\dct\t", {}),
+        dict_empty=("\\dct()", {}),
         dict_diff=(
-            "\\dct\ta,1,1.1,1.1e-99,1.1e+99,1.1e+178",
+            "\\dct(a,1,1.1,1.1e-99,1.1e+99,1.1e+178)",
             {"a": 1, 1.1: 1.1e-99, 1.1e+99: np.float64(1.1e+178)}
         ),
-        set_empty=("\\set\t", set()),
-        set_int=("\\set\t1,2,3", {1, 2, 3}),
-        array_empty=("\\npa\t", np.array([])),
-        array_int=("\\npa\t1,2", np.array([1, 2])),
-        array_float=("\\npa\t1.1,2.2", np.array([1.1, 2.2])),
-        array_efloat=("\\npa\t1.1e-99,2.2e+99", np.array([1.1e-99, 2.2e+99]))
-    )
-    DATA_FROM = dict(
-        from_list_with_pars=("\\lst len=5\t1,2,3,4,5", [1, 2, 3, 4, 5])
+        set_empty=("\\set()", set()),
+        set_int=("\\set(1,2,3)", {1, 2, 3}),
+        array_empty=("\\npa()", np.array([])),
+        array_int=("\\npa(1,2)", np.array([1, 2])),
+        array_float=("\\npa(1.1,2.2)", np.array([1.1, 2.2])),
+        array_efloat=("\\npa(1.1e-99,2.2e+99)", np.array([1.1e-99, 2.2e+99]))
     )
     DATA_CHAIN = dict(
-        ch1=("\\dct\ta,\\v(\\dct\t1,1.1)", {"a": {1: 1.1}}),
-        ch2=("\\dct\t0,\\v(\\lst\t),2,\\v(\\set\t1,2)", {0: [], 2: {1, 2}}), # todo add str mark if '0' (or number)
+        ch1=("\\dct(a,\\dct(1,1.1))", {"a": {1: 1.1}}),
+        ch2=("\\dct(\\str(0),\\lst(),2,\\set(1,2))", {"0": [], 2: {1, 2}}),
         ch3=(
-            "\\lst\t0,-1.1,\\v(\\npa\t),\\v(\\npa\t2),\\v(\\dct\t)",
+            "\\lst(0,-1.1,\\npa(),\\npa(2),\\dct())",
             [0, -1.1, np.array([]), np.array([2]), {}]
         ),
         ch4=(
-            "\\npa\t\\v(\\npa\t\\v(\\npa\t0,-1),\\v(\\npa\t2,3)),"
-            "\\v(\\npa\t\\v(\\npa\t4,5),\\v(\\npa\t6,7))",
+            "\\npa("
+            "\\npa(\\npa(0,-1),\\npa(2,3)),"
+            "\\npa(\\npa(4,5),\\npa(6,7))"
+            ")",
             np.array([[[0, -1], [2, 3]], [[4, 5], [6, 7]]])
         )
     )
+
+    def test_from_str_single(self) -> None:
+        self.assertEqual(
+            [1, 2, (3,)], StringEncoder.from_str(r"\lst(1,2,\tpl(3))")
+        )
+
+    def test_from_str(self):
+
+        def check(result, true_value):
+            if isinstance(result, np.ndarray):
+                self.assertIsInstance(result, np.ndarray)
+                self.assertTrue(np.isclose(true_value, result).all())
+            else:
+                self.assertEqual(true_value, result)
+
+        for name, (src, true) in self.DATA.items():
+            with self.subTest(name=name, true=true):
+                check(StringEncoder.from_str(src), true)
+        for name, (src, true) in self.DATA_CHAIN.items():
+            with self.subTest(type="chain", name=name, true=true):
+                if name in ("ch3",):
+                    self.assertEqual(
+                        str(StringEncoder.from_str(src)), str(true)
+                    )
+                else:
+                    check(StringEncoder.from_str(src), true)
+
+    def test_to_str_single(self) -> None:
+        self.assertEqual(
+            r"\lst(1,2,\tpl(3))", StringEncoder.to_str([1, 2, (3,)])
+        )
 
     def test_to_str(self):
 
@@ -115,26 +147,33 @@ class TestStringEncoder(unittest.TestCase):
                     true, StringEncoder.to_str(src)
                 )
 
-    def test_from_str(self):
+    def test_decorate(self) -> None:
+        self.assertEqual(
+            "\\dct(1,2,3,4)",
+            StringEncoder._decorate(Code.DICT, "1,2,3,4")
+        )
 
-        def check(result, true_value):
-            if isinstance(result, np.ndarray):
-                self.assertIsInstance(result, np.ndarray)
-                self.assertTrue(np.isclose(true_value, result).all())
-            else:
-                self.assertEqual(true_value, result)
+    def test_find_border(self) -> None:
+        self.assertTupleEqual(
+            (4, 8),
+            StringEncoder._find_border("\\tpl(1,2)")
+        )
+        self.assertTupleEqual(
+            (4, 8),
+            StringEncoder._find_border("\\lst(1,2),3,4)")
+        )
 
-        for name, (src, true) in self.DATA.items():
-            with self.subTest(name=name, true=true):
-                check(StringEncoder.from_str(src), true)
-        for name, (src, true) in self.DATA_FROM.items():
-            with self.subTest(name=name, true=true):
-                check(StringEncoder.from_str(src), true)
-        for name, (src, true) in self.DATA_CHAIN.items():
-            with self.subTest(type="chain", name=name, true=true):
-                if name in ("ch3",):
-                    self.assertEqual(
-                        str(StringEncoder.from_str(src)), str(true)
-                    )
-                else:
-                    check(StringEncoder.from_str(src), true)
+    def test_iter_string(self) -> None:
+        ref_values = ["1", "2", "\\tpl(3,4)", "gg"]
+        for ref, res in zip(
+            ref_values,
+            StringEncoder._iter_string("1,2,\\tpl(3,4),gg")
+        ):
+            with self.subTest(ref=ref, res=res):
+                self.assertEqual(ref, res)
+
+    def test_read_header(self) -> None:
+        self.assertTupleEqual(
+            (Code.TUPLE, "1,2"),
+            StringEncoder._read_header("\\tpl(1,2)")
+        )

@@ -1,6 +1,6 @@
 import re
 import itertools
-from typing import Any
+from typing import Any, Generator
 
 import numpy as np
 
@@ -81,21 +81,20 @@ def split_complex_dict(
     return result
 
 
+# todo: parameters (e.g. \npa[shape=\tpl(2,1),dtype=uint8](1,2))
 class StringEncoder(object):
 
     SINGLE_TYPES = int | float | str | bool | None
     ITERS = dict | list | np.ndarray | set | tuple | bytes
 
     DELIMITER = ","
-    PARAMETER = "="
 
     INT = re.compile("^-?\d+$")
     FLOAT = re.compile("^-?\d\.\d+([eE][+-]\d+)?$")
 
-    SOH = "\\"          # start of heading
-    SOT = "\t"          # start of text
-    SOV = f"{SOH}v("    # start of value
-    EOV = ")"           # end of value
+    SOH = "\\"          # start of header
+    SOT = "("          # start of text
+    EOT = ")"           # end of value
 
     HEADERS = {
         "bts": Code.BYTES,
@@ -115,19 +114,19 @@ class StringEncoder(object):
         Code.SET: set,
         Code.TUPLE: tuple,
     }
-    _TYPES = {
+    _HARD_TYPES = {
         bytes: Code.BYTES,
         dict: Code.DICT,
         list: Code.LIST,
         np.ndarray: Code.NUMPY_ARRAY,
         set: Code.SET,
-        tuple: Code.TUPLE
+        tuple: Code.TUPLE,
     }
 
     @classmethod
     def from_str(cls, value: str) -> Any:
         """
-        Decode value from string to any type.
+        Decode value from string.
 
         If conversion is not possible, it returns the string as is.
 
@@ -141,40 +140,12 @@ class StringEncoder(object):
         Any
             decoded value.
         """
-
-        def read_header(string: str):
-            """Read SOH and get code, parameters and clear string."""
-            code_ = cls.HEADERS[string[1:4]]
-            eoh_pos = string.find(cls.SOT)
-            assert eoh_pos != -1, "STX not found"
-            return code_, {}, string[eoh_pos + 1:]
-
-        def iter_string(string: str):
-            """Iterate by string"""
-            length, i_ch, raw = len(string), 0, ""
-            while i_ch < length:
-                ch = string[i_ch]
-                if ch == cls.SOH:
-                    assert not len(raw), "raw value not empty"
-                    end = cls._find_eov(string[i_ch:])
-                    yield cls.from_str(string[i_ch + 3:i_ch + end])
-                    i_ch += end + 1
-                elif ch == cls.DELIMITER:
-                    yield raw
-                    raw = ""
-                else:
-                    raw += ch
-                i_ch += 1
-
-            if len(raw) and len(string):
-                yield raw
-
         if cls._soh_exists(value):
-            code, pars, value = read_header(value)
+            code, value = cls._read_header(value)
             if code is Code.STRING:
                 return value
             return cls._CONVERTERS[code](
-                map(cls._to_value, iter_string(value))
+                map(cls._to_value, cls._iter_string(value))
             )
         return cls._to_value(value)
 
@@ -186,80 +157,166 @@ class StringEncoder(object):
         Parameters
         ----------
         value: Any
-            value for ecoding.
+            value for encoding.
 
         Returns
         -------
         str
             encoded value.
         """
-
-        def add_header(code_: Code, string: str, **pars: Any) -> str:
-            """Add header to the string."""
-            code_key = cls._HEADERS_R[code_]
-            assert not len(pars), "parameters is not supported yet"
-            pars = ""
-            return "{}{}{}{}{}".format(cls.SOH, code_key, pars, cls.SOT, string)
-
-        def to_string(val: Any) -> str:
-            """Convert value to string"""
-            if isinstance(val, cls.ITERS):
-                return cls.SOV + cls.to_str(val) + cls.EOV
-            elif isinstance(val, str):
-                val = cls.to_str(val)
-                if cls._soh_exists(val):
-                    return cls.SOV + val + cls.EOV
-                return val
-            return str(val)
-
-        def prepare_value(val: Any):
-            """Prepare value to encoding and get a Code."""
-            if isinstance(val, dict):
-                val = itertools.chain.from_iterable(value.items())
-            return cls._TYPES[type(value)], val
-
         if isinstance(value, str):
             if value == cls._to_value(value):
                 return value
-            return add_header(Code.STRING, value)
-        if type(value) not in cls._TYPES:
-            return to_string(value)
+            return cls._decorate(Code.STRING, value)
 
-        code, value = prepare_value(value)
-        return add_header(code, cls.DELIMITER.join(map(to_string, value)))
+        if type(value) not in cls._HARD_TYPES:
+            return cls._to_string(value)
+
+        code = cls._HARD_TYPES[type(value)]
+        if isinstance(value, dict):
+            value = itertools.chain.from_iterable(value.items())
+        return cls._decorate(
+            code, cls.DELIMITER.join(map(cls._to_string, value))
+        )
+
+    @classmethod
+    def _decorate(cls, code: Code, string: str) -> str:
+        """
+        Add SOH, header, SOT and EOT to the string.
+
+        Parameters
+        ----------
+        code: Code
+            code for header.
+        string: str
+            string for wrapping.
+
+        Returns
+        -------
+        str
+            decorated string.
+        """
+        header = cls.SOH + cls._HEADERS_R[code]
+        return header + cls.SOT + string + cls.EOT
+
+    @classmethod
+    def _find_border(cls, string: str) -> tuple[int, int]:
+        """
+        find SOT and EOT for SOH at the beginning of the string.
+
+        Parameters
+        ----------
+        string: str
+            string.
+
+        Returns
+        -------
+        tuple[int, int]
+            SOT and EOT positions.
+        """
+        assert cls._soh_exists(string), "SOH not exists: %s" % string
+        sot_pos, opened_sot = -1, 0
+        for i_char in range(len(string)):
+            char = string[i_char]
+
+            if char == cls.SOT:
+                opened_sot += 1
+                if sot_pos < 0:
+                    sot_pos = i_char
+
+            elif char == cls.EOT:
+                opened_sot -= 1
+
+            if not opened_sot and sot_pos > 0:
+                return sot_pos, i_char
+
+        raise ValueError("SOV not closed in %r" % string)
+
+    @classmethod
+    def _iter_string(cls, string: str) -> Generator[str, None, None]:
+        """
+        Iterate string by values.
+
+        Parameters
+        ----------
+        string: str
+            string for iterating.
+
+        Yields
+        ------
+        str
+            single raw value.
+        """
+        length, i_char, raw = len(string), 0, ""
+        while i_char < length:
+            char = string[i_char]
+
+            if char == cls.SOH:
+                assert not len(raw), "raw value not empty"
+                _, eot_pos = cls._find_border(string[i_char:])
+                yield string[i_char:i_char + eot_pos + 1]
+                i_char += eot_pos + 1
+
+            elif char == cls.DELIMITER:
+                yield raw
+                raw = ""
+
+            else:
+                raw += char
+            i_char += 1
+
+        if len(raw) and len(string):
+            yield raw
+
+    @classmethod
+    def _read_header(cls, string: str) -> tuple[Code, str]:
+        """
+        Read header and get Code with clear content.
+
+        Parameters
+        ----------
+        string: str
+            raw string
+
+        Returns
+        -------
+        tuple[Code, str]
+            header code and clear content.
+        """
+        code = cls.HEADERS[string[1:4]]
+        sot_pos, eot_pos = cls._find_border(string)
+        clear_value = string[sot_pos + 1:eot_pos]
+        return code, clear_value
 
     @classmethod
     def _soh_exists(cls, string: str) -> bool:
         """Check that SOH exists in the string."""
-        if len(string) < 5 or string[0] != cls.SOH:
-            return False
-        if cls.SOT not in string:
-            return False
-        return string[1:4] in cls.HEADERS
+        return (
+            len(string) >= 6
+            and string[0] == cls.SOH
+            and cls.SOT in string
+            and cls.EOT in string
+            and string[1:4] in cls.HEADERS
+        )
 
     @classmethod
-    def _find_eov(cls, string: str) -> int:
-        """Find the EOV for the SOV at the beginning of the string."""
-        assert string[:3] == cls.SOV, "SOV not found"
-        opened_sov = 1
-        for i_ch in range(3, len(string)):
-            if string[i_ch:i_ch + 3] == cls.SOV:
-                opened_sov += 1
-            elif string[i_ch] == cls.EOV:
-                opened_sov -= 1
-            if not opened_sov:
-                return i_ch
-        raise ValueError("SOV not closed")
+    def _to_string(cls, val: Any) -> str:
+        """Convert value to string."""
+        if isinstance(val, cls.ITERS | str):
+            return cls.to_str(val)
+        return str(val)
 
     @classmethod
-    def _to_value(cls, val: Any | str) -> Any:
-        """Convert the value from a string (if possible) or
-        return the value as is."""
+    def _to_value(cls, val: str) -> Any:
+        """
+        Convert the value from a string (if possible)
+        or return the value as is.
+        """
         if not isinstance(val, str) or not len(val):
             return val
 
-        elif val[:3] == cls.SOV and len(val) < 9:
-            return cls.from_str(val[3:cls._find_eov(val)])
+        elif val[0] == cls.SOH:
+            return cls.from_str(val)
 
         elif cls.INT.match(val) is not None:
             return int(val)
