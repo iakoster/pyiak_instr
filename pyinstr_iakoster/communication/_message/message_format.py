@@ -234,7 +234,7 @@ class MessageFormat(object):
 
     Parameters
     ----------
-    setter: MessageSetter
+    message_setter: MessageSetter
         message setter for specified format.
     arf: AsymmetricResponseField
         asymmetric field for message or kwargs for it.
@@ -247,22 +247,22 @@ class MessageFormat(object):
         if not all required fields are specified.
     """
 
-    SEP = "__"
-    "separator for nested dictionaries"
-
     def __init__(
             self,
-            setter: dict[str, Any] | MessageSetter = MessageSetter(),
+            message_setter: dict[str, Any] | MessageSetter = MessageSetter(),
             arf: dict[str, Any] | AsymmetricResponseField = AsymmetricResponseField(),
-            **setters: FieldSetter
+            **setters: FieldSetter | dict[str, Any]
     ):
         if isinstance(arf, dict):
             arf = AsymmetricResponseField(**arf)
-        if isinstance(setter, dict):
-            setter = MessageSetter(**setter)
+        if isinstance(message_setter, dict):
+            message_setter = MessageSetter(**message_setter)
+        for name, setter in setters.items():
+            if isinstance(setter, dict):
+                setters[name] = FieldSetter(**setter)
 
         self._arf = arf
-        self._msg_set = setter
+        self._msg_set = message_setter
         self._setters = setters
 
         setters_diff = set(
@@ -282,38 +282,33 @@ class MessageFormat(object):
         """
 
         mf_name, mf_dict = self._msg_set.kwargs["mf_name"], {}
-        sec_message = f"{mf_name}{self.SEP}message"
-        sec_setters = f"{mf_name}{self.SEP}setters"
 
-        mf_dict[sec_message] = {}
-        for opt, val in dict(
-                setter=dict(
-                    message_type=self._msg_set.message_type,
-                    **self._msg_set.kwargs,
-                ),
-                arf=self.arf.kwargs,
-        ).items():
-            mf_dict[sec_message][opt] = val
+        mf_dict[mf_name] = dict(
+            message_setter=dict(
+                message_type=self._msg_set.message_type,
+                **self._msg_set.kwargs,
+            ),
+            arf=self.arf.kwargs,
+        )
 
-        mf_dict[sec_setters] = {}
+        setters = {}
         for opt, val in self._setters.items():
+            setters[opt] = dict(field_type=val.field_type, **val.kwargs)
 
-            kw = val.kwargs  # fixme: fix krutch
-            for k, v in kw.items():
+        for name, setter in setters.items():
+            for k, v in setter.items():  # fixme: fix krutch
+
                 if isinstance(v, Code):
-                    kw[k] = v.value
+                    setter[k] = v.value
                 elif isinstance(v, dict):
                     for k_, v_ in v.items():
                         if isinstance(v_, Code):
                             v[k_] = v_.value
-
-            mf_dict[sec_setters][opt] = dict(field_type=val.field_type, **val.kwargs)
+        mf_dict[mf_name].update(setters)
 
         with RWConfig(config) as rwc:
-
-            for sec in rwc.hapi.sections():
-                if sec.split(self.SEP)[0] == mf_name:
-                    rwc.hapi.remove_section(sec)
+            if mf_name in rwc.hapi.sections():
+                rwc.hapi.remove_section(mf_name)
             rwc.apply_changes()
             rwc.write(mf_dict)
 
@@ -361,25 +356,13 @@ class MessageFormat(object):
         ValueError
             if config does now have required message format.
         """
-
-        kw, setters = {}, {}
-        sec_message = f"{mf_name}{cls.SEP}message"
-        sec_setters = f"{mf_name}{cls.SEP}setters"
-
+        kw = {}
         with RWConfig(config) as rwc:
-            sections = rwc.hapi.sections()
-            if sec_message not in sections or sec_setters not in sections:
+            if mf_name not in rwc.hapi.sections():
                 raise ValueError("format with name %r not exists" % mf_name)
-
-            for sec in [sec_message, sec_setters]:
-                for opt in rwc.hapi.options(sec):
-                    val = rwc.get(sec, opt)
-                    if sec == sec_message:
-                        kw[opt] = val
-                    elif sec == sec_setters:
-                        setters[opt] = FieldSetter(**val)
-
-        return cls(**kw, **setters)
+            kw = {opt: rwc.get(mf_name, opt)
+                  for opt in rwc.hapi.options(mf_name)}
+        return cls(**kw)
 
     @property
     def arf(self) -> AsymmetricResponseField:
@@ -392,7 +375,7 @@ class MessageFormat(object):
         return self._arf
 
     @property
-    def setter(self) -> MessageSetter:
+    def message_setter(self) -> MessageSetter:
         """
         Returns
         -------
@@ -424,7 +407,7 @@ class MessageFormatMap(object):
 
     def __init__(self, *formats: MessageFormat):
         self._formats = {
-            mf.setter.kwargs["mf_name"]: mf for mf in formats
+            mf.message_setter.kwargs["mf_name"]: mf for mf in formats
         }
 
     def get(self, mf_name: str) -> MessageFormat:
@@ -459,11 +442,6 @@ class MessageFormatMap(object):
         config: Path
             path to config file.
         """
-        with RWConfig(config) as rwc:
-            rwc.write({"master": {
-                "formats": list(self._formats)
-            }})
-
         for mf in self._formats.values():
             mf.write(config)
 
@@ -483,7 +461,7 @@ class MessageFormatMap(object):
             class instance with formats from config.
         """
         with RWConfig(config) as rwc:
-            formats = rwc.get("master", "formats")
+            formats = rwc.hapi.sections()
         return cls(*(MessageFormat.read(config, f) for f in formats))
 
     @property

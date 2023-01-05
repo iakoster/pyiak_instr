@@ -78,7 +78,7 @@ SETTERS = [
 
 MF_MSG_ARGS = [
     dict(
-        setter=MessageSetter(
+        message_setter=MessageSetter(
             message_type="strong",
             mf_name="n0",
             splittable=True,
@@ -92,7 +92,7 @@ MF_MSG_ARGS = [
         )
     ),
     dict(
-        setter=MessageSetter(
+        message_setter=MessageSetter(
             message_type="strong",
             mf_name="n1",
             splittable=False,
@@ -100,7 +100,7 @@ MF_MSG_ARGS = [
         ),
     ),
     dict(
-        setter=MessageSetter(
+        message_setter=MessageSetter(
             message_type="strong",
             mf_name="n2",
             splittable=False,
@@ -108,7 +108,7 @@ MF_MSG_ARGS = [
         ),
     ),
     dict(
-        setter=MessageSetter(
+        message_setter=MessageSetter(
             message_type="strong",
             mf_name="n3",
             splittable=False,
@@ -116,7 +116,7 @@ MF_MSG_ARGS = [
         ),
     ),
     dict(
-        setter=MessageSetter(
+        message_setter=MessageSetter(
             message_type="field",
             mf_name="n4",
             splittable=False,
@@ -132,7 +132,7 @@ def get_setters(num: int) -> dict[str, FieldSetter]:
 
 def get_message(num: int) -> MessageType:
     msg_args = deepcopy(MF_MSG_ARGS[num])
-    setter = msg_args["setter"]
+    setter = msg_args["message_setter"]
     return setter.message.configure(**SETTERS[num])
 
 
@@ -143,7 +143,7 @@ def get_mf(num: int, get_ref=True):
     mf = MessageFormat(**MF_MSG_ARGS[num], **SETTERS[num])
     if get_ref:
         return mf, dict(
-            message_setter=mf.setter,
+            message_setter=mf.message_setter,
             setters={n: unpack_setter(s) for n, s in mf.setters.items()}
         )
     return mf
@@ -172,30 +172,23 @@ MF_DICT: dict[str, MessageFormat] = {
 }
 
 MF_CFG_DICT = dict(
-    master=dict(
-        formats="\\lst(n0,n1,n2,n3,n4)",
-    ),
-    n0__message=dict(
-        setter="\\dct(message_type,strong,mf_name,n0,splittable,True,"
-               "slice_length,256)",
+    n0=dict(
+        message_setter="\\dct(message_type,strong,mf_name,n0,"
+                       "splittable,True,slice_length,256)",
         arf="\\dct(operand,!=,"
             "value,\\bts(0,0,0,1),"
             "start,12,"
             "stop,16)",
-    ),
-    n0__setters=dict(
         address="\\dct(field_type,address,fmt,>I)",
         data_length="\\dct(field_type,data_length,fmt,>I,units,17,additive,0)",
         operation="\\dct(field_type,operation,fmt,>I,"
                   "desc_dict,\\dct(w,0,r,1))",
         data="\\dct(field_type,data,expected,-1,fmt,>I)",
     ),
-    n1__message=dict(
-        setter="\\dct(message_type,strong,mf_name,n1,splittable,False,"
-               "slice_length,1024)",
+    n1=dict(
+        message_setter="\\dct(message_type,strong,mf_name,n1,"
+                       "splittable,False,slice_length,1024)",
         arf="\\dct()",
-    ),
-    n1__setters=dict(
         preamble="\\dct(field_type,static,fmt,>H,default,43605)",
         operation="\\dct(field_type,operation,fmt,>B,"
                   "desc_dict,\\dct(wp,1,rp,2,wn,3,rn,4))",
@@ -210,12 +203,10 @@ MF_CFG_DICT = dict(
         crc="\\dct(field_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
             "wo_fields,\\set(crc,preamble))",  # todo: check set order
     ),
-    n2__message=dict(
-        setter="\\dct(message_type,strong,mf_name,n2,splittable,False,"
-               "slice_length,1024)",
+    n2=dict(
+        message_setter="\\dct(message_type,strong,mf_name,n2,"
+                       "splittable,False,slice_length,1024)",
         arf="\\dct()",
-    ),
-    n2__setters=dict(
         operation="\\dct(field_type,operation,fmt,>B,"
                   "desc_dict,\\dct(r,1,w,2))",
         response="\\dct(field_type,response,"
@@ -229,12 +220,10 @@ MF_CFG_DICT = dict(
         crc="\\dct(field_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
             "wo_fields,None)",
     ),
-    n3__message=dict(
-        setter="\\dct(message_type,strong,mf_name,n3,splittable,False,"
-               "slice_length,1024)",
+    n3=dict(
+        message_setter="\\dct(message_type,strong,mf_name,n3,"
+                       "splittable,False,slice_length,1024)",
         arf="\\dct()",
-    ),
-    n3__setters=dict(
         operation="\\dct(field_type,operation,fmt,B,"
                   "desc_dict,\\dct(r,1,w,2))",
         response1="\\dct(field_type,response,"
@@ -251,12 +240,10 @@ MF_CFG_DICT = dict(
                   "default,0,"
                   "default_code,1282)",
     ),
-    n4__message=dict(
-        setter="\\dct(message_type,field,mf_name,n4,splittable,False,"
+    n4=dict(
+        message_setter="\\dct(message_type,field,mf_name,n4,splittable,False,"
                "slice_length,1024)",
         arf="\\dct()",
-    ),
-    n4__setters=dict(
         id="\\dct(field_type,single,fmt,>I,default,\\lst(),"
            "may_be_empty,False)",
         address="\\dct(field_type,address,fmt,>I)",

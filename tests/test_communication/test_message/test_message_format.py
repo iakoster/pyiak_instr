@@ -165,10 +165,10 @@ class TestMessageFormat(unittest.TestCase):
 
         for i_mf in range(2):
             mf, ref = get_mf(i_mf)
-            mf_name = mf.setter.mf_name
+            mf_name = mf.message_setter.mf_name
 
             with self.subTest(mf_name=mf_name, test="msg_args"):
-                self.assertEqual(ref["message_setter"], mf.setter)
+                self.assertEqual(ref["message_setter"], mf.message_setter)
 
             with self.subTest(mf_name=mf_name, setter="all"):
                 self.assertEqual(len(ref["setters"]), len(mf.setters))
@@ -179,7 +179,6 @@ class TestMessageFormat(unittest.TestCase):
                     with self.subTest(mf_name=mf_name, setter=name):
                         self.assertEqual(ref_name, name)
                         validate_object(self, setter, **ref_setter)
-                    break
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
@@ -197,13 +196,6 @@ class TestMessageFormat(unittest.TestCase):
     def test_write(self) -> None:
 
         cfg_path = TEST_DIR / "cfg_test.ini"
-        with RWConfig(cfg_path) as rwc:
-            if "master" not in rwc.hapi.sections():
-                rwc.hapi.add_section("master")
-            rwc.set(
-                "master", "formats", "\\lst(n0,n1,n2,n3,n4)", convert=False
-            )
-            rwc.apply_changes()
 
         for ref_mf in MF_DICT.values():
             ref_mf.write(cfg_path)
