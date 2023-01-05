@@ -937,3 +937,14 @@ class TestMessageSetter(unittest.TestCase):
                     get_args(MessageType),
                     "MessageType not supports %r" % msg_type
                 )
+
+    def test_init_kwargs(self) -> None:
+        self.assertDictEqual(
+            {
+                "message_type": "field",
+                "mf_name": "std",
+                "slice_length": 1024,
+                "splittable": False
+            },
+            MessageSetter("field").init_kwargs
+        )

@@ -1477,6 +1477,19 @@ class FieldSetter(object):
             default_code=default_code,
         )
 
+    @property
+    def init_kwargs(self) -> dict[str, Any]:
+        """
+        Returns
+        -------
+        dict[str, Any]
+            dictionary with all required arguments for init method.
+        """
+        return dict(
+            field_type=self.field_type,
+            **self.kwargs
+        )
+
     def __eq__(self, other: Any) -> bool:
         """
         Compare this field to `other`.

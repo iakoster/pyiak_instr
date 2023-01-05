@@ -975,6 +975,12 @@ class TestFieldSetter(unittest.TestCase):  # todo: test init field by FieldSette
                 )
             break
 
+    def test_init_kwargs(self) -> None:
+        self.assertDictEqual(
+            dict(field_type=None, a=3, b=3),
+            FieldSetter(a=3, b=3).init_kwargs
+        )
+
     def test_magic_eq(self) -> None:
         ref = FieldSetter(field_type="lol", a=5)
         res = FieldSetter(field_type="lol", a=5)

@@ -280,27 +280,11 @@ class MessageFormat(object):
         config: Path
             path to the config file.
         """
-
-        mf_name, mf_dict = self._msg_set.kwargs["mf_name"], {}
-
-        mf_dict[mf_name] = dict(
-            message_setter=dict(
-                message_type=self._msg_set.message_type,
-                **self._msg_set.kwargs,
-            ),
-            arf=self.arf.kwargs,
-        )
-
-        setters = {}
-        for opt, val in self._setters.items():
-            setters[opt] = dict(field_type=val.field_type, **val.kwargs)
-        mf_dict[mf_name].update(setters)
-
         with RWConfig(config) as rwc:
-            if mf_name in rwc.hapi.sections():
-                rwc.hapi.remove_section(mf_name)
-            rwc.apply_changes()
-            rwc.write(mf_dict)
+            if self._msg_set.mf_name in rwc.hapi.sections():
+                rwc.hapi.remove_section(self._msg_set.mf_name)
+            rwc.apply_changes()  # todo: test to correct work (replace section)
+            rwc.write({self._msg_set.mf_name: self.init_kwargs})
 
     def get(self, **update: dict[str, Any]) -> MessageType:
         """
@@ -363,6 +347,20 @@ class MessageFormat(object):
             error mark.
         """
         return self._arf
+
+    @property
+    def init_kwargs(self) -> dict[str, Any]:
+        """
+        Returns
+        -------
+        dict[str, Any]
+            dictionary with all required arguments for init method.
+        """
+        return dict(
+            message_setter=self._msg_set.init_kwargs,
+            arf=self.arf.kwargs,
+            **{n: s.init_kwargs for n, s in self._setters.items()}
+        )
 
     @property
     def message_setter(self) -> MessageSetter:

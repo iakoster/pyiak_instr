@@ -1036,6 +1036,19 @@ class MessageSetter(object):
             raise ValueError("invalid message type: %r" % self.message_type)
 
     @property
+    def init_kwargs(self) -> dict[str, Any]:
+        """
+        Returns
+        -------
+        dict[str, Any]
+            keywords arguments for setting a MessageSetter.
+        """
+        return dict(
+            message_type=self.message_type,
+            **self.kwargs
+        )
+
+    @property
     def kwargs(self) -> dict[str, Any]:
         """
         Returns
