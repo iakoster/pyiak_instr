@@ -426,7 +426,7 @@ class TestCrcField(unittest.TestCase):
             content=b"",
             default=b"",
             words_count=0,
-            wo_fields={"crc"},
+            wo_fields=set(),
             algorithm=field.algorithm,
             algorithm_name="crc16-CCITT/XMODEM",
             check_attrs=True,

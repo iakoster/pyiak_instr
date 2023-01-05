@@ -201,7 +201,7 @@ MF_CFG_DICT = dict(
         data_length="\\dct(field_type,data_length,fmt,>H,units,16,additive,0)",
         data="\\dct(field_type,data,expected,-1,fmt,>f)",
         crc="\\dct(field_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
-            "wo_fields,\\set(crc,preamble))",  # todo: check set order
+            "wo_fields,\\set(preamble))",
     ),
     n2=dict(
         message_setter="\\dct(message_type,strong,mf_name,n2,"
@@ -242,7 +242,7 @@ MF_CFG_DICT = dict(
     ),
     n4=dict(
         message_setter="\\dct(message_type,field,mf_name,n4,splittable,False,"
-               "slice_length,1024)",
+                       "slice_length,1024)",
         arf="\\dct()",
         id="\\dct(field_type,single,fmt,>I,default,\\lst(),"
            "may_be_empty,False)",

@@ -735,7 +735,6 @@ class CrcField(SingleField):
 
         if wo_fields is None:
             wo_fields = set()
-        wo_fields.add(name)
 
         SingleField.__init__(
             self,
@@ -752,8 +751,8 @@ class CrcField(SingleField):
     # todo: check that too many calls when creating message
     def calculate(self, msg: FieldMessage) -> int:
         """
-        Calculate a crc value of a message with all fields except this
-        field instance.
+        Calculate a crc value of a message with all fields except all
+        crc fields.
 
         Parameters
         ----------
@@ -767,7 +766,8 @@ class CrcField(SingleField):
         """
         content = b""
         for field in msg:
-            if field.name not in self._wo_fields:
+            if field.name not in self._wo_fields \
+                    and not isinstance(field, CrcField):
                 content += field.content
         return self._alg(content)
 
@@ -939,6 +939,7 @@ class DataLengthField(SingleField):
     BYTES = 0x10  # todo: to Code
     WORDS = 0x11
 
+    # todo: add behaviour ('actual' to set actual data length or 'expected_read' (for read operations))
     def __init__(
             self,
             mf_name: str,
