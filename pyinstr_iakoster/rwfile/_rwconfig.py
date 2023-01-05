@@ -97,7 +97,7 @@ class RWConfig(RWFile):
 
     def set(
             self, section: str, option: str, value: Any, convert: bool = True
-    ) -> None:
+    ) -> None:  # todo: set dict {sec: {opt: val}} or sec, {opt: val}
         """
         Set the value to the configparser.
 
@@ -147,12 +147,28 @@ class RWConfig(RWFile):
 
     @overload
     def write(
-            self, dictionary: dict[str, dict[str, Any]], convert: bool = True
+            self, section: str, options: dict[str, Any], convert: bool = True
     ) -> None:
         """
         Parameters
         ----------
-        dictionary: dict of {str: {str: Any}}
+        section: str
+            section name.
+        options: dict[str, Any]
+            dictionary of values in format {option: value}.
+        convert: bool
+            convert the resulting value to str by StringEncoder.
+        """
+        ...
+
+    @overload
+    def write(
+            self, sections: dict[str, dict[str, Any]], convert: bool = True
+    ) -> None:
+        """
+        Parameters
+        ----------
+        sections: dict of {str: {str: Any}}
             dictionary of values in format {section: {option: value}}.
         convert: bool
             convert the resulting value to str by StringEncoder.
@@ -161,10 +177,11 @@ class RWConfig(RWFile):
 
     def write(self, *args, convert: bool = True) -> None:
         """
-        write(section: str, option: str, value: Any) -> None.
-        write(dictionary: dict) -> None.
-
         Write value or dict to the configfile.
+
+        write(section: str, option: str, value: Any) -> None.
+        write(section: str, options: dict[str, Any]) -> None.
+        write(sections: dict[str, Any]) -> None.
 
         Also writes value or dict to the configparser.
 
@@ -185,12 +202,21 @@ class RWConfig(RWFile):
                 cfg.set(sec, opt, val)
                 self.set(sec, opt, val)
 
-            case (dict() as dictionary,):
+            case (str() as sec, dict() as options):
+                vals = {sec: {}}
+                for opt, val in options.items():
+                    if convert:
+                        val = StringEncoder.to_str(val)
+                    vals[sec][opt] = val
+                cfg.read_dict(vals)
+                self._hapi.read_dict(vals)
+
+            case (dict() as sections,):
                 vals = {}
-                for sec, item in dictionary.items():
+                for sec, options in sections.items():
                     if sec not in vals:
                         vals[sec] = {}
-                    for opt, val in item.items():
+                    for opt, val in options.items():
                         if convert:
                             val = StringEncoder.to_str(val)
                         vals[sec][opt] = val

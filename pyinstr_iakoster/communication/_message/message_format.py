@@ -284,7 +284,7 @@ class MessageFormat(object):
             if self._msg_set.mf_name in rwc.hapi.sections():
                 rwc.hapi.remove_section(self._msg_set.mf_name)
             rwc.apply_changes()  # todo: test to correct work (replace section)
-            rwc.write({self._msg_set.mf_name: self.init_kwargs})
+            rwc.write(self._msg_set.mf_name, self.init_kwargs)
 
     def get(self, **update: dict[str, Any]) -> MessageType:
         """

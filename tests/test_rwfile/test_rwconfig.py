@@ -98,6 +98,50 @@ class TestRWConfig(unittest.TestCase):
                     readed_config.get("single", options[i])
                 )
 
+    def test_write_sec_dict(self) -> None:
+        path = TEST_DATA_DIR / "sec_dict.ini"
+        data = {
+            "sec1": {
+                "opt1": "a",
+                "opt2": "b",
+            },
+            "sec2": {
+                "opt3": "c",
+            }
+        }
+        with RWConfig(path) as rwc:
+            for sec, options in data.items():
+                rwc.write(sec, options)
+
+        cfg = configparser.ConfigParser()
+        cfg.read(path)
+
+        for sec, options in data.items():
+            for opt, val in options.items():
+                with self.subTest(sec=sec, opt=opt):
+                    self.assertEqual(val, cfg.get(sec, opt))
+
+    def test_write_dict(self) -> None:
+        path = TEST_DATA_DIR / "dict.ini"
+        data = {
+            "sec1": {
+                "opt1": "a",
+                "opt2": "b",
+            },
+            "sec2": {
+                "opt3": "c",
+            }
+        }
+        RWConfig(path).write(data)
+
+        cfg = configparser.ConfigParser()
+        cfg.read(path)
+
+        for sec, options in data.items():
+            for opt, val in options.items():
+                with self.subTest(sec=sec, opt=opt):
+                    self.assertEqual(val, cfg.get(sec, opt))
+
     def test_write_wrong_args(self):
         with self.assertRaises(TypeError) as exc:
             self.rwc.write("", "")
