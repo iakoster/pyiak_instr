@@ -294,16 +294,6 @@ class MessageFormat(object):
         setters = {}
         for opt, val in self._setters.items():
             setters[opt] = dict(field_type=val.field_type, **val.kwargs)
-
-        for name, setter in setters.items():
-            for k, v in setter.items():  # fixme: fix krutch
-
-                if isinstance(v, Code):
-                    setter[k] = v.value
-                elif isinstance(v, dict):
-                    for k_, v_ in v.items():
-                        if isinstance(v_, Code):
-                            v[k_] = v_.value
         mf_dict[mf_name].update(setters)
 
         with RWConfig(config) as rwc:

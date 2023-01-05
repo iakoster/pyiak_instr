@@ -152,6 +152,11 @@ class TestStringEncoder(unittest.TestCase):
             "\\tpl\t1,2,3", StringEncoder.to_str("\\tpl\t1,2,3")
         )
 
+    def test_to_str_code_support(self) -> None:
+        self.assertEqual(
+            "1280", StringEncoder.to_str(Code.OK)
+        )
+
     def test_decorate(self) -> None:
         self.assertEqual(
             "\\dct(1,2,3,4)",

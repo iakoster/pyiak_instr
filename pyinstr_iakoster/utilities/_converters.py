@@ -304,6 +304,8 @@ class StringEncoder(object):
         """Convert value to string."""
         if isinstance(val, cls.ITERS | str):
             return cls.to_str(val)
+        elif isinstance(val, Code):
+            val = val.value
         return str(val)
 
     @classmethod
