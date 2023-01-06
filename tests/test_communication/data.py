@@ -20,7 +20,7 @@ SETTERS = [
     dict(
         address=FieldSetter.address(fmt=">I"),
         data_length=FieldSetter.data_length(
-            fmt=">I", behaviour="expected2read", units=FieldSetter.WORDS
+            fmt=">I", behaviour="expected2read", units=Code.WORDS
         ),
         operation=FieldSetter.operation(fmt=">I", desc_dict={"w": 0, "r": 1}),
         data=FieldSetter.data(expected=-1, fmt=">I")
@@ -181,7 +181,7 @@ MF_CFG_DICT = dict(
             "stop,16)",
         address="\\dct(field_type,address,fmt,>I)",
         data_length="\\dct(field_type,data_length,fmt,>I,"
-                    "behaviour,expected2read,units,17,additive,0)",
+                    "behaviour,expected2read,units,512,additive,0)",
         operation="\\dct(field_type,operation,fmt,>I,"
                   "desc_dict,\\dct(w,0,r,1))",
         data="\\dct(field_type,data,expected,-1,fmt,>I)",
@@ -200,7 +200,7 @@ MF_CFG_DICT = dict(
                  "default_code,3)",
         address="\\dct(field_type,address,fmt,>H)",
         data_length="\\dct(field_type,data_length,fmt,>H,behaviour,actual,"
-                    "units,16,additive,0)",
+                    "units,256,additive,0)",
         data="\\dct(field_type,data,expected,-1,fmt,>f)",
         crc="\\dct(field_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
             "wo_fields,\\set(preamble))",
@@ -218,7 +218,7 @@ MF_CFG_DICT = dict(
                  "default_code,255)",
         address="\\dct(field_type,address,fmt,>H)",
         data_length="\\dct(field_type,data_length,fmt,>H,behaviour,actual,"
-                    "units,16,additive,0)",
+                    "units,256,additive,0)",
         data="\\dct(field_type,data,expected,-1,fmt,>f)",
         crc="\\dct(field_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
             "wo_fields,None)",
@@ -236,7 +236,7 @@ MF_CFG_DICT = dict(
                   "default_code,3)",
         address="\\dct(field_type,address,fmt,B)",
         data_length="\\dct(field_type,data_length,fmt,B,behaviour,actual,"
-                    "units,16,additive,0)",
+                    "units,256,additive,0)",
         data="\\dct(field_type,data,expected,-1,fmt,B)",
         response2="\\dct(field_type,response,"
                   "fmt,B,"

@@ -539,7 +539,7 @@ class TestFieldDataLength(unittest.TestCase):
             default=b"",
             words_count=0,
             behaviour="actual",
-            units=0x10,
+            units=Code.BYTES,
             additive=0,
             check_attrs=True,
             wo_attrs=["parent"],
@@ -553,7 +553,7 @@ class TestFieldDataLength(unittest.TestCase):
                 "data_length",
                 start_byte=0,
                 fmt=">H",
-                units=0x11,
+                units=0x200,
                 additive=10,
             ),
             slice=slice(0, 2),
@@ -570,7 +570,7 @@ class TestFieldDataLength(unittest.TestCase):
             default=b"",
             words_count=0,
             behaviour="actual",
-            units=0x11,
+            units=Code.WORDS,
             additive=10,
             check_attrs=True,
             wo_attrs=["parent"],
@@ -579,9 +579,9 @@ class TestFieldDataLength(unittest.TestCase):
     def test_init_wrong_oper_core(self):
         with self.assertRaises(ValueError) as exc:
             DataLengthField(
-                "f", "data_length", start_byte=0, fmt="b", units=0x12
+                "f", "data_length", start_byte=0, fmt="b", units=Code.OK
             )
-        self.assertEqual("invalid units: 18", exc.exception.args[0])
+        self.assertEqual("invalid units: 1", exc.exception.args[0])
 
     def test_init_wrong_additive(self):
         with self.assertRaises(ValueError) as exc:
@@ -589,7 +589,7 @@ class TestFieldDataLength(unittest.TestCase):
                 "f", "data_length", start_byte=0, fmt="b", additive=-1
             )
         self.assertEqual(
-            "additive number must be integer and positive, got -1",
+            "additive number must be positive integer, got -1",
             exc.exception.args[0]
         )
 
@@ -606,10 +606,10 @@ class TestFieldDataLength(unittest.TestCase):
     def test_update(self):
         tf_data = self.get_tf_data([0x12, 0x14])
         init_args = (
-            (DataLengthField.BYTES, 0),
-            (DataLengthField.BYTES, 4),
-            (DataLengthField.WORDS, 0),
-            (DataLengthField.WORDS, 7)
+            (Code.BYTES, 0),
+            (Code.BYTES, 4),
+            (Code.WORDS, 0),
+            (Code.WORDS, 7)
         )
         results = (4, 8, 2, 9)
         for i_test, (args, result) in enumerate(zip(init_args, results)):
@@ -622,7 +622,7 @@ class TestFieldDataLength(unittest.TestCase):
                 )
 
     def test_calculate_invalid_units(self):
-        tf = self.get_tf(0x10, 0)
+        tf = self.get_tf(Code.BYTES, 0)
         tf._units = 0
         with self.assertRaises(ValueError) as exc:
             tf.calculate(self.get_tf_data([0, 1]))
@@ -942,7 +942,7 @@ class TestFieldSetter(unittest.TestCase):  # todo: test init field by FieldSette
             fmt="i",
             behaviour="actual",
             additive=0,
-            units=16,
+            units=Code.BYTES,
         )
 
     def test_operation(self):

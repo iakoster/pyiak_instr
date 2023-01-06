@@ -24,3 +24,6 @@ class Code(IntEnum):  # nodesc
     SET = auto()
     STRING = auto()
     TUPLE = auto()
+
+    # Additional types
+    WORDS = 0x200

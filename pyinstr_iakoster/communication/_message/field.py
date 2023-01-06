@@ -935,9 +935,6 @@ class DataLengthField(SingleField):
     SingleField: parent class.
     """
 
-    BYTES = 0x10  # todo: to Code
-    WORDS = 0x11
-
     def __init__(
             self,
             mf_name: str,
@@ -946,15 +943,13 @@ class DataLengthField(SingleField):
             start_byte: int,
             fmt: str,
             behaviour: str = "actual",  # todo: logic
-            units: int = BYTES,
+            units: Code | int = Code.BYTES,
             additive: int = 0,
             parent: FieldMessage = None
     ):
-        if units not in (self.BYTES, self.WORDS):
-            raise ValueError("invalid units: %d" % units)
         if additive < 0 or not isinstance(additive, int):
             raise ValueError(
-                "additive number must be integer and positive, "
+                "additive number must be positive integer, "
                 f"got {additive}"
             )
         if behaviour not in {"actual", "expected2read"}:
@@ -962,6 +957,11 @@ class DataLengthField(SingleField):
                 "invalid behaviour: %r not in "
                 "{'actual', 'expected2read}" % behaviour
             )
+
+        if isinstance(units, int):
+            units = Code(units)
+        if units not in (Code.BYTES, Code.WORDS):
+            raise ValueError("invalid units: %d" % units)
 
         SingleField.__init__(
             self,
@@ -995,9 +995,9 @@ class DataLengthField(SingleField):
             if units not in {BYTES, WORDS}.
         """
 
-        if self._units == self.BYTES:
+        if self._units is Code.BYTES:
             return len(data) + self._add
-        elif self._units == self.WORDS:
+        elif self._units is Code.WORDS:
             return data.words_count + self._add
         else:
             raise ValueError(f"invalid units: {self._units}")
@@ -1040,7 +1040,7 @@ class DataLengthField(SingleField):
         return self._bvr
 
     @property
-    def units(self) -> int:
+    def units(self) -> Code:
         """Data length units."""
         return self._units
 
@@ -1365,9 +1365,6 @@ class ResponseField(SingleField):
 
 class FieldSetter(object):
 
-    BYTES = DataLengthField.BYTES
-    WORDS = DataLengthField.WORDS
-
     FIELD_TYPES = dict(
         single=SingleField,
         static=StaticField,
@@ -1476,7 +1473,7 @@ class FieldSetter(object):
             *,
             fmt: str,
             behaviour: str = "actual",
-            units: int = BYTES,
+            units: int = Code.BYTES,
             additive: int = 0,
     ):
         return cls(

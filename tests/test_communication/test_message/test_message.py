@@ -536,7 +536,7 @@ class TestFieldMessage(unittest.TestCase):
                 oper: int,
                 data_len: int,
                 data=None,
-                units=FieldSetter.WORDS,
+                units=Code.WORDS,
         ):
             if data is None:
                 data = b""
@@ -591,10 +591,10 @@ class TestFieldMessage(unittest.TestCase):
                 ),
             ),
             8: (
-                get_mess(0, 1, 126, range(63), units=FieldSetter.BYTES),
+                get_mess(0, 1, 126, range(63), units=Code.BYTES),
                 (
-                    get_mess(0, 1, 64, range(32), units=FieldSetter.BYTES),
-                    get_mess(64, 1, 62, range(32, 63), units=FieldSetter.BYTES)
+                    get_mess(0, 1, 64, range(32), units=Code.BYTES),
+                    get_mess(64, 1, 62, range(32, 63), units=Code.BYTES)
                 ),
             )
         }
@@ -645,7 +645,7 @@ class TestFieldMessage(unittest.TestCase):
             address=FieldSetter.address(fmt="B"),
             operation=FieldSetter.operation(fmt="B"),
             data_length=FieldSetter.data_length(
-                fmt="B", units=FieldSetter.WORDS
+                fmt="B", units=Code.WORDS
             ),
             data=FieldSetter.data(expected=-1, fmt="B")
         ).set(address=0x12, operation=0x01, data_length=2)

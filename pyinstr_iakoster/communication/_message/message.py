@@ -522,9 +522,9 @@ class FieldMessage(object):
                 elif operation.base == 'w':
                     start = i_part * self._slice_length
                     end = start + data_len
-                    if data_length.units == DataLengthField.WORDS:
+                    if data_length.units == Code.WORDS:
                         msg.data.set(self.data[start:end])
-                    elif data_length.units == DataLengthField.BYTES:
+                    elif data_length.units == Code.BYTES:
                         msg.data.set(self.data.content[start:end])
                     else:
                         raise TypeError('Unsupported data units')
