@@ -10,6 +10,10 @@ class Code(IntEnum):  # nodesc
 
     # System codes
     NONE = 0
+    OK = auto()
+    WAIT = auto()
+    ERROR = auto()
+    RAISE = auto()
     UNDEFINED = 0xff
 
     # Type codes
@@ -20,9 +24,3 @@ class Code(IntEnum):  # nodesc
     SET = auto()
     STRING = auto()
     TUPLE = auto()
-
-    # status codes
-    OK = 0x500
-    WAIT = auto()
-    ERROR = auto()
-    RAISE = auto()

@@ -154,7 +154,7 @@ class TestStringEncoder(unittest.TestCase):
 
     def test_to_str_code_support(self) -> None:
         self.assertEqual(
-            "1280", StringEncoder.to_str(Code.OK)
+            "1", StringEncoder.to_str(Code.OK)
         )
 
     def test_decorate(self) -> None:

@@ -482,8 +482,8 @@ class TestConnection(unittest.TestCase):
                 "data_length=0, data=EMPTY, response2=0), "
                 "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
 
-                "receive with code(s): {'response1': <Code.ERROR: 1282>, "
-                "'response2': <Code.OK: 1280>}",
+                "receive with code(s): {'response1': <Code.ERROR: 3>, "
+                "'response2': <Code.OK: 1>}",
 
                 "<StrongFieldMessage(operation=1, response1=0, address=24, "
                 "data_length=4, data=EMPTY, response2=0), "

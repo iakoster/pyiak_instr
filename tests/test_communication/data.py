@@ -195,9 +195,9 @@ MF_CFG_DICT = dict(
                   "desc_dict,\\dct(wp,1,rp,2,wn,3,rn,4))",
         response="\\dct(field_type,response,"
                  "fmt,>B,"
-                 "codes,\\dct(0,1280),"
+                 "codes,\\dct(0,1),"
                  "default,0,"
-                 "default_code,1282)",
+                 "default_code,3)",
         address="\\dct(field_type,address,fmt,>H)",
         data_length="\\dct(field_type,data_length,fmt,>H,behaviour,actual,"
                     "units,16,additive,0)",
@@ -213,7 +213,7 @@ MF_CFG_DICT = dict(
                   "desc_dict,\\dct(r,1,w,2))",
         response="\\dct(field_type,response,"
                  "fmt,>B,"
-                 "codes,\\dct(0,1280,4,1281),"
+                 "codes,\\dct(0,1,4,2),"
                  "default,0,"
                  "default_code,255)",
         address="\\dct(field_type,address,fmt,>H)",
@@ -231,18 +231,18 @@ MF_CFG_DICT = dict(
                   "desc_dict,\\dct(r,1,w,2))",
         response1="\\dct(field_type,response,"
                   "fmt,B,"
-                  "codes,\\dct(0,1280,4,1281),"
+                  "codes,\\dct(0,1,4,2),"
                   "default,0,"
-                  "default_code,1282)",
+                  "default_code,3)",
         address="\\dct(field_type,address,fmt,B)",
         data_length="\\dct(field_type,data_length,fmt,B,behaviour,actual,"
                     "units,16,additive,0)",
         data="\\dct(field_type,data,expected,-1,fmt,B)",
         response2="\\dct(field_type,response,"
                   "fmt,B,"
-                  "codes,\\dct(0,1280,4,1281),"
+                  "codes,\\dct(0,1,4,2),"
                   "default,0,"
-                  "default_code,1282)",
+                  "default_code,3)",
     ),
     n4=dict(
         message_setter="\\dct(message_type,field,mf_name,n4,splittable,False,"
