@@ -748,7 +748,6 @@ class CrcField(SingleField):
         self._alg_name = algorithm_name
         self._alg = self.CRC_ALGORITHMS[algorithm_name]
 
-    # todo: check that too many calls when creating message
     def calculate(self, msg: FieldMessage) -> int:
         """
         Calculate a crc value of a message with all fields except all
@@ -939,7 +938,6 @@ class DataLengthField(SingleField):
     BYTES = 0x10  # todo: to Code
     WORDS = 0x11
 
-    # todo: add behaviour ('actual' to set actual data length or 'expected_read' (for read operations))
     def __init__(
             self,
             mf_name: str,
@@ -947,6 +945,7 @@ class DataLengthField(SingleField):
             *,
             start_byte: int,
             fmt: str,
+            behaviour: str = "actual",  # todo: logic
             units: int = BYTES,
             additive: int = 0,
             parent: FieldMessage = None
@@ -958,6 +957,11 @@ class DataLengthField(SingleField):
                 "additive number must be integer and positive, "
                 f"got {additive}"
             )
+        if behaviour not in {"actual", "expected2read"}:
+            raise ValueError(
+                "invalid behaviour: %r not in "
+                "{'actual', 'expected2read}" % behaviour
+            )
 
         SingleField.__init__(
             self,
@@ -967,6 +971,7 @@ class DataLengthField(SingleField):
             fmt=fmt,
             parent=parent
         )
+        self._bvr = behaviour
         self._units = units
         self._add = additive
 
@@ -999,7 +1004,10 @@ class DataLengthField(SingleField):
 
     def get_setter(self) -> FieldSetter:
         return FieldSetter.data_length(
-            fmt=self._fmt, units=self._units, additive=self._add,
+            fmt=self._fmt,
+            behaviour=self._bvr,
+            units=self._units,
+            additive=self._add,
         )
 
     def update(self) -> None:
@@ -1009,6 +1017,7 @@ class DataLengthField(SingleField):
         Raises
         ------
         ValueError
+            if parent is None;
             if units not in {BYTES, WORDS}.
         """
         if self._parent is None:
@@ -1016,14 +1025,24 @@ class DataLengthField(SingleField):
         self.set(self.calculate(self._parent.data))
 
     @property
-    def units(self) -> int:
-        """Data length units."""
-        return self._units
-
-    @property
     def additive(self) -> int:
         """Additional value to the data length."""
         return self._add
+
+    @property
+    def behaviour(self) -> str:
+        """
+        Returns
+        -------
+        str
+            field behaviour.
+        """
+        return self._bvr
+
+    @property
+    def units(self) -> int:
+        """Data length units."""
+        return self._units
 
 
 class OperationField(SingleField):
@@ -1452,9 +1471,20 @@ class FieldSetter(object):
         return cls(field_type="data", expected=expected, fmt=fmt)
 
     @classmethod
-    def data_length(cls, *, fmt: str, units: int = BYTES, additive: int = 0):
+    def data_length(
+            cls,
+            *,
+            fmt: str,
+            behaviour: str = "actual",
+            units: int = BYTES,
+            additive: int = 0,
+    ):
         return cls(
-            field_type="data_length", fmt=fmt, units=units, additive=additive
+            field_type="data_length",
+            fmt=fmt,
+            behaviour=behaviour,
+            units=units,
+            additive=additive,
         )
 
     @classmethod

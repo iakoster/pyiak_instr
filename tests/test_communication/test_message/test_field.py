@@ -538,6 +538,7 @@ class TestFieldDataLength(unittest.TestCase):
             content=b"",
             default=b"",
             words_count=0,
+            behaviour="actual",
             units=0x10,
             additive=0,
             check_attrs=True,
@@ -568,6 +569,7 @@ class TestFieldDataLength(unittest.TestCase):
             content=b"",
             default=b"",
             words_count=0,
+            behaviour="actual",
             units=0x11,
             additive=10,
             check_attrs=True,
@@ -588,6 +590,16 @@ class TestFieldDataLength(unittest.TestCase):
             )
         self.assertEqual(
             "additive number must be integer and positive, got -1",
+            exc.exception.args[0]
+        )
+
+    def test_init_wrong_behaviour(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            DataLengthField(
+                "f", "len", start_byte=0, fmt="b", behaviour="test"
+            )
+        self.assertEqual(
+            "invalid behaviour: 'test' not in {'actual', 'expected2read}",
             exc.exception.args[0]
         )
 
@@ -928,6 +940,7 @@ class TestFieldSetter(unittest.TestCase):  # todo: test init field by FieldSette
             FieldSetter.data_length(fmt="i"),
             field_type="data_length",
             fmt="i",
+            behaviour="actual",
             additive=0,
             units=16,
         )
