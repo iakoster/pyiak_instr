@@ -124,7 +124,7 @@ class StringEncoder(object):
     }
 
     @classmethod
-    def from_str(cls, value: str) -> Any:
+    def decode(cls, value: str) -> Any:
         """
         Decode value from string.
 
@@ -150,7 +150,7 @@ class StringEncoder(object):
         return cls._to_value(value)
 
     @classmethod
-    def to_str(cls, value: Any) -> str:
+    def encode(cls, value: Any) -> str:
         """
         Encode value to the string.
 
@@ -303,7 +303,7 @@ class StringEncoder(object):
     def _to_string(cls, val: Any) -> str:
         """Convert value to string."""
         if isinstance(val, cls.ITERS | str):
-            return cls.to_str(val)
+            return cls.encode(val)
         elif isinstance(val, Code):
             val = val.value
         return str(val)
@@ -318,7 +318,7 @@ class StringEncoder(object):
             return val
 
         elif cls._soh_exists(val):
-            return cls.from_str(val)
+            return cls.decode(val)
 
         elif cls.INT.match(val) is not None:
             return int(val)

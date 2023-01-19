@@ -105,7 +105,7 @@ class TestStringEncoder(unittest.TestCase):
 
     def test_from_str_single(self) -> None:
         self.assertEqual(
-            [1, 2, (3,)], StringEncoder.from_str(r"\lst(1,2,\tpl(3))")
+            [1, 2, (3,)], StringEncoder.decode(r"\lst(1,2,\tpl(3))")
         )
 
     def test_from_str(self):
@@ -119,19 +119,19 @@ class TestStringEncoder(unittest.TestCase):
 
         for name, (src, true) in self.DATA.items():
             with self.subTest(name=name, true=true):
-                check(StringEncoder.from_str(src), true)
+                check(StringEncoder.decode(src), true)
         for name, (src, true) in self.DATA_CHAIN.items():
             with self.subTest(type="chain", name=name, true=true):
                 if name in ("ch3",):
                     self.assertEqual(
-                        str(StringEncoder.from_str(src)), str(true)
+                        str(StringEncoder.decode(src)), str(true)
                     )
                 else:
-                    check(StringEncoder.from_str(src), true)
+                    check(StringEncoder.decode(src), true)
 
     def test_to_str_single(self) -> None:
         self.assertEqual(
-            r"\lst(1,2,\tpl(3))", StringEncoder.to_str([1, 2, (3,)])
+            r"\lst(1,2,\tpl(3))", StringEncoder.encode([1, 2, (3,)])
         )
 
     def test_to_str(self):
@@ -139,22 +139,22 @@ class TestStringEncoder(unittest.TestCase):
         for name, (true, src) in self.DATA.items():
             with self.subTest(name=name, true=true):
                 self.assertEqual(
-                    true, StringEncoder.to_str(src)
+                    true, StringEncoder.encode(src)
                 )
         for name, (true, src) in self.DATA_CHAIN.items():
             with self.subTest(type="chain", name=name, true=true):
                 self.assertEqual(
-                    true, StringEncoder.to_str(src)
+                    true, StringEncoder.encode(src)
                 )
 
     def test_to_str_invalid(self) -> None:
         self.assertEqual(
-            "\\tpl\t1,2,3", StringEncoder.to_str("\\tpl\t1,2,3")
+            "\\tpl\t1,2,3", StringEncoder.encode("\\tpl\t1,2,3")
         )
 
     def test_to_str_code_support(self) -> None:
         self.assertEqual(
-            "1", StringEncoder.to_str(Code.OK)
+            "1", StringEncoder.encode(Code.OK)
         )
 
     def test_decorate(self) -> None:
