@@ -331,3 +331,48 @@ class StringEncoder(object):
 
         else:
             return val
+
+
+class BytesEncoder(object):
+
+    TYPES = {
+        Code.BYTES,
+    }
+
+    @classmethod
+    def decode(cls, value: bytes, type_: Code) -> Any:
+        """
+        Decode value from bytes.
+
+        Parameters
+        ----------
+        value: bytes
+            value encoded in the bytes.
+        type_: Code
+            indicate what type expected in bytes.
+
+        Returns
+        -------
+        Any
+            decoded value.
+        """
+        ...
+
+    @classmethod
+    def encode(cls, value: Any, type_: Code) -> bytes:
+        """
+        Encode value to the bytes.
+
+        Parameters
+        ----------
+        value: Any
+            value for encoding.
+        type_: Code
+            indicate what type expected in bytes.
+
+        Returns
+        -------
+        bytes
+            encoded value.
+        """
+        ...
