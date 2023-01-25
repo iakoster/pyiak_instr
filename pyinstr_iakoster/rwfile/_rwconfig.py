@@ -10,11 +10,11 @@ from ..utilities import StringEncoder
 __all__ = ['RWConfig']
 
 
-class RWConfig(RWFile):
+class RWConfig(RWFile[configparser.ConfigParser]):
     """
     Class for reading and writing to the configfile as *.ini.
 
-    Include autoconverter for values.
+    Include auto-converter for values.
 
     Parameters
     ----------
@@ -22,13 +22,11 @@ class RWConfig(RWFile):
         path to config file *.ini.
     """
 
-    _hapi: configparser.ConfigParser
-
     FILE_SUFFIXES = {".ini"}
 
     def __init__(self, filepath: Path | str):
         super().__init__(filepath)
-        self._hapi = self._read_config()
+        self._api = self._read_config()
 
     def apply_changes(self) -> None:
         """
@@ -37,7 +35,7 @@ class RWConfig(RWFile):
         Used for save changes which created by .set method.
         """
         with io.open(self._fp, 'w') as cfg_file:
-            self._hapi.write(cfg_file)
+            self._api.write(cfg_file)
 
     def close(self):
         pass
@@ -66,7 +64,7 @@ class RWConfig(RWFile):
         Any
             resulting value from configfile.
         """
-        value = self._hapi.get(section, option)
+        value = self._api.get(section, option)
         if convert:
             return StringEncoder.decode(value)
         return value
@@ -121,11 +119,11 @@ class RWConfig(RWFile):
         """
         if convert:
             value = StringEncoder.encode(value)
-        self._hapi.set(section, option, value)
+        self._api.set(section, option, value)
 
     def update_config(self) -> None:
         """Re-read the configfile from specified and writes to the class."""
-        self._hapi = self._read_config()
+        self._api = self._read_config()
 
     @overload
     def write(
@@ -209,7 +207,7 @@ class RWConfig(RWFile):
                         val = StringEncoder.encode(val)
                     vals[sec][opt] = val
                 cfg.read_dict(vals)
-                self._hapi.read_dict(vals)
+                self._api.read_dict(vals)
 
             case (dict() as sections,):
                 vals = {}
@@ -221,7 +219,7 @@ class RWConfig(RWFile):
                             val = StringEncoder.encode(val)
                         vals[sec][opt] = val
                 cfg.read_dict(vals)
-                self._hapi.read_dict(vals)
+                self._api.read_dict(vals)
 
             case _:
                 raise TypeError(f"invalid arguments {args}")
@@ -249,7 +247,3 @@ class RWConfig(RWFile):
             with io.open(self._fp, 'w') as cfg_file:
                 config.write(cfg_file)
         return config
-
-    @property
-    def hapi(self) -> configparser.ConfigParser:
-        return self._hapi

@@ -5,17 +5,13 @@ from ._core import RWFile
 __all__ = ["RWBin"]
 
 
-class RWBin(RWFile):
+class RWBin(RWFile[None]):
 
     def __init__(self, filepath: str | Path):
         super().__init__(filepath)
 
     def close(self) -> None:
         pass
-
-    @property
-    def hapi(self) -> None:
-        return None
 
     def read_all(self) -> bytes:
         """

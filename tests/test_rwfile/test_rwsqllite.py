@@ -45,7 +45,7 @@ class TestRWSimpleSqlLite(unittest.TestCase):
         )
         self.assertTupleEqual(
             (0, 'first', 192.),
-            self.rws.hapi.execute(
+            self.rws.api.execute(
                 'SELECT * FROM test_table WHERE id=0;'
             ).fetchall()[0]
         )
@@ -57,7 +57,7 @@ class TestRWSimpleSqlLite(unittest.TestCase):
         )
         self.assertListEqual(
             [(1, 'second', 92.8), (2, 'third', 47.0)],
-            self.rws.hapi.execute(
+            self.rws.api.execute(
                 'SELECT * FROM test_table WHERE id IN (1, 2);'
             ).fetchall()
         )

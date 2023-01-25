@@ -281,8 +281,8 @@ class MessageFormat(object):
             path to the config file.
         """
         with RWConfig(config) as rwc:
-            if self._msg_set.mf_name in rwc.hapi.sections():
-                rwc.hapi.remove_section(self._msg_set.mf_name)
+            if self._msg_set.mf_name in rwc.api.sections():
+                rwc.api.remove_section(self._msg_set.mf_name)
             rwc.apply_changes()  # todo: test to correct work (replace section)
             rwc.write(self._msg_set.mf_name, self.init_kwargs)
 
@@ -332,10 +332,10 @@ class MessageFormat(object):
         """
         kw = {}
         with RWConfig(config) as rwc:
-            if mf_name not in rwc.hapi.sections():
+            if mf_name not in rwc.api.sections():
                 raise ValueError("format with name %r not exists" % mf_name)
             kw = {opt: rwc.get(mf_name, opt)
-                  for opt in rwc.hapi.options(mf_name)}
+                  for opt in rwc.api.options(mf_name)}
         return cls(**kw)
 
     @property
@@ -449,7 +449,7 @@ class MessageFormatMap(object):
             class instance with formats from config.
         """
         with RWConfig(config) as rwc:
-            formats = rwc.hapi.sections()
+            formats = rwc.api.sections()
         return cls(*(MessageFormat.read(config, f) for f in formats))
 
     @property

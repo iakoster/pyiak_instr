@@ -1,6 +1,8 @@
 from pathlib import Path
+from typing import Generic
 
 
+from ..core import UseApi, API_TYPE
 from ..exceptions import FileSuffixError, RWFileError
 
 
@@ -11,7 +13,7 @@ __all__ = [
 ]
 
 
-class RWFile(object):
+class RWFile(UseApi[API_TYPE], Generic[API_TYPE]):
     """
     Represents a base class for read/write file.
 
@@ -42,13 +44,6 @@ class RWFile(object):
     def close(self) -> None:
         """
         Close connection to the file.
-        """
-        raise NotImplementedError()
-
-    @property
-    def hapi(self):
-        """
-        Must returns hight-level api (e.g. class).
         """
         raise NotImplementedError()
 

@@ -1,13 +1,13 @@
 from __future__ import annotations
 import logging
 import datetime as dt
-from typing import Any
+from typing import Any, Generic
 
 from .._message import (
     MessageType,
     AsymmetricResponseField,
 )
-from ...core import Code
+from ...core import Code, UseApi, API_TYPE
 
 
 # todo: check type annotation
@@ -16,13 +16,13 @@ __all__ = [
 ]
 
 
-class Connection(object):
+class Connection(UseApi[API_TYPE], Generic[API_TYPE]):
     """
     Represents base class for messaging with devices via ethernet, UART etc.
 
     Parameters
     ----------
-    hapi: Any
+    api: Any
         High-level API (e.g. socket, Serial etc.).
     address: Any or None, default=None
         connection address. If specified call .bind method with address.
@@ -34,14 +34,14 @@ class Connection(object):
 
     def __init__(
             self,
-            hapi: Any,
+            api: Any,
             address: Any | None = None,
             logger: logging.Logger | str | None = None
     ):
         if isinstance(logger, str) and logger != "self":
             raise ValueError("invalid logger: %s != 'self'" % logger)
 
-        self._hapi = hapi
+        self._api = api
         self._logger = logging.getLogger(
             __name__
         ) if isinstance(logger, str) else logger
@@ -56,13 +56,13 @@ class Connection(object):
 
     def close(self) -> None:
         """
-        Close the connection (hapi).
+        Close the connection (api).
         """
         raise NotImplementedError()
 
     def receive(self) -> tuple[bytes, Any]:
         """
-        Receive message from hapi.
+        Receive message by api.
 
         Returns
         -------
@@ -73,7 +73,7 @@ class Connection(object):
 
     def setup(self, *args: Any, **kwargs: Any) -> Connection:
         """
-        Setup hapi.
+        Setup api.
 
         Parameters
         ----------
@@ -91,7 +91,7 @@ class Connection(object):
 
     def transmit(self, message: MessageType) -> None:
         """
-        Transmit message to hapi.
+        Transmit message by api.
 
         Information for transmit can be taken from the message
         (e.g. destination address).
@@ -105,7 +105,7 @@ class Connection(object):
 
     def _bind(self, address: Any) -> None:
         """
-        Bind address to hapi.
+        Bind address to api.
 
         Parameters
         ----------
@@ -399,14 +399,14 @@ class Connection(object):
         return self._addr
 
     @property
-    def hapi(self) -> Any:
+    def api(self) -> Any:
         """
         Returns
         -------
         Any
             high-level API (e.g. socket)
         """
-        return self._hapi
+        return self._api
 
     @property
     def receive_timeout(self) -> dt.timedelta:

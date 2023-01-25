@@ -7,7 +7,7 @@ from ._core import RWFile
 __all__ = ['RWSQLite']
 
 
-class RWSQLite(RWFile):
+class RWSQLite(RWFile[sqlite3.Cursor]):
     """
     Class for reading and writing to the database as *.db.
 
@@ -35,7 +35,7 @@ class RWSQLite(RWFile):
         super().__init__(filepath)
 
         self._conn = sqlite3.connect(filepath, timeout=timeout)
-        self._hapi = self._conn.cursor()
+        self._api = self._conn.cursor()
         self._autocommit = autocommit
 
     def request(
@@ -59,11 +59,11 @@ class RWSQLite(RWFile):
             sql cursor.
         """
         if many is None:
-            result = self._hapi.execute(request)
+            result = self._api.execute(request)
         elif isinstance(many, tuple):
-            result = self._hapi.execute(request, many)
+            result = self._api.execute(request, many)
         else:
-            result = self._hapi.executemany(request, many)
+            result = self._api.executemany(request, many)
 
         if self._autocommit:
             self.commit()
@@ -107,7 +107,7 @@ class RWSQLite(RWFile):
             list of a column names in the table
         """
         self.request('SELECT * FROM %s;' % table)
-        return [el[0] for el in self._hapi.description]
+        return [el[0] for el in self._api.description]
 
     def table_rows(self, table: str) -> int:
         """
@@ -134,7 +134,7 @@ class RWSQLite(RWFile):
     def close(self) -> None:
         """Close cursor and connection."""
         try:
-            self._hapi.close()
+            self._api.close()
         except sqlite3.ProgrammingError as err:
             if err.args[0] != 'Cannot operate on a closed database.':
                 raise
@@ -189,7 +189,7 @@ class RWSQLite(RWFile):
                 for table in self.tables}
 
     @property
-    def connection(self):
+    def connection(self) -> sqlite3.Connection:
         """
         Returns
         -------
@@ -197,7 +197,3 @@ class RWSQLite(RWFile):
             SQLite connection to the database.
         """
         return self._conn
-
-    @property
-    def hapi(self) -> sqlite3.Cursor:
-        return self._hapi

@@ -162,7 +162,7 @@ class TestConnection(unittest.TestCase):
             transmit_timeout=dt.timedelta(milliseconds=40),
             receive_timeout=dt.timedelta(milliseconds=20),
             address=('127.0.0.1', 4242),
-            hapi=TestApi(),
+            api=TestApi(),
         )
 
     def test_read_single(self) -> None:
@@ -532,7 +532,7 @@ class TestConnection(unittest.TestCase):
 
     def test_exc_logger_not_self(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            Connection(hapi=None, logger="self_")
+            Connection(api=None, logger="self_")
         self.assertEqual(
             "invalid logger: self_ != 'self'", exc.exception.args[0]
         )
