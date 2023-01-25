@@ -7,8 +7,11 @@ __all__ = ["RWBin"]
 
 class RWBin(RWFile[None]):
 
+    FILE_SUFFIXES = {".bin"}
+
     def __init__(self, filepath: str | Path):
         super().__init__(filepath)
+        self._api = None
 
     def close(self) -> None:
         pass
