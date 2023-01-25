@@ -48,7 +48,7 @@ class RWFile(object):
     @property
     def hapi(self):
         """
-        Must retutns hight-level api (e.g. class).
+        Must returns hight-level api (e.g. class).
         """
         raise NotImplementedError()
 

@@ -1,0 +1,42 @@
+from pathlib import Path
+
+from ._core import RWFile
+
+__all__ = ["RWBin"]
+
+
+class RWBin(RWFile):
+
+    def __init__(self, filepath: str | Path):
+        super().__init__(filepath)
+
+    def close(self) -> None:
+        pass
+
+    @property
+    def hapi(self) -> None:
+        return None
+
+    def read_all(self) -> bytes:
+        """
+        Read all content from file.
+
+        Returns
+        -------
+        bytes
+            file content.
+        """
+        with open(self._fp, "rb") as file:
+            return file.read()
+
+    def rewrite(self, content: bytes) -> None:
+        """
+        Rewrite file content.
+
+        Parameters
+        ----------
+        content: bytes
+            new content of the file.
+        """
+        with open(self._fp, "wb") as file:
+            file.write(content)
