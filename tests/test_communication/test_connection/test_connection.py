@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 
-from pyinstr_iakoster.communication import (
+from pyiak_instr.communication import (
     FieldMessage,
     MessageType,
     Connection,

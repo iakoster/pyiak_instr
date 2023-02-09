@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pandas.testing
 
-from pyinstr_iakoster.communication import (
+from pyiak_instr.communication import (
     FieldType,
     FieldMessage,
 )

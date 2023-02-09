@@ -1,7 +1,7 @@
 import shutil
 import unittest
 
-from pyinstr_iakoster.osutils import (
+from pyiak_instr.osutils import (
     hide_path,
     unhide_path,
     is_hidden_path,

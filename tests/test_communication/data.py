@@ -3,8 +3,8 @@ from typing import Any
 
 import pandas as pd
 
-from pyinstr_iakoster.core import Code
-from pyinstr_iakoster.communication import (
+from pyiak_instr.core import Code
+from pyiak_instr.communication import (
     FieldSetter,
     RegisterMap,
     AsymmetricResponseField,

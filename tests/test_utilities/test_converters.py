@@ -2,8 +2,8 @@ import unittest
 
 import numpy as np
 
-from pyinstr_iakoster.core import Code
-from pyinstr_iakoster.utilities import split_complex_dict, StringEncoder
+from pyiak_instr.core import Code
+from pyiak_instr.utilities import split_complex_dict, StringEncoder
 
 
 class TestSplitComplexDict(unittest.TestCase):

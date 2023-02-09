@@ -3,7 +3,7 @@ import unittest
 
 from tests.env_vars import TEST_DATA_DIR
 
-from pyinstr_iakoster.rwfile import RWSQLite
+from pyiak_instr.rwfile import RWSQLite
 
 SQLLITE_NAME = 'test_sqllite.db'
 SQLLITE_PATH = TEST_DATA_DIR / SQLLITE_NAME

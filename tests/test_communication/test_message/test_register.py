@@ -17,7 +17,7 @@ from ..utils import (
 )
 from ...env_vars import TEST_DATA_DIR
 
-from pyinstr_iakoster.communication import (
+from pyiak_instr.communication import (
     Register,
     RegisterMap
 )

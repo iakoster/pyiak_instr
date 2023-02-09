@@ -2,7 +2,7 @@ import shutil
 import unittest
 from pathlib import Path
 
-from pyinstr_iakoster.rwfile import RWFile, RWFileError, FileSuffixError
+from pyiak_instr.rwfile import RWFile, RWFileError, FileSuffixError
 
 from tests.env_vars import TEST_DATA_DIR
 

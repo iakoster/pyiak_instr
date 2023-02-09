@@ -1,6 +1,6 @@
 import unittest as _unittest
 
-from pyinstr_iakoster.store import (
+from pyiak_instr.store import (
     DataSpace, DataSpaceTemplate
 )
 

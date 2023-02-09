@@ -17,8 +17,8 @@ from ..utils import (
     compare_messages
 )
 
-from pyinstr_iakoster.rwfile import RWConfig
-from pyinstr_iakoster.communication import (
+from pyiak_instr.rwfile import RWConfig
+from pyiak_instr.communication import (
     AsymmetricResponseField,
     MessageFormat,
     MessageFormatMap,

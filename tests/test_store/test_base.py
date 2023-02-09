@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from pyinstr_iakoster.store import BitVector
+from pyiak_instr.store import BitVector
 
 
 class TestBitVector(unittest.TestCase):

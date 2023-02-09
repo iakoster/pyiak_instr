@@ -752,7 +752,7 @@ class FieldMessage(object):
 
         See Also
         --------
-        pyinstr_iakoster.communication.Message.split: method for splitting
+        pyiak_instr.communication.Message.split: method for splitting
             message for sending
         """
         return self._slice_length

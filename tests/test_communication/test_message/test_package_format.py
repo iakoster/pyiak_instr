@@ -15,7 +15,7 @@ from ..utils import (
     compare_messages,
 )
 
-from pyinstr_iakoster.communication import (
+from pyiak_instr.communication import (
     Register,
     PackageFormat,
 )

@@ -2,7 +2,7 @@ import shutil
 import unittest
 import configparser
 
-from pyinstr_iakoster.rwfile import RWConfig
+from pyiak_instr.rwfile import RWConfig
 
 from tests.env_vars import TEST_DATA_DIR
 

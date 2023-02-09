@@ -5,8 +5,8 @@ import numpy as np
 
 from ..utils import validate_object
 
-from pyinstr_iakoster.core import Code
-from pyinstr_iakoster.communication import (
+from pyiak_instr.core import Code
+from pyiak_instr.communication import (
     Field,
     SingleField,
     StaticField,
