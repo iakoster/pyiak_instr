@@ -20,6 +20,7 @@ from pyiak_instr.communication import (
     CrcField,
     DataField,
     DataLengthField,
+    IdField,
     OperationField,
     ResponseField,
     FieldSetter,
@@ -171,6 +172,7 @@ class TestFieldMessage(unittest.TestCase):
             DataLengthField=False,
             CrcField=False,
             AddressField=False,
+            IdField=False,
             check_attrs=True,
         )
 
@@ -201,6 +203,7 @@ class TestFieldMessage(unittest.TestCase):
             DataLengthField=False,
             CrcField=False,
             AddressField=False,
+            IdField=False,
             check_attrs=True,
         )
 
@@ -237,6 +240,7 @@ class TestFieldMessage(unittest.TestCase):
             DataLengthField=False,
             CrcField=False,
             AddressField=True,
+            IdField=False,
             check_attrs=True,
         )
 
@@ -268,6 +272,7 @@ class TestFieldMessage(unittest.TestCase):
             DataLengthField=False,
             CrcField=False,
             AddressField=True,
+            IdField=False,
             check_attrs=True,
         )
 
@@ -298,6 +303,7 @@ class TestFieldMessage(unittest.TestCase):
             DataLengthField=False,
             CrcField=False,
             AddressField=True,
+            IdField=False,
             check_attrs=True,
         )
 
@@ -413,6 +419,7 @@ class TestFieldMessage(unittest.TestCase):
             n3=FieldSetter.response(fmt="b", codes={}),
             n4=FieldSetter.base(expected=1, fmt="b"),
             n5=FieldSetter.address(fmt="b"),
+            n6=FieldSetter.id_field(fmt="b"),
         )
         for name, cls in [
             ("n1", Field),
@@ -421,6 +428,7 @@ class TestFieldMessage(unittest.TestCase):
             ("n3", ResponseField),
             ("n1", Field),
             ("n2", AddressField),
+            ("n6", IdField),
         ]:
             with self.subTest(field_class=cls.__name__):
                 field = msg.get.field_by_type(cls)

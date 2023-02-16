@@ -17,6 +17,7 @@ from .field import (
     CrcField,
     DataField,
     DataLengthField,
+    IdField,
     OperationField,
     ResponseField,
     FieldSetter,
@@ -122,6 +123,16 @@ class MessageFieldsGetParser(object):
             data length field instance.
         """
         return self.field_by_type(DataLengthField)
+
+    @property
+    def IdField(self) -> IdField:
+        """
+        Returns
+        -------
+        IdField
+            id field instance.
+        """
+        return self.field_by_type(IdField)
 
     @property
     def OperationField(self) -> OperationField:
@@ -236,6 +247,16 @@ class MessageFieldsHasParser(object):
             True -- DataField exists among fields.
         """
         return self.field_type(DataLengthField)
+
+    @property
+    def IdField(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- IdField exists among fields.
+        """
+        return self.field_type(IdField)
 
     @property
     def OperationField(self) -> bool:

@@ -1637,6 +1637,7 @@ FieldType = (
     CrcField |
     DataField |
     DataLengthField |
+    IdField |
     OperationField |
     ResponseField
 )
