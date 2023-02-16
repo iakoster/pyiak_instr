@@ -70,7 +70,7 @@ SETTERS = [
         )
     ),
     dict(
-        id=FieldSetter.single(fmt=">I"),
+        id=FieldSetter.id_field(fmt=">I"),
         address=FieldSetter.address(fmt=">I"),
         data=FieldSetter.data(expected=-1, fmt=">I"),
     ),
@@ -248,8 +248,7 @@ MF_CFG_DICT = dict(
         message_setter="\\dct(message_type,field,mf_name,n4,splittable,False,"
                        "slice_length,1024)",
         arf="\\dct()",
-        id="\\dct(field_type,single,fmt,>I,default,\\lst(),"
-           "may_be_empty,False)",
+        id="\\dct(field_type,id,fmt,>I)",
         address="\\dct(field_type,address,fmt,>I)",
         data="\\dct(field_type,data,expected,-1,fmt,>I)",
     )

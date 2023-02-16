@@ -1447,6 +1447,7 @@ class FieldSetter(object):
         crc=CrcField,
         data=DataField,
         data_length=DataLengthField,
+        id=IdField,
         operation=OperationField,
         response=ResponseField,
     )
