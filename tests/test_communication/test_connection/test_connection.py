@@ -508,6 +508,55 @@ class TestConnection(unittest.TestCase):
                 self.send(con, self.read("t9"))
             )
 
+    def test_id_field_correct(self) -> None:
+        with ConnectionTestInstance(
+                self,
+                log_entries=[
+                    "<FieldMessage(id=12345678, address=1123, data=EMPTY), "
+                    "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
+                    "12 34 56 78 00 00 11 23 00 00 01 4d, "
+                    "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)",
+                    "<FieldMessage(id=12345678, address=1123, data=14D), "
+                    "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)>",
+                ]
+        ) as con:
+            con.set_tx_messages(
+                self.read("t10", id=0x12345678),
+            )
+            con.set_rx_messages(
+                self.read("t10", id=0x12345678, data=333),
+            )
+
+            compare_messages(
+                self,
+                self.read("t10", ans=True, id=0x12345678, data=333),
+                self.send(con, self.read("t10", id=0x12345678)),
+            )
+
+    def test_id_field_invalid(self) -> None:
+        with ConnectionTestInstance(
+                self,
+                log_entries=[
+                    "<FieldMessage(id=12345678, address=1123, data=EMPTY), "
+                    "src=('127.0.0.1', 4242), dst=('127.0.0.1', 4224)>",
+                    "12 34 56 79 00 00 11 23 00 00 01 4d, "
+                    "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)",
+                    None,
+                    "receive with code(s): <Code.INVALID_ID: 768>",
+                    "12 34 56 78 00 00 11 23 00 00 01 4d, "
+                    "src=('127.0.0.1', 4224), dst=('127.0.0.1', 4242)",
+                    None,
+                ]
+        ) as con:
+            con.set_tx_messages(
+                self.read("t10", id=0x12345678),
+            )
+            con.set_rx_messages(
+                self.read("t10", id=0x12345679, data=333),
+                self.read("t10", id=0x12345678, data=333),
+            )
+            self.send(con, self.read("t10", id=0x12345678))
+
     def test_field_message(self) -> None:
         with ConnectionTestInstance(
             self,

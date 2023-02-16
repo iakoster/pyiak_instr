@@ -1341,7 +1341,7 @@ class ResponseField(SingleField):
     WAIT = Code.WAIT
     "wait next message"
 
-    RAISE = Code.RAISE
+    ERROR = Code.ERROR
     "some error"
 
     UNDEFINED = Code.UNDEFINED

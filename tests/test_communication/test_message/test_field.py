@@ -836,7 +836,7 @@ class TestResponseField(unittest.TestCase):
             codes={
                 0: Code.WAIT,
                 1: ResponseField.OK,
-                2: ResponseField.RAISE,
+                2: ResponseField.ERROR,
                 3: ResponseField.WAIT,
             }
         )
@@ -861,11 +861,11 @@ class TestResponseField(unittest.TestCase):
             codes={
                 0: Code.WAIT,
                 1: ResponseField.OK,
-                2: ResponseField.RAISE,
+                2: ResponseField.ERROR,
                 3: ResponseField.WAIT,
             },
             default_code=Code.UNDEFINED,
-            current_code=Code.RAISE,
+            current_code=Code.ERROR,
             words_count=1,
             check_attrs=True,
             wo_attrs=["parent"],
@@ -875,15 +875,15 @@ class TestResponseField(unittest.TestCase):
             {
                 0: Code.WAIT,
                 1: ResponseField.OK,
-                2: ResponseField.RAISE,
+                2: ResponseField.ERROR,
                 3: ResponseField.WAIT,
             }
         )
-        self.assertEqual(Code.RAISE, self.tf.current_code)
+        self.assertEqual(Code.ERROR, self.tf.current_code)
 
     def test_current_code(self) -> None:
         for i_code, code in enumerate(
-                (Code.WAIT, Code.OK, Code.RAISE, Code.WAIT, Code.UNDEFINED)
+                (Code.WAIT, Code.OK, Code.ERROR, Code.WAIT, Code.UNDEFINED)
         ):
             self.tf.set(i_code)
             with self.subTest(content=i_code, code=code):
@@ -908,7 +908,7 @@ class TestResponseField(unittest.TestCase):
                 codes={
                     0: Code.WAIT,
                     1: ResponseField.OK,
-                    2: ResponseField.RAISE,
+                    2: ResponseField.ERROR,
                     3: ResponseField.WAIT,
                 },
                 default_code=None,
@@ -924,12 +924,12 @@ class TestResponseField(unittest.TestCase):
 
     def test_magic_eq(self) -> None:
         self.tf.set(2)
-        self.assertTrue(self.tf == Code.RAISE)
+        self.assertTrue(self.tf == Code.ERROR)
         self.assertFalse(self.tf == 1)
 
     def test_magic_neq(self) -> None:
         self.tf.set(1)
-        self.assertTrue(self.tf != Code.RAISE)
+        self.assertTrue(self.tf != Code.ERROR)
         self.assertFalse(self.tf != Code.OK)
 
 

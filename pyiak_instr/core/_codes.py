@@ -13,7 +13,6 @@ class Code(IntEnum):  # nodesc
     OK = auto()
     WAIT = auto()
     ERROR = auto()
-    RAISE = auto()
     UNDEFINED = 0xff
 
     # Type codes
@@ -27,3 +26,6 @@ class Code(IntEnum):  # nodesc
 
     # Additional types
     WORDS = 0x200
+
+    # Additional errors
+    INVALID_ID = 0x300

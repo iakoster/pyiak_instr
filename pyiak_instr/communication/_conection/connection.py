@@ -302,7 +302,7 @@ class Connection(object):
                         transmit_again = True
                         continue
 
-                    code = self._validate_message(ans)
+                    code = self._validate_message(msg, ans)
                     self._log_info(repr(ans))
 
                     if code == Code.OK:
@@ -311,6 +311,8 @@ class Connection(object):
                         self._log_info("receive with code(s): %r" % code)
                         if code == Code.WAIT:
                             receive_start = dt.datetime.now()
+                        elif code is Code.INVALID_ID:
+                            invalid_received += 1
                         else:
                             invalid_received += 1
                             transmit_again = True
@@ -357,12 +359,14 @@ class Connection(object):
             return rx, Code.ERROR
         return rx, Code.OK
 
-    def _validate_message(self, rx: MessageType) -> Code | dict[str, Code]:
+    def _validate_message(self, tx: MessageType, rx: MessageType) -> Code | dict[str, Code]:
         """
         validate converted to a class message.
 
         Parameters
         ----------
+        tx: MessageType
+            transmit message.
         rx: MessageType
             received message.
 
@@ -373,6 +377,10 @@ class Connection(object):
             code from it. Returns all codes if there are several
             ResponseField and not all equal.
         """
+
+        if rx.has.IdField and tx.has.IdField:
+            if not tx.get.IdField.is_equal_to(rx.get.IdField):
+                return Code.INVALID_ID
 
         codes_dict = rx.response_codes
         codes = list(codes_dict.values())
