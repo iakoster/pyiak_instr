@@ -30,6 +30,7 @@ __all__ = [
     "CrcField",
     "DataField",
     "DataLengthField",
+    "IdField",
     "OperationField",
     "SingleField",
     "StaticField",
@@ -1045,6 +1046,84 @@ class DataLengthField(SingleField):
         return self._units
 
 
+class IdField(SingleField):
+    """
+    Represents a field with a unique identifier of a particular message.
+
+    Parameters
+    ----------
+    mf_name: str
+        the name of package format to which the field belongs.
+    name: str
+        the name of the field.
+    start_byte: int
+        the number of bytes in the message from which the fields begin.
+    fmt: str
+        format for packing or unpacking the content. The word length
+        is calculated from the format.
+    parent: FieldMessage or None
+        parent message.
+    """
+
+    def __init__(
+            self,
+            mf_name: str,
+            name: str,
+            *,
+            start_byte: int,
+            fmt: str,
+            parent: FieldMessage = None,
+    ):
+        super().__init__(
+            mf_name,
+            name,
+            start_byte=start_byte,
+            fmt=fmt,
+            parent=parent,
+        )
+
+    def get_setter(self) -> FieldSetter:
+        return FieldSetter.id_field(fmt=self._fmt)
+
+    def is_equal_to(self, other: IdField | int | float | bytes) -> bool:
+        """
+        Check that 'other' has the same value as the given instance.
+
+        If 'other' is empty IdField - returns False.
+
+        Parameters
+        ----------
+        other: IdField | int | float | bytes
+            other 'IdField' instance or value.
+
+        Returns
+        -------
+        bool
+            True - values are equal, False - they are not.
+
+        Raises
+        ------
+        TypeError
+            if the type is impossible to compare.
+        ValueError
+            if self instance is empty.
+        """
+        if not len(self):
+            raise ValueError("field is empty")
+
+        match other:
+            case IdField():
+                if len(other):
+                    return self._content == other.content
+                return False
+            case int() | float():
+                return self[0] == other
+            case bytes():
+                return self._content == other
+            case _:
+                raise TypeError("invalid type: %s" % type(other))
+
+
 class OperationField(SingleField):
     """
     Represents a field of a Message with operation (e.g. read).
@@ -1077,10 +1156,6 @@ class OperationField(SingleField):
         the value in the content.
     parent: FieldMessage or None
         parent message.
-
-    Notes
-    -----
-    The __getitem__ method was disallowed because only one word is expected.
 
     See Also
     --------
@@ -1483,6 +1558,10 @@ class FieldSetter(object):
             units=units,
             additive=additive,
         )
+
+    @classmethod
+    def id_field(cls, *, fmt: str):
+        return cls(field_type="id", fmt=fmt)
 
     @classmethod
     def operation(cls, *, fmt: str, desc_dict: dict[str, int] = None):

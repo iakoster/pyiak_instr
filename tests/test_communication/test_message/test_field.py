@@ -14,6 +14,7 @@ from pyiak_instr.communication import (
     AddressField,
     DataField,
     DataLengthField,
+    IdField,
     OperationField,
     ResponseField,
     FieldType,
@@ -627,6 +628,76 @@ class TestFieldDataLength(unittest.TestCase):
         with self.assertRaises(ValueError) as exc:
             tf.calculate(self.get_tf_data([0, 1]))
         self.assertEqual("invalid units: 0", exc.exception.args[0])
+
+
+class TestIdField(unittest.TestCase):
+
+    def test_init(self) -> None:
+        tf = self.get_tf()
+        tf.set(0)
+        validate_object(
+            self,
+            tf,
+            slice=slice(0, 1),
+            mf_name="format",
+            name="id",
+            start_byte=0,
+            stop_byte=1,
+            expected=1,
+            finite=True,
+            may_be_empty=False,
+            fmt="B",
+            bytesize=1,
+            content=b"\x00",
+            default=b"",
+            words_count=1,
+            check_attrs=True,
+            wo_attrs=["parent"],
+        )
+
+    def test_get_setter(self) -> None:
+        self.assertEqual("id", self.get_tf().get_setter().field_type)
+
+    def test_is_equal_to(self) -> None:
+        tf = self.get_tf()
+        tf.set(0)
+
+        other_0 = self.get_tf("0")
+        other_0.set(0)
+
+        other_1 = self.get_tf("1")
+        other_1.set(1)
+
+        data = (
+            ("bytes equal", b"\x00", True),
+            ("bytes not equal", b"\x01", False),
+            ("int equal", 0, True),
+            ("int not equal", 69, False),
+            ("float equal to int", 0.0, True),
+            ("float not equal", 1.1, False),
+            ("IdField equal", other_0, True),
+            ("IdField not equal", other_1, False),
+            ("IdField empty", self.get_tf("empty"), False),
+        )
+
+        for test, arg, ref in data:
+            with self.subTest(test=test, type=arg.__class__.__name__):
+                self.assertEqual(ref, tf.is_equal_to(arg))
+
+    def test_is_equal_to_exc(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            self.get_tf().is_equal_to(0)
+        self.assertEqual("field is empty", exc.exception.args[0])
+
+        with self.assertRaises(TypeError) as exc:
+            tmp = self.get_tf()
+            tmp.set(0)
+            tmp.is_equal_to("")
+        self.assertEqual("invalid type: <class 'str'>", exc.exception.args[0])
+
+    @staticmethod
+    def get_tf(name: str = "id") -> IdField:
+        return IdField("format", name, start_byte=0, fmt="B")
 
 
 class TestFieldOperation(unittest.TestCase):
