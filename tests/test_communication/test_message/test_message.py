@@ -437,7 +437,7 @@ class TestFieldMessage(unittest.TestCase):
 
     def test_get_instance(self) -> None:
         ref = FieldMessage().configure(
-            data=FieldSetter.data(expected=-1, fmt="b")
+            data=FieldSetter.data(expected=-1, fmt="B")
         ).set(data=255).set_src_dst(src="PC", dst="COM12")
         res = ref.get_instance()
         self.assertEqual(0, len(res))
@@ -457,7 +457,7 @@ class TestFieldMessage(unittest.TestCase):
             self,
             res.data,
             may_be_empty=True,
-            fmt="b",
+            fmt="B",
             finite=False,
             default=b"",
             name="data",
@@ -489,14 +489,14 @@ class TestFieldMessage(unittest.TestCase):
             msg.set(data=124)
             self.assertEqual(b"\xbf\x1b", msg["crc_name"].content)
 
-        # with self.subTest(test="manual crc"):
-        #     with self.assertRaises(MessageContentError) as exc:
-        #         msg.get_instance().set(data=123, crc_name=0xbf1c)
-        #     self.assertEqual(
-        #         "Error with crc_name in FieldMessage: "
-        #         "invalid crc value, 'bf1c' != 'cffc'",
-        #         exc.exception.args[0]
-        #     )
+        with self.subTest(test="manual crc"):
+            with self.assertRaises(MessageContentError) as exc:
+                msg.get_instance().set(data=123, crc_name=0xbf1c)
+            self.assertEqual(
+                "Error with crc_name in FieldMessage: "
+                "invalid crc value, 'bf1c' != 'cffc'",
+                exc.exception.args[0]
+            )
 
     def test_set_with_data_length(self) -> None:
         msg = FieldMessage().configure(
@@ -870,7 +870,7 @@ class TestStrongFieldMessage(unittest.TestCase):
                 address=FieldSetter.address(fmt="b"),
                 operation=FieldSetter.operation(fmt="b"),
                 data_length=FieldSetter.data_length(fmt="b"),
-                data=FieldSetter.data(expected=-1, fmt="b"),
+                data=FieldSetter.data(expected=-1, fmt="B"),
             ).set(address=1, operation=0, data_length=2, data=[5, 212]),
             setter=MessageSetter("strong"),
             bytes_=b"\x01\x00\x02\x05\xd4",
