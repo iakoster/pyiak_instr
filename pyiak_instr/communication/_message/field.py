@@ -659,6 +659,8 @@ class AddressField(SingleField):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
+    may_be_empty: bool, default=False
+        if True then field can be empty in a message.
     parent: FieldMessage or None
         parent message.
 
@@ -674,6 +676,7 @@ class AddressField(SingleField):
             *,
             start_byte: int,
             fmt: str,
+            may_be_empty: bool = False,
             parent: FieldMessage = None,
     ):
         SingleField.__init__(
@@ -682,6 +685,7 @@ class AddressField(SingleField):
             name,
             start_byte=start_byte,
             fmt=fmt,
+            may_be_empty=may_be_empty,
             parent=parent
         )
 
@@ -917,6 +921,8 @@ class DataLengthField(SingleField):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
+    may_be_empty: bool, default=False
+        if True then field can be empty in a message.
     units: int
         data length units. Data can be measured in bytes or words.
     additive: int
@@ -943,6 +949,7 @@ class DataLengthField(SingleField):
             *,
             start_byte: int,
             fmt: str,
+            may_be_empty: bool = False,
             behaviour: str = "actual",  # todo: logic
             units: Code | int = Code.BYTES,
             additive: int = 0,
@@ -970,6 +977,7 @@ class DataLengthField(SingleField):
             name,
             start_byte=start_byte,
             fmt=fmt,
+            may_be_empty=may_be_empty,
             parent=parent
         )
         self._bvr = behaviour
@@ -1151,6 +1159,8 @@ class OperationField(SingleField):
     fmt: str
         format for packing or unpacking the content. The word length
         is calculated from the format.
+    may_be_empty: bool, default=False
+        if True then field can be empty in a message.
     desc_dict: dict of {str, int}, optional
         dictionary of correspondence between the operation base and
         the value in the content.
@@ -1173,6 +1183,7 @@ class OperationField(SingleField):
             *,
             start_byte: int,
             fmt: str,
+            may_be_empty: bool = False,
             desc_dict: dict[str, int] = None,
             parent: FieldMessage = None,
     ):
@@ -1188,7 +1199,8 @@ class OperationField(SingleField):
             name,
             start_byte=start_byte,
             fmt=fmt,
-            parent=parent
+            may_be_empty=may_be_empty,
+            parent=parent,
         )
         self._desc = ""
 
@@ -1521,8 +1533,8 @@ class FieldSetter(object):
         return cls(field_type="static", fmt=fmt, default=default)
 
     @classmethod
-    def address(cls, *, fmt: str):
-        return cls(field_type="address", fmt=fmt)
+    def address(cls, *, fmt: str, may_be_empty: bool = False):
+        return cls(field_type="address", fmt=fmt, may_be_empty=may_be_empty)
 
     @classmethod
     def crc(
@@ -1548,6 +1560,7 @@ class FieldSetter(object):
             cls,
             *,
             fmt: str,
+            may_be_empty: bool = False,
             behaviour: str = "actual",
             units: int = Code.BYTES,
             additive: int = 0,
@@ -1555,6 +1568,7 @@ class FieldSetter(object):
         return cls(
             field_type="data_length",
             fmt=fmt,
+            may_be_empty=may_be_empty,
             behaviour=behaviour,
             units=units,
             additive=additive,
@@ -1565,8 +1579,19 @@ class FieldSetter(object):
         return cls(field_type="id", fmt=fmt)
 
     @classmethod
-    def operation(cls, *, fmt: str, desc_dict: dict[str, int] = None):
-        return cls(field_type="operation", fmt=fmt, desc_dict=desc_dict)
+    def operation(
+            cls,
+            *,
+            fmt: str,
+            desc_dict: dict[str, int] = None,
+            may_be_empty: bool = False,
+    ):
+        return cls(
+            field_type="operation",
+            fmt=fmt,
+            may_be_empty=may_be_empty,
+            desc_dict=desc_dict,
+        )
 
     @classmethod
     def response(

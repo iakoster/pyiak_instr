@@ -987,6 +987,7 @@ class TestFieldSetter(unittest.TestCase):  # todo: test init field by FieldSette
             FieldSetter.address(fmt="i"),
             field_type="address",
             fmt="i",
+            may_be_empty=False,
         )
 
     def test_crc(self) -> None:
@@ -1011,6 +1012,7 @@ class TestFieldSetter(unittest.TestCase):  # todo: test init field by FieldSette
             FieldSetter.data_length(fmt="i"),
             field_type="data_length",
             fmt="i",
+            may_be_empty=False,
             behaviour="actual",
             additive=0,
             units=Code.BYTES,
@@ -1021,6 +1023,7 @@ class TestFieldSetter(unittest.TestCase):  # todo: test init field by FieldSette
             FieldSetter.operation(fmt="i"),
             field_type="operation",
             fmt="i",
+            may_be_empty=False,
             desc_dict=None,
         )
 

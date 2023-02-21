@@ -179,10 +179,10 @@ MF_CFG_DICT = dict(
             "value,\\bts(0,0,0,1),"
             "start,12,"
             "stop,16)",
-        address="\\dct(field_type,address,fmt,>I)",
-        data_length="\\dct(field_type,data_length,fmt,>I,"
+        address="\\dct(field_type,address,fmt,>I,may_be_empty,False)",
+        data_length="\\dct(field_type,data_length,fmt,>I,may_be_empty,False,"
                     "behaviour,expected2read,units,512,additive,0)",
-        operation="\\dct(field_type,operation,fmt,>I,"
+        operation="\\dct(field_type,operation,fmt,>I,may_be_empty,False,"
                   "desc_dict,\\dct(w,0,r,1))",
         data="\\dct(field_type,data,expected,-1,fmt,>I)",
     ),
@@ -191,16 +191,16 @@ MF_CFG_DICT = dict(
                        "splittable,False,slice_length,1024)",
         arf="\\dct()",
         preamble="\\dct(field_type,static,fmt,>H,default,43605)",
-        operation="\\dct(field_type,operation,fmt,>B,"
+        operation="\\dct(field_type,operation,fmt,>B,may_be_empty,False,"
                   "desc_dict,\\dct(wp,1,rp,2,wn,3,rn,4))",
         response="\\dct(field_type,response,"
                  "fmt,>B,"
                  "codes,\\dct(0,1),"
                  "default,0,"
                  "default_code,3)",
-        address="\\dct(field_type,address,fmt,>H)",
-        data_length="\\dct(field_type,data_length,fmt,>H,behaviour,actual,"
-                    "units,256,additive,0)",
+        address="\\dct(field_type,address,fmt,>H,may_be_empty,False)",
+        data_length="\\dct(field_type,data_length,fmt,>H,may_be_empty,False,"
+                    "behaviour,actual,units,256,additive,0)",
         data="\\dct(field_type,data,expected,-1,fmt,>f)",
         crc="\\dct(field_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
             "wo_fields,\\set(preamble))",
@@ -209,16 +209,16 @@ MF_CFG_DICT = dict(
         message_setter="\\dct(message_type,strong,mf_name,n2,"
                        "splittable,False,slice_length,1024)",
         arf="\\dct()",
-        operation="\\dct(field_type,operation,fmt,>B,"
+        operation="\\dct(field_type,operation,fmt,>B,may_be_empty,False,"
                   "desc_dict,\\dct(r,1,w,2))",
         response="\\dct(field_type,response,"
                  "fmt,>B,"
                  "codes,\\dct(0,1,4,2),"
                  "default,0,"
                  "default_code,255)",
-        address="\\dct(field_type,address,fmt,>H)",
-        data_length="\\dct(field_type,data_length,fmt,>H,behaviour,actual,"
-                    "units,256,additive,0)",
+        address="\\dct(field_type,address,fmt,>H,may_be_empty,False)",
+        data_length="\\dct(field_type,data_length,fmt,>H,may_be_empty,False"
+                    ",behaviour,actual,units,256,additive,0)",
         data="\\dct(field_type,data,expected,-1,fmt,>f)",
         crc="\\dct(field_type,crc,fmt,>H,algorithm_name,crc16-CCITT/XMODEM,"
             "wo_fields,None)",
@@ -227,16 +227,16 @@ MF_CFG_DICT = dict(
         message_setter="\\dct(message_type,strong,mf_name,n3,"
                        "splittable,False,slice_length,1024)",
         arf="\\dct()",
-        operation="\\dct(field_type,operation,fmt,B,"
+        operation="\\dct(field_type,operation,fmt,B,may_be_empty,False,"
                   "desc_dict,\\dct(r,1,w,2))",
         response1="\\dct(field_type,response,"
                   "fmt,B,"
                   "codes,\\dct(0,1,4,2),"
                   "default,0,"
                   "default_code,3)",
-        address="\\dct(field_type,address,fmt,B)",
-        data_length="\\dct(field_type,data_length,fmt,B,behaviour,actual,"
-                    "units,256,additive,0)",
+        address="\\dct(field_type,address,fmt,B,may_be_empty,False)",
+        data_length="\\dct(field_type,data_length,fmt,B,may_be_empty,False,"
+                    "behaviour,actual,units,256,additive,0)",
         data="\\dct(field_type,data,expected,-1,fmt,B)",
         response2="\\dct(field_type,response,"
                   "fmt,B,"
@@ -249,7 +249,7 @@ MF_CFG_DICT = dict(
                        "slice_length,1024)",
         arf="\\dct()",
         id="\\dct(field_type,id,fmt,>I)",
-        address="\\dct(field_type,address,fmt,>I)",
+        address="\\dct(field_type,address,fmt,>I,may_be_empty,False)",
         data="\\dct(field_type,data,expected,-1,fmt,>I)",
     )
 )
