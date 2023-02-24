@@ -3,7 +3,7 @@ import unittest
 import configparser
 from copy import deepcopy
 
-from tests.env_vars import TEST_DATA_DIR
+from tests_deprecated.env_vars import TEST_DATA_DIR
 from ..data import (
     SETTERS,
     MF_DICT,
@@ -17,7 +17,6 @@ from ..utils import (
     compare_messages
 )
 
-from pyiak_instr_deprecation.rwfile import RWConfig
 from pyiak_instr_deprecation.communication import (
     AsymmetricResponseField,
     MessageFormat,

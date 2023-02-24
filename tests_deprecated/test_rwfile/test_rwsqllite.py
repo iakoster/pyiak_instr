@@ -1,7 +1,7 @@
 import shutil
 import unittest
 
-from tests.env_vars import TEST_DATA_DIR
+from tests_deprecated.env_vars import TEST_DATA_DIR
 
 from pyiak_instr_deprecation.rwfile import RWSQLite
 

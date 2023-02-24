@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pandas.testing
 
-from tests.env_vars import TEST_DATA_DIR
+from tests_deprecated.env_vars import TEST_DATA_DIR
 from ..data import (
     SETTERS,
     PF,

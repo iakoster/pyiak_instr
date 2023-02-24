@@ -15,7 +15,7 @@ from ..utils import (
     compare_messages,
     validate_object
 )
-from ...env_vars import TEST_DATA_DIR
+from tests_deprecated.env_vars import TEST_DATA_DIR
 
 from pyiak_instr_deprecation.communication import (
     Register,

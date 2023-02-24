@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pyiak_instr_deprecation.rwfile import RWFile, RWFileError, FileSuffixError
 
-from tests.env_vars import TEST_DATA_DIR
+from tests_deprecated.env_vars import TEST_DATA_DIR
 
 
 class TestRWFile(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestRWFile(unittest.TestCase):
 
     def test_init_not_file(self):
         with self.assertRaises(RWFileError) as exc:
-            RWFile(".")
+            RWFile("")
         self.assertEqual("path not lead to file", exc.exception.args[0])
 
     def test_init_with_mkdir(self):
