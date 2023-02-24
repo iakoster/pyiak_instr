@@ -27,7 +27,7 @@ from ...exceptions import (
     MessageContentError,
     NotConfiguredMessageError,
 )
-from ...core import Code
+from src.pyiak_instr.core import Code
 
 
 __all__ = [

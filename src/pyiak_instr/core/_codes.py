@@ -1,12 +1,10 @@
 from enum import IntEnum, auto
 
 
-__all__ = [
-    "Code"
-]
+__all__ = ["Code"]
 
 
-class Code(IntEnum):  # nodesc
+class Code(IntEnum):
 
     # System codes
     NONE = 0
@@ -16,13 +14,16 @@ class Code(IntEnum):  # nodesc
     UNDEFINED = 0xff
 
     # Type codes
-    BYTES = 0x100
+    BOOL = 0x100
+    BYTES = auto()
     DICT = auto()
+    FLOAT = auto()
+    INT = auto()
     LIST = auto()
-    NUMPY_ARRAY = auto()
     SET = auto()
     STRING = auto()
     TUPLE = auto()
+    NUMPY_ARRAY = auto()
 
     # Additional types
     WORDS = 0x200

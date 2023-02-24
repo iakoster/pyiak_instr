@@ -68,7 +68,7 @@ class RWConfig(RWFile):
         """
         value = self._hapi.get(section, option)
         if convert:
-            return StringEncoder.from_str(value)
+            return StringEncoder.decode(value)
         return value
 
     def read(self, section: str, option: str, convert: bool = True) -> Any:
@@ -92,7 +92,7 @@ class RWConfig(RWFile):
 
         value = self._read_config().get(section, option)
         if convert:
-            return StringEncoder.from_str(value)
+            return StringEncoder.decode(value)
         return value
 
     def set(
@@ -120,7 +120,7 @@ class RWConfig(RWFile):
         _any2str: method to convert the value to a str.
         """
         if convert:
-            value = StringEncoder.to_str(value)
+            value = StringEncoder.encode(value)
         self._hapi.set(section, option, value)
 
     def update_config(self) -> None:
@@ -198,7 +198,7 @@ class RWConfig(RWFile):
         match args:
             case (str() as sec, str() as opt, val):
                 if convert:
-                    val = StringEncoder.to_str(val)
+                    val = StringEncoder.encode(val)
                 cfg.set(sec, opt, val)
                 self.set(sec, opt, val)
 
@@ -206,7 +206,7 @@ class RWConfig(RWFile):
                 vals = {sec: {}}
                 for opt, val in options.items():
                     if convert:
-                        val = StringEncoder.to_str(val)
+                        val = StringEncoder.encode(val)
                     vals[sec][opt] = val
                 cfg.read_dict(vals)
                 self._hapi.read_dict(vals)
@@ -218,7 +218,7 @@ class RWConfig(RWFile):
                         vals[sec] = {}
                     for opt, val in options.items():
                         if convert:
-                            val = StringEncoder.to_str(val)
+                            val = StringEncoder.encode(val)
                         vals[sec][opt] = val
                 cfg.read_dict(vals)
                 self._hapi.read_dict(vals)

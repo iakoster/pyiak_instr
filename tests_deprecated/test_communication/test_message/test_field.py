@@ -5,7 +5,7 @@ import numpy as np
 
 from ..utils import validate_object
 
-from pyiak_instr_deprecation.core import Code
+from src.pyiak_instr.core import Code
 from pyiak_instr_deprecation.communication import (
     Field,
     SingleField,

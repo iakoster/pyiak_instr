@@ -5,7 +5,6 @@ from typing import Any
 
 from .field import FieldSetter
 from .message import MessageType, MessageSetter
-from ...core import Code
 from ...rwfile import (
     RWConfig,
 )

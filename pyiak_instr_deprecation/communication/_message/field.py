@@ -14,7 +14,7 @@ from typing import (
 import numpy as np
 import numpy.typing as npt
 
-from ...core import Code
+from src.pyiak_instr.core import Code
 from ...exceptions import (
     FieldContentError
 )

@@ -1,31 +1,24 @@
 import unittest
-from typing import Any, get_args
+from typing import get_args
 
 import numpy as np
 
 from ..utils import (
     validate_object,
-    compare_objects,
     validate_fields,
-    compare_messages,
 )
 
-from pyiak_instr_deprecation.core import Code
+from src.pyiak_instr.core import Code
 from pyiak_instr_deprecation.communication import (
-    ContentType,
     Field,
     SingleField,
     StaticField,
     AddressField,
-    CrcField,
     DataField,
-    DataLengthField,
     IdField,
     OperationField,
     ResponseField,
     FieldSetter,
-    FieldType,
-    FieldContentError,
     MessageType,
     FieldMessage,
     SingleFieldMessage,
@@ -33,12 +26,6 @@ from pyiak_instr_deprecation.communication import (
     MessageSetter,
     MessageContentError,
     NotConfiguredMessageError,
-    Register,
-    RegisterMap,
-    AsymmetricResponseField,
-    MessageFormat,
-    MessageFormatMap,
-    PackageFormat,
 )
 
 

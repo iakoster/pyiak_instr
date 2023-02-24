@@ -7,7 +7,7 @@ from .._message import (
     MessageType,
     AsymmetricResponseField,
 )
-from ...core import Code
+from src.pyiak_instr.core import Code
 
 
 # todo: check type annotation

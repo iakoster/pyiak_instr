@@ -3,7 +3,7 @@ from typing import Any
 
 import pandas as pd
 
-from pyiak_instr_deprecation.core import Code
+from src.pyiak_instr.core import Code
 from pyiak_instr_deprecation.communication import (
     FieldSetter,
     RegisterMap,
