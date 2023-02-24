@@ -1,6 +1,6 @@
 import unittest as _unittest
 
-from pyiak_instr.store import (
+from pyiak_instr_deprecation.store import (
     DataSpace, DataSpaceTemplate
 )
 

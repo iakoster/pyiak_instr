@@ -2,7 +2,7 @@ import unittest
 import traceback
 import pandas.errors
 
-from pyiak_instr.exceptions import (
+from pyiak_instr_deprecation.exceptions import (
     PyiError
 )
 
@@ -30,6 +30,6 @@ class TestPyiError(unittest.TestCase):
             raise self.exc
         except PyiError as exc:
             self.assertEqual(
-                "pyiak_instr.exceptions._base.PyiError: test msg",
+                "pyiak_instr_deprecation.exceptions._base.PyiError: test msg",
                 traceback.format_exception(exc)[-1][:-1]
             )

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from pyiak_instr.log import (
+from pyiak_instr_deprecation.log import (
     NoWork, BlankWork, Work,
     CompletedWorkError, InterruptedWorkError
 )
@@ -12,7 +12,7 @@ from pyiak_instr.log import (
 class TestBlankWork(unittest.TestCase):
 
     def test_work_name(self):
-        self.assertEqual('pyiak_instr.log._work.NoWork',
+        self.assertEqual('pyiak_instr_deprecation.log._work.NoWork',
                          BlankWork().work_name)
         self.assertEqual('builtins.print',
                          BlankWork(print).work_name)
@@ -23,7 +23,7 @@ class TestBlankWork(unittest.TestCase):
         work = BlankWork()
         self.assertEqual(
             'Work report:\n'
-            'BlankWork(work=pyiak_instr.log._work.NoWork, '
+            'BlankWork(work=pyiak_instr_deprecation.log._work.NoWork, '
             'args=(), additional_args=(), kwargs={}, '
             'additional_kwargs={}, iscalled=False)',
             work.report()
@@ -57,7 +57,7 @@ class TestBlankWork(unittest.TestCase):
         work.interrupt(KeyboardInterrupt('test'))
         self.assertEqual(
             'Work report:\n'
-            'BlankWork(work=pyiak_instr.log._work.NoWork, '
+            'BlankWork(work=pyiak_instr_deprecation.log._work.NoWork, '
             'args=(), additional_args=(), kwargs={}, '
             'additional_kwargs={}, iscalled=True)\n'
             'Steps:\n1. step_1\n\tsubstep_1.1 result_1.1\n'
@@ -76,7 +76,7 @@ class TestBlankWork(unittest.TestCase):
         work.add_substep('substep_2', None)
         self.assertEqual(
             'Work report:\n'
-            'BlankWork(work=pyiak_instr.log._work.NoWork, '
+            'BlankWork(work=pyiak_instr_deprecation.log._work.NoWork, '
             'args=(), additional_args=(), kwargs={}, '
             'additional_kwargs={}, iscalled=False)\n'
             'Steps:\n1.substep_1 result_1.1\n'
@@ -102,7 +102,7 @@ class TestBlankWork(unittest.TestCase):
             work()
         self.assertEqual(
             'Work report:\n'
-            'BlankWork(work=pyiak_instr.log._work.NoWork, '
+            'BlankWork(work=pyiak_instr_deprecation.log._work.NoWork, '
             'args=(), additional_args=(), kwargs={}, '
             'additional_kwargs={}, iscalled=False)\n'
             'Steps:\n1.substep_1 result_1.1\n'

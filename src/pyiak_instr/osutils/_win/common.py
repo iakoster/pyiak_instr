@@ -1,6 +1,5 @@
 import os
 import stat
-from pathlib import Path
 from subprocess import call
 
 
@@ -11,63 +10,51 @@ __all__ = [
 ]
 
 
-def hide_path(path: Path) -> Path:
+def hide_path(path: os.PathLike[str]) -> None:
     """
     Hide file or directory.
 
     Parameters
     ----------
-    path: Path
-        path to the file or directory.
-
-    Returns
-    -------
-    Path
+    path: PathLike[str]
         path to the file or directory.
 
     Raises
     ------
-    FileExistsError
+    FileNotFoundError
         if path not exists.
     """
-    if not path.exists():
-        raise FileExistsError("path not exists")
+    if not os.path.exists(path):
+        raise FileNotFoundError("path not found")
     call(["attrib", "+H", path])
-    return path
 
 
-def unhide_path(path: Path) -> Path:
+def unhide_path(path: os.PathLike[str]) -> None:
     """
     Unhide file or directory.
 
     Parameters
     ----------
-    path: Path
+    path: PathLike[str]
         path to the file or directory
-
-    Returns
-    -------
-    Path
-        path to the file or directory.
 
     Raises
     ------
-    FileExistsError
+    FileNotFoundError
         if path not exists.
     """
-    if not path.exists():
-        raise FileExistsError("path not exists")
+    if not os.path.exists(path):
+        raise FileNotFoundError("path not found")
     call(["attrib", "-H", path])
-    return path
 
 
-def is_hidden_path(path: Path) -> bool:
+def is_hidden_path(path: os.PathLike[str]) -> bool:
     """
     Check that path is hidden.
 
     Parameters
     ----------
-    path: Path
+    path: PathLike[str]
         path to the file or directory
 
     Returns
@@ -77,9 +64,9 @@ def is_hidden_path(path: Path) -> bool:
 
     Raises
     ------
-    FileExistsError
+    FileNotFoundError
         if path not exists.
     """
-    if not path.exists():
-        raise FileExistsError("path not exists")
+    if not os.path.exists(path):
+        raise FileNotFoundError("path not found")
     return bool(os.stat(path).st_file_attributes & stat.FILE_ATTRIBUTE_HIDDEN)

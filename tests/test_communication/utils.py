@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pandas.testing
 
-from pyiak_instr.communication import (
+from pyiak_instr_deprecation.communication import (
     FieldType,
     FieldMessage,
 )

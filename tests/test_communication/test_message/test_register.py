@@ -17,7 +17,7 @@ from ..utils import (
 )
 from ...env_vars import TEST_DATA_DIR
 
-from pyiak_instr.communication import (
+from pyiak_instr_deprecation.communication import (
     Register,
     RegisterMap
 )

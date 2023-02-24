@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from pyiak_instr.log import get_logging_dict_config
+from pyiak_instr_deprecation.log import get_logging_dict_config
 
 
 class TestLogUtilsMethods(unittest.TestCase):

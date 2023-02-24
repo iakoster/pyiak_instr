@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 
-from pyiak_instr.communication import (
+from pyiak_instr_deprecation.communication import (
     FieldMessage,
     MessageType,
     Connection,

@@ -17,8 +17,8 @@ from ..utils import (
     compare_messages
 )
 
-from pyiak_instr.rwfile import RWConfig
-from pyiak_instr.communication import (
+from pyiak_instr_deprecation.rwfile import RWConfig
+from pyiak_instr_deprecation.communication import (
     AsymmetricResponseField,
     MessageFormat,
     MessageFormatMap,

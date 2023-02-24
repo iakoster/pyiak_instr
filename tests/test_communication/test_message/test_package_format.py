@@ -15,7 +15,7 @@ from ..utils import (
     compare_messages,
 )
 
-from pyiak_instr.communication import (
+from pyiak_instr_deprecation.communication import (
     Register,
     PackageFormat,
 )

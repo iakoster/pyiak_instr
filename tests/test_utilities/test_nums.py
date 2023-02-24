@@ -2,7 +2,7 @@ import unittest
 
 import random
 
-from pyiak_instr.utilities import to_base, from_base
+from pyiak_instr_deprecation.utilities import to_base, from_base
 
 
 class TestBaseOperations(unittest.TestCase):

@@ -773,7 +773,7 @@ class FieldMessage(object):
 
         See Also
         --------
-        pyiak_instr.communication.Message.split: method for splitting
+        pyiak_instr_deprecation.communication.Message.split: method for splitting
             message for sending
         """
         return self._slice_length

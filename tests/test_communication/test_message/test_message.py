@@ -10,8 +10,8 @@ from ..utils import (
     compare_messages,
 )
 
-from pyiak_instr.core import Code
-from pyiak_instr.communication import (
+from pyiak_instr_deprecation.core import Code
+from pyiak_instr_deprecation.communication import (
     ContentType,
     Field,
     SingleField,

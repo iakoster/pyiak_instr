@@ -213,7 +213,7 @@ class Register(object):
 
         See Also
         --------
-        pyiak_instr.utilities.split_complex_dict: function for splitting
+        pyiak_instr_deprecation.utilities.split_complex_dict: function for splitting
             incoming dict.
         """
         return self._get_message(
