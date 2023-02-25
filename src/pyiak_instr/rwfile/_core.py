@@ -35,7 +35,34 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
 
     def __init__(self, filepath: Path | str, api: T):
         WithApi.__init__(self, api)
+        self._fp = self._check_filepath(filepath)
 
+    @abstractmethod
+    def close(self) -> None:
+        """Close api."""
+        pass
+
+    def _check_filepath(self, filepath: Path | str) -> Path:
+        """
+        Check that `filepath` is correct.
+
+        Parameters
+        ----------
+        filepath : Path
+            path to the file.
+
+        Returns
+        -------
+        Path
+            path as Path class.
+
+        Raises
+        ------
+        FileSuffixError
+            if suffix of `filepath` is not in `ALLOWED_SUFFIXES`.
+        FileNotFoundError
+            if `filepath` exists, and it is not a file.
+        """
         if isinstance(filepath, str):
             filepath = Path(filepath)
         if (
@@ -47,13 +74,7 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
         if filepath.exists() and not filepath.is_file():
             raise FileNotFoundError("path not lead to file")
         filepath.absolute().parent.mkdir(parents=True, exist_ok=True)
-
-        self._fp = filepath
-
-    @abstractmethod
-    def close(self) -> None:
-        """Close api."""
-        pass
+        return filepath
 
     def _get_under_brackets(self) -> str:
         return str(self._fp)
