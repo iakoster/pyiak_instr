@@ -5,12 +5,10 @@ __all__ = ["split_complex_dict"]
 
 
 def split_complex_dict(
-        complex_dict: dict[str, Any],
-        sep: str = "__",
-        without_sep: str = "raise"
+    complex_dict: dict[str, Any], sep: str = "__", without_sep: str = "raise"
 ) -> (
-        dict[str, dict[str, Any]]
-        | tuple[dict[str, dict[str, Any]], dict[str, Any]]
+    dict[str, dict[str, Any]]
+    | tuple[dict[str, dict[str, Any]], dict[str, Any]]
 ):
     """
     Split dictionary to nested dictionaries (subdictionaries) by `sep`.
@@ -46,6 +44,7 @@ def split_complex_dict(
             % without_sep
         )
 
+    result: dict[str, dict[str, Any]]
     result, wo_sep_dict = {}, {}
     for key, value in complex_dict.items():
         if without_sep == "raise" and sep not in key:

@@ -25,4 +25,8 @@ def flake8(session: Session) -> None:
 
 @nox.session(python=False)
 def mypy(session: Session):
-    session.run("mypy", "src/pyiak_instr", "--config-file=mypy.ini")
+    session.run(
+        "mypy",
+        "src/pyiak_instr",
+        "--config-file=mypy.ini",
+    )

@@ -5,13 +5,12 @@ __all__ = ["Code"]
 
 
 class Code(IntEnum):
-
     # System codes
     NONE = 0
     OK = auto()
     WAIT = auto()
     ERROR = auto()
-    UNDEFINED = 0xff
+    UNDEFINED = 0xFF
 
     # Type codes
     BOOL = 0x100

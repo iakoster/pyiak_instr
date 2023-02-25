@@ -1,10 +1,10 @@
 import re
 import itertools
-from typing import Any, Iterable, Generator
+from typing import Any, Callable, Generator
 
 import numpy as np
 
-from src.pyiak_instr.core import Code
+from ..core import Code
 
 
 __all__ = ["StringEncoder"]
@@ -12,14 +12,10 @@ __all__ = ["StringEncoder"]
 
 # todo: parameters (e.g. \npa[shape=\tpl(2,1),dtype=uint8](1,2))
 class StringEncoder(object):
-
-    SUPPORTED_ITERABLES = bytes | dict | list | set | tuple | np.ndarray
-    "Union type of supported iterables (expect string)"
-
     DELIMITER = ","
     "Delimiter between values"
 
-    FLOAT = re.compile("^-?\d\.\d+([eE][+-]\d+)?$")
+    FLOAT = re.compile(r"^-?\d\.\d+([eE][+-]\d+)?$")
     "Float pattern"
 
     SOH = "\\"
@@ -35,26 +31,29 @@ class StringEncoder(object):
         "bts": Code.BYTES,
         "dct": Code.DICT,
         "lst": Code.LIST,
-        "npa": Code.NUMPY_ARRAY,
         "set": Code.SET,
         "str": Code.STRING,
         "tpl": Code.TUPLE,
+        "npa": Code.NUMPY_ARRAY,
     }
-    "Dictionary with headers of various types"
+    "Dictionary with headers of complex types"
 
     _HEADERS_R = {v: k for k, v in HEADERS.items()}
 
-    _HARD_TYPES = {
+    _COMPLEX_TYPES = {
         bytes: Code.BYTES,
         dict: Code.DICT,
         list: Code.LIST,
-        np.ndarray: Code.NUMPY_ARRAY,
         set: Code.SET,
         tuple: Code.TUPLE,
+        np.ndarray: Code.NUMPY_ARRAY,
     }
-    "Types where encoded string must be compound"
+    "Types where encoded string must be complex"
 
-    _DECODERS = {
+    COMPLEX_TYPES: set[type] = {*_COMPLEX_TYPES}
+    "Set of types that require coding"
+
+    _DECODERS: dict[Code, Callable[[Any], Any]] = {
         Code.NONE: lambda x: None,
         Code.BOOL: lambda x: x == "True",
         Code.BYTES: bytes,
@@ -115,10 +114,10 @@ class StringEncoder(object):
                 return value
             return cls._decorate(Code.STRING, value)
 
-        if type(value) not in cls._HARD_TYPES:
+        if type(value) not in cls._COMPLEX_TYPES:
             return cls._encode_value(value)
 
-        code = cls._HARD_TYPES[type(value)]
+        code = cls._COMPLEX_TYPES[type(value)]
         if code is Code.DICT:
             value = itertools.chain.from_iterable(value.items())
         return cls._decorate(
@@ -189,7 +188,7 @@ class StringEncoder(object):
     @classmethod
     def _encode_value(cls, value: Any) -> str:
         """Convert value to string."""
-        if isinstance(value, cls.SUPPORTED_ITERABLES | str):
+        if type(value) in cls.COMPLEX_TYPES or isinstance(value, str):
             return cls.encode(value)
         elif isinstance(value, Code):
             value = value.value
@@ -236,11 +235,11 @@ class StringEncoder(object):
     def _is_compound_string(cls, string: str) -> bool:
         """Check that string can be converted to value."""
         return (
-                len(string) >= 6
-                and string[0] == cls.SOH
-                and cls.SOD in string
-                and cls.EOD in string
-                and string[1:4] in cls.HEADERS
+            len(string) >= 6
+            and string[0] == cls.SOH
+            and cls.SOD in string
+            and cls.EOD in string
+            and string[1:4] in cls.HEADERS
         )
 
     @classmethod
