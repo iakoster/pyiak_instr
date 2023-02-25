@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-from ._core import RWFile
+from src.pyiak_instr.rwfile._core import RWFile
 
 
 __all__ = ['RWSQLite']
@@ -24,7 +24,7 @@ class RWSQLite(RWFile):
         database response timeout.
     """
 
-    FILE_SUFFIXES = {".db"}
+    ALLOWED_SUFFIXES = {".db"}
 
     def __init__(
             self,

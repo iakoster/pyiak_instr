@@ -3,7 +3,7 @@ import configparser
 from pathlib import Path
 from typing import overload, Any
 
-from ._core import RWFile
+from src.pyiak_instr.rwfile._core import RWFile
 from ..utilities import StringEncoder
 
 
@@ -24,7 +24,7 @@ class RWConfig(RWFile):
 
     _hapi: configparser.ConfigParser
 
-    FILE_SUFFIXES = {".ini"}
+    ALLOWED_SUFFIXES = {".ini"}
 
     def __init__(self, filepath: Path | str):
         super().__init__(filepath)
