@@ -12,7 +12,7 @@ class RWSQLite(RWFile):
     Class for reading and writing to the database as *.db.
 
     The timeout specifies how long the connection should
-    wait for the lock to go away until raising an exception.
+    wait for the lock to go away until raising an exceptions.
 
     Parameters
     ----------

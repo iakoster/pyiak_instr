@@ -291,7 +291,7 @@ class Field(BaseField):
 
         If the received content is not of type bytes, then there will be
         an attempt to convert the received variable into type bytes,
-        otherwise an exception will be raised.
+        otherwise an exceptions will be raised.
 
         Parameters
         ----------

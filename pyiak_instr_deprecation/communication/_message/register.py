@@ -40,7 +40,7 @@ def _validate_register_rw_input(invalid_type: str):
     Parameters
     ----------
     invalid_type: str
-        type of register when exception will be risen.
+        type of register when exceptions will be risen.
 
     Returns
     -------
@@ -289,7 +289,7 @@ class Register(object):
             if message format is not specified.
         """
         if self.mf is None:
-            raise AttributeError("message format not specified")  # todo: custom exception
+            raise AttributeError("message format not specified")  # todo: custom exceptions
         msg = self.mf.get(**configure_kw)
 
         if msg.has.AddressField:
