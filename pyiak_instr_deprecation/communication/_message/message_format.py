@@ -282,8 +282,8 @@ class MessageFormat(object):
         with RWConfig(config) as rwc:
             if self._msg_set.mf_name in rwc.hapi.sections():
                 rwc.hapi.remove_section(self._msg_set.mf_name)
-            rwc.apply_changes()  # todo: test to correct work (replace section)
-            rwc.write(self._msg_set.mf_name, self.init_kwargs)
+            rwc.commit()  # todo: test to correct work (replace section)
+            rwc.set(self._msg_set.mf_name, self.init_kwargs)
 
     def get(self, **update: dict[str, Any]) -> MessageType:
         """
@@ -430,7 +430,7 @@ class MessageFormatMap(object):
             path to config file.
         """
         for mf in self._formats.values():
-            mf.write(config)
+            mf.set(config)
 
     @classmethod
     def read(cls, config: Path) -> MessageFormatMap:

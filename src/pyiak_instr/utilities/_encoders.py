@@ -15,7 +15,7 @@ class StringEncoder(object):
     DELIMITER = ","
     "Delimiter between values"
 
-    FLOAT = re.compile(r"^-?\d\.\d+([eE][+-]\d+)?$")
+    FLOAT = re.compile(r"^-?\d+\.\d+([eE][+-]\d+)?$")
     "Float pattern"
 
     SOH = "\\"

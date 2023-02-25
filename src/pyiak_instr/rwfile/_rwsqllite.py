@@ -33,9 +33,7 @@ class RWSQLite(RWFile[sqlite3.Cursor]):
         autocommit: bool = True,
         timeout: float = 5,
     ):
-        self._con = sqlite3.connect(
-            self._check_filepath(filepath), timeout=timeout
-        )
+        self._con = sqlite3.connect(filepath, timeout=timeout)
         super().__init__(filepath, self._con.cursor())
         self._autocommit = autocommit
 

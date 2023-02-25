@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from src.pyiak_instr.rwfile import RWFile, RWFileError, FileSuffixError
+from src.pyiak_instr.rwfile import RWFile, FileSuffixError
 
 from ..env import get_local_test_data_dir, remove_test_data_dir
 from ...utils import validate_object

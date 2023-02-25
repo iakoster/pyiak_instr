@@ -33,7 +33,7 @@ class TestPackageFormat(unittest.TestCase):
             shutil.rmtree(TEST_DATA_DIR)
 
     def test_write_read(self):
-        PF.write(formats=CFG_PATH, registers=DB_PATH)
+        PF.set(formats=CFG_PATH, registers=DB_PATH)
         pf = PackageFormat.read(formats=CFG_PATH, registers=DB_PATH)
 
         with self.subTest(test="register map"):
@@ -98,7 +98,7 @@ class TestPackageFormat(unittest.TestCase):
                 operation=0,
                 data=10
             ),
-            res.write([10])
+            res.set([10])
         )
 
     def test_getitem(self):
@@ -129,8 +129,8 @@ class TestPackageFormat(unittest.TestCase):
     def test_write_get_set_difference(self) -> None:
         compare_messages(
             self,
-            PF["t6"].write().set(data=1.47),
-            PF["t6"].write(data=1.47),
+            PF["t6"].set().set(data=1.47),
+            PF["t6"].set(data=1.47),
         )
 
     def test_write_with_update(self):
@@ -147,7 +147,7 @@ class TestPackageFormat(unittest.TestCase):
 
         with self.subTest(test="read only"):
             with self.assertRaises(TypeError) as exc:
-                PF["t_2"].write()
+                PF["t_2"].set()
             self.assertEqual(
                 "read only register", exc.exception.args[0]
             )
@@ -162,7 +162,7 @@ class TestPackageFormat(unittest.TestCase):
 
         with self.subTest(test="write invalid length"):
             with self.assertRaises(ValueError) as exc:
-                PF["t_3"].write([0] * 6)
+                PF["t_3"].set([0] * 6)
             self.assertEqual(
                 "data length mote than register length: 6 > 5",
                 exc.exception.args[0]

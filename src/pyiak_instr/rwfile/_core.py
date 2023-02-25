@@ -1,7 +1,8 @@
+from __future__ import annotations
 from pathlib import Path
 from abc import abstractmethod
 from types import TracebackType
-from typing import Optional, Type, TypeVar
+from typing import Any, Optional, Type, TypeVar
 
 
 from ..exceptions import RWFileError, FileSuffixError
@@ -16,6 +17,55 @@ __all__ = [
 
 
 T = TypeVar("T")
+
+
+def _convert_path(filepath: Path | str) -> Path:
+    """
+    Convert `filepath` to Path if `filepath` is str instance.
+
+    Parameters
+    ----------
+    filepath : Path or path-like string
+        path to file
+
+    Returns
+    -------
+    Path
+        path as Path instance.
+    """
+    if isinstance(filepath, str):
+        filepath = Path(filepath)
+    return filepath
+
+
+def _check_filepath(cls: type[RWFile[T]], filepath: Path | str) -> None:
+    """
+    Check that `filepath` is correct.
+
+    Parameters
+    ----------
+    cls: RWFile
+        class instance.
+    filepath : Path
+        path to the file.
+
+    Raises
+    ------
+    FileSuffixError
+        if suffix of `filepath` is not in `ALLOWED_SUFFIXES`.
+    FileNotFoundError
+        if `filepath` exists, and it is not a file.
+    """
+    filepath_ = _convert_path(filepath)
+    if (
+        len(cls.ALLOWED_SUFFIXES)
+        and filepath_.suffix not in cls.ALLOWED_SUFFIXES
+    ):
+        raise FileSuffixError(cls.ALLOWED_SUFFIXES, filepath_)
+
+    if filepath_.exists() and not filepath_.is_file():
+        raise FileNotFoundError("path not lead to file")
+    filepath_.absolute().parent.mkdir(parents=True, exist_ok=True)
 
 
 class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
@@ -35,46 +85,12 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
 
     def __init__(self, filepath: Path | str, api: T):
         WithApi.__init__(self, api)
-        self._fp = self._check_filepath(filepath)
+        self._fp = _convert_path(filepath)
 
     @abstractmethod
     def close(self) -> None:
         """Close api."""
         pass
-
-    def _check_filepath(self, filepath: Path | str) -> Path:
-        """
-        Check that `filepath` is correct.
-
-        Parameters
-        ----------
-        filepath : Path
-            path to the file.
-
-        Returns
-        -------
-        Path
-            path as Path class.
-
-        Raises
-        ------
-        FileSuffixError
-            if suffix of `filepath` is not in `ALLOWED_SUFFIXES`.
-        FileNotFoundError
-            if `filepath` exists, and it is not a file.
-        """
-        if isinstance(filepath, str):
-            filepath = Path(filepath)
-        if (
-            len(self.ALLOWED_SUFFIXES)
-            and filepath.suffix not in self.ALLOWED_SUFFIXES
-        ):
-            raise FileSuffixError(self.ALLOWED_SUFFIXES, filepath)
-
-        if filepath.exists() and not filepath.is_file():
-            raise FileNotFoundError("path not lead to file")
-        filepath.absolute().parent.mkdir(parents=True, exist_ok=True)
-        return filepath
 
     def _get_under_brackets(self) -> str:
         return str(self._fp)
@@ -97,3 +113,9 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
     ) -> None:
         self.close()
         return super().__exit__(exc_type, exc_val, exc_tb)
+
+    def __new__(
+        cls, filepath: Path | str, *args: Any, **kwargs: Any
+    ) -> RWFile[T]:
+        _check_filepath(cls, filepath)
+        return super().__new__(cls)
