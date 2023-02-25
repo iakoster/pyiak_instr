@@ -1,5 +1,5 @@
 from ._common import split_complex_dict
-from ._converters import StringEncoder
+from ._encoders import StringEncoder
 from ._nums import num_sign, to_base
 
 

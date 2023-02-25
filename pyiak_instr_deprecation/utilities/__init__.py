@@ -1,4 +1,4 @@
-from src.pyiak_instr.utilities._converters import split_complex_dict, StringEncoder
+from src.pyiak_instr.utilities._encoders import split_complex_dict, StringEncoder
 from ._nums import (
     num_sign,
     to_base,
