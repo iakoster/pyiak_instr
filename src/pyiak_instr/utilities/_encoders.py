@@ -1,13 +1,161 @@
 import re
 import itertools
+import struct
 from typing import Any, Callable, Generator
 
 import numpy as np
+import numpy.typing as npt
 
 from ..core import Code
 
 
-__all__ = ["StringEncoder"]
+__all__ = ["BytesEncoder", "StringEncoder"]
+
+
+class BytesEncoder(object):
+    @classmethod
+    def decode(
+        cls,
+        content: bytes,
+        fmt: str = "B",
+        order: str = "",
+    ) -> npt.NDArray[Any]:  # todo: typing
+        """
+        Decode bytes content to array.
+
+        Parameters
+        ----------
+        content : bytes
+            content to decoding.
+        fmt : str, default='B'
+            value format.
+        order : str, default=''
+            bytes order.
+
+        Returns
+        -------
+        numpy.typing.NDArray
+            decoded values.
+        """
+        cls._check_fmt(fmt)
+        cls._check_order(order)
+        return np.frombuffer(content, dtype=cls._get_dtype(fmt, order))
+
+    @classmethod
+    def decode_value(
+        cls,
+        content: bytes,
+        fmt: str = "B",
+        order: str = "",
+    ) -> int | float:
+        """
+        Decode one value from content.
+
+        Parameters
+        ----------
+        content : bytes
+            value content.
+        fmt : str, default='B'
+            value format.
+        order : str, order=''
+            content order.
+
+        Returns
+        -------
+        numpy.number
+            decoded value.
+
+        Raises
+        ------
+        ValueError
+            if content is not a one value.
+        """
+        if len(content) / struct.calcsize(fmt) != 1:
+            raise ValueError("content must be specified by one value")
+        return cls.decode(content, fmt=fmt, order=order)[0]  # type: ignore
+
+    @classmethod
+    def encode(
+        cls,
+        content: npt.ArrayLike,
+        fmt: str = "B",
+        order: str = "",
+    ) -> bytes:
+        """
+        Encode values to bytes.
+
+        Parameters
+        ----------
+        content : numpy.typing.ArrayLike
+            values to encoding.
+        fmt : str
+            format char.
+        order : str
+            order char.
+
+        Returns
+        -------
+        bytes
+            encoded values.
+        """
+        cls._check_fmt(fmt)
+        cls._check_order(order)
+        return np.array(content, dtype=cls._get_dtype(fmt, order)).tobytes()
+
+    @classmethod
+    def _check_fmt(cls, fmt: str) -> None:
+        """
+        Check format.
+
+        Parameters
+        ----------
+        fmt : str
+            format.
+
+        Raises
+        ------
+        ValueError
+            if fmt is not specified by char.
+        """
+        if len(fmt) != 1:
+            raise ValueError("fmt must be specified by char")
+
+    @classmethod
+    def _check_order(cls, order: str) -> None:
+        """
+        Check order char.
+
+        Parameters
+        ----------
+        order : str
+            order char.
+
+        Raises
+        ------
+        ValueError
+            if order not in {'', '>', '<', '!'}.
+        """
+        if order not in {"", ">", "<"}:
+            raise ValueError("order not in {'', '>', '<'}")
+
+    @classmethod
+    def _get_dtype(cls, fmt: str, order: str) -> str:
+        """
+        Get dtype with order and fmt.
+
+        Parameters
+        ----------
+        fmt : str
+            format.
+        order : str
+            order char.
+
+        Returns
+        -------
+        str
+            dtype string.
+        """
+        return (order if struct.calcsize(fmt) != 1 else "") + fmt
 
 
 # todo: parameters (e.g. \npa[shape=\tpl(2,1),dtype=uint8](1,2))
