@@ -3,7 +3,7 @@ from pathlib import Path
 from configparser import ConfigParser
 from typing import Any
 
-from pyiak_instr_deprecation.rwfile import RWConfig
+from src.pyiak_instr.rwfile import RWConfig
 
 from ..env import get_local_test_data_dir, remove_test_data_dir
 
