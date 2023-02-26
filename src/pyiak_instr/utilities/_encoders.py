@@ -13,6 +13,7 @@ __all__ = ["BytesEncoder", "StringEncoder"]
 
 
 class BytesEncoder(object):
+    # nodesc
     @classmethod
     def decode(
         cls,
@@ -159,7 +160,7 @@ class BytesEncoder(object):
 
 
 # todo: parameters (e.g. \npa[shape=\tpl(2,1),dtype=uint8](1,2))
-class StringEncoder(object):
+class StringEncoder(object):  # nodesc
     DELIMITER = ","
     "Delimiter between values"
 

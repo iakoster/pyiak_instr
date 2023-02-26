@@ -614,8 +614,8 @@ class FieldMessage(object):
         i_infinite, next_start_byte = -1, 0
         for i_field, field in enumerate(fields):
 
-            field.start_byte = next_start_byte
-            next_start_byte += field.expected * field.bytesize
+            field.start = next_start_byte
+            next_start_byte += field.expected * field.wordsize
 
             if field.finite:
                 field.stop_byte = next_start_byte
@@ -637,15 +637,15 @@ class FieldMessage(object):
                     field.stop_byte = next_start_byte
                 else:
                     field.stop_byte = None
-                next_start_byte -= field.expected * field.bytesize
-                field.start_byte = next_start_byte
+                next_start_byte -= field.expected * field.wordsize
+                field.start = next_start_byte
 
             else:
                 if i_infinite:  # i_infinite > 0
-                    field.start_byte = fields[i_infinite - 1].stop_byte
-                    field.stop_byte = fields[i_infinite + 1].start_byte
+                    field.start = fields[i_infinite - 1].stop_byte
+                    field.stop_byte = fields[i_infinite + 1].start
                 else:  # i_infinite == 0
-                    field.stop_byte = fields[1].start_byte
+                    field.stop_byte = fields[1].start
                 break
 
     def _validate_content(self) -> None:
