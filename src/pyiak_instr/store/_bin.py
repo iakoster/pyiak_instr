@@ -11,9 +11,10 @@ from ..exceptions import WithoutParent
 from ..utilities import BytesEncoder
 
 
-def _parent_dependence_property(
-    func: Callable[[Any], Any]
-) -> Callable[[Any], Any]:
+__all__ = ["BytesField", "BytesFieldPattern"]
+
+
+def _parent_dependence(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
     @functools.wraps(func)
     def wrapper(self: BytesField) -> Any:
         if self.parent is None:
@@ -52,11 +53,11 @@ class BytesField:
     parent: ContinuousBytesStorage | None = None
     """parent storage."""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.expected < 0:
             object.__setattr__(self, "expected", 0)
 
-    @_parent_dependence_property
+    @_parent_dependence
     def decode(self) -> npt.NDArray[Any]:
         """
         Decode content from parent.
@@ -96,7 +97,7 @@ class BytesField:
         return self.expected * self.word_size
 
     @property
-    @_parent_dependence_property
+    @_parent_dependence
     def content(self) -> bytes:
         """
         Returns
@@ -149,7 +150,7 @@ class BytesField:
         return struct.calcsize(self.fmt)
 
     @property
-    @_parent_dependence_property
+    @_parent_dependence
     def words_count(self) -> int:
         """
         Returns
@@ -160,7 +161,7 @@ class BytesField:
         return len(self.content) // self.word_size
 
 
-class BytesFieldParametersContainer:
+class BytesFieldPattern:
     """
     Represents class which storage common parameters for field.
 
@@ -172,6 +173,21 @@ class BytesFieldParametersContainer:
 
     def __init__(self, **parameters: Any):
         self._kw = parameters
+
+    def add(self, key: str, value: Any) -> None:
+        """
+        Add new parameter to the pattern.
+
+        Parameters
+        ----------
+        key: str
+            new parameter name.
+        value: Any
+            new parameter value.
+        """
+        if key in self:
+            raise KeyError("parameter in pattern already")
+        self._kw[key] = value
 
     def get(self, **parameters: Any) -> BytesField:
         """
@@ -190,12 +206,31 @@ class BytesFieldParametersContainer:
         """
         return BytesField(**self._kw, **parameters)
 
+    def pop(self, key: str) -> Any:
+        """
+        Extract parameter with removal.
+
+        Parameters
+        ----------
+        key: str
+            parameter name.
+
+        Returns
+        -------
+        Any
+            parameter value.
+        """
+        return self._kw.pop(key)
+
+    def __contains__(self, item: str) -> bool:
+        return item in self._kw
+
     def __getitem__(self, parameter: str) -> Any:
         return self._kw[parameter]
 
     def __setitem__(self, parameter: str, value: Any) -> None:
-        if parameter not in self._kw:
-            raise KeyError("%r not in parameters list" % parameter)
+        if parameter not in self:
+            raise KeyError("%r not in parameters" % parameter)
         self._kw[parameter] = value
 
 
