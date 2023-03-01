@@ -191,7 +191,7 @@ class BytesFieldPattern:
 
     def get(self, **parameters: Any) -> BytesField:
         """
-        Get field initialized with parameters from container and from
+        Get field initialized with parameters from pattern and from
         `parameters`.
 
         Parameters
@@ -205,6 +205,28 @@ class BytesFieldPattern:
             initialized field.
         """
         return BytesField(**self._kw, **parameters)
+
+    def get_updated(self, **parameters: Any) -> BytesField:
+        """
+        Get field initialized with parameters from pattern and from
+        `parameters`.
+
+        If parameters from pattern will be updated via `parameters` before
+        creation Field instance.
+
+        Parameters
+        ----------
+        **parameters: Any
+            parameters for field.
+
+        Returns
+        -------
+        BytesField
+            initialized field.
+        """
+        kw_ = self._kw.copy()
+        kw_.update(parameters)
+        return BytesField(**kw_)  # pylint: disable=missing-kwoa
 
     def pop(self, key: str) -> Any:
         """

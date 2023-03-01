@@ -56,14 +56,14 @@ class TestBytesField(unittest.TestCase):
 class TestBytesFieldPattern(unittest.TestCase):
 
     def test_add(self) -> None:
-        pattern = self._get_setter()
+        pattern = self._get_pattern()
         self.assertNotIn("e", pattern)
         pattern.add("e", 223)
         self.assertIn("e", pattern)
 
     def test_add_exc(self) -> None:
         with self.assertRaises(KeyError) as exc:
-            self._get_setter().add("a", 1)
+            self._get_pattern().add("a", 1)
         self.assertEqual("parameter in pattern already", exc.exception.args[0])
 
     def test_get(self) -> None:
@@ -84,32 +84,54 @@ class TestBytesFieldPattern(unittest.TestCase):
             check_attrs=False,
         )
 
+    def test_get_updated(self) -> None:
+        pattern = BytesFieldPattern(
+            may_be_empty=True,
+            fmt="B",
+            order="",
+            expected=4,
+        )
+        with self.assertRaises(TypeError) as exc:
+            pattern.get(start=0, expected=1)
+        self.assertIn(
+            "got multiple values for keyword argument 'expected'",
+            exc.exception.args[0],
+        )
+
+        validate_object(
+            self,
+            pattern.get_updated(start=0, expected=1),
+            start=0,
+            expected=1,
+            check_attrs=False,
+        )
+
     def test_pop(self) -> None:
-        pattern = self._get_setter()
+        pattern = self._get_pattern()
         self.assertIn("a", pattern)
         self.assertEqual(1, pattern.pop("a"))
         self.assertNotIn("a", pattern)
 
     def test_magic_contains(self) -> None:
-        self.assertIn("a", self._get_setter())
+        self.assertIn("a", self._get_pattern())
 
     def test_magic_getitem(self) -> None:
-        self.assertEqual(1, self._get_setter()["a"])
+        self.assertEqual(1, self._get_pattern()["a"])
 
     def test_magic_setitem(self) -> None:
-        pattern = self._get_setter()
+        pattern = self._get_pattern()
         self.assertListEqual([], pattern["b"])
         pattern["b"] = 1
         self.assertEqual(1, pattern["b"])
 
     def test_magic_setitem_exc(self) -> None:
-        pattern = self._get_setter()
+        pattern = self._get_pattern()
         with self.assertRaises(KeyError) as exc:
             pattern["e"] = 1
         self.assertEqual("'e' not in parameters", exc.exception.args[0])
 
     @staticmethod
-    def _get_setter() -> BytesFieldPattern:
+    def _get_pattern() -> BytesFieldPattern:
         return BytesFieldPattern(
             a=1,
             b=[],
