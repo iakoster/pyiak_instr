@@ -26,14 +26,29 @@ class TestBytesField(unittest.TestCase):
             infinite=True,
             may_be_empty=True,
             order=">",
-            parent=None,
             slice=slice(4, None),
             start=4,
             stop=None,
             word_size=4,
             check_attrs=True,
-            wo_attrs=["content", "words_count"]
         )
+
+    def test_decode(self) -> None:
+        obj = BytesField(
+            start=4,
+            may_be_empty=True,
+            fmt="I",
+            order=">",
+            expected=-100,
+        )
+        cases = (
+            (b"\x00\x00\x00\x01", 1),
+            (b"\x00\x00\x00\x01\x00\x00\x00\x02", [1, 2]),
+            (b"\x00\x00\x00\x01\x00\x00\x00\x22", np.array([1, 0x22])),
+        )
+        for i_case, (data, ref) in enumerate(cases):
+            with self.subTest(test=i_case):
+                compare_values(self, ref, obj.decode(data))
 
     def test_encode(self) -> None:
         obj = BytesField(

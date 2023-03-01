@@ -81,7 +81,7 @@ def get_object_attrs(
 
 
 def compare_values(case: TestCase, ref: Any, res: Any) -> None:
-    if isinstance(ref, np.ndarray):
+    if np.ndarray in (type(ref), type(res)):
         numpy.testing.assert_allclose(ref, res)
     elif isinstance(ref, pd.DataFrame):
         pandas.testing.assert_frame_equal(ref, res)

@@ -1,27 +1,15 @@
 """Private module of ``pyiak_instr.store`` for work with bytes."""
 from __future__ import annotations
 import struct
-import functools
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Generator
 
 import numpy.typing as npt
 
-from ..exceptions import WithoutParent
 from ..utilities import BytesEncoder
 
 
 __all__ = ["BytesField", "BytesFieldPattern"]
-
-
-def _parent_dependence(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
-    @functools.wraps(func)
-    def wrapper(self: BytesField) -> Any:
-        if self.parent is None:
-            raise WithoutParent()
-        return func(self)
-
-    return wrapper
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -50,26 +38,25 @@ class BytesField:
     default: bytes = b""
     """default value of the field."""
 
-    parent: ContinuousBytesStorage | None = None
-    """parent storage."""
-
     def __post_init__(self) -> None:
         if self.expected < 0:
             object.__setattr__(self, "expected", 0)
 
-    @_parent_dependence
-    def decode(self) -> npt.NDArray[Any]:
+    def decode(self, content: bytes) -> npt.NDArray[Any]:
         """
         Decode content from parent.
+
+        Parameters
+        ----------
+        content: bytes
+            content for decoding.
 
         Returns
         -------
         npt.NDArray[Any]
             decoded content.
         """
-        return BytesEncoder.decode(
-            self.content, fmt=self.fmt, order=self.order
-        )
+        return BytesEncoder.decode(content, fmt=self.fmt, order=self.order)
 
     def encode(self, content: npt.ArrayLike) -> bytes:
         """
@@ -82,7 +69,8 @@ class BytesField:
 
         Returns
         -------
-        encoded content.
+        bytes
+            encoded content.
         """
         return BytesEncoder.encode(content, fmt=self.fmt, order=self.order)
 
@@ -95,17 +83,6 @@ class BytesField:
             expected bytes for field. Returns 0 if field is infinite.
         """
         return self.expected * self.word_size
-
-    @property
-    @_parent_dependence
-    def content(self) -> bytes:
-        """
-        Returns
-        -------
-        bytes
-            field content.
-        """
-        return self.parent.content[self.slice]  # type: ignore
 
     @property
     def infinite(self) -> bool:
@@ -149,8 +126,44 @@ class BytesField:
         """
         return struct.calcsize(self.fmt)
 
+
+class BytesFieldParser:
+    """
+    Represents parser for work with field content.
+
+    Parameters
+    ----------
+    storage: ContinuousBytesStorage
+        storage of fields.
+    field: BytesField
+        field instance.
+    """
+
+    def __init__(self, storage: ContinuousBytesStorage, field: BytesField):
+        self._s = storage
+        self._f = field
+
     @property
-    @_parent_dependence
+    def content(self) -> bytes:
+        """
+        Returns
+        -------
+        bytes
+            field content.
+        """
+        return self._s.content[self._f.slice]
+
+    @property
+    def field(self) -> BytesField:
+        """
+        Returns
+        -------
+        BytesField
+            field instance.
+        """
+        return self._f
+
+    @property
     def words_count(self) -> int:
         """
         Returns
@@ -158,7 +171,42 @@ class BytesField:
         int
             Count of words in the field.
         """
-        return len(self.content) // self.word_size
+        return len(self.content) // self._f.word_size
+
+
+class ContinuousBytesStorage:
+    """
+    Represents continuous storage where data storage in bytes.
+
+    Continuous means that the storage fields must go continuously, that is,
+    where one field ends, another must begin.
+
+    Parameters
+    ----------
+    **fields: BytesField
+        fields of the storage. The kwarg Key is used as the field name.
+    """
+
+    def __init__(self, **fields: BytesField):
+        self._f = fields
+        self._c = b""
+
+    @property
+    def content(self) -> bytes:
+        """
+        Returns
+        -------
+        bytes
+            content of the storage.
+        """
+        return self._c
+
+    def __getitem__(self, field: str) -> BytesFieldParser:
+        return BytesFieldParser(self, self._f[field])
+
+    def __iter__(self) -> Generator[BytesFieldParser, None, None]:
+        for field in self._f:
+            yield self[field]
 
 
 class BytesFieldPattern:
@@ -254,32 +302,3 @@ class BytesFieldPattern:
         if parameter not in self:
             raise KeyError("%r not in parameters" % parameter)
         self._kw[parameter] = value
-
-
-# pylint: disable=too-few-public-methods
-class ContinuousBytesStorage:
-    """
-    Represents continuous storage where data storage in bytes.
-
-    Continuous means that the storage fields must go continuously, that is,
-    where one field ends, another must begin.
-
-    Parameters
-    ----------
-    **fields: BytesField
-        fields of the storage. The kwarg Key is used as the field name.
-    """
-
-    def __init__(self, **fields: BytesField):
-        self._f = fields
-        self._c = b""
-
-    @property
-    def content(self) -> bytes:
-        """
-        Returns
-        -------
-        bytes
-            content of the storage.
-        """
-        return self._c
