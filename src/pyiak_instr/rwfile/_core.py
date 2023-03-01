@@ -1,3 +1,6 @@
+"""Private module of ``pyiak_instr.osutils._win`` with common functions for
+Windows.
+"""
 from __future__ import annotations
 from pathlib import Path
 from abc import abstractmethod
@@ -90,7 +93,6 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
     @abstractmethod
     def close(self) -> None:
         """Close api."""
-        pass
 
     def _get_under_brackets(self) -> str:
         return str(self._fp)
@@ -114,6 +116,7 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
         self.close()
         return super().__exit__(exc_type, exc_val, exc_tb)
 
+    # pylint: disable=unused-argument
     def __new__(
         cls, filepath: Path | str, *args: Any, **kwargs: Any
     ) -> RWFile[T]:

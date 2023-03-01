@@ -1,3 +1,4 @@
+"""Private module of ``pyiak_instr`` with common types."""
 from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import Self, Optional, Type, TypeVar, Generic
@@ -9,7 +10,9 @@ __all__ = ["ContextManager", "WithApi", "WithBaseStringMethods"]
 T = TypeVar("T")
 
 
-class ContextManager(ABC):  # nodesc
+class ContextManager(ABC):
+    """Represents context manager abstract class."""
+
     def __enter__(self) -> Self:
         return self
 
@@ -22,7 +25,10 @@ class ContextManager(ABC):  # nodesc
         pass
 
 
-class WithApi(ABC, Generic[T]):  # nodesc
+# pylint: disable=too-few-public-methods
+class WithApi(ABC, Generic[T]):
+    """Represents generic class with some API."""
+
     def __init__(self, api: T):
         self._api = api
 
@@ -32,7 +38,9 @@ class WithApi(ABC, Generic[T]):  # nodesc
         return self._api
 
 
-class WithBaseStringMethods(ABC):  # nodesc
+class WithBaseStringMethods(ABC):
+    """Represents abstract class with basic string methods."""
+
     @abstractmethod
     def _get_under_brackets(self) -> str:
         pass

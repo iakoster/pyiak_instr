@@ -1,3 +1,4 @@
+"""Private module of ``pyiak_instr.utilities`` with common functions"""
 from typing import Any
 
 
@@ -49,7 +50,7 @@ def split_complex_dict(
     for key, value in complex_dict.items():
         if without_sep == "raise" and sep not in key:
             raise KeyError("key %r does not have separator %r" % (key, sep))
-        elif sep not in key:
+        if sep not in key:
             wo_sep_dict[key] = value
             continue
 

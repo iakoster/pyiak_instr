@@ -1,8 +1,9 @@
+"""Private module of ``pyiak_instr.store`` for work with bytes."""
 from __future__ import annotations
 import struct
 import functools
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Callable
 
 import numpy.typing as npt
 
@@ -29,18 +30,18 @@ def _neg_int_to_zero(value: int) -> int:
     return value
 
 
-def _parent_dependence(f):  # nodesc
-    @functools.wraps(f)
+def _parent_dependence(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
+    @functools.wraps(func)
     def wrapper(self: BytesField, *args: Any, **kwargs: Any) -> Any:
         if self.parent is None:
             raise WithoutParent()
-        return f(self, *args, **kwargs)
+        return func(self, *args, **kwargs)
 
     return wrapper
 
 
 @dataclass(frozen=True, kw_only=True)
-class BytesField(object):
+class BytesField:
     """
     Represents field parameters with values encoded in bytes.
     """
@@ -52,14 +53,14 @@ class BytesField(object):
     """if True then field can be empty in a message."""
 
     fmt: str
-    """format for packing or unpacking the content. 
+    """format for packing or unpacking the content.
     The word length is calculated from the format."""
 
     order: str
     """bytes order for packing and unpacking."""
 
-    expected: int = field(default_factory=_neg_int_to_zero)
-    """expected number of words in the field. If less than 1, from 
+    expected: int
+    """expected number of words in the field. If less than 1, from
     the start byte to the end of the message."""
 
     default: bytes = b""
@@ -116,7 +117,7 @@ class BytesField(object):
         bytes
             field content.
         """
-        return self.parent.content[self.slice]
+        return self.parent.content[self.slice]  # type: ignore
 
     @property
     def infinite(self) -> bool:
@@ -172,11 +173,34 @@ class BytesField(object):
         return len(self.content) // self.word_size
 
 
-class BytesFieldParametersContainer(object):  # nodesc
+class BytesFieldParametersContainer:
+    """
+    Represents class which storage common parameters for field.
+
+    Parameters
+    ----------
+    **parameters: Any
+        common parameters.
+    """
+
     def __init__(self, **parameters: Any):
         self._kw = parameters
 
     def get(self, **parameters: Any) -> BytesField:
+        """
+        Get field initialized with parameters from container and from
+        `parameters`.
+
+        Parameters
+        ----------
+        **parameters: Any
+            additional field initialization parameters.
+
+        Returns
+        -------
+        BytesField
+            initialized field.
+        """
         return BytesField(**self._kw, **parameters)
 
     def __getitem__(self, parameter: str) -> Any:
@@ -188,14 +212,30 @@ class BytesFieldParametersContainer(object):  # nodesc
         self._kw[parameter] = value
 
 
-class ContinuousBytesStorage(object):
+# pylint: disable=too-few-public-methods
+class ContinuousBytesStorage:
+    """
+    Represents continuous storage where data storage in bytes.
+
+    Continuous means that the storage fields must go continuously, that is,
+    where one field ends, another must begin.
+
+    Parameters
+    ----------
+    **fields: BytesField
+        fields of the storage. The kwarg Key is used as the field name.
+    """
+
     def __init__(self, **fields: BytesField):
-        ...
+        self._f = fields
+        self._c = b""
 
     @property
     def content(self) -> bytes:
-        ...
-
-
-class BytesStoragePattern(object):
-    ...
+        """
+        Returns
+        -------
+        bytes
+            content of the storage.
+        """
+        return self._c

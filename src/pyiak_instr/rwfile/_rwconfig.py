@@ -1,3 +1,10 @@
+"""
+====================================
+RWConfig (:mod:`pyiak_instr.rwfile`)
+====================================
+
+The module provides class for work with config file
+"""
 import io
 from pathlib import Path
 from configparser import ConfigParser
@@ -36,7 +43,7 @@ class RWConfig(RWFile[ConfigParser]):
 
         Used for save changes which created by .set method.
         """
-        with io.open(self._fp, "w") as file:
+        with io.open(self._fp, "w", encoding="cp1251") as file:
             self._api.write(file)
 
     def drop_changes(self) -> None:
@@ -89,7 +96,6 @@ class RWConfig(RWFile[ConfigParser]):
         convert: bool, default=True
             convert the `value` to str by StringEncoder.
         """
-        ...
 
     @overload
     def set(
@@ -105,7 +111,6 @@ class RWConfig(RWFile[ConfigParser]):
         convert: bool, default=True
             convert the `value` to str by StringEncoder.
         """
-        ...
 
     @overload
     def set(
@@ -119,7 +124,6 @@ class RWConfig(RWFile[ConfigParser]):
         convert: bool
             convert the `value` to str by StringEncoder.
         """
-        ...
 
     def set(self, *args: Any, convert: bool = True, **kwargs: Any) -> None:
         """
@@ -139,7 +143,7 @@ class RWConfig(RWFile[ConfigParser]):
             for mypy compatibility.
         """
         if len(kwargs):
-            raise ValueError("kwargs cannot used here")  # todo: implement
+            raise ValueError("kwargs cannot used here")
 
         def convert_value(value: Any) -> Any:
             if convert:
@@ -191,6 +195,6 @@ class RWConfig(RWFile[ConfigParser]):
         if filepath.exists():
             cfg.read(filepath)
         else:
-            with io.open(filepath, "w") as file:
+            with io.open(filepath, "w", encoding="cp1251") as file:
                 cfg.write(file)
         return cfg

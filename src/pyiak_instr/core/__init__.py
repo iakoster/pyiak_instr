@@ -1,3 +1,8 @@
+"""
+=========================
+Core (:mod:`pyiak_instr`)
+=========================
+"""
 from ._codes import Code
 
 

@@ -1,3 +1,4 @@
+"""Private module of `pyiak_instr.exceptions` with base exceptions."""
 from typing import Any
 
 
@@ -7,7 +8,7 @@ __all__ = ["PyiError"]
 class PyiError(Exception):
     """Base class of exceptions for library."""
 
-    def __init__(self, msg: str = "", *args: Any):
+    def __init__(self, *args: Any, msg: str = ""):
         self.msg = msg
         super().__init__(msg, *args)
 

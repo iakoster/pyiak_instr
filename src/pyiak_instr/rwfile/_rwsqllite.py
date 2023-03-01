@@ -1,3 +1,6 @@
+"""Private module of ``pyiak_instr.rwfile`` with class for work with
+SQLite3 database.
+"""
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -69,6 +72,7 @@ class RWSQLite(RWFile[sqlite3.Cursor]):
         return result
 
     def close(self) -> None:
+        """Close connection to database."""
         try:
             self._api.close()
         except sqlite3.ProgrammingError as err:

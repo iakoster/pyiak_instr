@@ -1,3 +1,7 @@
+"""
+Private module of `pyiak_instr.exceptions` with exceptions for rwfile
+package.
+"""
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +15,7 @@ class RWFileError(PyiError):
     """Base class for exceptions in rwfile package."""
 
     def __init__(self, msg: str, filepath: Path, *args: Any):
-        super().__init__(msg, filepath, *args)
+        super().__init__(filepath, *args, msg=msg)
         self.filepath = filepath
 
 

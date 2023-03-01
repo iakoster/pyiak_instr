@@ -1,3 +1,4 @@
+"""Private module of ``pyiak_instr.utilities`` with functions with nums"""
 import string
 
 
@@ -26,7 +27,7 @@ def num_sign(value: int | float, pos_zero: bool = False) -> int:
     sign = (value > 0) - (value < 0)
     if sign:
         return sign
-    elif pos_zero:
+    if pos_zero:
         return 1
     return 0
 

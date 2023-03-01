@@ -1,3 +1,8 @@
+"""
+===========================
+RWFile (:mod:`pyiak_instr`)
+===========================
+"""
 from ._core import RWFile, RWFileError, FileSuffixError
 from ._rwconfig import RWConfig
 from ._rwsqllite import RWSQLite

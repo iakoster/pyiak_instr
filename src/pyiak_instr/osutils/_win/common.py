@@ -1,3 +1,4 @@
+"""Private module of ``pyiak_instr.osutils`` with Windows functions."""
 import os
 import stat
 from subprocess import call

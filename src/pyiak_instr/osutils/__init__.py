@@ -1,3 +1,8 @@
+"""
+============================
+osutils (:mod:`pyiak_instr`)
+============================
+"""
 from platform import system
 
 match system():

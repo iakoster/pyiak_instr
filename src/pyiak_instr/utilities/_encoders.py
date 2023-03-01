@@ -1,3 +1,4 @@
+"""Private module of ``pyiak_instr.utilities`` with functions with nums"""
 import re
 import itertools
 import struct
@@ -12,7 +13,11 @@ from ..core import Code
 __all__ = ["BytesEncoder", "StringEncoder"]
 
 
-class BytesEncoder(object):
+class BytesEncoder:
+    """
+    Represents class for encoding/decoding numbers and arrays to/from bytes.
+    """
+
     # nodesc
     @classmethod
     def decode(
@@ -160,7 +165,11 @@ class BytesEncoder(object):
 
 
 # todo: parameters (e.g. \npa[shape=\tpl(2,1),dtype=uint8](1,2))
-class StringEncoder(object):  # nodesc
+class StringEncoder:
+    """
+    Represent class for encoding/decoding python values to/from string.
+    """
+
     DELIMITER = ","
     "Delimiter between values"
 
@@ -317,19 +326,19 @@ class StringEncoder(object):  # nodesc
         Code
             type code.
         """
-        if not len(string):
+        if len(string) == 0:
             return Code.STRING
 
-        elif string[0] == "-" and string[1:].isdigit() or string.isdigit():
+        if string[0] == "-" and string[1:].isdigit() or string.isdigit():
             return Code.INT
 
-        elif cls.FLOAT.match(string) is not None:
+        if cls.FLOAT.match(string) is not None:
             return Code.FLOAT
 
-        elif string in ("True", "False"):
+        if string in ("True", "False"):
             return Code.BOOL
 
-        elif string == "None":
+        if string == "None":
             return Code.NONE
 
         return Code.STRING
@@ -339,7 +348,7 @@ class StringEncoder(object):  # nodesc
         """Convert value to string."""
         if type(value) in cls.COMPLEX_TYPES or isinstance(value, str):
             return cls.encode(value)
-        elif isinstance(value, Code):
+        if isinstance(value, Code):
             value = value.value
         return str(value)
 
@@ -411,7 +420,7 @@ class StringEncoder(object):  # nodesc
             char = string[i]
 
             if char == cls.SOH:
-                assert not len(raw), "raw value not empty"
+                assert len(raw) == 0, "raw value not empty"
                 _, eod = cls._get_data_border(string[i:])
                 yield string[i : i + eod + 1]
                 i += eod + 1
@@ -424,7 +433,7 @@ class StringEncoder(object):  # nodesc
                 raw += char
             i += 1
 
-        if len(raw) and len(string):
+        if len(raw) != 0 and len(string) != 0:
             yield raw
 
     @classmethod

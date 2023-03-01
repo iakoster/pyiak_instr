@@ -1,3 +1,4 @@
+"""Private module of ``pyiak_instr.store`` with common store classes"""
 import numpy as np
 import numpy.typing as npt
 
@@ -5,7 +6,7 @@ import numpy.typing as npt
 __all__ = ["BitVector"]
 
 
-class BitVector(object):
+class BitVector:
     """
     Class for bitwise operations on an array as a large single value.
 
@@ -99,6 +100,7 @@ class BitVector(object):
             self._vals[i_val] &= ~(1 << i_bit)
         # universal: (self._vals[i_val] & ~(1 << i_bit)) | (bit << i_bit)
 
+    # pylint: disable=invalid-name
     def up(self, index: int) -> None:
         """
         Set True flag to bit by index.

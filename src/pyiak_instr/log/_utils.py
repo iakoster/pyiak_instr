@@ -1,3 +1,4 @@
+"""Private module of `pyiak_instr.log` with utilities for logging."""
 from pathlib import Path
 from typing import Any
 
@@ -5,6 +6,7 @@ from typing import Any
 __all__ = ["get_logging_dict_config"]
 
 
+# pylint: disable=too-many-arguments
 def get_logging_dict_config(
     version: int = 1,
     disable_existing_loggers: bool = False,
@@ -21,7 +23,7 @@ def get_logging_dict_config(
     app_name: str = "application name",
 ) -> dict[str, Any]:
     """
-    create and return a dict with standard settings that
+    Create and return a dict with standard settings that
     can be used almost always
 
     Parameters

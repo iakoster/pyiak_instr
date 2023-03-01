@@ -1,3 +1,4 @@
+"""Private module of ``pyiak_instr.core`` with codes."""
 from enum import IntEnum, auto
 
 
@@ -5,6 +6,10 @@ __all__ = ["Code"]
 
 
 class Code(IntEnum):
+    """
+    Represents the codes that are used in the library.
+    """
+
     # System codes
     NONE = 0
     OK = auto()

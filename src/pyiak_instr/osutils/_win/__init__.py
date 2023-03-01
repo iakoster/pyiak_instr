@@ -1,3 +1,4 @@
+"""Private module of ``pyiak_instr.osutils`` with import Windows functions."""
 from .common import (
     hide_path,
     unhide_path,

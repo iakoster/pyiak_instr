@@ -2,12 +2,11 @@ import nox
 from nox.sessions import Session
 
 
-nox.options.sessions = "black", "flake8", "mypy", "unittests"
+nox.options.sessions = "black", "flake8", "pylint", "mypy", "unittests"
 
 
 @nox.session(python=False)
 def unittests(session: Session) -> None:
-    session.run("pip", "install", "-r", "requirements.txt")
     session.run(
         "python", "-m", "unittest", "discover", "-s", "tests", "-t", "."
     )
@@ -21,6 +20,11 @@ def black(session: Session) -> None:
 @nox.session(python=False)
 def flake8(session: Session) -> None:
     session.run("flake8", "src/pyiak_instr", "--extend-ignore", "E203")
+
+
+@nox.session(python=False)
+def pylint(session: Session) -> None:
+    session.run("Pylint", "src/pyiak_instr", "--rc-file", ".config/.pylintrc")
 
 
 @nox.session(python=False)
