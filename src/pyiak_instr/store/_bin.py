@@ -30,12 +30,14 @@ def _neg_int_to_zero(value: int) -> int:
     return value
 
 
-def _parent_dependence(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
+def _parent_dependence_property(
+    func: Callable[[Any], Any]
+) -> Callable[[Any], Any]:
     @functools.wraps(func)
-    def wrapper(self: BytesField, *args: Any, **kwargs: Any) -> Any:
+    def wrapper(self: BytesField) -> Any:
         if self.parent is None:
             raise WithoutParent()
-        return func(self, *args, **kwargs)
+        return func(self)
 
     return wrapper
 
@@ -69,7 +71,7 @@ class BytesField:
     parent: ContinuousBytesStorage | None = None
     """parent storage."""
 
-    @_parent_dependence
+    @_parent_dependence_property
     def decode(self) -> npt.NDArray[Any]:
         """
         Decode content from parent.
@@ -109,7 +111,7 @@ class BytesField:
         return self.expected * self.word_size
 
     @property
-    @_parent_dependence
+    @_parent_dependence_property
     def content(self) -> bytes:
         """
         Returns
@@ -162,7 +164,7 @@ class BytesField:
         return struct.calcsize(self.fmt)
 
     @property
-    @_parent_dependence
+    @_parent_dependence_property
     def words_count(self) -> int:
         """
         Returns
