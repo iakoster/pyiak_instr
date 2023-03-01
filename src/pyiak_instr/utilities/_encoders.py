@@ -139,7 +139,7 @@ class BytesEncoder:
         Raises
         ------
         ValueError
-            if order not in {'', '>', '<', '!'}.
+            if order not in {'', '>', '<'}.
         """
         if order not in {"", ">", "<"}:
             raise ValueError("order not in {'', '>', '<'}")

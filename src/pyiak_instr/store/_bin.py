@@ -11,25 +11,6 @@ from ..exceptions import WithoutParent
 from ..utilities import BytesEncoder
 
 
-def _neg_int_to_zero(value: int) -> int:
-    """
-    Change integer to zero if value less than 1.
-
-    Parameters
-    ----------
-    value : int
-        value.
-
-    Returns
-    -------
-    int
-        changed value.
-    """
-    if value < 1:
-        return 0
-    return value
-
-
 def _parent_dependence_property(
     func: Callable[[Any], Any]
 ) -> Callable[[Any], Any]:
@@ -70,6 +51,10 @@ class BytesField:
 
     parent: ContinuousBytesStorage | None = None
     """parent storage."""
+
+    def __post_init__(self):
+        if self.expected < 0:
+            object.__setattr__(self, "expected", 0)
 
     @_parent_dependence_property
     def decode(self) -> npt.NDArray[Any]:
