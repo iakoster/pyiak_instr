@@ -34,7 +34,12 @@ class WithApi(ABC, Generic[T]):
 
     @property
     def api(self) -> T:
-        """Returns high-level api instance."""
+        """
+        Returns
+        -------
+        T
+            high-level api instance.
+        """
         return self._api
 
 

@@ -3,19 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
+
+# CI cashes
+.mypy_cache/
 
 # Environments
 venv/
@@ -25,4 +17,4 @@ venv/
 
 # Data
 /data/
-/data_test/
+/test_data/

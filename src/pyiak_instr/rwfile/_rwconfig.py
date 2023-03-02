@@ -141,27 +141,32 @@ class RWConfig(RWFile[ConfigParser]):
             convert the resulting value to str by StringEncoder.
         **kwargs: Any
             for mypy compatibility.
+
+        Raises
+        ------
+        ValueError
+            if method is called with kwargs.
+        TypeError
+            if method is called with wrong arguments.
         """
         if len(kwargs):
             raise ValueError("kwargs cannot used here")
 
-        def convert_value(value: Any) -> Any:
+        def _convert(value: Any) -> Any:
             if convert:
                 value = StringEncoder.encode(value)
             return value
 
         match args:
             case (str() as sec, str() as opt, val):
-                set_dict = {sec: {opt: convert_value(val)}}
+                set_dict = {sec: {opt: _convert(val)}}
 
             case (str() as sec, dict() as opts):
-                set_dict = {
-                    sec: {o: convert_value(v) for o, v in opts.items()}
-                }
+                set_dict = {sec: {o: _convert(v) for o, v in opts.items()}}
 
             case (dict() as secs,):
                 set_dict = {
-                    s: {o: convert_value(v) for o, v in opts.items()}
+                    s: {o: _convert(v) for o, v in opts.items()}
                     for s, opts in secs.items()
                 }
 

@@ -90,6 +90,11 @@ class BitVector:
             bit index.
         bit : int | bool
             bit value.
+
+        Raises
+        ------
+        ValueError
+            if bit not in {0, 1, False, True}
         """
         if bit not in (0, 1, False, True):
             raise ValueError("bit value not in {0, 1, False, True}")
@@ -159,6 +164,11 @@ class BitVector:
         ----------
         values : Collection
             new values for vector.
+
+        Raises
+        ------
+        ValueError
+            if new values have different length with current array.
         """
         if not isinstance(values, int) and len(values) != self._vals.shape[0]:
             raise ValueError(

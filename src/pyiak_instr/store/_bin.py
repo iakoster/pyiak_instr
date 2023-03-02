@@ -232,6 +232,11 @@ class BytesFieldPattern:
             new parameter name.
         value: Any
             new parameter value.
+
+        Raises
+        ------
+        KeyError
+            if parameter name is already exists.
         """
         if key in self:
             raise KeyError("parameter in pattern already")

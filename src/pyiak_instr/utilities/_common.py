@@ -5,6 +5,7 @@ from typing import Any
 __all__ = ["split_complex_dict"]
 
 
+# pylint: disable=missing-return-doc
 def split_complex_dict(
     complex_dict: dict[str, Any], sep: str = "__", without_sep: str = "raise"
 ) -> (
