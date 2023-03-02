@@ -29,6 +29,7 @@ class RWSQLite(RWFile[sqlite3.Cursor]):
     """
 
     ALLOWED_SUFFIXES = {".db"}
+    """Set of the allowed suffixes"""
 
     def __init__(
         self,

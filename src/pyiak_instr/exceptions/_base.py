@@ -6,7 +6,16 @@ __all__ = ["PyiError"]
 
 
 class PyiError(Exception):
-    """Base class of exceptions for library."""
+    """
+    Base class of exceptions for library.
+
+    Parameters
+    ----------
+    *args: Any
+        exception arguments.
+    msg: str, default=''
+        exception message.
+    """
 
     def __init__(self, *args: Any, msg: str = ""):
         self.msg = msg

@@ -285,8 +285,18 @@ class StringEncoder:
     @classmethod
     def _decode_value(cls, value: str) -> Any:
         """
-        Convert the value from a string (if possible)
-        or return the value as is.
+        Convert the value from a string (if possible) or return the value
+        as is.
+
+        Parameters
+        ----------
+        value: str
+            single value for decoding.
+
+        Returns
+        -------
+        Any
+            decoded value.
         """
         if cls._is_compound_string(value):
             return cls.decode(value)
@@ -345,7 +355,19 @@ class StringEncoder:
 
     @classmethod
     def _encode_value(cls, value: Any) -> str:
-        """Convert value to string."""
+        """
+        Convert value to string.
+
+        Parameters
+        ----------
+        value: Any
+            single value for encoding.
+
+        Returns
+        -------
+        str
+            encoded value.
+        """
         if type(value) in cls.COMPLEX_TYPES or isinstance(value, str):
             return cls.encode(value)
         if isinstance(value, Code):
@@ -391,7 +413,19 @@ class StringEncoder:
 
     @classmethod
     def _is_compound_string(cls, string: str) -> bool:
-        """Check that string can be converted to value."""
+        """
+        Check that string can be converted to value.
+
+        Parameters
+        ----------
+        string: str
+            string for checking.
+
+        Returns
+        -------
+        bool
+            True - if `string` is compound, otherwise False.
+        """
         return (
             len(string) >= 6
             and string[0] == cls.SOH

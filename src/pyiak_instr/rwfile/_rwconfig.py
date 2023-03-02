@@ -125,6 +125,7 @@ class RWConfig(RWFile[ConfigParser]):
             convert the `value` to str by StringEncoder.
         """
 
+    # todo: convert only str
     def set(self, *args: Any, convert: bool = True, **kwargs: Any) -> None:
         """
         Write value or dict to the configfile.
@@ -152,21 +153,21 @@ class RWConfig(RWFile[ConfigParser]):
         if len(kwargs):
             raise ValueError("kwargs cannot used here")
 
-        def _convert(value: Any) -> Any:
+        def __convert(value: Any) -> Any:
             if convert:
                 value = StringEncoder.encode(value)
             return value
 
         match args:
             case (str() as sec, str() as opt, val):
-                set_dict = {sec: {opt: _convert(val)}}
+                set_dict = {sec: {opt: __convert(val)}}
 
             case (str() as sec, dict() as opts):
-                set_dict = {sec: {o: _convert(v) for o, v in opts.items()}}
+                set_dict = {sec: {o: __convert(v) for o, v in opts.items()}}
 
             case (dict() as secs,):
                 set_dict = {
-                    s: {o: _convert(v) for o, v in opts.items()}
+                    s: {o: __convert(v) for o, v in opts.items()}
                     for s, opts in secs.items()
                 }
 

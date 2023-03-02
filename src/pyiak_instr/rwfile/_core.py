@@ -95,6 +95,12 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
         """Close api."""
 
     def _get_under_brackets(self) -> str:
+        """
+        Returns
+        -------
+        str
+            string which must be under brackets in result of .__str__ method.
+        """
         return str(self._fp)
 
     @property

@@ -1,8 +1,9 @@
 """Private module of ``pyiak_instr.store`` for work with bytes."""
 from __future__ import annotations
+
 import struct
 from dataclasses import dataclass
-from typing import Any, Generator
+from typing import Any, Self, Generator
 
 import numpy.typing as npt
 
@@ -20,9 +21,6 @@ class BytesField:
 
     start: int
     """the number of bytes in the message from which the fields begin."""
-
-    may_be_empty: bool
-    """if True then field can be empty in a message."""
 
     fmt: str
     """format for packing or unpacking the content.
@@ -73,6 +71,27 @@ class BytesField:
             encoded content.
         """
         return BytesEncoder.encode(content, fmt=self.fmt, order=self.order)
+
+    def validate(self, content: bytes) -> bool:
+        """
+        Check the content for compliance with the field parameters.
+
+        Parameters
+        ----------
+        content: bytes
+            content for validating.
+
+        Returns
+        -------
+        bool
+            True - content is correct, False - not.
+        """
+        if self.infinite:
+            if len(content) % self.word_size:
+                return False
+        elif len(content) != self.bytes_expected:
+            return False
+        return True
 
     @property
     def bytes_expected(self) -> int:
@@ -127,6 +146,7 @@ class BytesField:
         return struct.calcsize(self.fmt)
 
 
+# todo: up to this level all functions and properties from BytesField
 class BytesFieldParser:
     """
     Represents parser for work with field content.
@@ -135,13 +155,32 @@ class BytesFieldParser:
     ----------
     storage: ContinuousBytesStorage
         storage of fields.
+    name: str
+        field name.
     field: BytesField
         field instance.
     """
 
-    def __init__(self, storage: ContinuousBytesStorage, field: BytesField):
+    def __init__(
+        self,
+        storage: ContinuousBytesStorage,
+        name: str,
+        field: BytesField,
+    ):
+        self._name = name
         self._s = storage
         self._f = field
+
+    def decode(self) -> npt.NDArray[Any]:
+        """
+        Decode field content.
+
+        Returns
+        -------
+        NDArray
+            decoded content.
+        """
+        return self._f.decode(self.content)
 
     @property
     def content(self) -> bytes:
@@ -154,7 +193,7 @@ class BytesFieldParser:
         return self._s.content[self._f.slice]
 
     @property
-    def field(self) -> BytesField:
+    def fld(self) -> BytesField:
         """
         Returns
         -------
@@ -164,6 +203,16 @@ class BytesFieldParser:
         return self._f
 
     @property
+    def name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            field name
+        """
+        return self._name
+
+    @property
     def words_count(self) -> int:
         """
         Returns
@@ -171,7 +220,16 @@ class BytesFieldParser:
         int
             Count of words in the field.
         """
-        return len(self.content) // self._f.word_size
+        return len(self) // self._f.word_size
+
+    def __len__(self) -> int:
+        """
+        Returns
+        -------
+        int
+            bytes count of the content
+        """
+        return len(self.content)
 
 
 class ContinuousBytesStorage:
@@ -189,7 +247,108 @@ class ContinuousBytesStorage:
 
     def __init__(self, **fields: BytesField):
         self._f = fields
-        self._c = b""
+        self._c = bytearray()
+
+    def extract(self, content: bytes) -> Self:
+        """
+        Extract fields from existing bytes content.
+
+        Parameters
+        ----------
+        content: bytes
+            new content.
+
+        Returns
+        -------
+        Self
+            self instance.
+        """
+        fields = {}
+        for parser in self:
+            new = content[parser.fld.slice]
+            if len(new):
+                fields[parser.name] = new
+        self.set(**fields)
+        return self
+
+    def set(self, **fields: npt.ArrayLike) -> Self:
+        """
+        Set content to the fields.
+
+        Parameters
+        ----------
+        **fields: ArrayLike
+            fields content
+
+        Returns
+        -------
+        Self
+            self instance
+
+        Raises
+        ------
+        AttributeError
+            if values of non-existent fields were passed or values of some
+            fields were not passed.
+        """
+
+        diff = set()
+        raw_diff = set(self._f).symmetric_difference(set(fields))
+        for field in raw_diff:
+            if field in self and (
+                self[field].fld.infinite or len(self[field]) != 0
+            ):
+                continue
+            diff.add(field)
+
+        if len(diff) != 0:
+            raise AttributeError(
+                "missing or superfluous fields were found: %r" % sorted(diff)
+            )
+
+        self._set(fields)
+        return self
+
+    def _set(self, fields: dict[str, npt.ArrayLike]) -> None:
+        """
+        Set new content to the fields.
+
+        Parameters
+        ----------
+        fields: fields: dict[str, ArrayLike]
+            dictionary of new field content.
+        """
+        for field in self:
+            if field.name in fields:
+                self._set_field_content(field, fields[field.name])
+
+    def _set_field_content(
+        self,
+        parser: BytesFieldParser,
+        content: npt.ArrayLike,
+    ) -> None:
+        """
+        Set new content to the field.
+
+        Parameters
+        ----------
+        parser: BytesFieldParser
+            field parser.
+        content: ArrayLike
+            new content.
+
+        Raises
+        ------
+        ValueError
+            if new content is not correct for field.
+        """
+        new_content = parser.fld.encode(content)
+        if not parser.fld.validate(new_content):
+            raise ValueError(
+                "%r is not correct for %r"
+                % (new_content.hex(" "), parser.name)
+            )
+        self._c[parser.fld.slice] = new_content
 
     @property
     def content(self) -> bytes:
@@ -201,10 +360,16 @@ class ContinuousBytesStorage:
         """
         return self._c
 
+    def __contains__(self, name: str) -> bool:
+        """Check that field name exists."""
+        return name in self._f
+
     def __getitem__(self, field: str) -> BytesFieldParser:
-        return BytesFieldParser(self, self._f[field])
+        """Get field parser."""
+        return BytesFieldParser(self, field, self._f[field])
 
     def __iter__(self) -> Generator[BytesFieldParser, None, None]:
+        """Iterate by field parsers."""
         for field in self._f:
             yield self[field]
 

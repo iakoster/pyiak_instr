@@ -48,7 +48,12 @@ class WithBaseStringMethods(ABC):
 
     @abstractmethod
     def _get_under_brackets(self) -> str:
-        pass
+        """
+        Returns
+        -------
+        str
+            string for placing under brackets in `.__str__`.
+        """
 
     def __repr__(self) -> str:
         """

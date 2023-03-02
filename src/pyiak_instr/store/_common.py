@@ -117,6 +117,7 @@ class BitVector:
         """
         self.set(index, True)
 
+    # pylint: disable=missing-return-doc
     def _get_coords(self, index: int) -> tuple[int, int]:
         """
         Get indexes for value and bit.

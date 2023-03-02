@@ -14,7 +14,6 @@ class TestBytesField(unittest.TestCase):
             self,
             BytesField(
                 start=4,
-                may_be_empty=True,
                 fmt="I",
                 order=">",
                 expected=-100,
@@ -24,7 +23,6 @@ class TestBytesField(unittest.TestCase):
             expected=0,
             fmt="I",
             infinite=True,
-            may_be_empty=True,
             order=">",
             slice=slice(4, None),
             start=4,
@@ -36,7 +34,6 @@ class TestBytesField(unittest.TestCase):
     def test_decode(self) -> None:
         obj = BytesField(
             start=4,
-            may_be_empty=True,
             fmt="I",
             order=">",
             expected=-100,
@@ -53,7 +50,6 @@ class TestBytesField(unittest.TestCase):
     def test_encode(self) -> None:
         obj = BytesField(
             start=4,
-            may_be_empty=True,
             fmt="I",
             order=">",
             expected=-100,
@@ -83,7 +79,6 @@ class TestBytesFieldPattern(unittest.TestCase):
 
     def test_get(self) -> None:
         pattern = BytesFieldPattern(
-            may_be_empty=True,
             fmt="B",
             order="",
             expected=4,
@@ -92,7 +87,6 @@ class TestBytesFieldPattern(unittest.TestCase):
             self,
             pattern.get(start=4),
             start=4,
-            may_be_empty=True,
             fmt="B",
             order="",
             expected=4,
@@ -101,7 +95,6 @@ class TestBytesFieldPattern(unittest.TestCase):
 
     def test_get_updated(self) -> None:
         pattern = BytesFieldPattern(
-            may_be_empty=True,
             fmt="B",
             order="",
             expected=4,

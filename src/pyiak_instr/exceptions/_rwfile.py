@@ -12,7 +12,18 @@ __all__ = ["RWFileError", "FileSuffixError"]
 
 
 class RWFileError(PyiError):
-    """Base class for exceptions in rwfile package."""
+    """
+    Base class for exceptions in rwfile package.
+
+    Parameters
+    ----------
+    msg: str
+        exception message.
+    filepath: Path
+        path to the file.
+    *args: Any
+        exception arguments.
+    """
 
     def __init__(self, msg: str, filepath: Path, *args: Any):
         super().__init__(filepath, *args, msg=msg)
@@ -20,7 +31,16 @@ class RWFileError(PyiError):
 
 
 class FileSuffixError(RWFileError):
-    """Raised when filepath is wrong by some pattern."""
+    """
+    Raised when filepath has invalid suffix.
+
+    Parameters
+    ----------
+    suffixes: set[str]
+        allowed suffixes.
+    filepath: Path
+        path to the file with invalid suffix.
+    """
 
     def __init__(self, suffixes: set[str], filepath: Path):
         super().__init__(
