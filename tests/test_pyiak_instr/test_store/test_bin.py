@@ -4,7 +4,11 @@ import numpy as np
 
 from ...utils import validate_object, compare_values
 
-from src.pyiak_instr.store import BytesField, BytesFieldPattern
+from src.pyiak_instr.store import (
+    BytesField,
+    ContinuousBytesStorage,
+    BytesFieldPattern,
+)
 
 
 class TestBytesField(unittest.TestCase):
@@ -62,6 +66,124 @@ class TestBytesField(unittest.TestCase):
         for i_case, (data, ref) in enumerate(cases):
             with self.subTest(test=i_case):
                 compare_values(self, ref, obj.encode(data))
+
+    def test_validate(self) -> None:
+        obj = BytesField(
+            start=0,
+            fmt="h",
+            order="",
+            expected=2,
+        )
+        with self.subTest(test="finite True"):
+            self.assertTrue(obj.validate(b"\x02\x04\x00\x00"))
+        with self.subTest(test="finite False"):
+            self.assertFalse(obj.validate(b"\x02\x04\x00\x00\x01"))
+
+        obj = BytesField(
+            start=0,
+            fmt="h",
+            order="",
+            expected=-1,
+        )
+        with self.subTest(test="infinite True"):
+            self.assertTrue(obj.validate(b"\x02\x04\x00\x00"))
+        with self.subTest(test="infinite False"):
+            self.assertFalse(obj.validate(b"\x02\x04\x00"))
+
+    def test_stop_after_infinite(self) -> None:
+        data = (
+            (BytesField(
+                start=-4,
+                fmt="h",
+                order="",
+                expected=1,
+            ), -2),
+            (BytesField(
+                start=-2,
+                fmt="h",
+                order="",
+                expected=1,
+            ), None)
+        )
+
+        for i, (obj, ref) in enumerate(data):
+            with self.subTest(test=i):
+                self.assertEqual(ref, obj.stop)
+
+
+class TestBytesFieldParser(unittest.TestCase):
+
+    def test_init(self) -> None:
+        validate_object(
+            self,
+            self._get_cbs()["f0"],
+            content=b"",
+            name="f0",
+            words_count=0,
+            wo_attrs=["fld"],
+        )
+
+    def test_decode(self) -> None:
+        compare_values(self, [], self._get_cbs()["f0"].decode())
+
+    @staticmethod
+    def _get_cbs() -> ContinuousBytesStorage:
+        return ContinuousBytesStorage(
+                name="cbs",
+                f0=BytesField(
+                    start=0,
+                    fmt="I",
+                    order=">",
+                    expected=-1,
+                )
+            )
+
+
+class TestContinuousBytesStorage(unittest.TestCase):
+
+    def test_init(self) -> None:
+        obj = self._get_cbs()
+        ref_data = dict(
+            f0=dict(
+                content=b"",
+                name="f0",
+                words_count=0,
+            ),
+        )
+
+        validate_object(self, obj, content=b"", name="cbs")
+        for name, ref in ref_data.items():
+            validate_object(self, obj[name], **ref, wo_attrs=["fld"])
+
+    def test_init_exc(self) -> None:
+        with self.assertRaises(TypeError)as exc:
+            ContinuousBytesStorage(name="", f0={})
+        self.assertEqual(
+            "invalid type of 'f0': <class 'dict'>", exc.exception.args[0]
+        )
+
+    def test_magic_contains(self) -> None:
+        self.assertIn("f0", self._get_cbs())
+
+    def test_magic_getitem(self) -> None:
+        self.assertEqual("f0", self._get_cbs()["f0"].name)
+
+    def test_magic_iter(self) -> None:
+        for ref, res in zip(("f0",), self._get_cbs()):
+            with self.subTest(ref=ref):
+                self.assertEqual(ref, res.name)
+
+    @staticmethod
+    def _get_cbs() -> ContinuousBytesStorage:
+        return ContinuousBytesStorage(
+            name="cbs",
+            f0=BytesField(
+                start=0,
+                fmt="I",
+                order=">",
+                expected=1,
+            ),
+        )
 
 
 class TestBytesFieldPattern(unittest.TestCase):

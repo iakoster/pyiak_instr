@@ -7,10 +7,10 @@ from typing import Any, Self, Generator
 
 import numpy.typing as npt
 
-from ..utilities import BytesEncoder
+from ..utilities import BytesEncoder, split_complex_dict
 
 
-__all__ = ["BytesField", "BytesFieldPattern"]
+__all__ = ["BytesField", "ContinuousBytesStorage", "BytesFieldPattern"]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -22,11 +22,11 @@ class BytesField:
     start: int
     """the number of bytes in the message from which the fields begin."""
 
-    fmt: str
+    fmt: str  # todo: to Code
     """format for packing or unpacking the content.
     The word length is calculated from the format."""
 
-    order: str
+    order: str  # todo: to Code
     """bytes order for packing and unpacking."""
 
     expected: int
@@ -133,7 +133,10 @@ class BytesField:
         """
         if self.infinite:
             return None
-        return self.start + self.word_size * self.expected
+        stop = self.start + self.bytes_expected
+        if stop == 0:
+            return None
+        return stop
 
     @property
     def word_size(self) -> int:
@@ -241,11 +244,20 @@ class ContinuousBytesStorage:
 
     Parameters
     ----------
+    name: str
+        name of storage.
     **fields: BytesField
         fields of the storage. The kwarg Key is used as the field name.
     """
 
-    def __init__(self, **fields: BytesField):
+    def __init__(self, name: str, **fields: BytesField):
+        for f_name, field in fields.items():
+            if not isinstance(field, BytesField):
+                raise TypeError(
+                    "invalid type of %r: %s" % (f_name, type(field))
+                )
+
+        self._name = name
         self._f = fields
         self._c = bytearray()
 
@@ -360,6 +372,16 @@ class ContinuousBytesStorage:
         """
         return self._c
 
+    @property
+    def name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            name of the storage.
+        """
+        return self._name
+
     def __contains__(self, name: str) -> bool:
         """Check that field name exists."""
         return name in self._f
@@ -472,3 +494,72 @@ class BytesFieldPattern:
         if parameter not in self:
             raise KeyError("%r not in parameters" % parameter)
         self._kw[parameter] = value
+
+
+class BytesStoragePattern:
+    """
+    Represents class which storage common parameters for storage.
+
+    Parameters
+    ----------
+    **kwargs: Any
+        parameters for storage initialization.
+    """
+
+    def __init__(self, **kwargs: Any):
+        self._kw = kwargs
+        self._p: dict[str, BytesFieldPattern] = {}
+
+    def configure(self, **patterns: BytesFieldPattern) -> Self:
+        """
+        Configure storage pattern with field patterns.
+
+        Parameters
+        ----------
+        **patterns : BytesFieldPattern
+            dictionary of field patterns where key is a name of field.
+
+        Returns
+        -------
+        Self
+            self instance.
+        """
+        self._p = patterns
+        return self
+
+    def get(self, **update: Any) -> ContinuousBytesStorage:
+        """
+        Get initialized storage.
+
+        Parameters
+        ----------
+        **update : Any
+            those keys that are separated by "__" will be defined as
+            parameters for the field, otherwise for the storage.
+
+        Returns
+        -------
+        ContinuousBytesStorage
+            initialized storage.
+        """
+        for_fields, for_storage = split_complex_dict(
+            update, without_sep="other"
+        )
+
+        storage_kw = self._kw
+        if len(for_storage) != 0:
+            storage_kw.update(for_storage)
+
+        fields = {}
+        for name, pattern in self._p.items():
+            if name in for_fields:
+                # not supported, but it is correct behaviour
+                # if len(set(for_field).intersection(pattern)) == 0:
+                #     fields[name] = pattern.get(**for_field)
+                fields[name] = pattern.get_updated(**for_fields[name])
+            else:
+                fields[name] = pattern.get()
+
+        return ContinuousBytesStorage(
+            **storage_kw, **fields  # type: ignore[arg-type]
+        )

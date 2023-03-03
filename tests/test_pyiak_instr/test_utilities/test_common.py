@@ -14,7 +14,7 @@ class TestSplitComplexDict(unittest.TestCase):
             },
             split_complex_dict(dict(
                 a__a=1, b__b__b={20: 10}, d__d=[1, 2, 3]
-            ))
+            ))[0]
         )
 
     def test_without_sep(self) -> None:

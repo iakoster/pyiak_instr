@@ -5,13 +5,9 @@ from typing import Any
 __all__ = ["split_complex_dict"]
 
 
-# pylint: disable=missing-return-doc
 def split_complex_dict(
     complex_dict: dict[str, Any], sep: str = "__", without_sep: str = "raise"
-) -> (
-    dict[str, dict[str, Any]]
-    | tuple[dict[str, dict[str, Any]], dict[str, Any]]
-):
+) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
     """
     Split dictionary to nested dictionaries (subdictionaries) by `sep`.
 
@@ -27,11 +23,11 @@ def split_complex_dict(
 
     Returns
     -------
-    result: dict[str, dict[str, Any]]
-        nested dictionaries separated by `sep`.
-    dict_without_sep: dict[str, Any], optional
-        dictionary with keys without `sep`. It will be empty if there is no
-        keys without `sep` and `without_sep`='other'.
+    tuple[dict[str, dict[str, Any]], dict[str, Any]]
+        two dictionaries:
+            nested dictionaries separated by `sep`;
+            dictionary with keys without `sep`. It will be empty if there is
+            no keys without `sep` and `without_sep`='other'.
 
     Raises
     ------
@@ -68,6 +64,4 @@ def split_complex_dict(
 
         sub_dict[sub_keys[-1]] = value
 
-    if without_sep == "other":
-        return result, wo_sep_dict
-    return result
+    return result, wo_sep_dict
