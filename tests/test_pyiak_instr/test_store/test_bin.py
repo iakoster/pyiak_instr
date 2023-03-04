@@ -1,14 +1,23 @@
 import unittest
+from typing import Any
 
 import numpy as np
-
-from ...utils import validate_object, compare_values
 
 from src.pyiak_instr.store import (
     BytesField,
     ContinuousBytesStorage,
     BytesFieldPattern,
 )
+
+from ..data_bin import (
+    get_cbs_one,
+    get_cbs_example,
+    get_cbs_one_infinite,
+    get_cbs_first_infinite,
+    get_cbs_middle_infinite,
+    get_cbs_last_infinite,
+)
+from ...utils import validate_object, compare_values
 
 
 class TestBytesField(unittest.TestCase):
@@ -161,6 +170,163 @@ class TestContinuousBytesStorage(unittest.TestCase):
         self.assertEqual(
             "invalid type of 'f0': <class 'dict'>", exc.exception.args[0]
         )
+
+    def test_extract(self) -> None:
+
+        def get_storage_pars(
+                content: bytes,
+                name: str,
+        ) -> dict[str, Any]:
+            return dict(
+                content=content,
+                name=name,
+            )
+
+        def get_field_pars(
+                content: bytes,
+                words_count: int,
+        ) -> dict[str, Any]:
+            return dict(
+                content=content,
+                words_count=words_count,
+                wo_attrs=["fld", "name"],
+            )
+
+        data = dict(
+            one=dict(
+                obj=get_cbs_one(),
+                data=b"\x00\x01\xff\xff",
+                validate_storage=get_storage_pars(
+                    b"\x00\x01\xff\xff", "cbs_one"
+                ),
+                validate_fields=dict(
+                    f0=get_field_pars(b"\x00\x01\xff\xff", 2),
+                ),
+                decode=dict(
+                    f0=[1, -1],
+                ),
+            ),
+            one_infinite=dict(
+                obj=get_cbs_one_infinite(),
+                data=b"\xef\x01\xff",
+                validate_storage=get_storage_pars(
+                    b"\xef\x01\xff", "cbs_one_infinite"
+                ),
+                validate_fields=dict(
+                    f0=get_field_pars(b"\xef\x01\xff", 3),
+                ),
+                decode=dict(
+                    f0=[-17, 1, -1],
+                ),
+            ),
+            first_infinite=dict(
+                obj=get_cbs_first_infinite(),
+                data=b"\xef\x01\xff\xff\x0f\xab\xdd",
+                validate_storage=get_storage_pars(
+                    b"\xef\x01\xff\xff\x0f\xab\xdd", "cbs_first_infinite"
+                ),
+                validate_fields=dict(
+                    f0=get_field_pars(b"\xef\x01\xff", 3),
+                    f1=get_field_pars(b"\xff\x0f", 1),
+                    f2=get_field_pars(b"\xab\xdd", 2),
+                ),
+                decode=dict(
+                    f0=[-17, 1, -1],
+                    f1=[0xFF0F],
+                    f2=[0xAB, 0xDD],
+                ),
+            ),
+            middle_infinite=dict(
+                obj=get_cbs_middle_infinite(),
+                data=b"\xef\x01\xff\xff\x01\x02\x03\x04\xab\xdd",
+                validate_storage=get_storage_pars(
+                    b"\xef\x01\xff\xff\x01\x02\x03\x04\xab\xdd",
+                    "cbs_middle_infinite",
+                ),
+                validate_fields=dict(
+                    f0=get_field_pars(b"\xef\x01\xff\xff", 2),
+                    f1=get_field_pars(b"\x01\x02\x03\x04", 2),
+                    f2=get_field_pars(b"\xab\xdd", 2),
+                ),
+                decode=dict(
+                    f0=[0x1EF, 0xFFFF],
+                    f1=[0x102, 0x304],
+                    f2=[0xAB, 0xDD],
+                ),
+            ),
+            last_infinite=dict(
+                obj=get_cbs_last_infinite(),
+                data=b"\xab\xcd\x00\x00\x01\x02\x03\x04\x00\x00",
+                validate_storage=get_storage_pars(
+                    b"\xab\xcd\x00\x00\x01\x02\x03\x04\x00\x00",
+                    "cbs_last_infinite",
+                ),
+                validate_fields=dict(
+                    f0=get_field_pars(b"\xab\xcd", 1),
+                    f1=get_field_pars(b"\x00\x00\x01\x02\x03\x04\x00\x00", 2),
+                ),
+                decode=dict(
+                    f0=[0xCDAB],
+                    f1=[0x102, 0x3040000],
+                ),
+            ),
+        )
+
+        for short_name, comp in data.items():
+            with self.subTest(test=short_name):
+                obj = comp["obj"]
+                comp_storage = comp["validate_storage"]
+                comp_fields = comp["validate_fields"]
+                comp_decode = comp["decode"]
+
+                obj.extract(comp["data"])
+                validate_object(self, obj, **comp_storage)
+                for field in obj:
+                    validate_object(self, field, **comp_fields[field.name])
+
+                with self.subTest(sub_test="decode"):
+                    self.assertListEqual(
+                        list(comp_decode), [f.name for f in obj]
+                    )
+                    for f_name, decoded in obj.decode().items():
+                        with self.subTest(field=f_name):
+                            compare_values(self, comp_decode[f_name], decoded)
+
+    def test_set_replace(self) -> None:
+        obj = get_cbs_example()
+        obj.set(f0=1, f1=[2, 3], f3=[4, 5], f4=6)
+        self.assertEqual(b"\x00\x01\x02\x03\x04\x05\x06", obj.content)
+        obj.set(f2=b"\xff\xfe\xfd")
+        self.assertEqual(
+            b"\x00\x01\x02\x03\xff\xfe\xfd\x04\x05\x06",
+            obj.content,
+        )
+        obj.set(f0=32)
+        self.assertEqual(
+            b"\x00\x20\x02\x03\xff\xfe\xfd\x04\x05\x06",
+            obj.content,
+        )
+        obj.set(f2=b"new content")
+        self.assertEqual(
+            b"\x00\x20\x02\x03new content\x04\x05\x06",
+            obj.content,
+        )
+
+    def test_set_exc(self) -> None:
+        with self.subTest(exception="missing or extra"):
+            with self.assertRaises(AttributeError) as exc:
+                get_cbs_example().set(f0=1, f1=2, f4=5, f8=1)
+            self.assertEqual(
+                "missing or extra fields were found: ['f3', 'f8']",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(exception="invalid new content"):
+            with self.assertRaises(ValueError) as exc:
+                get_cbs_example().set(f0=1, f1=[2, 3, 4], f3=1, f4=5)
+            self.assertEqual(
+                "'02 03 04' is not correct for 'f1'", exc.exception.args[0]
+            )
 
     def test_magic_contains(self) -> None:
         self.assertIn("f0", self._get_cbs())

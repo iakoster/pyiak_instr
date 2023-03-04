@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import struct
 from dataclasses import dataclass
+from dataclasses import field as _field
 from typing import Any, Self, Generator
 
 import numpy.typing as npt
@@ -36,9 +37,15 @@ class BytesField:
     default: bytes = b""
     """default value of the field."""
 
+    _stop: int | None = _field(default=None, repr=False)
+    """stop byte index of field content."""
+
     def __post_init__(self) -> None:
         if self.expected < 0:
             object.__setattr__(self, "expected", 0)
+        stop = self.start + self.bytes_expected
+        if not self.infinite and stop != 0:
+            object.__setattr__(self, "_stop", stop)
 
     def decode(self, content: bytes) -> npt.NDArray[Any]:
         """
@@ -131,12 +138,7 @@ class BytesField:
         int | None
             The number of byte in the message to which the field stops.
         """
-        if self.infinite:
-            return None
-        stop = self.start + self.bytes_expected
-        if stop == 0:
-            return None
-        return stop
+        return self._stop
 
     @property
     def word_size(self) -> int:
@@ -259,7 +261,21 @@ class ContinuousBytesStorage:
 
         self._name = name
         self._f = fields
-        self._c = bytearray()
+        self._c = bytes()
+
+    def decode(self) -> dict[str, npt.NDArray[Any]]:
+        """
+        Iterate by fields end decode each.
+
+        Returns
+        -------
+        dict[str, npt.NDArray[Any]]
+            dictionary with decoded content where key is a field name.
+        """
+        decoded = {}
+        for field in self:
+            decoded[field.name] = field.decode()
+        return decoded
 
     def extract(self, content: bytes) -> Self:
         """
@@ -315,7 +331,7 @@ class ContinuousBytesStorage:
 
         if len(diff) != 0:
             raise AttributeError(
-                "missing or superfluous fields were found: %r" % sorted(diff)
+                "missing or extra fields were found: %r" % sorted(diff)
             )
 
         self._set(fields)
@@ -330,15 +346,23 @@ class ContinuousBytesStorage:
         fields: fields: dict[str, ArrayLike]
             dictionary of new field content.
         """
+        # todo: performance, replace content if content > 0 or
+        #  if empty create new
+        new_content = b""
         for field in self:
             if field.name in fields:
-                self._set_field_content(field, fields[field.name])
+                new_content += self._get_new_field_content(
+                    field, fields[field.name]
+                )
+            else:
+                new_content += field.content
+        self._c = new_content
 
-    def _set_field_content(
-        self,
+    @staticmethod
+    def _get_new_field_content(
         parser: BytesFieldParser,
         content: npt.ArrayLike,
-    ) -> None:
+    ) -> bytes:
         """
         Set new content to the field.
 
@@ -349,18 +373,28 @@ class ContinuousBytesStorage:
         content: ArrayLike
             new content.
 
+        Returns
+        -------
+        bytes
+            new field content
+
         Raises
         ------
         ValueError
             if new content is not correct for field.
         """
-        new_content = parser.fld.encode(content)
+        if isinstance(content, bytes):
+            new_content = content
+        else:
+            new_content = parser.fld.encode(content)
+
         if not parser.fld.validate(new_content):
             raise ValueError(
                 "%r is not correct for %r"
                 % (new_content.hex(" "), parser.name)
             )
-        self._c[parser.fld.slice] = new_content
+
+        return new_content
 
     @property
     def content(self) -> bytes:

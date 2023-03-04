@@ -78,7 +78,7 @@ class BitVector:
             bit value.
         """
         i_val, i_bit = self._get_coords(index)
-        return self._vals[i_val] >> i_bit & 1  # type: ignore
+        return self._vals[i_val] >> i_bit & 1  # type: ignore[no-any-return]
 
     def set(self, index: int, bit: int | bool) -> None:
         """
