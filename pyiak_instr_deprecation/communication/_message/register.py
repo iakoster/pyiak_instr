@@ -308,7 +308,7 @@ class Register(object):
         msg.set(**set_kw)
 
         if msg.has.DataLengthField:  # todo: if not has -> check with data.words_count
-            data_length = msg.get.DataLengthField[0]
+            data_length = msg._get_continuous.DataLengthField[0]
             if data_length > self.length:
                 raise ValueError(
                     "data length mote than register length: %d > %d"

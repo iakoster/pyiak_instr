@@ -132,33 +132,33 @@ class TestRegister(unittest.TestCase):
         test(2050, "invalid shift: 2050 not in [0, 2048)")
 
     def test_read(self) -> None:
-        ref = self.MF.get().set(address=0x100, data_length=0x800, operation=1)
+        ref = self.MF._get_continuous().set(address=0x100, data_length=0x800, operation=1)
         res = self.reg.read()
         compare_messages(self, ref, res)
 
     def test_read_update(self) -> None:
-        ref = self.MF.get(
+        ref = self.MF._get_continuous(
             data={"fmt": ">f"}
         ).set(address=0x100, data_length=0x200, operation=1)
         res = self.reg.read(data_length=0x200, data__fmt=">f")
         compare_messages(self, ref, res)
 
     def test_write(self) -> None:
-        ref = self.MF.get().set(
+        ref = self.MF._get_continuous().set(
             address=0x100, operation=0, data=[3, 2, 1]
         )
         res = self.reg.write(data=[3, 2, 1])
         compare_messages(self, ref, res)
 
     def test_write_update(self) -> None:
-        ref = self.MF.get(
+        ref = self.MF._get_continuous(
             data={"fmt": ">f"}
         ).set(address=0x100, operation=0, data=[0.1])
         res = self.reg.write([0.1], data__fmt=">f")
         compare_messages(self, ref, res)
 
     def test_write_another_data__fmt(self) -> None:
-        ref = self.MF.get(data={"fmt": ">f"}).set(
+        ref = self.MF._get_continuous(data={"fmt": ">f"}).set(
             address=0x100, operation=0, data=22
         )
         res = self.wo_reg.write(22)

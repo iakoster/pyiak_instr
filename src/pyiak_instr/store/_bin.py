@@ -8,10 +8,16 @@ from typing import Any, Self, Generator
 
 import numpy.typing as npt
 
+from ..exceptions import NotConfiguredYet
 from ..utilities import BytesEncoder, split_complex_dict
 
 
-__all__ = ["BytesField", "ContinuousBytesStorage", "BytesFieldPattern"]
+__all__ = [
+    "BytesField",
+    "ContinuousBytesStorage",
+    "BytesFieldPattern",
+    "BytesStoragePattern",
+]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -536,12 +542,15 @@ class BytesStoragePattern:
 
     Parameters
     ----------
+    name: str
+        name of storage.
     **kwargs: Any
         parameters for storage initialization.
     """
 
-    def __init__(self, **kwargs: Any):
-        self._kw = kwargs
+    def __init__(self, name: str, **kwargs: Any):
+        self._kw = dict(name=name, **kwargs)
+        self._continuous = True  # now available only with this option
         self._p: dict[str, BytesFieldPattern] = {}
 
     def configure(self, **patterns: BytesFieldPattern) -> Self:
@@ -575,25 +584,142 @@ class BytesStoragePattern:
         -------
         ContinuousBytesStorage
             initialized storage.
+
+        Raises
+        ------
+        AssertionError
+            if in some reason `_continuous` is False.
         """
         for_fields, for_storage = split_complex_dict(
             update, without_sep="other"
         )
+        if self._continuous:
+            return self._get_continuous(for_storage, for_fields)
+        raise AssertionError("not continuous storage not supports")
+
+    def _get_continuous(
+        self,
+        for_storage: dict[str, Any],
+        for_fields: dict[str, dict[str, Any]],
+    ) -> ContinuousBytesStorage:
+        """
+        Get initialized continuous storage.
+
+        Parameters
+        ----------
+        for_storage: dict[str, Any]:
+            dictionary with parameters for storage in format
+            {PARAMETER: VALUE}.
+        for_fields: dict[str, dict[str, Any]]
+            dictionary with parameters for fields in format
+            {FIELD: {PARAMETER: VALUE}}.
+
+        Returns
+        -------
+        ContinuousBytesStorage
+            initialized storage.
+
+        Raises
+        ------
+        NotConfiguredYet
+            if patterns list is empty.
+        """
+        if len(self._p) == 0:
+            raise NotConfiguredYet(self)
 
         storage_kw = self._kw
         if len(for_storage) != 0:
             storage_kw.update(for_storage)
 
-        fields = {}
-        for name, pattern in self._p.items():
-            if name in for_fields:
-                # not supported, but it is correct behaviour
-                # if len(set(for_field).intersection(pattern)) == 0:
-                #     fields[name] = pattern.get(**for_field)
-                fields[name] = pattern.get_updated(**for_fields[name])
-            else:
-                fields[name] = pattern.get()
+        fields, inf = self._get_fields_before_inf(for_fields)
+        if len(fields) != len(self._p):
+            after, next_ = self._get_fields_after_inf(for_fields, inf)
+            fields.update(after)
+            object.__setattr__(fields[inf], "_stop", fields[next_].start)
 
         return ContinuousBytesStorage(
             **storage_kw, **fields  # type: ignore[arg-type]
         )
+
+    def _get_fields_after_inf(
+        self,
+        fields_kw: dict[str, dict[str, Any]],
+        inf: str,
+    ) -> tuple[dict[str, BytesField], str]:
+        """
+
+
+        Parameters
+        ----------
+        fields_kw : dict[str, dict[str, Any]]
+            dictionary of kwargs for fields.
+        inf : str
+            name of infinite fields.
+
+        Returns
+        -------
+        tuple[dict[str, BytesField], str]
+            fields - dictionary of fields from infinite (not included);
+            next - name of next field after infinite.
+        """
+        rev_names = list(self._p)[::-1]
+        fields, start, next_ = [], 0, ""
+        for name in rev_names:
+            if name == inf:
+                break
+
+            pattern = self._p[name]
+            start -= pattern["expected"] * struct.calcsize(pattern["fmt"])
+            field_kw = fields_kw[name] if name in fields_kw else {}
+            field_kw.update(start=start)
+            fields.append((name, pattern.get_updated(**field_kw)))
+            next_ = name
+
+        return dict(fields[::-1]), next_
+
+    def _get_fields_before_inf(
+        self, fields_kw: dict[str, dict[str, Any]]
+    ) -> tuple[dict[str, BytesField], str]:
+        """
+        Get the dictionary of fields that go up to and including the infinite
+        field.
+
+        Parameters
+        ----------
+        fields_kw : dict[str, dict[str, Any]]
+            dictionary of kwargs for fields.
+
+        Returns
+        -------
+        tuple[dict[str, BytesField], str]
+            fields - dictionary of fields up to infinite (include);
+            inf - name of infinite field. Empty if there is no found.
+        """
+        fields, start, inf = {}, 0, ""
+        for name, pattern in self._p.items():
+            field_kw = fields_kw[name] if name in fields_kw else {}
+            field_kw.update(start=start)
+
+            # not supported, but it is correct behaviour
+            # if len(set(for_field).intersection(pattern)) == 0:
+            #     fields[name] = pattern.get(**for_field)
+            fields[name] = pattern.get_updated(**field_kw)
+
+            stop = fields[name].stop
+            if stop is None:
+                inf = name
+                break
+            start = stop
+
+        return fields, inf
+
+    @property
+    def name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            name of pattern.
+        """
+        # todo: TypedDict for this case
+        return self._kw["name"]  # type: ignore[no-any-return]

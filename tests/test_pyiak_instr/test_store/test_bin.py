@@ -7,6 +7,7 @@ from src.pyiak_instr.store import (
     BytesField,
     ContinuousBytesStorage,
     BytesFieldPattern,
+    BytesStoragePattern,
 )
 
 from ..data_bin import (
@@ -17,7 +18,7 @@ from ..data_bin import (
     get_cbs_middle_infinite,
     get_cbs_last_infinite,
 )
-from ...utils import validate_object, compare_values
+from ...utils import validate_object, compare_values, compare_objects
 
 
 class TestBytesField(unittest.TestCase):
@@ -434,3 +435,122 @@ class TestBytesFieldPattern(unittest.TestCase):
             c={},
             d="string"
         )
+
+
+class TestBytesStoragePattern(unittest.TestCase):
+
+    def test_init(self) -> None:
+        validate_object(
+            self,
+            BytesStoragePattern(name="cbs", kwarg="None"),
+            name="cbs",
+        )
+
+    def test_get_continuous(self) -> None:
+        data = b"\xaa\x55\xab\xcd\x11\x22\x33\x44\x55\xdc\xbb\x99"
+        ref = dict(
+            validate_storage=dict(
+                content=b"\xaa\x55\xab\xcd\x11\x22\x33\x44\x55\xdc\xbb\x99",
+                name="cbs_example"
+            ),
+            validate_fields=dict(
+                f0=dict(
+                    content=b"\xaa\x55",
+                    words_count=1,
+                    wo_attrs=["name", "fld"],
+                ),
+                f1=dict(
+                    content=b"\xab\xcd",
+                    words_count=2,
+                    wo_attrs=["name", "fld"],
+                ),
+                f2=dict(
+                    content=b"\x11\x22\x33\x44\x55",
+                    words_count=5,
+                    wo_attrs=["name", "fld"],
+                ),
+                f3=dict(
+                    content=b"\xdc\xbb",
+                    words_count=2,
+                    wo_attrs=["name", "fld"],
+                ),
+                f4=dict(
+                    content=b"\x99",
+                    words_count=1,
+                    wo_attrs=["name", "fld"],
+                ),
+            ),
+            field_slices=dict(
+                f0=slice(0, 2),
+                f1=slice(2, 4),
+                f2=slice(4, -3),
+                f3=slice(-3, -1),
+                f4=slice(-1, None),
+            ),
+            decode=dict(
+                f0=[0xAA55],
+                f1=[0xAB, 0xCD],
+                f2=[0x11, 0x22, 0x33, 0x44, 0x55],
+                f3=[0xDC, 0xBB],
+                f4=[-103],
+            ),
+        )
+
+        pattern = self._get_example_patters()
+        res = pattern.get()
+        res.extract(data)
+
+        ref_storage = ref["validate_storage"]
+        ref_fields = ref["validate_fields"]
+        ref_slice = ref["field_slices"]
+        ref_decode = ref["decode"]
+
+        validate_object(self, res, **ref_storage)
+        for field in res:
+            validate_object(self, field, **ref_fields[field.name])
+
+        with self.subTest(sub_test="slice"):
+            self.assertListEqual(list(ref_slice), [f.name for f in res])
+            for parser in res:
+                with self.subTest(field=parser.name):
+                    compare_values(
+                        self, ref_slice[parser.name], parser.fld.slice
+                    )
+
+        with self.subTest(sub_test="decode"):
+            self.assertListEqual(list(ref_decode), [f.name for f in res])
+            for f_name, decoded in res.decode().items():
+                with self.subTest(field=f_name):
+                    compare_values(self, ref_decode[f_name], decoded)
+
+    @staticmethod
+    def _get_example_patters() -> BytesStoragePattern:
+        pattern = BytesStoragePattern(name="cbs_example")
+        pattern.configure(
+            f0=BytesFieldPattern(
+                fmt="H",
+                order=">",
+                expected=1,
+            ),
+            f1=BytesFieldPattern(
+                fmt="B",
+                order="",
+                expected=2,
+            ),
+            f2=BytesFieldPattern(
+                fmt="b",
+                order="",
+                expected=-1,
+            ),
+            f3=BytesFieldPattern(
+                fmt="B",
+                order="",
+                expected=2,
+            ),
+            f4=BytesFieldPattern(
+                fmt="b",
+                order="",
+                expected=1,
+            )
+        )
+        return pattern

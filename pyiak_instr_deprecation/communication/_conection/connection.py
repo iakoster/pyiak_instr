@@ -227,8 +227,8 @@ class Connection(object):
             received message.
         """
         if tx.has.OperationField \
-                and tx.get.OperationField.base == "w":  # todo: base Code
-            rx.get.DataLengthField.set(tx.get.DataLengthField.content)
+                and tx._get_continuous.OperationField.base == "w":  # todo: base Code
+            rx._get_continuous.DataLengthField.set(tx._get_continuous.DataLengthField.content)
 
     def _send(self, msg: MessageType, arf: AsymmetricResponseField) -> MessageType:
         """
@@ -379,7 +379,7 @@ class Connection(object):
         """
 
         if rx.has.IdField and tx.has.IdField:
-            if not tx.get.IdField.is_equal_to(rx.get.IdField):
+            if not tx._get_continuous.IdField.is_equal_to(rx._get_continuous.IdField):
                 return Code.INVALID_ID
 
         codes_dict = rx.response_codes

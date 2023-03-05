@@ -214,9 +214,9 @@ class TestMessageFormat(unittest.TestCase):
 
     def test_get(self) -> None:
         test_data = [
-            (get_message(0), get_mf(0, get_ref=False).get()),
-            (get_message(1), get_mf(1, get_ref=False).get()),
-            (get_message(2), get_mf(2, get_ref=False).get()),
+            (get_message(0), get_mf(0, get_ref=False)._get_continuous()),
+            (get_message(1), get_mf(1, get_ref=False)._get_continuous()),
+            (get_message(2), get_mf(2, get_ref=False)._get_continuous()),
         ]
         for i_test, (ref, res) in enumerate(test_data):
             with self.subTest(i_test=i_test):
@@ -228,7 +228,7 @@ class TestMessageFormat(unittest.TestCase):
         compare_messages(
             self,
             get_message(1).configure(**setters),
-            get_mf(1, get_ref=False).get(data={"fmt": ">I"})
+            get_mf(1, get_ref=False)._get_continuous(data={"fmt": ">I"})
         )
 
         setters = deepcopy(SETTERS[2])
@@ -236,7 +236,7 @@ class TestMessageFormat(unittest.TestCase):
         compare_messages(
             self,
             get_message(2).configure(**setters),
-            get_mf(2, get_ref=False).get(data={"fmt": "B"})
+            get_mf(2, get_ref=False)._get_continuous(data={"fmt": "B"})
         )
 
     def test_read_exc(self):

@@ -333,7 +333,7 @@ class MessageFormat(object):
         with RWConfig(config) as rwc:
             if mf_name not in rwc.hapi.sections():
                 raise ValueError("format with name %r not exists" % mf_name)
-            kw = {opt: rwc.get(mf_name, opt)
+            kw = {opt: rwc._get_continuous(mf_name, opt)
                   for opt in rwc.hapi.options(mf_name)}
         return cls(**kw)
 

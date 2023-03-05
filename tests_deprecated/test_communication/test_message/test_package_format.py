@@ -52,7 +52,7 @@ class TestPackageFormat(unittest.TestCase):
             operation="w",
             data=[34, 52]
         )
-        res = PF.get("n0").extract(
+        res = PF._get_continuous("n0").extract(
             b"\x01\x02\x03\x04\x00\x00\x00\x02\x00\x00\x00\x00"
             b"\x00\x00\x00\x22\x00\x00\x00\x34"
         )
@@ -69,7 +69,7 @@ class TestPackageFormat(unittest.TestCase):
             data=[17, 32],
             crc=0xdfaf
         )
-        res = PF.get("n1", data={"fmt": "B"}).extract(
+        res = PF._get_continuous("n1", data={"fmt": "B"}).extract(
             b"\xaa\x55\x01\x00\x00\x33\x00\x02\x11\x20\xdf\xaf"
         )
         compare_messages(self, ref, res)
