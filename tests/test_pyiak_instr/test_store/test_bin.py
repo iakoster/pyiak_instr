@@ -1,3 +1,4 @@
+import shutil
 import unittest
 from typing import Any
 
@@ -20,8 +21,10 @@ from ..data_bin import (
     get_cbs_middle_infinite,
     get_cbs_last_infinite,
 )
+from ..env import get_local_test_data_dir
 from ...utils import validate_object, compare_values
 
+TEST_DATA_DIR = get_local_test_data_dir(__name__)
 
 class TestBytesField(unittest.TestCase):
 
@@ -437,6 +440,10 @@ class TestBytesFieldPattern(unittest.TestCase):
 
 class TestBytesStoragePattern(unittest.TestCase):
 
+    @classmethod
+    def tearDownClass(cls) -> None:
+        shutil.rmtree(TEST_DATA_DIR.parent)
+
     def test_init(self) -> None:
         validate_object(
             self,
@@ -494,7 +501,7 @@ class TestBytesStoragePattern(unittest.TestCase):
             ),
         )
 
-        pattern = self._get_example_patters()
+        pattern = self._get_example_pattern()
         res = pattern.get()
         res.extract(data)
 
@@ -528,13 +535,33 @@ class TestBytesStoragePattern(unittest.TestCase):
             "BytesStoragePattern not configured yet", exc.exception.args[0]
         )
 
+    def test_to_from_config(self) -> None:
+        path = TEST_DATA_DIR / "test.ini"
+        ref = self._get_example_pattern()
+        ref.to_config(path)
+        res = BytesStoragePattern.from_config(path, "cbs_example")
+
+        with self.subTest(test="storage"):
+            self.assertDictEqual(ref._kw, res._kw)
+
+        for (name, rf), (_, rs) in zip(ref, res):
+            with self.subTest(test=name):
+                for (par, rf_kw), rs_kw in zip(
+                        rf._kw.items(), rs._kw.values()
+                ):
+                    with self.subTest(parameter=par):
+                        self.assertEqual(rf_kw, rs_kw)
+                        self.assertIsInstance(rs_kw, type(rf_kw))
+        res.get()
+
     @staticmethod
-    def _get_example_patters() -> BytesStoragePattern:
+    def _get_example_pattern() -> BytesStoragePattern:
         pattern = BytesStoragePattern(name="cbs_example")
         pattern.configure(
             f0=BytesFieldPattern(
                 fmt=Code.U16,
                 expected=1,
+                order=Code.BIG_ENDIAN,
             ),
             f1=BytesFieldPattern(
                 fmt=Code.U8,

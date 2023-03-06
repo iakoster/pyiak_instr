@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import struct
+from pathlib import Path
 from dataclasses import dataclass
 from dataclasses import field as _field
 from typing import Any, ClassVar, Self, Generator
@@ -9,6 +10,7 @@ from typing import Any, ClassVar, Self, Generator
 import numpy.typing as npt
 
 from ..core import Code
+from ..rwfile import RWConfig
 from ..exceptions import CodeNotAllowed, NotConfiguredYet
 from ..utilities import BytesEncoder, split_complex_dict
 
@@ -455,7 +457,13 @@ class BytesFieldPattern:
         common parameters.
     """
 
+    _CODE_PARS = ("fmt", "order")
+    """list of parameters which must be converted to Code."""
+
     def __init__(self, **parameters: Any):
+        for par, val in parameters.items():
+            if par in self._CODE_PARS:
+                parameters[par] = Code(val)
         self._kw = parameters
 
     def add(self, key: str, value: Any) -> None:
@@ -533,6 +541,9 @@ class BytesFieldPattern:
         """
         return self._kw.pop(key)
 
+    def __init_kwargs__(self) -> dict[str, Any]:
+        return self._kw
+
     def __contains__(self, item: str) -> bool:
         return item in self._kw
 
@@ -558,6 +569,7 @@ class BytesStoragePattern:
     """
 
     def __init__(self, name: str, **kwargs: Any):
+        self._name = name
         self._kw = dict(name=name, **kwargs)
         self._continuous = True  # now available only with this option
         self._p: dict[str, BytesFieldPattern] = {}
@@ -610,6 +622,25 @@ class BytesStoragePattern:
         if self._continuous:
             return self._get_continuous(for_storage, for_fields)
         raise AssertionError("not continuous storage not supports")
+
+    def to_config(self, path: Path) -> None:
+        """
+        Write pattern configuration to config file.
+
+        Parameters
+        ----------
+        path : Path
+            path to config file.
+        """
+        pars = {self._name: self.__init_kwargs__()}
+        for name, pattern in self:
+            pars[name] = pattern.__init_kwargs__()
+
+        with RWConfig(path) as cfg:
+            if cfg.api.has_section(self._name):
+                cfg.api.remove_section(self._name)
+            cfg.set({self._name: pars})
+            cfg.commit()
 
     def _get_continuous(
         self,
@@ -721,6 +752,30 @@ class BytesStoragePattern:
 
         return fields, inf
 
+    @classmethod
+    def from_config(cls, path: Path, name: str) -> Self:
+        """
+        Initialize class instance by config file.
+
+        Parameters
+        ----------
+        path : Path
+            path to config file.
+        name : str
+            section with parameters for class. Use as pattern name.
+
+        Returns
+        -------
+        Self
+            initialized class instance.
+        """
+        with RWConfig(path) as cfg:
+            opts = cfg.api.options(name)
+            opts.pop(opts.index(name))
+            return cls(**cfg.get(name, name)).configure(
+                **{f: BytesFieldPattern(**cfg.get(name, f)) for f in opts}
+            )
+
     @property
     def name(self) -> str:
         """
@@ -730,4 +785,16 @@ class BytesStoragePattern:
             name of pattern.
         """
         # todo: TypedDict for this case
-        return self._kw["name"]  # type: ignore[no-any-return]
+        return self._name
+
+    def __init_kwargs__(self) -> dict[str, Any]:
+        return self._kw
+
+    def __getitem__(self, name: str) -> BytesFieldPattern:
+        return self._p[name]
+
+    def __iter__(
+        self,
+    ) -> Generator[tuple[str, BytesFieldPattern], None, None]:
+        for name, pattern in self._p.items():
+            yield name, pattern

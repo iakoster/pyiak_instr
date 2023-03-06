@@ -268,6 +268,7 @@ class StringEncoder:
             encoded value.
         """
         if isinstance(value, str):
+            # todo: optimize - check only SOH and numbers
             if value == cls._decode_value(value):
                 return value
             return cls._decorate(Code.STRING, value)
