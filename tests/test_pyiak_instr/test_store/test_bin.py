@@ -3,12 +3,14 @@ from typing import Any
 
 import numpy as np
 
+from src.pyiak_instr.core import Code
 from src.pyiak_instr.store import (
     BytesField,
     ContinuousBytesStorage,
     BytesFieldPattern,
     BytesStoragePattern,
 )
+from src.pyiak_instr.exceptions import NotConfiguredYet
 
 from ..data_bin import (
     get_cbs_one,
@@ -18,7 +20,7 @@ from ..data_bin import (
     get_cbs_middle_infinite,
     get_cbs_last_infinite,
 )
-from ...utils import validate_object, compare_values, compare_objects
+from ...utils import validate_object, compare_values
 
 
 class TestBytesField(unittest.TestCase):
@@ -28,16 +30,15 @@ class TestBytesField(unittest.TestCase):
             self,
             BytesField(
                 start=4,
-                fmt="I",
-                order=">",
+                fmt=Code.U32,
                 expected=-100,
             ),
             bytes_expected=0,
             default=b"",
             expected=0,
-            fmt="I",
+            fmt=Code.U32,
             infinite=True,
-            order=">",
+            order=Code.BIG_ENDIAN,
             slice=slice(4, None),
             start=4,
             stop=None,
@@ -48,8 +49,7 @@ class TestBytesField(unittest.TestCase):
     def test_decode(self) -> None:
         obj = BytesField(
             start=4,
-            fmt="I",
-            order=">",
+            fmt=Code.U32,
             expected=-100,
         )
         cases = (
@@ -64,9 +64,9 @@ class TestBytesField(unittest.TestCase):
     def test_encode(self) -> None:
         obj = BytesField(
             start=4,
-            fmt="I",
-            order=">",
+            fmt=Code.U32,
             expected=-100,
+            order=Code.BIG_ENDIAN,
         )
         cases = (
             (1, b"\x00\x00\x00\x01"),
@@ -80,9 +80,9 @@ class TestBytesField(unittest.TestCase):
     def test_validate(self) -> None:
         obj = BytesField(
             start=0,
-            fmt="h",
-            order="",
+            fmt=Code.I16,
             expected=2,
+            order=Code.DEFAULT,
         )
         with self.subTest(test="finite True"):
             self.assertTrue(obj.validate(b"\x02\x04\x00\x00"))
@@ -91,9 +91,9 @@ class TestBytesField(unittest.TestCase):
 
         obj = BytesField(
             start=0,
-            fmt="h",
-            order="",
+            fmt=Code.I16,
             expected=-1,
+            order=Code.LITTLE_ENDIAN,
         )
         with self.subTest(test="infinite True"):
             self.assertTrue(obj.validate(b"\x02\x04\x00\x00"))
@@ -104,15 +104,15 @@ class TestBytesField(unittest.TestCase):
         data = (
             (BytesField(
                 start=-4,
-                fmt="h",
-                order="",
+                fmt=Code.I16,
                 expected=1,
+                order=Code.DEFAULT,
             ), -2),
             (BytesField(
                 start=-2,
-                fmt="h",
-                order="",
+                fmt=Code.I16,
                 expected=1,
+                order=Code.DEFAULT,
             ), None)
         )
 
@@ -142,9 +142,9 @@ class TestBytesFieldParser(unittest.TestCase):
                 name="cbs",
                 f0=BytesField(
                     start=0,
-                    fmt="I",
-                    order=">",
+                    fmt=Code.U32,
                     expected=-1,
+                    order=Code.BIG_ENDIAN,
                 )
             )
 
@@ -346,8 +346,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
             name="cbs",
             f0=BytesField(
                 start=0,
-                fmt="I",
-                order=">",
+                fmt=Code.U32,
                 expected=1,
             ),
         )
@@ -368,24 +367,23 @@ class TestBytesFieldPattern(unittest.TestCase):
 
     def test_get(self) -> None:
         pattern = BytesFieldPattern(
-            fmt="B",
-            order="",
+            fmt=Code.U8,
+            order=Code.DEFAULT,
             expected=4,
         )
         validate_object(
             self,
             pattern.get(start=4),
             start=4,
-            fmt="B",
-            order="",
+            fmt=Code.U8,
+            order=Code.DEFAULT,
             expected=4,
             check_attrs=False,
         )
 
     def test_get_updated(self) -> None:
         pattern = BytesFieldPattern(
-            fmt="B",
-            order="",
+            fmt=Code.U8,
             expected=4,
         )
         with self.assertRaises(TypeError) as exc:
@@ -523,33 +521,35 @@ class TestBytesStoragePattern(unittest.TestCase):
                 with self.subTest(field=f_name):
                     compare_values(self, ref_decode[f_name], decoded)
 
+    def test_get_exc(self) -> None:
+        with self.assertRaises(NotConfiguredYet) as exc:
+            BytesStoragePattern(name="test").get()
+        self.assertEqual(
+            "BytesStoragePattern not configured yet", exc.exception.args[0]
+        )
+
     @staticmethod
     def _get_example_patters() -> BytesStoragePattern:
         pattern = BytesStoragePattern(name="cbs_example")
         pattern.configure(
             f0=BytesFieldPattern(
-                fmt="H",
-                order=">",
+                fmt=Code.U16,
                 expected=1,
             ),
             f1=BytesFieldPattern(
-                fmt="B",
-                order="",
+                fmt=Code.U8,
                 expected=2,
             ),
             f2=BytesFieldPattern(
-                fmt="b",
-                order="",
+                fmt=Code.I8,
                 expected=-1,
             ),
             f3=BytesFieldPattern(
-                fmt="B",
-                order="",
+                fmt=Code.U8,
                 expected=2,
             ),
             f4=BytesFieldPattern(
-                fmt="b",
-                order="",
+                fmt=Code.I8,
                 expected=1,
             )
         )

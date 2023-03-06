@@ -6,6 +6,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from src.pyiak_instr.core import Code
+from src.pyiak_instr.exceptions import CodeNotAllowed
 from src.pyiak_instr.utilities import BytesEncoder, StringEncoder
 
 
@@ -14,19 +15,10 @@ class TestBytesEncoder(unittest.TestCase):
     def test_decode(self) -> None:
         assert_array_equal(
             [2, 3],
-            BytesEncoder.decode(b"\x00\x02\x00\x03", fmt="H", order=">"),
+            BytesEncoder.decode(
+                b"\x00\x02\x00\x03", fmt=Code.U16, order=Code.BIG_ENDIAN
+            ),
         )
-
-    def test_decode_exc(self) -> None:
-        with self.assertRaises(ValueError) as exc:
-            BytesEncoder.decode(b"", fmt="BB")
-        self.assertEqual(
-            "fmt must be specified by char", exc.exception.args[0]
-        )
-
-        with self.assertRaises(ValueError) as exc:
-            BytesEncoder.decode(b"", order="@")
-        self.assertEqual("order not in {'', '>', '<'}", exc.exception.args[0])
 
     def test_decode_value(self) -> None:
         self.assertEqual(1, BytesEncoder.decode_value(b"\x01"))
@@ -41,7 +33,22 @@ class TestBytesEncoder(unittest.TestCase):
     def test_encode(self) -> None:
         self.assertEqual(b"\x01", BytesEncoder.encode(1))
         self.assertEqual(
-            b"\x3f\x8c\xcc\xcd", BytesEncoder.encode(1.1, fmt="f", order=">")
+            b"\x3f\x8c\xcc\xcd", BytesEncoder.encode(
+                1.1, fmt=Code.F32, order=Code.BIG_ENDIAN
+            )
+        )
+
+    def test_get_dtype_exc(self) -> None:
+        with self.assertRaises(CodeNotAllowed) as exc:
+            BytesEncoder.decode(b"", fmt=0)
+        self.assertEqual(
+            "code not allowed: <Code.NONE: 0>", exc.exception.args[0]
+        )
+
+        with self.assertRaises(CodeNotAllowed) as exc:
+            BytesEncoder.decode(b"", order=Code.NONE)
+        self.assertEqual(
+            "code not allowed: <Code.NONE: 0>", exc.exception.args[0]
         )
 
 

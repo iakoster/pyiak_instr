@@ -1,8 +1,16 @@
 """Private module of `pyiak_instr.exceptions` with common exceptions."""
 from ._base import PyiError
+from ..core import Code
 
 
-__all__ = ["NotConfiguredYet", "WithoutParent"]
+__all__ = ["CodeNotAllowed", "NotConfiguredYet", "WithoutParent"]
+
+
+class CodeNotAllowed(PyiError):
+    """Raised when received code not in list of allowed codes."""
+
+    def __init__(self, code: Code) -> None:
+        super().__init__(msg=f"code not allowed: {repr(code)}")
 
 
 class NotConfiguredYet(PyiError):

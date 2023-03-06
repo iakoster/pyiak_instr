@@ -4,11 +4,12 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 from dataclasses import field as _field
-from typing import Any, Self, Generator
+from typing import Any, ClassVar, Self, Generator
 
 import numpy.typing as npt
 
-from ..exceptions import NotConfiguredYet
+from ..core import Code
+from ..exceptions import CodeNotAllowed, NotConfiguredYet
 from ..utilities import BytesEncoder, split_complex_dict
 
 
@@ -29,16 +30,16 @@ class BytesField:
     start: int
     """the number of bytes in the message from which the fields begin."""
 
-    fmt: str  # todo: to Code
+    fmt: Code
     """format for packing or unpacking the content.
     The word length is calculated from the format."""
-
-    order: str  # todo: to Code
-    """bytes order for packing and unpacking."""
 
     expected: int
     """expected number of words in the field. If less than 1, from
     the start byte to the end of the message."""
+
+    order: Code = Code.BIG_ENDIAN
+    """bytes order for packing and unpacking."""
 
     default: bytes = b""
     """default value of the field."""
@@ -46,7 +47,15 @@ class BytesField:
     _stop: int | None = _field(default=None, repr=False)
     """stop byte index of field content."""
 
+    ORDERS: ClassVar[dict[Code, str]] = BytesEncoder.ORDERS
+    VALUES: ClassVar[dict[Code, str]] = BytesEncoder.VALUES
+
     def __post_init__(self) -> None:
+        if self.fmt not in BytesEncoder.VALUES:
+            raise CodeNotAllowed(self.fmt)
+        if self.order not in BytesEncoder.ORDERS:
+            raise CodeNotAllowed(self.order)
+
         if self.expected < 0:
             object.__setattr__(self, "expected", 0)
         stop = self.start + self.bytes_expected
@@ -154,7 +163,7 @@ class BytesField:
         int
             The length of the one word in bytes.
         """
-        return struct.calcsize(self.fmt)
+        return struct.calcsize(self.VALUES[self.fmt])
 
 
 # todo: up to this level all functions and properties from BytesField
@@ -589,7 +598,12 @@ class BytesStoragePattern:
         ------
         AssertionError
             if in some reason `_continuous` is False.
+        NotConfiguredYet
+            if patterns list is empty.
         """
+        if len(self._p) == 0:
+            raise NotConfiguredYet(self)
+
         for_fields, for_storage = split_complex_dict(
             update, without_sep="other"
         )
@@ -618,15 +632,7 @@ class BytesStoragePattern:
         -------
         ContinuousBytesStorage
             initialized storage.
-
-        Raises
-        ------
-        NotConfiguredYet
-            if patterns list is empty.
         """
-        if len(self._p) == 0:
-            raise NotConfiguredYet(self)
-
         storage_kw = self._kw
         if len(for_storage) != 0:
             storage_kw.update(for_storage)
@@ -669,7 +675,9 @@ class BytesStoragePattern:
                 break
 
             pattern = self._p[name]
-            start -= pattern["expected"] * struct.calcsize(pattern["fmt"])
+            start -= pattern["expected"] * struct.calcsize(
+                BytesField.VALUES[pattern["fmt"]]
+            )
             field_kw = fields_kw[name] if name in fields_kw else {}
             field_kw.update(start=start)
             fields.append((name, pattern.get_updated(**field_kw)))

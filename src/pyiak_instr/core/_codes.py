@@ -15,6 +15,7 @@ class Code(IntEnum):
     OK = auto()
     WAIT = auto()
     ERROR = auto()
+    DEFAULT = auto()
     UNDEFINED = 0xFF
 
     # Type codes
@@ -29,8 +30,25 @@ class Code(IntEnum):
     TUPLE = auto()
     NUMPY_ARRAY = auto()
 
+    # Value types codes
+    I8 = 0x200
+    I16 = auto()
+    I32 = auto()
+    I64 = auto()
+    U8 = auto()
+    U16 = auto()
+    U32 = auto()
+    U64 = auto()
+    F16 = auto()
+    F32 = auto()
+    F64 = auto()
+
     # Additional types
-    WORDS = 0x200
+    WORDS = 0x300
 
     # Additional errors
-    INVALID_ID = 0x300
+    INVALID_ID = 0x400
+
+    # Additional codes
+    BIG_ENDIAN = 0x500
+    LITTLE_ENDIAN = auto()

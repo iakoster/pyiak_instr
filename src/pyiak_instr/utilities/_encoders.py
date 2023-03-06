@@ -8,6 +8,7 @@ import numpy as np
 import numpy.typing as npt
 
 from ..core import Code
+from ..exceptions import CodeNotAllowed
 
 
 __all__ = ["BytesEncoder", "StringEncoder"]
@@ -18,13 +19,33 @@ class BytesEncoder:
     Represents class for encoding/decoding numbers and arrays to/from bytes.
     """
 
-    # nodesc
+    ORDERS: dict[Code, str] = {
+        Code.DEFAULT: "",
+        Code.BIG_ENDIAN: ">",
+        Code.LITTLE_ENDIAN: "<",
+    }
+
+    VALUES: dict[Code, str] = {
+        Code.I8: "b",
+        Code.I16: "h",
+        Code.I32: "i",
+        Code.I64: "q",
+        Code.U8: "B",
+        Code.U16: "H",
+        Code.U32: "I",
+        Code.U64: "Q",
+        Code.F16: "e",
+        Code.F32: "f",
+        Code.F64: "d",
+    }
+    """types of values for encoding"""
+
     @classmethod
     def decode(
         cls,
         content: bytes,
-        fmt: str = "B",
-        order: str = "",
+        fmt: Code | int = Code.U8,
+        order: Code | int = Code.DEFAULT,
     ) -> npt.NDArray[Any]:  # todo: typing
         """
         Decode bytes content to array.
@@ -43,16 +64,14 @@ class BytesEncoder:
         numpy.typing.NDArray
             decoded values.
         """
-        cls._check_fmt(fmt)
-        cls._check_order(order)
         return np.frombuffer(content, dtype=cls._get_dtype(fmt, order))
 
     @classmethod
     def decode_value(
         cls,
         content: bytes,
-        fmt: str = "B",
-        order: str = "",
+        fmt: Code | int = Code.U8,
+        order: Code | int = Code.DEFAULT,
     ) -> int | float:
         """
         Decode one value from content.
@@ -76,16 +95,17 @@ class BytesEncoder:
         ValueError
             if content is not a one value.
         """
-        if len(content) / struct.calcsize(fmt) != 1:
+        dtype = cls._get_dtype(fmt, order)
+        if len(content) / struct.calcsize(dtype) != 1:
             raise ValueError("content must be specified by one value")
-        return cls.decode(content, fmt=fmt, order=order)[0]  # type: ignore
+        return np.frombuffer(content, dtype=dtype)[0]  # type: ignore
 
     @classmethod
     def encode(
         cls,
         content: npt.ArrayLike,
-        fmt: str = "B",
-        order: str = "",
+        fmt: Code | int = Code.U8,
+        order: Code | int = Code.DEFAULT,
     ) -> bytes:
         """
         Encode values to bytes.
@@ -104,64 +124,44 @@ class BytesEncoder:
         bytes
             encoded values.
         """
-        cls._check_fmt(fmt)
-        cls._check_order(order)
         return np.array(content, dtype=cls._get_dtype(fmt, order)).tobytes()
 
     @classmethod
-    def _check_fmt(cls, fmt: str) -> None:
+    def _get_dtype(cls, fmt: Code | int, order: Code | int) -> str:
         """
-        Check format.
+        Check the correctness of `fmt` and `order` and get format string.
 
         Parameters
         ----------
-        fmt : str
-            format.
-
-        Raises
-        ------
-        ValueError
-            if fmt is not specified by char.
-        """
-        if len(fmt) != 1:
-            raise ValueError("fmt must be specified by char")
-
-    @classmethod
-    def _check_order(cls, order: str) -> None:
-        """
-        Check order char.
-
-        Parameters
-        ----------
-        order : str
-            order char.
-
-        Raises
-        ------
-        ValueError
-            if order not in {'', '>', '<'}.
-        """
-        if order not in {"", ">", "<"}:
-            raise ValueError("order not in {'', '>', '<'}")
-
-    @classmethod
-    def _get_dtype(cls, fmt: str, order: str) -> str:
-        """
-        Get dtype with order and fmt.
-
-        Parameters
-        ----------
-        fmt : str
-            format.
-        order : str
-            order char.
+        fmt : Code | int
+            format code.
+        order : Code | int
+            order code.
 
         Returns
         -------
         str
-            dtype string.
+            format string.
+
+        Raises
+        ------
+        CodeNotAllowed
+            if `fmt` or `order` not in list of existed formats.
         """
-        return (order if struct.calcsize(fmt) != 1 else "") + fmt
+        if isinstance(fmt, int):
+            fmt = Code(fmt)
+        if isinstance(order, int):
+            order = Code(order)
+
+        if fmt not in cls.VALUES:
+            raise CodeNotAllowed(fmt)
+        if order not in cls.ORDERS:
+            raise CodeNotAllowed(order)
+
+        dtype = cls.VALUES[fmt]
+        if struct.calcsize(dtype) > 1:
+            dtype = cls.ORDERS[order] + dtype
+        return dtype
 
 
 # todo: parameters (e.g. \npa[shape=\tpl(2,1),dtype=uint8](1,2))
