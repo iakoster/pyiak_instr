@@ -52,3 +52,8 @@ class Code(IntEnum):
     # Additional codes
     BIG_ENDIAN = 0x500
     LITTLE_ENDIAN = auto()
+
+    # Common codes
+    ACTUAL = 0x600
+    READ = auto()
+    WRITE = auto()

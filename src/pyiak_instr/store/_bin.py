@@ -43,7 +43,7 @@ class BytesField:
     order: Code = Code.BIG_ENDIAN
     """bytes order for packing and unpacking."""
 
-    default: bytes = b""
+    default: bytes = b""  # todo: to ContentType
     """default value of the field."""
 
     _stop: int | None = _field(default=None, repr=False)
@@ -453,6 +453,8 @@ class BytesFieldPattern:
 
     Parameters
     ----------
+    field_type: str, default=''
+        name of field type.
     **parameters: Any
         common parameters.
     """
@@ -460,7 +462,11 @@ class BytesFieldPattern:
     _CODE_PARS = ("fmt", "order")
     """list of parameters which must be converted to Code."""
 
-    def __init__(self, **parameters: Any):
+    _FIELD_TYPES: dict[str, type[BytesField]] = {}
+    """dictionary of field types where key is a name of type."""
+
+    def __init__(self, field_type: str = "", **parameters: Any):
+        self._field_type = field_type
         for par, val in parameters.items():
             if par in self._CODE_PARS:
                 parameters[par] = Code(val)
@@ -501,7 +507,8 @@ class BytesFieldPattern:
         BytesField
             initialized field.
         """
-        return BytesField(**self._kw, **parameters)
+        # todo: check intersection and then call .get_updated
+        return self._get_field_class()(**self._kw, **parameters)
 
     def get_updated(self, **parameters: Any) -> BytesField:
         """
@@ -523,7 +530,7 @@ class BytesFieldPattern:
         """
         kw_ = self._kw.copy()
         kw_.update(parameters)
-        return BytesField(**kw_)  # pylint: disable=missing-kwoa
+        return self._get_field_class()(**kw_)  # pylint: disable=missing-kwoa
 
     def pop(self, key: str) -> Any:
         """
@@ -541,8 +548,31 @@ class BytesFieldPattern:
         """
         return self._kw.pop(key)
 
+    def _get_field_class(self) -> type[BytesField]:
+        """
+        Get field class by `field_type`.
+
+        Returns
+        -------
+        type[BytesField]
+            field class.
+        """
+        return self._FIELD_TYPES.get(self._field_type, BytesField)
+
+    @property
+    def field_type(self) -> str:
+        """
+        Returns
+        -------
+        str
+            name of field type.
+        """
+        return self._field_type
+
     def __init_kwargs__(self) -> dict[str, Any]:
-        return self._kw
+        kwargs = {"field_type": self._field_type}
+        kwargs.update(self._kw)
+        return kwargs
 
     def __contains__(self, item: str) -> bool:
         return item in self._kw

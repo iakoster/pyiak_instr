@@ -55,7 +55,8 @@ class TestBytesEncoder(unittest.TestCase):
 class TestStringEncoder(unittest.TestCase):
 
     DATA = dict(
-        empty_str=("", ""),
+        empty_str=("", ""),     # if empty string is a last parameter
+                                # (e.g. dict) -> raises error
         letter=("a", "a"),
         word=("lol", "lol"),
         sentence=("lol kek!!!", "lol kek!!!"),
