@@ -17,6 +17,7 @@ from ..utilities import BytesEncoder, split_complex_dict
 
 __all__ = [
     "BytesField",
+    "BytesFieldParser",
     "ContinuousBytesStorage",
     "BytesFieldPattern",
     "BytesStoragePattern",
@@ -714,7 +715,8 @@ class BytesStoragePattern:
         inf: str,
     ) -> tuple[dict[str, BytesField], str]:
         """
-
+        Get the dictionary of fields that go from infinite field
+        (not included) to end.
 
         Parameters
         ----------
