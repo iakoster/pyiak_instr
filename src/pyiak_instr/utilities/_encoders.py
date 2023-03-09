@@ -14,6 +14,7 @@ from ..exceptions import CodeNotAllowed
 __all__ = ["BytesEncoder", "StringEncoder"]
 
 
+# todo: add string support
 class BytesEncoder:
     """
     Represents class for encoding/decoding numbers and arrays to/from bytes.
@@ -46,7 +47,7 @@ class BytesEncoder:
         content: bytes,
         fmt: Code | int = Code.U8,
         order: Code | int = Code.DEFAULT,
-    ) -> npt.NDArray[Any]:  # todo: typing
+    ) -> npt.NDArray[np.int_ | np.float_]:
         """
         Decode bytes content to array.
 

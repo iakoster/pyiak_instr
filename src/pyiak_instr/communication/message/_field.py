@@ -1,4 +1,5 @@
-"""Private module of ``pyiak_instr.communication.message`` field classes."""
+"""Private module of ``pyiak_instr.communication.message`` with field
+classes."""
 from __future__ import annotations
 from dataclasses import dataclass
 from dataclasses import field as _field

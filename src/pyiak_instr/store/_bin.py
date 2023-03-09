@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from dataclasses import field as _field
 from typing import Any, ClassVar, Self, Generator
 
+import numpy as np
 import numpy.typing as npt
 
 from ..core import Code
@@ -65,7 +66,7 @@ class BytesField:
         if not self.infinite and stop != 0:
             object.__setattr__(self, "_stop", stop)
 
-    def decode(self, content: bytes) -> npt.NDArray[Any]:
+    def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
         """
         Decode content from parent.
 
@@ -170,6 +171,7 @@ class BytesField:
 
 
 # todo: up to this level all functions and properties from BytesField
+# todo: __str__ method
 class BytesFieldParser:
     """
     Represents parser for work with field content.
@@ -194,7 +196,7 @@ class BytesFieldParser:
         self._s = storage
         self._f = field
 
-    def decode(self) -> npt.NDArray[Any]:
+    def decode(self) -> npt.NDArray[np.int_ | np.float_]:
         """
         Decode field content.
 
@@ -244,6 +246,41 @@ class BytesFieldParser:
             Count of words in the field.
         """
         return len(self) // self._f.word_size
+
+    def __bytes__(self) -> bytes:  # todo: tests
+        """
+        Returns
+        -------
+        bytes
+            field content.
+        """
+        return self.content
+
+    def __getitem__(
+        self, index: int | slice
+    ) -> np.int_ | np.float_:  # todo: tests
+        """
+        Parameters
+        ----------
+        index : int | slice
+            word index.
+
+        Returns
+        -------
+        int | float
+            word value.
+        """
+        return self.decode()[index]  # type: ignore[return-value]
+
+    def __iter__(self) -> Generator[int | float, None, None]:  # todo: tests
+        """
+        Yields
+        ------
+        int | float
+            word value.
+        """
+        for item in self.decode():
+            yield item
 
     def __len__(self) -> int:
         """
