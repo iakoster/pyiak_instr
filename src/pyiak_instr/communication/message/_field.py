@@ -152,6 +152,16 @@ class CrcMessageField(SingleMessageField):
         "crc16-CCITT/XMODEM": get_crc16_ccitt_xmodem
     }
 
+    @property
+    def algorithm(self) -> Callable[[bytes], int]:
+        """
+        Returns
+        -------
+        Callable[[bytes], int]
+            algorithm to calculate crc.
+        """
+        return self.CRC_ALGORITHMS[self.algorithm_name]
+
 
 @dataclass(frozen=True, kw_only=True)
 class DataMessageField(MessageField):

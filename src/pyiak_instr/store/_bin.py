@@ -172,6 +172,7 @@ class BytesField:
 
 # todo: up to this level all functions and properties from BytesField
 # todo: __str__ method
+# todo: parser via Generic[ContinuousBytesStorage, BytesField]
 class BytesFieldParser:
     """
     Represents parser for work with field content.
