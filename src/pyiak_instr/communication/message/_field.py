@@ -3,7 +3,7 @@ classes."""
 from __future__ import annotations
 from dataclasses import dataclass
 from dataclasses import field as _field
-from typing import Any, Self, ClassVar, Callable
+from typing import Any, Callable, ClassVar, Self, Union
 
 from ...core import Code
 from ...store import BytesField, BytesFieldPattern
@@ -20,6 +20,7 @@ __all__ = [
     "IdMessageField",
     "OperationMessageField",
     "ResponseMessageField",
+    "MessageFieldUnionT",
     "MessageFieldPattern",
 ]
 
@@ -243,6 +244,20 @@ class ResponseMessageField(SingleMessageField):
 
     default_code: Code = Code.UNDEFINED
     """default code if value undefined."""
+
+
+MessageFieldUnionT = Union[
+    MessageField,
+    SingleMessageField,
+    StaticMessageField,
+    AddressMessageField,
+    CrcMessageField,
+    DataMessageField,
+    DataLengthMessageField,
+    IdMessageField,
+    OperationMessageField,
+    ResponseMessageField,
+]
 
 
 class MessageFieldPattern(BytesFieldPattern):
