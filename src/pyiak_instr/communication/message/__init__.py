@@ -17,7 +17,7 @@ from ._field import (
     ResponseMessageField,
     MessageFieldPattern,
 )
-from ._field_parser import MessageFieldParser
+from ._message import MessageFieldParser
 
 
 __all__ = [

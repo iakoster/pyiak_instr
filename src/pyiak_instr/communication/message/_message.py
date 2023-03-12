@@ -17,8 +17,6 @@ from ._field import (
 from ...store import BytesFieldParser
 from ...core import Code
 
-# todo: all parsers via generic
-
 __all__ = [
     "MessageFieldParser",
     "SingleMessageFieldParser",
@@ -33,6 +31,7 @@ __all__ = [
 ]
 
 
+# todo: all parsers via generic
 class MessageFieldParser(BytesFieldParser):
     """
     Represents parser for work with message field content.
