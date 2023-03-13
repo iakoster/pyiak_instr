@@ -43,7 +43,7 @@ class SingleMessageField(MessageField):
     def __post_init__(self) -> None:
         super().__post_init__()
         if self.expected != 1:
-            raise ValueError("single field must expected one word.")
+            raise ValueError("single field should expect one word")
 
     def validate(self, content: bytes) -> bool:
         """
@@ -73,7 +73,7 @@ class StaticMessageField(SingleMessageField):
     def __post_init__(self) -> None:
         super().__post_init__()
         if len(self.default) == 0:
-            raise ValueError("default value not specified.")
+            raise ValueError("default value not specified")
 
     def validate(self, content: bytes) -> bool:
         """
