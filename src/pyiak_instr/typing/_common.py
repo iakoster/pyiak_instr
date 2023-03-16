@@ -62,7 +62,7 @@ class WithBaseStringMethods(ABC):
     """Represents abstract class with basic string methods."""
 
     @abstractmethod
-    def _get_under_brackets(self) -> str:
+    def __str_under_brackets__(self) -> str:
         """
         Returns
         -------
@@ -88,5 +88,5 @@ class WithBaseStringMethods(ABC):
         """
         return "%s(%r)" % (
             self.__class__.__name__,
-            self._get_under_brackets(),
+            self.__str_under_brackets__(),
         )

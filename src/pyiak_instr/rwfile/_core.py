@@ -94,15 +94,6 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
     def close(self) -> None:
         """Close api."""
 
-    def _get_under_brackets(self) -> str:
-        """
-        Returns
-        -------
-        str
-            string which must be under brackets in result of .__str__ method.
-        """
-        return str(self._fp)
-
     @property
     def filepath(self) -> Path:
         """
@@ -112,6 +103,15 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
             Path to the file.
         """
         return self._fp
+
+    def __str_under_brackets__(self) -> str:
+        """
+        Returns
+        -------
+        str
+            string which must be under brackets in result of .__str__ method.
+        """
+        return str(self._fp)
 
     def __exit__(
         self,
@@ -125,6 +125,6 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
     # pylint: disable=unused-argument
     def __new__(
         cls, filepath: Path | str, *args: Any, **kwargs: Any
-    ) -> RWFile[T]:
+    ) -> RWFile[T]:  # todo: typing - Self[T]
         _check_filepath(cls, filepath)
         return super().__new__(cls)
