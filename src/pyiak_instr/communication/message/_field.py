@@ -168,6 +168,8 @@ class CrcMessageField(SingleMessageField):
 class DataMessageField(MessageField):
     """Represents a field of a Message with data."""
 
+    expected: int = 0
+
 
 @dataclass(frozen=True, kw_only=True)
 class DataLengthMessageField(SingleMessageField):
@@ -260,6 +262,8 @@ MessageFieldUnionT = Union[
 ]
 
 
+# todo: typehint - Generic. .get, .get_updated and ._get_field_class writes
+#  just because needed to change type.
 class MessageFieldPattern(BytesFieldPattern):
     """
     Represents class which storage common parameters for message field.
@@ -290,6 +294,58 @@ class MessageFieldPattern(BytesFieldPattern):
         if field_type not in self._FIELD_TYPES:
             raise ValueError(f"invalid field type name: {field_type}")
         super().__init__(field_type=field_type, **parameters)
+
+    def get(self, **parameters: Any) -> MessageFieldUnionT:
+        """
+        Get field initialized with parameters from pattern and from
+        `parameters`.
+
+        Parameters
+        ----------
+        **parameters: Any
+            additional field initialization parameters.
+
+        Returns
+        -------
+        MessageFieldUnionT
+            initialized field.
+        """
+        return self._get_field_class()(**self._kw, **parameters)
+
+    def get_updated(self, **parameters: Any) -> MessageFieldUnionT:
+        """
+        Get field initialized with parameters from pattern and from
+        `parameters`.
+
+        If parameters from pattern will be updated via `parameters` before
+        creation Field instance.
+
+        Parameters
+        ----------
+        **parameters: Any
+            parameters for field.
+
+        Returns
+        -------
+        MessageFieldUnionT
+            initialized field.
+        """
+        kw_ = self._kw.copy()
+        kw_.update(parameters)
+        return self._get_field_class()(**kw_)
+
+    def _get_field_class(self) -> type[MessageFieldUnionT]:
+        """
+        Get field class by `field_type`.
+
+        Returns
+        -------
+        type[MessageFieldUnionT]
+            message field class.
+        """
+        return self._FIELD_TYPES.get(  # type: ignore[return-value]
+            self._field_type, MessageField
+        )
 
     @classmethod
     def basic(
@@ -457,7 +513,7 @@ class MessageFieldPattern(BytesFieldPattern):
     def data(
         cls,
         fmt: Code,
-        expected: int,
+        expected: int = 0,
         order: Code = Code.BIG_ENDIAN,
     ) -> Self:
         """
@@ -467,7 +523,7 @@ class MessageFieldPattern(BytesFieldPattern):
         ----------
         fmt : Code
             format code.
-        expected : int
+        expected : int, default=0
             expected number of words in the field.
         order : Code, default=Code.BIG_ENDIAN
             bytes order code.

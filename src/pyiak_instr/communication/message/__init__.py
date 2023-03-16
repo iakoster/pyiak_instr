@@ -15,6 +15,7 @@ from ._field import (
     IdMessageField,
     OperationMessageField,
     ResponseMessageField,
+    MessageFieldUnionT,
     MessageFieldPattern,
 )
 from ._message import MessageFieldParser
@@ -31,6 +32,7 @@ __all__ = [
     "IdMessageField",
     "OperationMessageField",
     "ResponseMessageField",
+    "MessageFieldUnionT",
     "MessageFieldPattern",
     "MessageFieldParser",
 ]

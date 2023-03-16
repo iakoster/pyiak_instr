@@ -3,7 +3,18 @@
 Typing (:mod:`pyiak_instr`)
 ===========================
 """
-from ._common import ContextManager, WithApi, WithBaseStringMethods
+# pylint: disable=duplicate-code
+from ._common import (
+    ContextManager,
+    SupportsInitKwargs,
+    WithApi,
+    WithBaseStringMethods,
+)
 
 
-__all__ = ["ContextManager", "WithApi", "WithBaseStringMethods"]
+__all__ = [
+    "ContextManager",
+    "SupportsInitKwargs",
+    "WithApi",
+    "WithBaseStringMethods",
+]

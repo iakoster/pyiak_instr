@@ -486,6 +486,7 @@ class ContinuousBytesStorage:
             yield self[field]
 
 
+# todo: typehint - Generic. Create via generic for children.
 class BytesFieldPattern:
     """
     Represents class which storage common parameters for field.

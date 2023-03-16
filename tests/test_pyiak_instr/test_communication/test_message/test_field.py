@@ -12,6 +12,7 @@ from src.pyiak_instr.communication.message import (
     IdMessageField,
     OperationMessageField,
     ResponseMessageField,
+    MessageFieldPattern,
 )
 
 from ....utils import validate_object
@@ -270,3 +271,59 @@ class TestResponseMessageField(unittest.TestCase):
             stop=12,
             word_size=2,
         )
+
+
+class TestMessageFieldPattern(unittest.TestCase):
+
+    def test_get(self) -> None:
+        data = dict(
+            basic=(
+                MessageFieldPattern.basic(fmt=Code.U8, expected=0),
+                MessageField,
+            ),
+            single=(
+                MessageFieldPattern.single(fmt=Code.U8), SingleMessageField,
+            ),
+            static=(
+                MessageFieldPattern.static(
+                    fmt=Code.U32, default=b"\x00\x01\x02\x03"
+                ),
+                StaticMessageField,
+            ),
+            address=(
+                MessageFieldPattern.address(fmt=Code.U8),
+                AddressMessageField,
+            ),
+            crc=(
+                MessageFieldPattern.crc(fmt=Code.U16), CrcMessageField,
+            ),
+            data=(
+                MessageFieldPattern.data(fmt=Code.U64), DataMessageField,
+            ),
+            data_length=(
+                MessageFieldPattern.data_length(fmt=Code.I32),
+                DataLengthMessageField,
+            ),
+            id=(
+                MessageFieldPattern.id(fmt=Code.U8), IdMessageField,
+            ),
+            operation=(
+                MessageFieldPattern.operation(fmt=Code.U16), OperationMessageField,
+            ),
+            response=(
+                MessageFieldPattern.response(fmt=Code.F16), ResponseMessageField,
+            )
+        )
+
+        self.assertSetEqual(set(data), set(MessageFieldPattern._FIELD_TYPES))
+        for type_name, (pattern, field_type) in data.items():
+            pattern: MessageFieldPattern
+            with self.subTest(test=type_name):
+                self.assertEqual(type_name, pattern.field_type)
+                res = pattern.get(start=0)
+
+                for key, val in pattern.__init_kwargs__().items():
+                    if key == "field_type":
+                        continue
+                    with self.subTest(parameter=key):
+                        self.assertEqual(val, getattr(res, key))

@@ -4,7 +4,12 @@ from types import TracebackType
 from typing import Any, Self, Optional, Type, TypeVar, Generic, Protocol
 
 
-__all__ = ["ContextManager", "WithApi", "WithBaseStringMethods"]
+__all__ = [
+    "ContextManager",
+    "SupportsInitKwargs",
+    "WithApi",
+    "WithBaseStringMethods",
+]
 
 
 T = TypeVar("T")
@@ -32,7 +37,7 @@ class SupportsInitKwargs(Protocol):
     """
 
     def __init_kwargs__(self) -> dict[str, Any]:
-        ...
+        """Returns kwargs required for initialization."""
 
 
 # pylint: disable=too-few-public-methods
