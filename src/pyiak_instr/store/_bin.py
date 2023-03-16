@@ -52,10 +52,10 @@ class BytesField:
     """stop byte index of field content."""
 
     ORDERS: ClassVar[dict[Code, str]] = BytesEncoder.ORDERS
-    VALUES: ClassVar[dict[Code, str]] = BytesEncoder.VALUES
+    VALUES: ClassVar[dict[Code, str]] = BytesEncoder.ALLOWED_CODES
 
     def __post_init__(self) -> None:
-        if self.fmt not in BytesEncoder.VALUES:
+        if self.fmt not in BytesEncoder.ALLOWED_CODES:
             raise CodeNotAllowed(self.fmt)
         if self.order not in BytesEncoder.ORDERS:
             raise CodeNotAllowed(self.order)

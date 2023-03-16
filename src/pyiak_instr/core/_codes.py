@@ -34,15 +34,24 @@ class Code(IntEnum):
     # Value types codes
     I8 = 0x200
     I16 = auto()
+    I24 = auto()
     I32 = auto()
+    I40 = auto()
+    I48 = auto()
+    I56 = auto()
     I64 = auto()
     U8 = auto()
     U16 = auto()
+    U24 = auto()
     U32 = auto()
+    U40 = auto()
+    U48 = auto()
+    U56 = auto()
     U64 = auto()
     F16 = auto()
     F32 = auto()
     F64 = auto()
+    CHAR = auto()
 
     # Additional types
     WORDS = 0x300

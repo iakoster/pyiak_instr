@@ -10,15 +10,40 @@ from src.pyiak_instr.exceptions import CodeNotAllowed
 from src.pyiak_instr.utilities import BytesEncoder, StringEncoder
 
 
+def _get_value_instance(
+    code: Code,
+    length: int,
+    encode_raw: list[bytes] | None = None,
+    decode: list[int] | None = None,
+):
+    if encode_raw is None:
+        encode_raw = [b"\x02", b"\x03"]
+    if decode is None:
+        decode = [2, 3]
+
+    encode = b""
+    for val in encode_raw:
+        encode += b"\x00" * (length - len(encode_raw)) + val
+    return code, decode, encode
+
+
 class TestBytesEncoder(unittest.TestCase):
 
+    DATA = {
+        n: _get_value_instance(c, l) for n, (c, l) in dict(
+            u8=(Code.U8, 1)
+        ).items()
+    }
+
     def test_decode(self) -> None:
-        assert_array_equal(
-            [2, 3],
-            BytesEncoder.decode(
-                b"\x00\x02\x00\x03", fmt=Code.U16, order=Code.BIG_ENDIAN
-            ),
-        )
+        for name, (fmt, decoded, encoded) in self.DATA.items():
+            with self.subTest(test=name, fmt=repr(fmt)):
+                assert_array_equal(
+                    decoded,
+                    BytesEncoder.decode(
+                        encoded, fmt=fmt, order=Code.BIG_ENDIAN
+                    ),
+                )
 
     def test_decode_value(self) -> None:
         self.assertEqual(1, BytesEncoder.decode_value(b"\x01"))
