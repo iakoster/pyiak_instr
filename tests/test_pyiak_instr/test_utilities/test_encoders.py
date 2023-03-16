@@ -40,12 +40,6 @@ class TestBytesEncoder(unittest.TestCase):
 
     def test_get_dtype_exc(self) -> None:
         with self.assertRaises(CodeNotAllowed) as exc:
-            BytesEncoder.decode(b"", fmt=0)
-        self.assertEqual(
-            "code not allowed: <Code.NONE: 0>", exc.exception.args[0]
-        )
-
-        with self.assertRaises(CodeNotAllowed) as exc:
             BytesEncoder.decode(b"", order=Code.NONE)
         self.assertEqual(
             "code not allowed: <Code.NONE: 0>", exc.exception.args[0]
@@ -56,7 +50,7 @@ class TestStringEncoder(unittest.TestCase):
 
     DATA = dict(
         empty_str=("", ""),     # if empty string is a last parameter
-                                # (e.g. dict) -> raises error
+                                # (e.g. dict) -> raise error
         letter=("a", "a"),
         word=("lol", "lol"),
         sentence=("lol kek!!!", "lol kek!!!"),
@@ -71,6 +65,7 @@ class TestStringEncoder(unittest.TestCase):
         efloat_small_neg=("-5.4321e-99", -5.4321e-99),
         efloat_str=("\\str(4.321e-107)", "4.321e-107"),
         efloat_large=("5.4321e+99", 5.4321e+99),
+        code=("\\cod(1)", Code.OK),
         true=("True", True),
         true_str=("\\str(True)", "True"),
         false=("False", False),
@@ -153,25 +148,8 @@ class TestStringEncoder(unittest.TestCase):
 
     def test_encode_code_support(self) -> None:
         self.assertEqual(
-            "1", StringEncoder.encode(Code.OK)
+            "\cod(1)", StringEncoder.encode(Code.OK)
         )
-
-    # def test_decode_value(self) -> None:
-    #     for string, ref in (
-    #         ("", Code.STRING),
-    #         (r"\tpl(1,2)", Code.TUPLE),
-    #         ("112", Code.INT),
-    #         ("-15675", Code.INT),
-    #         ("1.1", Code.FLOAT),
-    #         ("-1.1e+10", Code.FLOAT),
-    #         ("True", Code.BOOL),
-    #         ("False", Code.BOOL),
-    #         ("None", Code.NONE),
-    #         ("text", Code.STRING),
-    #     ):
-    #         with self.subTest(string=string, ref=repr(ref)):
-    #             res = StringEncoder._determine_type(string)
-    #             self.assertEqual(ref, res)
 
     def test_decorate(self) -> None:
         self.assertEqual(

@@ -499,17 +499,11 @@ class BytesFieldPattern:
         common parameters.
     """
 
-    _CODE_PARS = ("fmt", "order")
-    """list of parameters which must be converted to Code."""
-
     _FIELD_TYPES: dict[str, type[BytesField]] = {}
     """dictionary of field types where key is a name of type."""
 
     def __init__(self, field_type: str = "", **parameters: Any):
         self._field_type = field_type
-        for par, val in parameters.items():
-            if par in self._CODE_PARS:
-                parameters[par] = Code(val)
         self._kw = parameters
 
     def add(self, key: str, value: Any) -> None:

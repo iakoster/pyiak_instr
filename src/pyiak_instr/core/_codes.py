@@ -21,6 +21,7 @@ class Code(IntEnum):
     # Type codes
     BOOL = 0x100
     BYTES = auto()
+    CODE = auto()
     DICT = auto()
     FLOAT = auto()
     INT = auto()

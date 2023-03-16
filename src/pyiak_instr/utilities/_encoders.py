@@ -45,8 +45,8 @@ class BytesEncoder:
     def decode(
         cls,
         content: bytes,
-        fmt: Code | int = Code.U8,
-        order: Code | int = Code.DEFAULT,
+        fmt: Code = Code.U8,
+        order: Code = Code.DEFAULT,
     ) -> npt.NDArray[np.int_ | np.float_]:
         """
         Decode bytes content to array.
@@ -55,9 +55,9 @@ class BytesEncoder:
         ----------
         content : bytes
             content to decoding.
-        fmt : str, default='B'
+        fmt : Code, default=Code.U8
             value format.
-        order : str, default=''
+        order : Code, default=Code.DEFAULT
             bytes order.
 
         Returns
@@ -71,8 +71,8 @@ class BytesEncoder:
     def decode_value(
         cls,
         content: bytes,
-        fmt: Code | int = Code.U8,
-        order: Code | int = Code.DEFAULT,
+        fmt: Code = Code.U8,
+        order: Code = Code.DEFAULT,
     ) -> int | float:
         """
         Decode one value from content.
@@ -81,9 +81,9 @@ class BytesEncoder:
         ----------
         content : bytes
             value content.
-        fmt : str, default='B'
+        fmt : Code, default=Code.U8
             value format.
-        order : str, order=''
+        order : Code, order=Code.DEFAULT
             content order.
 
         Returns
@@ -105,8 +105,8 @@ class BytesEncoder:
     def encode(
         cls,
         content: npt.ArrayLike,
-        fmt: Code | int = Code.U8,
-        order: Code | int = Code.DEFAULT,
+        fmt: Code = Code.U8,
+        order: Code = Code.DEFAULT,
     ) -> bytes:
         """
         Encode values to bytes.
@@ -115,10 +115,10 @@ class BytesEncoder:
         ----------
         content : numpy.typing.ArrayLike
             values to encoding.
-        fmt : str
-            format char.
-        order : str
-            order char.
+        fmt : Code, default=Code.U8
+            format code.
+        order : Code, default=Code.DEFAULT
+            order code.
 
         Returns
         -------
@@ -128,15 +128,15 @@ class BytesEncoder:
         return np.array(content, dtype=cls._get_dtype(fmt, order)).tobytes()
 
     @classmethod
-    def _get_dtype(cls, fmt: Code | int, order: Code | int) -> str:
+    def _get_dtype(cls, fmt: Code, order: Code) -> str:
         """
         Check the correctness of `fmt` and `order` and get format string.
 
         Parameters
         ----------
-        fmt : Code | int
+        fmt : Code
             format code.
-        order : Code | int
+        order : Code
             order code.
 
         Returns
@@ -149,11 +149,6 @@ class BytesEncoder:
         CodeNotAllowed
             if `fmt` or `order` not in list of existed formats.
         """
-        if isinstance(fmt, int):
-            fmt = Code(fmt)
-        if isinstance(order, int):
-            order = Code(order)
-
         if fmt not in cls.VALUES:
             raise CodeNotAllowed(fmt)
         if order not in cls.ORDERS:
@@ -188,6 +183,7 @@ class StringEncoder:
 
     HEADERS = {
         "bts": Code.BYTES,
+        "cod": Code.CODE,
         "dct": Code.DICT,
         "lst": Code.LIST,
         "set": Code.SET,
@@ -216,6 +212,7 @@ class StringEncoder:
         Code.NONE: lambda x: None,
         Code.BOOL: lambda x: x == "True",
         Code.BYTES: bytes,
+        Code.CODE: Code,
         Code.DICT: lambda x: {v: next(x) for v in x},
         Code.FLOAT: float,
         Code.INT: int,
@@ -248,6 +245,8 @@ class StringEncoder:
             code, value = cls._read(string)
             if code is Code.STRING:
                 return value
+            if code is Code.CODE:
+                return Code(int(value))
             return cls._DECODERS[code](
                 map(cls._decode_value, cls._iter(value))
             )
@@ -373,7 +372,7 @@ class StringEncoder:
         if type(value) in cls.COMPLEX_TYPES or isinstance(value, str):
             return cls.encode(value)
         if isinstance(value, Code):
-            value = value.value
+            return cls._decorate(Code.CODE, str(value))
         return str(value)
 
     @classmethod
