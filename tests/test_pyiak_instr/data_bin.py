@@ -35,25 +35,25 @@ def get_cbs_example() -> ContinuousBytesStorage:
             start=2,
             fmt=Code.U8,
             expected=2,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
         ),
         f2=BytesField(
             start=4,
             fmt=Code.I8,
             expected=-1,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
         ),
         f3=BytesField(
             start=-3,
             fmt=Code.U8,
             expected=2,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
         ),
         f4=BytesField(
             start=-1,
             fmt=Code.I8,
             expected=1,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
         )
     )
     object.__setattr__(cbs["f2"].fld, "_stop", -3)
@@ -67,7 +67,7 @@ def get_cbs_one_infinite() -> ContinuousBytesStorage:
             start=0,
             fmt=Code.I8,
             expected=-1,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
         )
     )
 
@@ -79,7 +79,7 @@ def get_cbs_first_infinite() -> ContinuousBytesStorage:
             start=0,
             fmt=Code.I8,
             expected=-1,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
         ),
         f1=BytesField(
             start=-4,
@@ -90,7 +90,7 @@ def get_cbs_first_infinite() -> ContinuousBytesStorage:
             start=-2,
             fmt=Code.U8,
             expected=2,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
         ),
     )
     object.__setattr__(cbs["f0"].fld, "_stop", -4)
@@ -115,7 +115,7 @@ def get_cbs_middle_infinite() -> ContinuousBytesStorage:
             start=-2,
             fmt=Code.U8,
             expected=2,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
         ),
     )
     object.__setattr__(cbs["f1"].fld, "_stop", -2)

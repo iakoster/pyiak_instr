@@ -2,7 +2,7 @@
 import re
 import itertools
 import struct
-from typing import Any, Callable, Generator
+from typing import Any, Callable, Generator, Iterable, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -21,33 +21,9 @@ class BytesEncoder:
     """
 
     ORDERS: dict[Code, str] = {
-        Code.DEFAULT: "",
         Code.BIG_ENDIAN: ">",
         Code.LITTLE_ENDIAN: "<",
     }
-
-    ALLOWED_CODES = {
-        Code.I8,
-        Code.I16,
-        Code.I24,
-        Code.I32,
-        Code.I40,
-        Code.I48,
-        Code.I56,
-        Code.I64,
-        Code.U8,
-        Code.U16,
-        Code.U24,
-        Code.U32,
-        Code.U40,
-        Code.U48,
-        Code.U56,
-        Code.U64,
-        Code.F16,
-        Code.F32,
-        Code.F64,
-    }
-    """types of values for encoding"""
 
     _U_LENGTHS = {
         Code.U8: 1,
@@ -71,12 +47,30 @@ class BytesEncoder:
         Code.I64: 8,
     }
 
+    _F_LENGTHS = {
+        Code.F16: 2,
+        Code.F32: 4,
+        Code.F64: 6,
+    }
+
+    _F_DTYPES = {
+        Code.F16: "e",
+        Code.F32: "f",
+        Code.F64: "d",
+    }
+
+    ALLOWED_CODES = set(_U_LENGTHS)
+    """types of values for encoding"""
+
+    ALLOWED_CODES.update(_I_LENGTHS)
+    ALLOWED_CODES.update(_F_LENGTHS)
+
     @classmethod
     def decode(
         cls,
         content: bytes,
         fmt: Code = Code.U8,
-        order: Code = Code.DEFAULT,
+        order: Code = Code.BIG_ENDIAN,
     ) -> npt.NDArray[np.int_ | np.float_]:
         """
         Decode bytes content to array.
@@ -87,7 +81,7 @@ class BytesEncoder:
             content to decoding.
         fmt : Code, default=Code.U8
             value format.
-        order : Code, default=Code.DEFAULT
+        order : Code, default=Code.BIG_ENDIAN
             bytes order.
 
         Returns
@@ -100,15 +94,17 @@ class BytesEncoder:
         CodeNotAllowed
             if `fmt` or `order` not in list of existed formats.
         """
-        if fmt not in cls.ALLOWED_CODES:
-            raise CodeNotAllowed(fmt)
-        if order not in cls.ORDERS:
-            raise CodeNotAllowed(order)
+        cls.check_fmt_order(fmt, order)
 
         if fmt in cls._U_LENGTHS:
-            return cls._decode_uint(content, fmt, order)
+            return np.fromiter(
+                cls._decode_int(content, fmt, order, False), int
+            )
+
         if fmt in cls._I_LENGTHS:
-            return cls._decode_int(content, fmt, order)
+            return np.fromiter(
+                cls._decode_int(content, fmt, order, True), int
+            )
 
         return np.frombuffer(content, dtype=cls._get_dtype(fmt, order))
 
@@ -117,8 +113,8 @@ class BytesEncoder:
         cls,
         content: bytes,
         fmt: Code = Code.U8,
-        order: Code = Code.DEFAULT,
-    ) -> int | float:
+        order: Code = Code.BIG_ENDIAN,
+    ) -> np.int_ | np.float_:
         """
         Decode one value from content.
 
@@ -128,7 +124,7 @@ class BytesEncoder:
             value content.
         fmt : Code, default=Code.U8
             value format.
-        order : Code, order=Code.DEFAULT
+        order : Code, order=Code.BIG_ENDIAN
             content order.
 
         Returns
@@ -141,48 +137,76 @@ class BytesEncoder:
         ValueError
             if content is not a one value.
         """
-        raise NotImplementedError()
-        dtype = cls._get_dtype(fmt, order)
-        if len(content) / struct.calcsize(dtype) != 1:
+        value = cls.decode(content, fmt=fmt, order=order)
+        if len(value) != 1:
             raise ValueError("content must be specified by one value")
-        return np.frombuffer(content, dtype=dtype)[0]  # type: ignore
+        return value[0]  # type: ignore[no-any-return]
 
     @classmethod
-    def _decode_int(cls, content: bytes, fmt: Code, order: Code) -> npt.NDArray[int]:
-        ...
+    def _decode_int(
+        cls, content: bytes, fmt: Code, order: Code, signed: bool
+    ) -> Iterable[int]:
+        """
+        Returns a generator where each element is a decoded integer.
+
+        Parameters
+        ----------
+        content : bytes
+            content for decoding.
+        fmt : Code
+            value format code.
+        order : Code
+            order code.
+        signed : bool
+            indicator indicating whether each value is unsigned or not.
+
+        Yields
+        ------
+        int
+            decoded single value.
+        """
+        value_length = (
+            cls._U_LENGTHS if fmt in cls._U_LENGTHS else cls._I_LENGTHS
+        )[fmt]
+
+        byteorder: Literal["big", "little"]  # for typing
+        if order is Code.BIG_ENDIAN:
+            byteorder = "big"
+        else:
+            byteorder = "little"
+
+        for val in cls._iterate_by_bytes(content, value_length):
+            yield int.from_bytes(val, byteorder, signed=signed)
 
     @classmethod
-    def _decode_uint(cls, content: bytes, fmt: Code, order: Code) -> npt.NDArray[int]:
+    def _iterate_by_bytes(
+        cls, content: bytes, value_length: int
+    ) -> Iterable[bytes]:
+        """
+        Returns a generator where each value is a bytes slice with a single
+        value.
 
-        def __iterate():
-            for i_val in range(0, len(content), val_len):
-                start = i_val * val_len
-                yield content[start : start + val_len]
+        Parameters
+        ----------
+        content : bytes
+            content.
+        value_length : int
+            length of single value in bytes.
 
-        def __decode_value(value: bytes, order_val: int):
-            assert order_val in (1, -1)
-            decoded = 0
-            for i, byte in enumerate(value[::order_val]):
-                decoded += byte << (8 * i)
-            return decoded
-
-        def __decode():
-            order_val = -1 if order is Code.BIG_ENDIAN else 1
-            for val in __iterate():
-                yield __decode_value(val, order_val)
-
-        val_len = cls._U_LENGTHS[fmt]
-
-        if len(content) % val_len:
-            raise ValueError("wrong content length")
-        return np.fromiter(__decode(), int)
+        Yields
+        ------
+        bytes
+            value bytes slice.
+        """
+        for i_val in range(0, len(content) // value_length):
+            yield content[i_val * value_length : (i_val + 1) * value_length]
 
     @classmethod
     def encode(
         cls,
-        content: npt.ArrayLike,
+        content: Iterable[int | float] | int | float,
         fmt: Code = Code.U8,
-        order: Code = Code.DEFAULT,
+        order: Code = Code.BIG_ENDIAN,
     ) -> bytes:
         """
         Encode values to bytes.
@@ -193,7 +217,7 @@ class BytesEncoder:
             values to encoding.
         fmt : Code, default=Code.U8
             format code.
-        order : Code, default=Code.DEFAULT
+        order : Code, default=Code.BIG_ENDIAN
             order code.
 
         Returns
@@ -201,40 +225,139 @@ class BytesEncoder:
         bytes
             encoded values.
         """
-        raise NotImplementedError()
+        cls.check_fmt_order(fmt, order)
+
+        if fmt in cls._U_LENGTHS:
+            return b"".join(cls._encode_int(content, fmt, order, False))
+
+        if fmt in cls._I_LENGTHS:
+            return b"".join(cls._encode_int(content, fmt, order, True))
+
         return np.array(content, dtype=cls._get_dtype(fmt, order)).tobytes()
 
-    # @classmethod
-    # def _get_dtype(cls, fmt: Code, order: Code) -> str:
-    #     """
-    #     Check the correctness of `fmt` and `order` and get format string.
-    #
-    #     Parameters
-    #     ----------
-    #     fmt : Code
-    #         format code.
-    #     order : Code
-    #         order code.
-    #
-    #     Returns
-    #     -------
-    #     str
-    #         format string.
-    #
-    #     Raises
-    #     ------
-    #     CodeNotAllowed
-    #         if `fmt` or `order` not in list of existed formats.
-    #     """
-    #     if fmt not in cls.ALLOWED_CODES:
-    #         raise CodeNotAllowed(fmt)
-    #     if order not in cls.ORDERS:
-    #         raise CodeNotAllowed(order)
-    #
-    #     dtype = cls.ALLOWED_CODES[fmt]
-    #     if struct.calcsize(dtype) > 1:
-    #         dtype = cls.ORDERS[order] + dtype
-    #     return dtype
+    @classmethod
+    def _encode_int(
+        cls,
+        content: Iterable[int | float] | int | float,
+        fmt: Code,
+        order: Code,
+        signed: bool,
+    ) -> Iterable[bytes]:
+        """
+        Returns a generator where each value is an encoded integer.
+
+        Parameters
+        ----------
+        content : ArrayLike
+            values for encoding.
+        fmt : Code
+            value format code.
+        order : Code
+            order code.
+        signed : bool
+            indicator indicating whether each value is unsigned or not.
+
+        Yields
+        ------
+        int
+            encoded single value.
+        """
+        value_length = (
+            cls._U_LENGTHS if fmt in cls._U_LENGTHS else cls._I_LENGTHS
+        )[fmt]
+
+        byteorder: Literal["big", "little"]  # for typing
+        if order is Code.BIG_ENDIAN:
+            byteorder = "big"
+        else:
+            byteorder = "little"
+
+        if not isinstance(content, Iterable):
+            content = [content]
+
+        for value in content:
+            if not isinstance(value, int):
+                value = int(value)
+            yield value.to_bytes(value_length, byteorder, signed=signed)
+
+    @classmethod
+    def _get_dtype(cls, fmt: Code, order: Code) -> str:
+        """
+        Check the correctness of `fmt` and `order` and get format string.
+
+        Parameters
+        ----------
+        fmt : Code
+            format code.
+        order : Code
+            order code.
+
+        Returns
+        -------
+        str
+            format string.
+
+        Raises
+        ------
+        CodeNotAllowed
+            if `fmt` or `order` not in list of existed formats.
+        """
+        assert fmt in cls._F_DTYPES
+
+        dtype = cls._F_DTYPES[fmt]
+        if struct.calcsize(dtype) > 1:
+            dtype = cls.ORDERS[order] + dtype
+        return dtype
+
+    @classmethod
+    def check_fmt_order(cls, fmt: Code, order: Code) -> None:
+        """
+        Check that `fmt` and `order` codes is allowed.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format code.
+        order : Code
+            order code.
+
+        Raises
+        ------
+        CodeNotAllowed
+            if `fmt` or `order` not in list of existed formats.
+        """
+        if fmt not in cls.ALLOWED_CODES:
+            raise CodeNotAllowed(fmt)
+        if order not in cls.ORDERS:
+            raise CodeNotAllowed(order)
+
+    @classmethod
+    def get_bytesize(cls, fmt: Code) -> int:
+        """
+        Get format size in bytes.
+
+        Parameters
+        ----------
+        fmt : Code
+            format code.
+
+        Returns
+        -------
+        int
+            bytesize.
+
+        Raises
+        ------
+        CodeNotAllowed
+            if `fmt` not in list of allowed codes.
+        """
+        if fmt in cls._U_LENGTHS:
+            return cls._U_LENGTHS[fmt]
+        if fmt in cls._I_LENGTHS:
+            return cls._I_LENGTHS[fmt]
+        if fmt in cls._F_LENGTHS:
+            return cls._F_LENGTHS[fmt]
+        raise CodeNotAllowed(fmt)
 
 
 # todo: parameters (e.g. \npa[shape=\tpl(2,1),dtype=uint8](1,2))

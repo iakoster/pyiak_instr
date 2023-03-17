@@ -3,7 +3,7 @@ from itertools import chain
 from typing import Collection
 
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_almost_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import CodeNotAllowed
@@ -23,26 +23,60 @@ def _get_value_instance(
 
     encode = b""
     for val in encode_raw:
-        encode += b"\x00" * (length - len(encode_raw)) + val
+        encode += b"\x00" * (length - len(val)) + val
     return code, decode, encode
 
 
 class TestBytesEncoder(unittest.TestCase):
 
-    DATA = {
-        n: _get_value_instance(c, l) for n, (c, l) in dict(
-            u8=(Code.U8, 1)
-        ).items()
-    }
+    DATA = dict(
+        empty=(Code.U24, [], b"", Code.BIG_ENDIAN),
+        u8=(Code.U8, [2, 3], b"\x02\x03", Code.BIG_ENDIAN),
+        u24=(
+            Code.U24,
+            [0xFF1234, 0x2307],
+            b"\xff\x12\x34\x00\x23\x07",
+            Code.BIG_ENDIAN,
+        ),
+        u24_little=(
+            Code.U24,
+            [0x3412FF, 0x72300],
+            b"\xff\x12\x34\x00\x23\x07",
+            Code.LITTLE_ENDIAN,
+        ),
+        i8=(Code.I8, [-127, -37], b"\x81\xdb", Code.BIG_ENDIAN),
+        i32=(
+            Code.I32,
+            [-0xfabdc, -0xea],
+            b"\xff\xf0\x54\x24\xff\xff\xff\x16",
+            Code.BIG_ENDIAN,
+        ),
+        f16=(
+            Code.F16,
+            [1.244140625],
+            b"\x3C\xFA",
+            Code.BIG_ENDIAN,
+        ),
+        f32=(
+            Code.F32,
+            [6547.525390625],
+            b"\x45\xCC\x9C\x34",
+            Code.BIG_ENDIAN,
+        ),
+        f64=(
+            Code.F64,
+            [3.141592653589793],
+            b"\x40\x09\x21\xFB\x54\x44\x2D\x18",
+            Code.BIG_ENDIAN,
+        ),
+    )
 
     def test_decode(self) -> None:
-        for name, (fmt, decoded, encoded) in self.DATA.items():
+        for name, (fmt, decoded, encoded, order) in self.DATA.items():
             with self.subTest(test=name, fmt=repr(fmt)):
-                assert_array_equal(
+                assert_array_almost_equal(
                     decoded,
-                    BytesEncoder.decode(
-                        encoded, fmt=fmt, order=Code.BIG_ENDIAN
-                    ),
+                    BytesEncoder.decode(encoded, fmt=fmt, order=order),
                 )
 
     def test_decode_value(self) -> None:
@@ -56,14 +90,35 @@ class TestBytesEncoder(unittest.TestCase):
         )
 
     def test_encode(self) -> None:
-        self.assertEqual(b"\x01", BytesEncoder.encode(1))
+        for name, (fmt, decoded, encoded, order) in self.DATA.items():
+            with self.subTest(test=name, fmt=repr(fmt)):
+                self.assertEqual(
+                    encoded,
+                    BytesEncoder.encode(decoded, fmt=fmt, order=order),
+                )
+
+    def test_get_value_size(self) -> None:
+        for code, size in {
+            Code.U16: 2,
+            Code.I56: 7,
+            Code.F32: 4,
+        }.items():
+            self.assertEqual(size, BytesEncoder.get_bytesize(code))
+
+    def test_get_value_size_exc(self) -> None:
+        with self.assertRaises(CodeNotAllowed) as exc:
+            BytesEncoder.get_bytesize(Code.NONE)
         self.assertEqual(
-            b"\x3f\x8c\xcc\xcd", BytesEncoder.encode(
-                1.1, fmt=Code.F32, order=Code.BIG_ENDIAN
-            )
+            "code not allowed: <Code.NONE: 0>", exc.exception.args[0]
         )
 
-    def test_get_dtype_exc(self) -> None:
+    def test_check_fmt_order_exc(self) -> None:
+        with self.assertRaises(CodeNotAllowed) as exc:
+            BytesEncoder.decode(b"", fmt=Code.NONE)
+        self.assertEqual(
+            "code not allowed: <Code.NONE: 0>", exc.exception.args[0]
+        )
+
         with self.assertRaises(CodeNotAllowed) as exc:
             BytesEncoder.decode(b"", order=Code.NONE)
         self.assertEqual(

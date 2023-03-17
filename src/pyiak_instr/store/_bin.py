@@ -1,18 +1,17 @@
 """Private module of ``pyiak_instr.store`` for work with bytes."""
 from __future__ import annotations
 
-import struct
 from pathlib import Path
 from dataclasses import dataclass
 from dataclasses import field as _field
-from typing import Any, ClassVar, Self, Generator
+from typing import Any, ClassVar, Self, Generator, Iterable
 
 import numpy as np
 import numpy.typing as npt
 
 from ..core import Code
 from ..rwfile import RWConfig
-from ..exceptions import CodeNotAllowed, NotConfiguredYet
+from ..exceptions import NotConfiguredYet
 from ..utilities import BytesEncoder, split_complex_dict
 
 
@@ -52,13 +51,10 @@ class BytesField:
     """stop byte index of field content."""
 
     ORDERS: ClassVar[dict[Code, str]] = BytesEncoder.ORDERS
-    VALUES: ClassVar[dict[Code, str]] = BytesEncoder.ALLOWED_CODES
+    ALLOWED_CODES: ClassVar[set[Code]] = BytesEncoder.ALLOWED_CODES
 
     def __post_init__(self) -> None:
-        if self.fmt not in BytesEncoder.ALLOWED_CODES:
-            raise CodeNotAllowed(self.fmt)
-        if self.order not in BytesEncoder.ORDERS:
-            raise CodeNotAllowed(self.order)
+        BytesEncoder.check_fmt_order(self.fmt, self.order)
 
         if self.expected < 0:
             object.__setattr__(self, "expected", 0)
@@ -82,7 +78,7 @@ class BytesField:
         """
         return BytesEncoder.decode(content, fmt=self.fmt, order=self.order)
 
-    def encode(self, content: npt.ArrayLike) -> bytes:
+    def encode(self, content: Iterable[int | float] | int | float) -> bytes:
         """
         Encode array to bytes.
 
@@ -167,12 +163,13 @@ class BytesField:
         int
             The length of the one word in bytes.
         """
-        return struct.calcsize(self.VALUES[self.fmt])
+        return BytesEncoder.get_bytesize(self.fmt)
 
 
 # todo: up to this level all functions and properties from BytesField
 # todo: __str__ method
 # todo: parser via Generic[ContinuousBytesStorage, BytesField]
+# todo: typing - set content with bytes
 class BytesFieldParser:
     """
     Represents parser for work with field content.
@@ -355,7 +352,7 @@ class ContinuousBytesStorage:
         self.set(**fields)
         return self
 
-    def set(self, **fields: npt.ArrayLike) -> Self:
+    def set(self, **fields: Iterable[int | float] | int | float) -> Self:
         """
         Set content to the fields.
 
@@ -393,7 +390,9 @@ class ContinuousBytesStorage:
         self._set(fields)
         return self
 
-    def _set(self, fields: dict[str, npt.ArrayLike]) -> None:
+    def _set(
+        self, fields: dict[str, Iterable[int | float] | int | float]
+    ) -> None:
         """
         Set new content to the fields.
 
@@ -417,7 +416,7 @@ class ContinuousBytesStorage:
     @staticmethod
     def _get_new_field_content(
         parser: BytesFieldParser,
-        content: npt.ArrayLike,
+        content: Iterable[int | float] | int | float,
     ) -> bytes:
         """
         Set new content to the field.
@@ -771,8 +770,8 @@ class BytesStoragePattern:
                 break
 
             pattern = self._p[name]
-            start -= pattern["expected"] * struct.calcsize(
-                BytesField.VALUES[pattern["fmt"]]
+            start -= pattern["expected"] * BytesEncoder.get_bytesize(
+                pattern["fmt"]
             )
             field_kw = fields_kw[name] if name in fields_kw else {}
             field_kw.update(start=start)

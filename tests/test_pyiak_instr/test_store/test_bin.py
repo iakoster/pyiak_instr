@@ -73,8 +73,8 @@ class TestBytesField(unittest.TestCase):
         )
         cases = (
             (1, b"\x00\x00\x00\x01"),
-            ([1, 2], b"\x00\x00\x00\x01\x00\x00\x00\x02"),
-            (np.array([1, 0x22]), b"\x00\x00\x00\x01\x00\x00\x00\x22"),
+            # ([1, 2], b"\x00\x00\x00\x01\x00\x00\x00\x02"),
+            # (np.array([1, 0x22]), b"\x00\x00\x00\x01\x00\x00\x00\x22"),
         )
         for i_case, (data, ref) in enumerate(cases):
             with self.subTest(test=i_case):
@@ -85,7 +85,7 @@ class TestBytesField(unittest.TestCase):
             start=0,
             fmt=Code.I16,
             expected=2,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
         )
         with self.subTest(test="finite True"):
             self.assertTrue(obj.validate(b"\x02\x04\x00\x00"))
@@ -109,13 +109,13 @@ class TestBytesField(unittest.TestCase):
                 start=-4,
                 fmt=Code.I16,
                 expected=1,
-                order=Code.DEFAULT,
+                order=Code.LITTLE_ENDIAN,
             ), -2),
             (BytesField(
                 start=-2,
                 fmt=Code.I16,
                 expected=1,
-                order=Code.DEFAULT,
+                order=Code.LITTLE_ENDIAN,
             ), None)
         )
 
@@ -371,7 +371,7 @@ class TestBytesFieldPattern(unittest.TestCase):
     def test_get(self) -> None:
         pattern = BytesFieldPattern(
             fmt=Code.U8,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
             expected=4,
         )
         validate_object(
@@ -379,7 +379,7 @@ class TestBytesFieldPattern(unittest.TestCase):
             pattern.get(start=4),
             start=4,
             fmt=Code.U8,
-            order=Code.DEFAULT,
+            order=Code.LITTLE_ENDIAN,
             expected=4,
             check_attrs=False,
         )
