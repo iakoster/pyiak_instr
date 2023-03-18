@@ -13,6 +13,7 @@ from ..core import Code
 from ..rwfile import RWConfig
 from ..exceptions import NotConfiguredYet
 from ..utilities import BytesEncoder, split_complex_dict
+from ..typing import BytesFieldParserABC
 
 
 __all__ = [
@@ -164,130 +165,6 @@ class BytesField:
             The length of the one word in bytes.
         """
         return BytesEncoder.get_bytesize(self.fmt)
-
-
-# todo: up to this level all functions and properties from BytesField
-# todo: __str__ method
-# todo: parser via Generic[ContinuousBytesStorage, BytesField]
-# todo: typing - set content with bytes
-class BytesFieldParser:
-    """
-    Represents parser for work with field content.
-
-    Parameters
-    ----------
-    storage: ContinuousBytesStorage
-        storage of fields.
-    name: str
-        field name.
-    field: BytesField
-        field instance.
-    """
-
-    def __init__(
-        self,
-        storage: ContinuousBytesStorage,
-        name: str,
-        field: BytesField,
-    ):
-        self._name = name
-        self._s = storage
-        self._f = field
-
-    def decode(self) -> npt.NDArray[np.int_ | np.float_]:
-        """
-        Decode field content.
-
-        Returns
-        -------
-        NDArray
-            decoded content.
-        """
-        return self._f.decode(self.content)
-
-    @property
-    def content(self) -> bytes:
-        """
-        Returns
-        -------
-        bytes
-            field content.
-        """
-        return self._s.content[self._f.slice]
-
-    @property
-    def fld(self) -> BytesField:
-        """
-        Returns
-        -------
-        BytesField
-            field instance.
-        """
-        return self._f
-
-    @property
-    def name(self) -> str:
-        """
-        Returns
-        -------
-        str
-            field name
-        """
-        return self._name
-
-    @property
-    def words_count(self) -> int:
-        """
-        Returns
-        -------
-        int
-            Count of words in the field.
-        """
-        return len(self) // self._f.word_size
-
-    def __bytes__(self) -> bytes:  # todo: tests
-        """
-        Returns
-        -------
-        bytes
-            field content.
-        """
-        return self.content
-
-    def __getitem__(
-        self, index: int | slice
-    ) -> np.int_ | np.float_:  # todo: tests
-        """
-        Parameters
-        ----------
-        index : int | slice
-            word index.
-
-        Returns
-        -------
-        int | float
-            word value.
-        """
-        return self.decode()[index]  # type: ignore[return-value]
-
-    def __iter__(self) -> Generator[int | float, None, None]:  # todo: tests
-        """
-        Yields
-        ------
-        int | float
-            word value.
-        """
-        for item in self.decode():
-            yield item
-
-    def __len__(self) -> int:
-        """
-        Returns
-        -------
-        int
-            bytes count of the content
-        """
-        return len(self.content)
 
 
 class ContinuousBytesStorage:
@@ -485,7 +362,104 @@ class ContinuousBytesStorage:
             yield self[field]
 
 
+# todo: up to this level all functions and properties from BytesField
+# todo: __str__ method
+# todo: typing - set content with bytes
+class BytesFieldParser(
+    BytesFieldParserABC[ContinuousBytesStorage, BytesField]
+):
+    """
+    Represents parser for work with field content.
+    """
+
+    def decode(self) -> npt.NDArray[np.int_ | np.float_]:
+        """
+        Decode field content.
+
+        Returns
+        -------
+        NDArray
+            decoded content.
+        """
+        return self._f.decode(self.content)
+
+    @property
+    def content(self) -> bytes:
+        """
+        Returns
+        -------
+        bytes
+            field content.
+        """
+        return self._s.content[self._f.slice]
+
+    @property
+    def name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            field name
+        """
+        return self._name
+
+    @property
+    def words_count(self) -> int:
+        """
+        Returns
+        -------
+        int
+            Count of words in the field.
+        """
+        return len(self) // self._f.word_size
+
+    def __bytes__(self) -> bytes:  # todo: tests
+        """
+        Returns
+        -------
+        bytes
+            field content.
+        """
+        return self.content
+
+    def __getitem__(
+        self, index: int | slice
+    ) -> np.int_ | np.float_:  # todo: tests
+        """
+        Parameters
+        ----------
+        index : int | slice
+            word index.
+
+        Returns
+        -------
+        int | float
+            word value.
+        """
+        return self.decode()[index]  # type: ignore[return-value]
+
+    def __iter__(self) -> Generator[int | float, None, None]:  # todo: tests
+        """
+        Yields
+        ------
+        int | float
+            word value.
+        """
+        for item in self.decode():
+            yield item
+
+    def __len__(self) -> int:
+        """
+        Returns
+        -------
+        int
+            bytes count of the content
+        """
+        return len(self.content)
+
+
 # todo: typehint - Generic. Create via generic for children.
+# todo: to metaclass (because uses for generate new class)
 class BytesFieldPattern:
     """
     Represents class which storage common parameters for field.
@@ -619,6 +593,7 @@ class BytesFieldPattern:
         self._kw[parameter] = value
 
 
+# todo: to metaclass (because uses for generate new class)
 class BytesStoragePattern:
     """
     Represents class which storage common parameters for storage.

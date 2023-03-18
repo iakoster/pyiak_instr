@@ -179,6 +179,7 @@ class MessageFieldParser(BytesFieldParser):
     Represents parser for work with message field content.
     """
 
+    _s: Message
     _f: MessageField
 
     @property

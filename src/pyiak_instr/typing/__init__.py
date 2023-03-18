@@ -10,9 +10,11 @@ from ._common import (
     WithApi,
     WithBaseStringMethods,
 )
+from ._store import BytesFieldParserABC
 
 
 __all__ = [
+    "BytesFieldParserABC",
     "ContextManager",
     "SupportsInitKwargs",
     "WithApi",
