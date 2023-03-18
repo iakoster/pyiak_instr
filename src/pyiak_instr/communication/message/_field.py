@@ -20,7 +20,7 @@ __all__ = [
     "IdMessageFieldParameters",
     "OperationMessageFieldParameters",
     "ResponseMessageFieldParameters",
-    "MessageFieldUnionT",
+    "MessageFieldParametersUnionT",
     "MessageFieldPattern",
 ]
 
@@ -248,7 +248,7 @@ class ResponseMessageFieldParameters(SingleMessageFieldParameters):
     """default code if value undefined."""
 
 
-MessageFieldUnionT = Union[
+MessageFieldParametersUnionT = Union[
     MessageFieldParameters,
     SingleMessageFieldParameters,
     StaticMessageFieldParameters,
@@ -295,7 +295,7 @@ class MessageFieldPattern(BytesFieldPattern):
             raise ValueError(f"invalid field type name: {field_type}")
         super().__init__(field_type=field_type, **parameters)
 
-    def get(self, **parameters: Any) -> MessageFieldUnionT:
+    def get(self, **parameters: Any) -> MessageFieldParametersUnionT:
         """
         Get field initialized with parameters from pattern and from
         `parameters`.
@@ -312,7 +312,7 @@ class MessageFieldPattern(BytesFieldPattern):
         """
         return self._get_field_class()(**self._kw, **parameters)
 
-    def get_updated(self, **parameters: Any) -> MessageFieldUnionT:
+    def get_updated(self, **parameters: Any) -> MessageFieldParametersUnionT:
         """
         Get field initialized with parameters from pattern and from
         `parameters`.
@@ -334,7 +334,7 @@ class MessageFieldPattern(BytesFieldPattern):
         kw_.update(parameters)
         return self._get_field_class()(**kw_)
 
-    def _get_field_class(self) -> type[MessageFieldUnionT]:
+    def _get_field_class(self) -> type[MessageFieldParametersUnionT]:
         """
         Get field class by `field_type`.
 

@@ -15,7 +15,7 @@ from ._field import (
     IdMessageFieldParameters,
     OperationMessageFieldParameters,
     ResponseMessageFieldParameters,
-    MessageFieldUnionT,
+    MessageFieldParametersUnionT,
     MessageFieldPattern,
 )
 from ._message import MessageField
@@ -32,7 +32,7 @@ __all__ = [
     "IdMessageFieldParameters",
     "OperationMessageFieldParameters",
     "ResponseMessageFieldParameters",
-    "MessageFieldUnionT",
+    "MessageFieldParametersUnionT",
     "MessageFieldPattern",
     "MessageField",
 ]
