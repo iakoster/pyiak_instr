@@ -6,7 +6,7 @@ import numpy as np
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.store import (
-    BytesField,
+    BytesFieldParameters,
     ContinuousBytesStorage,
     BytesFieldPattern,
     BytesStoragePattern,
@@ -26,12 +26,13 @@ from ...utils import validate_object, compare_values
 
 TEST_DATA_DIR = get_local_test_data_dir(__name__)
 
-class TestBytesField(unittest.TestCase):
+
+class TestBytesFieldParameters(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            BytesField(
+            BytesFieldParameters(
                 start=4,
                 fmt=Code.U32,
                 expected=-100,
@@ -50,7 +51,7 @@ class TestBytesField(unittest.TestCase):
         )
 
     def test_decode(self) -> None:
-        obj = BytesField(
+        obj = BytesFieldParameters(
             start=4,
             fmt=Code.U32,
             expected=-100,
@@ -65,7 +66,7 @@ class TestBytesField(unittest.TestCase):
                 compare_values(self, ref, obj.decode(data))
 
     def test_encode(self) -> None:
-        obj = BytesField(
+        obj = BytesFieldParameters(
             start=4,
             fmt=Code.U32,
             expected=-100,
@@ -81,7 +82,7 @@ class TestBytesField(unittest.TestCase):
                 compare_values(self, ref, obj.encode(data))
 
     def test_validate(self) -> None:
-        obj = BytesField(
+        obj = BytesFieldParameters(
             start=0,
             fmt=Code.I16,
             expected=2,
@@ -92,7 +93,7 @@ class TestBytesField(unittest.TestCase):
         with self.subTest(test="finite False"):
             self.assertFalse(obj.validate(b"\x02\x04\x00\x00\x01"))
 
-        obj = BytesField(
+        obj = BytesFieldParameters(
             start=0,
             fmt=Code.I16,
             expected=-1,
@@ -105,13 +106,13 @@ class TestBytesField(unittest.TestCase):
 
     def test_stop_after_infinite(self) -> None:
         data = (
-            (BytesField(
+            (BytesFieldParameters(
                 start=-4,
                 fmt=Code.I16,
                 expected=1,
                 order=Code.LITTLE_ENDIAN,
             ), -2),
-            (BytesField(
+            (BytesFieldParameters(
                 start=-2,
                 fmt=Code.I16,
                 expected=1,
@@ -124,7 +125,7 @@ class TestBytesField(unittest.TestCase):
                 self.assertEqual(ref, obj.stop)
 
 
-class TestBytesFieldParser(unittest.TestCase):
+class TestBytesField(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
@@ -133,7 +134,7 @@ class TestBytesFieldParser(unittest.TestCase):
             content=b"",
             name="f0",
             words_count=0,
-            wo_attrs=["fld"],
+            wo_attrs=["parameters"],
         )
 
     def test_decode(self) -> None:
@@ -143,7 +144,7 @@ class TestBytesFieldParser(unittest.TestCase):
     def _get_cbs() -> ContinuousBytesStorage:
         return ContinuousBytesStorage(
                 name="cbs",
-                f0=BytesField(
+                f0=BytesFieldParameters(
                     start=0,
                     fmt=Code.U32,
                     expected=-1,
@@ -166,7 +167,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
 
         validate_object(self, obj, content=b"", name="cbs")
         for name, ref in ref_data.items():
-            validate_object(self, obj[name], **ref, wo_attrs=["fld"])
+            validate_object(self, obj[name], **ref, wo_attrs=["parameters"])
 
     def test_init_exc(self) -> None:
         with self.assertRaises(TypeError)as exc:
@@ -193,7 +194,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
             return dict(
                 content=content,
                 words_count=words_count,
-                wo_attrs=["fld", "name"],
+                wo_attrs=["parameters", "name"],
             )
 
         data = dict(
@@ -347,7 +348,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
     def _get_cbs() -> ContinuousBytesStorage:
         return ContinuousBytesStorage(
             name="cbs",
-            f0=BytesField(
+            f0=BytesFieldParameters(
                 start=0,
                 fmt=Code.U32,
                 expected=1,
@@ -462,27 +463,27 @@ class TestBytesStoragePattern(unittest.TestCase):
                 f0=dict(
                     content=b"\xaa\x55",
                     words_count=1,
-                    wo_attrs=["name", "fld"],
+                    wo_attrs=["name", "parameters"],
                 ),
                 f1=dict(
                     content=b"\xab\xcd",
                     words_count=2,
-                    wo_attrs=["name", "fld"],
+                    wo_attrs=["name", "parameters"],
                 ),
                 f2=dict(
                     content=b"\x11\x22\x33\x44\x55",
                     words_count=5,
-                    wo_attrs=["name", "fld"],
+                    wo_attrs=["name", "parameters"],
                 ),
                 f3=dict(
                     content=b"\xdc\xbb",
                     words_count=2,
-                    wo_attrs=["name", "fld"],
+                    wo_attrs=["name", "parameters"],
                 ),
                 f4=dict(
                     content=b"\x99",
                     words_count=1,
-                    wo_attrs=["name", "fld"],
+                    wo_attrs=["name", "parameters"],
                 ),
             ),
             field_slices=dict(
@@ -519,7 +520,7 @@ class TestBytesStoragePattern(unittest.TestCase):
             for parser in res:
                 with self.subTest(field=parser.name):
                     compare_values(
-                        self, ref_slice[parser.name], parser.fld.slice
+                        self, ref_slice[parser.name], parser.parameters.slice
                     )
 
         with self.subTest(sub_test="decode"):

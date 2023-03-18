@@ -5,34 +5,34 @@ Message (:mod:`pyiak_instr.communication`)
 """
 # pylint: disable=duplicate-code
 from ._field import (
-    MessageField,
-    SingleMessageField,
-    StaticMessageField,
-    AddressMessageField,
-    CrcMessageField,
-    DataMessageField,
-    DataLengthMessageField,
-    IdMessageField,
-    OperationMessageField,
-    ResponseMessageField,
+    MessageFieldParameters,
+    SingleMessageFieldParameters,
+    StaticMessageFieldParameters,
+    AddressMessageFieldParameters,
+    CrcMessageFieldParameters,
+    DataMessageFieldParameters,
+    DataLengthMessageFieldParameters,
+    IdMessageFieldParameters,
+    OperationMessageFieldParameters,
+    ResponseMessageFieldParameters,
     MessageFieldUnionT,
     MessageFieldPattern,
 )
-from ._message import MessageFieldParser
+from ._message import MessageField
 
 
 __all__ = [
-    "MessageField",
-    "SingleMessageField",
-    "StaticMessageField",
-    "AddressMessageField",
-    "CrcMessageField",
-    "DataMessageField",
-    "DataLengthMessageField",
-    "IdMessageField",
-    "OperationMessageField",
-    "ResponseMessageField",
+    "MessageFieldParameters",
+    "SingleMessageFieldParameters",
+    "StaticMessageFieldParameters",
+    "AddressMessageFieldParameters",
+    "CrcMessageFieldParameters",
+    "DataMessageFieldParameters",
+    "DataLengthMessageFieldParameters",
+    "IdMessageFieldParameters",
+    "OperationMessageFieldParameters",
+    "ResponseMessageFieldParameters",
     "MessageFieldUnionT",
     "MessageFieldPattern",
-    "MessageFieldParser",
+    "MessageField",
 ]

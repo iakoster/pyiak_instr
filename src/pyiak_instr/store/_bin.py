@@ -13,12 +13,12 @@ from ..core import Code
 from ..rwfile import RWConfig
 from ..exceptions import NotConfiguredYet
 from ..utilities import BytesEncoder, split_complex_dict
-from ..typing import BytesFieldParserABC
+from ..typing import BytesFieldABC
 
 
 __all__ = [
+    "BytesFieldParameters",
     "BytesField",
-    "BytesFieldParser",
     "ContinuousBytesStorage",
     "BytesFieldPattern",
     "BytesStoragePattern",
@@ -26,7 +26,7 @@ __all__ = [
 
 
 @dataclass(frozen=True, kw_only=True)
-class BytesField:
+class BytesFieldParameters:
     """
     Represents field parameters with values encoded in bytes.
     """
@@ -178,13 +178,13 @@ class ContinuousBytesStorage:
     ----------
     name: str
         name of storage.
-    **fields: BytesField
+    **fields: BytesFieldParameters
         fields of the storage. The kwarg Key is used as the field name.
     """
 
-    def __init__(self, name: str, **fields: BytesField):
+    def __init__(self, name: str, **fields: BytesFieldParameters):
         for f_name, field in fields.items():
-            if not isinstance(field, BytesField):
+            if not isinstance(field, BytesFieldParameters):
                 raise TypeError(
                     "invalid type of %r: %s" % (f_name, type(field))
                 )
@@ -223,7 +223,7 @@ class ContinuousBytesStorage:
         """
         fields = {}
         for parser in self:
-            new = content[parser.fld.slice]
+            new = content[parser.parameters.slice]
             if len(new):
                 fields[parser.name] = new
         self.set(**fields)
@@ -254,7 +254,7 @@ class ContinuousBytesStorage:
         raw_diff = set(self._f).symmetric_difference(set(fields))
         for field in raw_diff:
             if field in self and (
-                self[field].fld.infinite or len(self[field]) != 0
+                self[field].parameters.infinite or len(self[field]) != 0
             ):
                 continue
             diff.add(field)
@@ -292,7 +292,7 @@ class ContinuousBytesStorage:
 
     @staticmethod
     def _get_new_field_content(
-        parser: BytesFieldParser,
+        parser: BytesField,
         content: Iterable[int | float] | int | float,
     ) -> bytes:
         """
@@ -300,7 +300,7 @@ class ContinuousBytesStorage:
 
         Parameters
         ----------
-        parser: BytesFieldParser
+        parser: BytesField
             field parser.
         content: ArrayLike
             new content.
@@ -318,9 +318,9 @@ class ContinuousBytesStorage:
         if isinstance(content, bytes):
             new_content = content
         else:
-            new_content = parser.fld.encode(content)
+            new_content = parser.parameters.encode(content)
 
-        if not parser.fld.validate(new_content):
+        if not parser.parameters.validate(new_content):
             raise ValueError(
                 "%r is not correct for %r"
                 % (new_content.hex(" "), parser.name)
@@ -352,11 +352,11 @@ class ContinuousBytesStorage:
         """Check that field name exists."""
         return name in self._f
 
-    def __getitem__(self, field: str) -> BytesFieldParser:
+    def __getitem__(self, field: str) -> BytesField:
         """Get field parser."""
-        return BytesFieldParser(self, field, self._f[field])
+        return BytesField(self, field, self._f[field])
 
-    def __iter__(self) -> Generator[BytesFieldParser, None, None]:
+    def __iter__(self) -> Generator[BytesField, None, None]:
         """Iterate by field parsers."""
         for field in self._f:
             yield self[field]
@@ -365,9 +365,7 @@ class ContinuousBytesStorage:
 # todo: up to this level all functions and properties from BytesField
 # todo: __str__ method
 # todo: typing - set content with bytes
-class BytesFieldParser(
-    BytesFieldParserABC[ContinuousBytesStorage, BytesField]
-):
+class BytesField(BytesFieldABC[ContinuousBytesStorage, BytesFieldParameters]):
     """
     Represents parser for work with field content.
     """
@@ -381,7 +379,7 @@ class BytesFieldParser(
         NDArray
             decoded content.
         """
-        return self._f.decode(self.content)
+        return self._p.decode(self.content)
 
     @property
     def content(self) -> bytes:
@@ -391,7 +389,7 @@ class BytesFieldParser(
         bytes
             field content.
         """
-        return self._s.content[self._f.slice]
+        return self._s.content[self._p.slice]
 
     @property
     def name(self) -> str:
@@ -411,7 +409,7 @@ class BytesFieldParser(
         int
             Count of words in the field.
         """
-        return len(self) // self._f.word_size
+        return len(self) // self._p.word_size
 
     def __bytes__(self) -> bytes:  # todo: tests
         """
@@ -460,6 +458,7 @@ class BytesFieldParser(
 
 # todo: typehint - Generic. Create via generic for children.
 # todo: to metaclass (because uses for generate new class)
+# todo: wait to 3.12 for TypeVar with default type.
 class BytesFieldPattern:
     """
     Represents class which storage common parameters for field.
@@ -472,7 +471,7 @@ class BytesFieldPattern:
         common parameters.
     """
 
-    _FIELD_TYPES: dict[str, type[BytesField]] = {}
+    _FIELD_TYPES: dict[str, type[BytesFieldParameters]] = {}
     """dictionary of field types where key is a name of type."""
 
     def __init__(self, field_type: str = "", **parameters: Any):
@@ -499,7 +498,7 @@ class BytesFieldPattern:
             raise KeyError("parameter in pattern already")
         self._kw[key] = value
 
-    def get(self, **parameters: Any) -> BytesField:
+    def get(self, **parameters: Any) -> BytesFieldParameters:
         """
         Get field initialized with parameters from pattern and from
         `parameters`.
@@ -511,13 +510,13 @@ class BytesFieldPattern:
 
         Returns
         -------
-        BytesField
+        BytesFieldParameters
             initialized field.
         """
         # todo: check intersection and then call .get_updated
         return self._get_field_class()(**self._kw, **parameters)
 
-    def get_updated(self, **parameters: Any) -> BytesField:
+    def get_updated(self, **parameters: Any) -> BytesFieldParameters:
         """
         Get field initialized with parameters from pattern and from
         `parameters`.
@@ -532,7 +531,7 @@ class BytesFieldPattern:
 
         Returns
         -------
-        BytesField
+        BytesFieldParameters
             initialized field.
         """
         kw_ = self._kw.copy()
@@ -555,16 +554,16 @@ class BytesFieldPattern:
         """
         return self._kw.pop(key)
 
-    def _get_field_class(self) -> type[BytesField]:
+    def _get_field_class(self) -> type[BytesFieldParameters]:
         """
         Get field class by `field_type`.
 
         Returns
         -------
-        type[BytesField]
+        type[BytesFieldParameters]
             field class.
         """
-        return self._FIELD_TYPES.get(self._field_type, BytesField)
+        return self._FIELD_TYPES.get(self._field_type, BytesFieldParameters)
 
     @property
     def field_type(self) -> str:
@@ -720,7 +719,7 @@ class BytesStoragePattern:
         self,
         fields_kw: dict[str, dict[str, Any]],
         inf: str,
-    ) -> tuple[dict[str, BytesField], str]:
+    ) -> tuple[dict[str, BytesFieldParameters], str]:
         """
         Get the dictionary of fields that go from infinite field
         (not included) to end.
@@ -734,7 +733,7 @@ class BytesStoragePattern:
 
         Returns
         -------
-        tuple[dict[str, BytesField], str]
+        tuple[dict[str, BytesFieldParameters], str]
             fields - dictionary of fields from infinite (not included);
             next - name of next field after infinite.
         """
@@ -757,7 +756,7 @@ class BytesStoragePattern:
 
     def _get_fields_before_inf(
         self, fields_kw: dict[str, dict[str, Any]]
-    ) -> tuple[dict[str, BytesField], str]:
+    ) -> tuple[dict[str, BytesFieldParameters], str]:
         """
         Get the dictionary of fields that go up to and including the infinite
         field.
@@ -769,7 +768,7 @@ class BytesStoragePattern:
 
         Returns
         -------
-        tuple[dict[str, BytesField], str]
+        tuple[dict[str, BytesFieldParameters], str]
             fields - dictionary of fields up to infinite (include);
             inf - name of infinite field. Empty if there is no found.
         """

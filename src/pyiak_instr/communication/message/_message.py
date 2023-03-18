@@ -6,32 +6,33 @@ from typing import Any, Generator, Self
 import numpy.typing as npt
 
 from ._field import (
-    MessageField,
-    SingleMessageField,
-    StaticMessageField,
-    AddressMessageField,
-    CrcMessageField,
-    DataMessageField,
-    DataLengthMessageField,
-    IdMessageField,
-    OperationMessageField,
-    ResponseMessageField,
+    MessageFieldParameters,
+    SingleMessageFieldParameters,
+    StaticMessageFieldParameters,
+    AddressMessageFieldParameters,
+    CrcMessageFieldParameters,
+    DataMessageFieldParameters,
+    DataLengthMessageFieldParameters,
+    IdMessageFieldParameters,
+    OperationMessageFieldParameters,
+    ResponseMessageFieldParameters,
     MessageFieldUnionT,
 )
-from ...store import BytesFieldParser, ContinuousBytesStorage
+from ...store import BytesField, ContinuousBytesStorage
 from ...core import Code
+from ...typing import BytesFieldABC
 
 __all__ = [
-    "MessageFieldParser",
-    "SingleMessageFieldParser",
-    "StaticMessageFieldParser",
-    "AddressMessageFieldParser",
-    "CrcMessageFieldParser",
-    "DataMessageFieldParser",
-    "DataLengthMessageFieldParser",
-    "IdMessageFieldParser",
-    "OperationMessageFieldParser",
-    "ResponseMessageFieldParser",
+    "MessageField",
+    "SingleMessageField",
+    "StaticMessageField",
+    "AddressMessageField",
+    "CrcMessageField",
+    "DataMessageField",
+    "DataLengthMessageField",
+    "IdMessageField",
+    "OperationMessageField",
+    "ResponseMessageField",
 ]
 
 
@@ -173,86 +174,44 @@ class Message(ContinuousBytesStorage):
         self._src = source
 
 
-# todo: all parsers via generic
-class MessageFieldParser(BytesFieldParser):
+class MessageField(
+    BytesField, BytesFieldABC[Message, MessageFieldParameters]
+):
     """
     Represents parser for work with message field content.
     """
 
-    _s: Message
-    _f: MessageField
 
-    @property
-    def fld(self) -> MessageField:
-        """
-        Returns
-        -------
-        MessageField
-            field instance
-        """
-        return self._f
-
-
-class SingleMessageFieldParser(MessageFieldParser):
+class SingleMessageField(
+    MessageField, BytesFieldABC[Message, SingleMessageFieldParameters]
+):
     """
     Represents parser for work with single message field content.
     """
 
-    _f: SingleMessageField
 
-    @property
-    def fld(self) -> SingleMessageField:
-        """
-        Returns
-        -------
-        SingleMessageField
-            field instance
-        """
-        return self._f
-
-
-class StaticMessageFieldParser(MessageFieldParser):
+class StaticMessageField(
+    MessageField, BytesFieldABC[Message, StaticMessageFieldParameters]
+):
     """
     Represents parser for work with static message field content.
     """
 
-    _f: StaticMessageField
 
-    @property
-    def fld(self) -> StaticMessageField:
-        """
-        Returns
-        -------
-        StaticMessageField
-            field instance.
-        """
-        return self._f
-
-
-class AddressMessageFieldParser(SingleMessageFieldParser):
+class AddressMessageField(
+    SingleMessageField, BytesFieldABC[Message, AddressMessageFieldParameters]
+):
     """
     Represents parser for work with crc message field content.
     """
 
-    _f: AddressMessageField
 
-    @property
-    def fld(self) -> AddressMessageField:
-        """
-        Returns
-        -------
-        AddressMessageField
-            field instance.
-        """
-        return self._f
-
-
-class CrcMessageFieldParser(SingleMessageFieldParser):
+class CrcMessageField(
+    SingleMessageField, BytesFieldABC[Message, CrcMessageFieldParameters]
+):
     """
     Represents parser for work with crc message field content.
     """
-
-    _f: CrcMessageField
 
     def calculate(self) -> int:
         """
@@ -277,23 +236,13 @@ class CrcMessageFieldParser(SingleMessageFieldParser):
         """
         raise NotImplementedError()
 
-    @property
-    def fld(self) -> CrcMessageField:
-        """
-        Returns
-        -------
-        CrcMessageField
-            field instance.
-        """
-        return self._f
 
-
-class DataMessageFieldParser(MessageField):
+class DataMessageField(
+    MessageFieldParameters, BytesFieldABC[Message, DataMessageFieldParameters]
+):
     """
     Represents parser for work with data message field content.
     """
-
-    _f: DataMessageField
 
     def append(self, content: npt.ArrayLike) -> None:
         """
@@ -311,23 +260,14 @@ class DataMessageFieldParser(MessageField):
         """
         raise NotImplementedError()
 
-    @property
-    def fld(self) -> DataMessageField:
-        """
-        Returns
-        -------
-        DataMessageField
-            field instance.
-        """
-        return self._f
 
-
-class DataLengthMessageFieldParser(SingleMessageFieldParser):
+class DataLengthMessageField(
+    SingleMessageField,
+    BytesFieldABC[Message, DataLengthMessageFieldParameters],
+):
     """
     Represents parser for work with data length message field content.
     """
-
-    _f: DataLengthMessageField
 
     def calculate(self) -> None:
         """
@@ -347,23 +287,13 @@ class DataLengthMessageFieldParser(SingleMessageFieldParser):
         """
         raise NotImplementedError()
 
-    @property
-    def fld(self) -> DataLengthMessageField:
-        """
-        Returns
-        -------
-        DataLengthMessageField
-            field instance.
-        """
-        return self._f
 
-
-class IdMessageFieldParser(SingleMessageFieldParser):
+class IdMessageField(
+    SingleMessageField, BytesFieldABC[Message, IdMessageFieldParameters]
+):
     """
     Represents parser for work with id message field content.
     """
-
-    _f: IdMessageField
 
     def compare(self) -> None:
         """
@@ -374,23 +304,14 @@ class IdMessageFieldParser(SingleMessageFieldParser):
         """
         raise NotImplementedError()
 
-    @property
-    def fld(self) -> IdMessageField:
-        """
-        Returns
-        -------
-        IdMessageField
-            field instance.
-        """
-        return self._f
 
-
-class OperationMessageFieldParser(SingleMessageFieldParser):
+class OperationMessageField(
+    SingleMessageField,
+    BytesFieldABC[Message, OperationMessageFieldParameters],
+):
     """
     Represents parser for work with operation message field content.
     """
-
-    _f: OperationMessageField
 
     def calculate(self) -> None:
         """
@@ -410,23 +331,13 @@ class OperationMessageFieldParser(SingleMessageFieldParser):
         """
         raise NotImplementedError()
 
-    @property
-    def fld(self) -> OperationMessageField:
-        """
-        Returns
-        -------
-        OperationMessageField
-            self instance.
-        """
-        return self._f
 
-
-class ResponseMessageFieldParser(SingleMessageFieldParser):
+class ResponseMessageField(
+    SingleMessageField, BytesFieldABC[Message, ResponseMessageFieldParameters]
+):
     """
     Represents parser for work with response message field content.
     """
-
-    _f: ResponseMessageField
 
     @property
     def code(self) -> Code:
@@ -437,13 +348,3 @@ class ResponseMessageFieldParser(SingleMessageFieldParser):
             placeholder.
         """
         raise NotImplementedError()
-
-    @property
-    def fld(self) -> ResponseMessageField:
-        """
-        Returns
-        -------
-        ResponseMessageField
-            self instance.
-        """
-        return self._f

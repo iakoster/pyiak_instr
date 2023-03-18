@@ -3,15 +3,15 @@ from abc import ABC
 from typing import Generic, TypeVar
 
 
-__all__ = ["BytesFieldParserABC"]
+__all__ = ["BytesFieldABC"]
 
 
-FieldT = TypeVar("FieldT")
+ParametersT = TypeVar("ParametersT")
 StorageT = TypeVar("StorageT")
 
 
 # pylint: disable=too-few-public-methods
-class BytesFieldParserABC(ABC, Generic[StorageT, FieldT]):
+class BytesFieldABC(ABC, Generic[StorageT, ParametersT]):
     """
     Abstract base class parser for byte fields.
 
@@ -21,21 +21,23 @@ class BytesFieldParserABC(ABC, Generic[StorageT, FieldT]):
         storage of fields.
     name : str
         field name.
-    field : FieldT
-        field instance.
+    parameters : ParametersT
+        parameters instance.
     """
 
-    def __init__(self, storage: StorageT, name: str, field: FieldT) -> None:
+    def __init__(
+        self, storage: StorageT, name: str, parameters: ParametersT
+    ) -> None:
         self._s = storage
         self._name = name
-        self._f = field
+        self._p = parameters
 
     @property
-    def fld(self) -> FieldT:
+    def parameters(self) -> ParametersT:
         """
         Returns
         -------
-        BytesField
-            field instance.
+        FieldT
+            parameters instance.
         """
-        return self._f
+        return self._p

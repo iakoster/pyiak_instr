@@ -2,28 +2,28 @@ import unittest
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.communication.message import (
-    MessageField,
-    SingleMessageField,
-    StaticMessageField,
-    AddressMessageField,
-    CrcMessageField,
-    DataMessageField,
-    DataLengthMessageField,
-    IdMessageField,
-    OperationMessageField,
-    ResponseMessageField,
+    MessageFieldParameters,
+    SingleMessageFieldParameters,
+    StaticMessageFieldParameters,
+    AddressMessageFieldParameters,
+    CrcMessageFieldParameters,
+    DataMessageFieldParameters,
+    DataLengthMessageFieldParameters,
+    IdMessageFieldParameters,
+    OperationMessageFieldParameters,
+    ResponseMessageFieldParameters,
     MessageFieldPattern,
 )
 
 from ....utils import validate_object
 
 
-class TestMessageField(unittest.TestCase):
+class TestMessageFieldParameters(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            MessageField(
+            MessageFieldParameters(
                 expected=20,
                 fmt=Code.I64,
                 start=10,
@@ -41,11 +41,11 @@ class TestMessageField(unittest.TestCase):
         )
 
 
-class TestSingleMessageField(unittest.TestCase):
+class TestSingleMessageFieldParameters(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            SingleMessageField(
+            SingleMessageFieldParameters(
                 fmt=Code.U8,
                 start=0,
                 expected=2,
@@ -61,7 +61,7 @@ class TestSingleMessageField(unittest.TestCase):
             (b"\x00" * 2, True),
             (b"\x00" * 3, False),
         )
-        obj = SingleMessageField(
+        obj = SingleMessageFieldParameters(
             fmt=Code.U16,
             start=0,
         )
@@ -71,18 +71,18 @@ class TestSingleMessageField(unittest.TestCase):
                 self.assertEqual(ref, obj.validate(data))
 
 
-class TestStaticMessageField(unittest.TestCase):
+class TestStaticMessageFieldParameters(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            StaticMessageField(
+            StaticMessageFieldParameters(
                 fmt=Code.U8,
                 start=0,
             )
         self.assertEqual("default value not specified", exc.exception.args[0])
 
     def test_validate(self) -> None:
-        obj = StaticMessageField(
+        obj = StaticMessageFieldParameters(
             fmt=Code.U16,
             start=0,
             default=b"42"
@@ -94,12 +94,12 @@ class TestStaticMessageField(unittest.TestCase):
             self.assertEqual(ref, obj.validate(data))
 
 
-class TestAddressMessageField(unittest.TestCase):
+class TestAddressMessageFieldParameters(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            AddressMessageField(
+            AddressMessageFieldParameters(
                 fmt=Code.I64,
                 start=10,
             ),
@@ -116,15 +116,15 @@ class TestAddressMessageField(unittest.TestCase):
         )
 
 
-class TestCrcMessageField(unittest.TestCase):
+class TestCrcMessageFieldParameters(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            CrcMessageField(fmt=Code.U8, start=0, algorithm_name="None")
+            CrcMessageFieldParameters(fmt=Code.U8, start=0, algorithm_name="None")
         self.assertEqual("invalid algorithm: 'None'", exc.exception.args[0])
 
     def test_algorithm(self) -> None:
-        obj = CrcMessageField(fmt=Code.U16, start=0)
+        obj = CrcMessageFieldParameters(fmt=Code.U16, start=0)
 
         for i, (data, ref) in enumerate((
             (b"\x10\x01\x20\x04", 0x6af5),
@@ -136,12 +136,12 @@ class TestCrcMessageField(unittest.TestCase):
                 self.assertEqual(ref, obj.algorithm(data))
 
 
-class TestDataMessageField(unittest.TestCase):
+class TestDataMessageFieldParameters(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            DataMessageField(
+            DataMessageFieldParameters(
                 fmt=Code.I64,
                 start=10,
                 expected=-1,
@@ -159,12 +159,12 @@ class TestDataMessageField(unittest.TestCase):
         )
 
 
-class TestDataLengthMessageField(unittest.TestCase):
+class TestDataLengthMessageFieldParameters(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            DataLengthMessageField(
+            DataLengthMessageFieldParameters(
                 fmt=Code.U16,
                 start=10,
             ),
@@ -199,16 +199,16 @@ class TestDataLengthMessageField(unittest.TestCase):
         )):
             with self.subTest(test=i):
                 with self.assertRaises(ValueError) as exc:
-                    DataLengthMessageField(fmt=Code.U8, start=0, **kw)
+                    DataLengthMessageFieldParameters(fmt=Code.U8, start=0, **kw)
                 self.assertEqual(msg, exc.exception.args[0])
 
 
-class TestIdMessageField(unittest.TestCase):
+class TestIdMessageFieldParameters(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            IdMessageField(
+            IdMessageFieldParameters(
                 fmt=Code.U16,
                 start=10,
             ),
@@ -225,12 +225,12 @@ class TestIdMessageField(unittest.TestCase):
         )
 
 
-class TestOperationMessageField(unittest.TestCase):
+class TestOperationMessageFieldParameters(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            OperationMessageField(
+            OperationMessageFieldParameters(
                 fmt=Code.U16,
                 start=10,
             ),
@@ -248,12 +248,12 @@ class TestOperationMessageField(unittest.TestCase):
         )
 
 
-class TestResponseMessageField(unittest.TestCase):
+class TestResponseMessageFieldParameters(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            ResponseMessageField(
+            ResponseMessageFieldParameters(
                 fmt=Code.U16,
                 start=10,
                 codes={0: Code.OK, 1: Code.ERROR},
@@ -279,39 +279,39 @@ class TestMessageFieldPattern(unittest.TestCase):
         data = dict(
             basic=(
                 MessageFieldPattern.basic(fmt=Code.U8, expected=0),
-                MessageField,
+                MessageFieldParameters,
             ),
             single=(
-                MessageFieldPattern.single(fmt=Code.U8), SingleMessageField,
+                MessageFieldPattern.single(fmt=Code.U8), SingleMessageFieldParameters,
             ),
             static=(
                 MessageFieldPattern.static(
                     fmt=Code.U32, default=b"\x00\x01\x02\x03"
                 ),
-                StaticMessageField,
+                StaticMessageFieldParameters,
             ),
             address=(
                 MessageFieldPattern.address(fmt=Code.U8),
-                AddressMessageField,
+                AddressMessageFieldParameters,
             ),
             crc=(
-                MessageFieldPattern.crc(fmt=Code.U16), CrcMessageField,
+                MessageFieldPattern.crc(fmt=Code.U16), CrcMessageFieldParameters,
             ),
             data=(
-                MessageFieldPattern.data(fmt=Code.U64), DataMessageField,
+                MessageFieldPattern.data(fmt=Code.U64), DataMessageFieldParameters,
             ),
             data_length=(
                 MessageFieldPattern.data_length(fmt=Code.I32),
-                DataLengthMessageField,
+                DataLengthMessageFieldParameters,
             ),
             id=(
-                MessageFieldPattern.id(fmt=Code.U8), IdMessageField,
+                MessageFieldPattern.id(fmt=Code.U8), IdMessageFieldParameters,
             ),
             operation=(
-                MessageFieldPattern.operation(fmt=Code.U16), OperationMessageField,
+                MessageFieldPattern.operation(fmt=Code.U16), OperationMessageFieldParameters,
             ),
             response=(
-                MessageFieldPattern.response(fmt=Code.F16), ResponseMessageField,
+                MessageFieldPattern.response(fmt=Code.F16), ResponseMessageFieldParameters,
             )
         )
 

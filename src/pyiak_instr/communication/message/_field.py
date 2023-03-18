@@ -6,32 +6,32 @@ from dataclasses import field as _field
 from typing import Any, Callable, ClassVar, Self, Union
 
 from ...core import Code
-from ...store import BytesField, BytesFieldPattern
+from ...store import BytesFieldParameters, BytesFieldPattern
 
 
 __all__ = [
-    "MessageField",
-    "SingleMessageField",
-    "StaticMessageField",
-    "AddressMessageField",
-    "CrcMessageField",
-    "DataMessageField",
-    "DataLengthMessageField",
-    "IdMessageField",
-    "OperationMessageField",
-    "ResponseMessageField",
+    "MessageFieldParameters",
+    "SingleMessageFieldParameters",
+    "StaticMessageFieldParameters",
+    "AddressMessageFieldParameters",
+    "CrcMessageFieldParameters",
+    "DataMessageFieldParameters",
+    "DataLengthMessageFieldParameters",
+    "IdMessageFieldParameters",
+    "OperationMessageFieldParameters",
+    "ResponseMessageFieldParameters",
     "MessageFieldUnionT",
     "MessageFieldPattern",
 ]
 
 
 @dataclass(frozen=True, kw_only=True)
-class MessageField(BytesField):
+class MessageFieldParameters(BytesFieldParameters):
     """Represents a general field of a Message."""
 
 
 @dataclass(frozen=True, kw_only=True)
-class SingleMessageField(MessageField):
+class SingleMessageFieldParameters(MessageFieldParameters):
     """
     Represents a field of a Message with single word.
     """
@@ -65,7 +65,7 @@ class SingleMessageField(MessageField):
 
 
 @dataclass(frozen=True, kw_only=True)
-class StaticMessageField(SingleMessageField):
+class StaticMessageFieldParameters(SingleMessageFieldParameters):
     """
     Represents a field of a Message with static single word (e.g. preamble).
     """
@@ -95,14 +95,14 @@ class StaticMessageField(SingleMessageField):
 
 
 @dataclass(frozen=True, kw_only=True)
-class AddressMessageField(SingleMessageField):
+class AddressMessageFieldParameters(SingleMessageFieldParameters):
     """
     Represents a field of a Message with address.
     """
 
 
 @dataclass(frozen=True, kw_only=True)
-class CrcMessageField(SingleMessageField):
+class CrcMessageFieldParameters(SingleMessageFieldParameters):
     """
     Represents a field of a Message with crc value.
     """
@@ -165,14 +165,14 @@ class CrcMessageField(SingleMessageField):
 
 
 @dataclass(frozen=True, kw_only=True)
-class DataMessageField(MessageField):
+class DataMessageFieldParameters(MessageFieldParameters):
     """Represents a field of a Message with data."""
 
     expected: int = 0
 
 
 @dataclass(frozen=True, kw_only=True)
-class DataLengthMessageField(SingleMessageField):
+class DataLengthMessageFieldParameters(SingleMessageFieldParameters):
     """
     Represents a field of a Message with data length.
     """
@@ -200,14 +200,14 @@ class DataLengthMessageField(SingleMessageField):
 
 
 @dataclass(frozen=True, kw_only=True)
-class IdMessageField(SingleMessageField):
+class IdMessageFieldParameters(SingleMessageFieldParameters):
     """
     Represents a field with a unique identifier of a particular message.
     """
 
 
 @dataclass(frozen=True, kw_only=True)
-class OperationMessageField(SingleMessageField):
+class OperationMessageFieldParameters(SingleMessageFieldParameters):
     """
     Represents a field of a Message with operation (e.g. read).
 
@@ -236,7 +236,7 @@ class OperationMessageField(SingleMessageField):
 
 
 @dataclass(frozen=True, kw_only=True)
-class ResponseMessageField(SingleMessageField):
+class ResponseMessageFieldParameters(SingleMessageFieldParameters):
     """
     Represents a field of a Message with response field.
     """
@@ -249,16 +249,16 @@ class ResponseMessageField(SingleMessageField):
 
 
 MessageFieldUnionT = Union[
-    MessageField,
-    SingleMessageField,
-    StaticMessageField,
-    AddressMessageField,
-    CrcMessageField,
-    DataMessageField,
-    DataLengthMessageField,
-    IdMessageField,
-    OperationMessageField,
-    ResponseMessageField,
+    MessageFieldParameters,
+    SingleMessageFieldParameters,
+    StaticMessageFieldParameters,
+    AddressMessageFieldParameters,
+    CrcMessageFieldParameters,
+    DataMessageFieldParameters,
+    DataLengthMessageFieldParameters,
+    IdMessageFieldParameters,
+    OperationMessageFieldParameters,
+    ResponseMessageFieldParameters,
 ]
 
 
@@ -277,16 +277,16 @@ class MessageFieldPattern(BytesFieldPattern):
     """
 
     _FIELD_TYPES = dict(
-        basic=MessageField,
-        single=SingleMessageField,
-        static=StaticMessageField,
-        address=AddressMessageField,
-        crc=CrcMessageField,
-        data=DataMessageField,
-        data_length=DataLengthMessageField,
-        id=IdMessageField,
-        operation=OperationMessageField,
-        response=ResponseMessageField,
+        basic=MessageFieldParameters,
+        single=SingleMessageFieldParameters,
+        static=StaticMessageFieldParameters,
+        address=AddressMessageFieldParameters,
+        crc=CrcMessageFieldParameters,
+        data=DataMessageFieldParameters,
+        data_length=DataLengthMessageFieldParameters,
+        id=IdMessageFieldParameters,
+        operation=OperationMessageFieldParameters,
+        response=ResponseMessageFieldParameters,
     )
     """dictionary of field types where key is a name of type."""
 
@@ -344,7 +344,7 @@ class MessageFieldPattern(BytesFieldPattern):
             message field class.
         """
         return self._FIELD_TYPES.get(  # type: ignore[return-value]
-            self._field_type, MessageField
+            self._field_type, MessageFieldParameters
         )
 
     @classmethod
