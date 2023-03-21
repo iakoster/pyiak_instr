@@ -6,21 +6,22 @@ from typing import Any, Generator, Self, Union
 import numpy.typing as npt
 
 from ._field import (
-    MessageFieldParameters,
-    SingleMessageFieldParameters,
-    StaticMessageFieldParameters,
-    AddressMessageFieldParameters,
-    CrcMessageFieldParameters,
-    DataMessageFieldParameters,
-    DataLengthMessageFieldParameters,
-    IdMessageFieldParameters,
-    OperationMessageFieldParameters,
-    ResponseMessageFieldParameters,
-    MessageFieldParametersUnionT,
+    MessageFieldStruct,
+    SingleMessageFieldStruct,
+    StaticMessageFieldStruct,
+    AddressMessageFieldStruct,
+    CrcMessageFieldStruct,
+    DataMessageFieldStruct,
+    DataLengthMessageFieldStruct,
+    IdMessageFieldStruct,
+    OperationMessageFieldStruct,
+    ResponseMessageFieldStruct,
+    MessageFieldStructUnionT,
+    MessageFieldPattern,
 )
-from ...store import BytesField, ContinuousBytesStorage
+from ...store import BytesField, ContinuousBytesStorage, BytesStoragePattern
 from ...core import Code
-from ...typing import BytesFieldABC
+from ...typing import BytesFieldABC, PatternStorageABC
 
 __all__ = [
     "MessageField",
@@ -52,7 +53,7 @@ class MessageGetParser:
     def __init__(
         self,
         message: Message,
-        types: dict[type[MessageFieldParametersUnionT], str],
+        types: dict[type[MessageFieldStructUnionT], str],
     ):
         self._msg, self._types = message, types
 
@@ -64,7 +65,7 @@ class MessageGetParser:
         MessageField
             field instance.
         """
-        return self(MessageFieldParameters)  # type: ignore[return-value]
+        return self(MessageFieldStruct)  # type: ignore[return-value]
 
     @property
     def single(self) -> SingleMessageField:
@@ -74,9 +75,7 @@ class MessageGetParser:
         SingleMessageField
             field instance.
         """
-        return self(
-            SingleMessageFieldParameters
-        )  # type: ignore[return-value]
+        return self(SingleMessageFieldStruct)  # type: ignore[return-value]
 
     @property
     def static(self) -> StaticMessageField:
@@ -86,9 +85,7 @@ class MessageGetParser:
         StaticMessageField
             field instance.
         """
-        return self(
-            StaticMessageFieldParameters
-        )  # type: ignore[return-value]
+        return self(StaticMessageFieldStruct)  # type: ignore[return-value]
 
     @property
     def address(self) -> AddressMessageField:
@@ -98,9 +95,7 @@ class MessageGetParser:
         AddressMessageField
             field instance.
         """
-        return self(
-            AddressMessageFieldParameters
-        )  # type: ignore[return-value]
+        return self(AddressMessageFieldStruct)  # type: ignore[return-value]
 
     @property
     def crc(self) -> CrcMessageField:
@@ -110,7 +105,7 @@ class MessageGetParser:
         CrcMessageField
             field instance.
         """
-        return self(CrcMessageFieldParameters)  # type: ignore[return-value]
+        return self(CrcMessageFieldStruct)  # type: ignore[return-value]
 
     @property
     def data(self) -> DataMessageField:
@@ -120,7 +115,7 @@ class MessageGetParser:
         DataMessageField
             field instance.
         """
-        return self(DataMessageFieldParameters)  # type: ignore[return-value]
+        return self(DataMessageFieldStruct)  # type: ignore[return-value]
 
     @property
     def data_length(self) -> DataLengthMessageField:
@@ -131,7 +126,7 @@ class MessageGetParser:
             field instance.
         """
         return self(
-            DataLengthMessageFieldParameters
+            DataLengthMessageFieldStruct
         )  # type: ignore[return-value]
 
     # pylint: disable=invalid-name
@@ -143,7 +138,7 @@ class MessageGetParser:
         IdMessageField
             field instance.
         """
-        return self(IdMessageFieldParameters)  # type: ignore[return-value]
+        return self(IdMessageFieldStruct)  # type: ignore[return-value]
 
     @property
     def operation(self) -> OperationMessageField:
@@ -153,9 +148,7 @@ class MessageGetParser:
         OperationMessageField
             field instance.
         """
-        return self(
-            OperationMessageFieldParameters
-        )  # type: ignore[return-value]
+        return self(OperationMessageFieldStruct)  # type: ignore[return-value]
 
     @property
     def response(self) -> ResponseMessageField:
@@ -165,12 +158,10 @@ class MessageGetParser:
         ResponseMessageField
             field instance.
         """
-        return self(
-            ResponseMessageFieldParameters
-        )  # type: ignore[return-value]
+        return self(ResponseMessageFieldStruct)  # type: ignore[return-value]
 
     def __call__(
-        self, type_: type[MessageFieldParametersUnionT]
+        self, type_: type[MessageFieldStructUnionT]
     ) -> MessageFieldUnionT:
         """
         Get first field with specified type.
@@ -206,7 +197,7 @@ class MessageHasParser:
 
     def __init__(
         self,
-        types: set[type[MessageFieldParametersUnionT]],
+        types: set[type[MessageFieldStructUnionT]],
     ) -> None:
         self._types = types
 
@@ -218,7 +209,7 @@ class MessageHasParser:
         bool
             True -- basic field exists in message.
         """
-        return self(MessageFieldParameters)
+        return self(MessageFieldStruct)
 
     @property
     def single(self) -> bool:
@@ -228,7 +219,7 @@ class MessageHasParser:
         bool
             True -- single field exists in message.
         """
-        return self(SingleMessageFieldParameters)
+        return self(SingleMessageFieldStruct)
 
     @property
     def static(self) -> bool:
@@ -238,7 +229,7 @@ class MessageHasParser:
         bool
             True -- static field exists in message.
         """
-        return self(StaticMessageFieldParameters)
+        return self(StaticMessageFieldStruct)
 
     @property
     def address(self) -> bool:
@@ -248,7 +239,7 @@ class MessageHasParser:
         bool
             True -- address field exists in message.
         """
-        return self(AddressMessageFieldParameters)
+        return self(AddressMessageFieldStruct)
 
     @property
     def crc(self) -> bool:
@@ -258,7 +249,7 @@ class MessageHasParser:
         bool
             True -- crc field exists in message.
         """
-        return self(CrcMessageFieldParameters)
+        return self(CrcMessageFieldStruct)
 
     @property
     def data(self) -> bool:
@@ -268,7 +259,7 @@ class MessageHasParser:
         bool
             True -- data field exists in message.
         """
-        return self(DataMessageFieldParameters)
+        return self(DataMessageFieldStruct)
 
     @property
     def data_length(self) -> bool:
@@ -278,7 +269,7 @@ class MessageHasParser:
         bool
             True -- data length field exists in message.
         """
-        return self(DataLengthMessageFieldParameters)
+        return self(DataLengthMessageFieldStruct)
 
     # pylint: disable=invalid-name
     @property
@@ -289,7 +280,7 @@ class MessageHasParser:
         bool
             True -- id field exists in message.
         """
-        return self(IdMessageFieldParameters)
+        return self(IdMessageFieldStruct)
 
     @property
     def operation(self) -> bool:
@@ -299,7 +290,7 @@ class MessageHasParser:
         bool
             True -- operation field exists in message.
         """
-        return self(OperationMessageFieldParameters)
+        return self(OperationMessageFieldStruct)
 
     @property
     def response(self) -> bool:
@@ -309,9 +300,9 @@ class MessageHasParser:
         bool
             True -- response field exists in message.
         """
-        return self(ResponseMessageFieldParameters)
+        return self(ResponseMessageFieldStruct)
 
-    def __call__(self, type_: type[MessageFieldParametersUnionT]) -> bool:
+    def __call__(self, type_: type[MessageFieldStructUnionT]) -> bool:
         """
         Check that message has field of specified type.
 
@@ -329,6 +320,7 @@ class MessageHasParser:
 
 
 # todo: __str__
+# todo: fix typing
 class Message(ContinuousBytesStorage):
     """
     Represents message for communication.
@@ -350,7 +342,7 @@ class Message(ContinuousBytesStorage):
         name: str = "std",
         splittable: bool = False,
         slice_length: int = 1024,  # todo: length must in bytes
-        **fields: MessageFieldParametersUnionT,
+        **fields: MessageFieldStructUnionT,
     ) -> None:
         if "data" not in fields:
             raise KeyError("field with name 'data' required")
@@ -359,7 +351,7 @@ class Message(ContinuousBytesStorage):
         self._slice_length = slice_length
 
         self._src, self._dst = None, None
-        self._field_types: dict[type[MessageFieldParametersUnionT], str] = {}
+        self._field_types: dict[type[MessageFieldStructUnionT], str] = {}
         for f_name, parameters in fields.items():
             class_ = parameters.__class__
             if class_ not in self._field_types:
@@ -486,16 +478,14 @@ class Message(ContinuousBytesStorage):
         self._src = source
 
 
-class MessageField(
-    BytesField, BytesFieldABC[Message, MessageFieldParameters]
-):
+class MessageField(BytesField, BytesFieldABC[Message, MessageFieldStruct]):
     """
     Represents parser for work with message field content.
     """
 
 
 class SingleMessageField(
-    MessageField, BytesFieldABC[Message, SingleMessageFieldParameters]
+    MessageField, BytesFieldABC[Message, SingleMessageFieldStruct]
 ):
     """
     Represents parser for work with single message field content.
@@ -503,7 +493,7 @@ class SingleMessageField(
 
 
 class StaticMessageField(
-    MessageField, BytesFieldABC[Message, StaticMessageFieldParameters]
+    MessageField, BytesFieldABC[Message, StaticMessageFieldStruct]
 ):
     """
     Represents parser for work with static message field content.
@@ -511,7 +501,7 @@ class StaticMessageField(
 
 
 class AddressMessageField(
-    SingleMessageField, BytesFieldABC[Message, AddressMessageFieldParameters]
+    SingleMessageField, BytesFieldABC[Message, AddressMessageFieldStruct]
 ):
     """
     Represents parser for work with crc message field content.
@@ -519,7 +509,7 @@ class AddressMessageField(
 
 
 class CrcMessageField(
-    SingleMessageField, BytesFieldABC[Message, CrcMessageFieldParameters]
+    SingleMessageField, BytesFieldABC[Message, CrcMessageFieldStruct]
 ):
     """
     Represents parser for work with crc message field content.
@@ -550,7 +540,7 @@ class CrcMessageField(
 
 
 class DataMessageField(
-    MessageFieldParameters, BytesFieldABC[Message, DataMessageFieldParameters]
+    MessageFieldStruct, BytesFieldABC[Message, DataMessageFieldStruct]
 ):
     """
     Represents parser for work with data message field content.
@@ -575,7 +565,7 @@ class DataMessageField(
 
 class DataLengthMessageField(
     SingleMessageField,
-    BytesFieldABC[Message, DataLengthMessageFieldParameters],
+    BytesFieldABC[Message, DataLengthMessageFieldStruct],
 ):
     """
     Represents parser for work with data length message field content.
@@ -601,7 +591,7 @@ class DataLengthMessageField(
 
 
 class IdMessageField(
-    SingleMessageField, BytesFieldABC[Message, IdMessageFieldParameters]
+    SingleMessageField, BytesFieldABC[Message, IdMessageFieldStruct]
 ):
     """
     Represents parser for work with id message field content.
@@ -619,7 +609,7 @@ class IdMessageField(
 
 class OperationMessageField(
     SingleMessageField,
-    BytesFieldABC[Message, OperationMessageFieldParameters],
+    BytesFieldABC[Message, OperationMessageFieldStruct],
 ):
     """
     Represents parser for work with operation message field content.
@@ -645,7 +635,7 @@ class OperationMessageField(
 
 
 class ResponseMessageField(
-    SingleMessageField, BytesFieldABC[Message, ResponseMessageFieldParameters]
+    SingleMessageField, BytesFieldABC[Message, ResponseMessageFieldStruct]
 ):
     """
     Represents parser for work with response message field content.
@@ -674,3 +664,66 @@ MessageFieldUnionT = Union[
     OperationMessageField,
     ResponseMessageField,
 ]
+
+
+# todo: implement storage only for one
+# todo: fix typing (how?)
+class MessagePattern(
+    BytesStoragePattern, PatternStorageABC[Message, MessageFieldPattern]
+):
+    """
+    Represents class which storage common parameters for message.
+
+    Parameters
+    ----------
+    name: str
+        name of message format.
+    splittable: bool, default=False
+        shows that the message can be divided by the data.
+    slice_length: int, default=1024
+        max length of the data in one slice.
+    """
+
+    _target_options = {}
+    _target_default = Message  # type: ignore[assignment]
+
+    def __init__(
+        self, name: str, splittable: bool = False, slice_length: int = 1024
+    ):
+        super().__init__(
+            "continuous",
+            name,
+            splittable=splittable,
+            slice_length=slice_length,
+        )
+
+    def get(self, changes_allowed: bool = False, **additions: Any) -> Message:
+        """
+        Get initialized message.
+
+        Parameters
+        ----------
+        changes_allowed: bool, default = False
+            allows situations where keys from the pattern overlap with kwargs.
+            If False, it causes an error on intersection, otherwise the
+            `additions` take precedence.
+        **additions: Any
+            additional initialization parameters. Those keys that are
+            separated by "__" will be defined as parameters for other
+            patterns target, otherwise for the storage target.
+
+        Returns
+        -------
+        ContinuousBytesStorage
+            initialized storage.
+
+        Raises
+        ------
+        AssertionError
+            if in some reason typename is invalid.
+        NotConfiguredYet
+            if patterns list is empty.
+        """
+        return super().get(  # type: ignore[return-value]
+            changes_allowed=changes_allowed, **additions
+        )

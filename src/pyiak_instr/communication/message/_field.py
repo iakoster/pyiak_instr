@@ -6,32 +6,33 @@ from dataclasses import field as _field
 from typing import Any, Callable, ClassVar, Self, Union
 
 from ...core import Code
-from ...store import BytesFieldParameters, BytesFieldPattern
+from ...store import BytesFieldStruct, BytesFieldPattern
+from ...typing import PatternABC
 
 
 __all__ = [
-    "MessageFieldParameters",
-    "SingleMessageFieldParameters",
-    "StaticMessageFieldParameters",
-    "AddressMessageFieldParameters",
-    "CrcMessageFieldParameters",
-    "DataMessageFieldParameters",
-    "DataLengthMessageFieldParameters",
-    "IdMessageFieldParameters",
-    "OperationMessageFieldParameters",
-    "ResponseMessageFieldParameters",
-    "MessageFieldParametersUnionT",
+    "MessageFieldStruct",
+    "SingleMessageFieldStruct",
+    "StaticMessageFieldStruct",
+    "AddressMessageFieldStruct",
+    "CrcMessageFieldStruct",
+    "DataMessageFieldStruct",
+    "DataLengthMessageFieldStruct",
+    "IdMessageFieldStruct",
+    "OperationMessageFieldStruct",
+    "ResponseMessageFieldStruct",
+    "MessageFieldStructUnionT",
     "MessageFieldPattern",
 ]
 
 
 @dataclass(frozen=True, kw_only=True)
-class MessageFieldParameters(BytesFieldParameters):
+class MessageFieldStruct(BytesFieldStruct):
     """Represents a general field of a Message."""
 
 
 @dataclass(frozen=True, kw_only=True)
-class SingleMessageFieldParameters(MessageFieldParameters):
+class SingleMessageFieldStruct(MessageFieldStruct):
     """
     Represents a field of a Message with single word.
     """
@@ -65,7 +66,7 @@ class SingleMessageFieldParameters(MessageFieldParameters):
 
 
 @dataclass(frozen=True, kw_only=True)
-class StaticMessageFieldParameters(SingleMessageFieldParameters):
+class StaticMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with static single word (e.g. preamble).
     """
@@ -95,14 +96,14 @@ class StaticMessageFieldParameters(SingleMessageFieldParameters):
 
 
 @dataclass(frozen=True, kw_only=True)
-class AddressMessageFieldParameters(SingleMessageFieldParameters):
+class AddressMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with address.
     """
 
 
 @dataclass(frozen=True, kw_only=True)
-class CrcMessageFieldParameters(SingleMessageFieldParameters):
+class CrcMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with crc value.
     """
@@ -165,14 +166,14 @@ class CrcMessageFieldParameters(SingleMessageFieldParameters):
 
 
 @dataclass(frozen=True, kw_only=True)
-class DataMessageFieldParameters(MessageFieldParameters):
+class DataMessageFieldStruct(MessageFieldStruct):
     """Represents a field of a Message with data."""
 
     expected: int = 0
 
 
 @dataclass(frozen=True, kw_only=True)
-class DataLengthMessageFieldParameters(SingleMessageFieldParameters):
+class DataLengthMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with data length.
     """
@@ -200,14 +201,14 @@ class DataLengthMessageFieldParameters(SingleMessageFieldParameters):
 
 
 @dataclass(frozen=True, kw_only=True)
-class IdMessageFieldParameters(SingleMessageFieldParameters):
+class IdMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field with a unique identifier of a particular message.
     """
 
 
 @dataclass(frozen=True, kw_only=True)
-class OperationMessageFieldParameters(SingleMessageFieldParameters):
+class OperationMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with operation (e.g. read).
 
@@ -236,7 +237,7 @@ class OperationMessageFieldParameters(SingleMessageFieldParameters):
 
 
 @dataclass(frozen=True, kw_only=True)
-class ResponseMessageFieldParameters(SingleMessageFieldParameters):
+class ResponseMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with response field.
     """
@@ -248,104 +249,54 @@ class ResponseMessageFieldParameters(SingleMessageFieldParameters):
     """default code if value undefined."""
 
 
-MessageFieldParametersUnionT = Union[
-    MessageFieldParameters,
-    SingleMessageFieldParameters,
-    StaticMessageFieldParameters,
-    AddressMessageFieldParameters,
-    CrcMessageFieldParameters,
-    DataMessageFieldParameters,
-    DataLengthMessageFieldParameters,
-    IdMessageFieldParameters,
-    OperationMessageFieldParameters,
-    ResponseMessageFieldParameters,
+MessageFieldStructUnionT = Union[
+    MessageFieldStruct,
+    SingleMessageFieldStruct,
+    StaticMessageFieldStruct,
+    AddressMessageFieldStruct,
+    CrcMessageFieldStruct,
+    DataMessageFieldStruct,
+    DataLengthMessageFieldStruct,
+    IdMessageFieldStruct,
+    OperationMessageFieldStruct,
+    ResponseMessageFieldStruct,
 ]
 
 
 # todo: typehint - Generic. .get, .get_updated and ._get_field_class writes
 #  just because needed to change type.
-class MessageFieldPattern(BytesFieldPattern):
+class MessageFieldPattern(
+    BytesFieldPattern, PatternABC[MessageFieldStructUnionT]
+):
     """
     Represents class which storage common parameters for message field.
 
     Parameters
     ----------
-    field_type: str
-        name of field type.
-    **parameters: Any
-        common parameters.
+    typename: str
+        name of pattern target type.
+    **kwargs: Any
+        parameters for target initialization.
     """
 
-    _FIELD_TYPES = dict(
-        basic=MessageFieldParameters,
-        single=SingleMessageFieldParameters,
-        static=StaticMessageFieldParameters,
-        address=AddressMessageFieldParameters,
-        crc=CrcMessageFieldParameters,
-        data=DataMessageFieldParameters,
-        data_length=DataLengthMessageFieldParameters,
-        id=IdMessageFieldParameters,
-        operation=OperationMessageFieldParameters,
-        response=ResponseMessageFieldParameters,
+    _target_options = dict(
+        basic=MessageFieldStruct,
+        single=SingleMessageFieldStruct,
+        static=StaticMessageFieldStruct,
+        address=AddressMessageFieldStruct,
+        crc=CrcMessageFieldStruct,
+        data=DataMessageFieldStruct,
+        data_length=DataLengthMessageFieldStruct,
+        id=IdMessageFieldStruct,
+        operation=OperationMessageFieldStruct,
+        response=ResponseMessageFieldStruct,
     )
-    """dictionary of field types where key is a name of type."""
+    _target_default = MessageFieldStruct
 
-    def __init__(self, field_type: str, **parameters: Any) -> None:
-        if field_type not in self._FIELD_TYPES:
-            raise ValueError(f"invalid field type name: {field_type}")
-        super().__init__(field_type=field_type, **parameters)
-
-    def get(self, **parameters: Any) -> MessageFieldParametersUnionT:
-        """
-        Get field initialized with parameters from pattern and from
-        `parameters`.
-
-        Parameters
-        ----------
-        **parameters: Any
-            additional field initialization parameters.
-
-        Returns
-        -------
-        MessageFieldUnionT
-            initialized field.
-        """
-        return self._get_field_class()(**self._kw, **parameters)
-
-    def get_updated(self, **parameters: Any) -> MessageFieldParametersUnionT:
-        """
-        Get field initialized with parameters from pattern and from
-        `parameters`.
-
-        If parameters from pattern will be updated via `parameters` before
-        creation Field instance.
-
-        Parameters
-        ----------
-        **parameters: Any
-            parameters for field.
-
-        Returns
-        -------
-        MessageFieldUnionT
-            initialized field.
-        """
-        kw_ = self._kw.copy()
-        kw_.update(parameters)
-        return self._get_field_class()(**kw_)
-
-    def _get_field_class(self) -> type[MessageFieldParametersUnionT]:
-        """
-        Get field class by `field_type`.
-
-        Returns
-        -------
-        type[MessageFieldUnionT]
-            message field class.
-        """
-        return self._FIELD_TYPES.get(  # type: ignore[return-value]
-            self._field_type, MessageFieldParameters
-        )
+    def __init__(self, typename: str, **parameters: Any) -> None:
+        if typename not in self._target_options:
+            raise ValueError(f"invalid field typename: {typename}")
+        super().__init__(typename=typename, **parameters)
 
     @classmethod
     def basic(
@@ -375,7 +326,7 @@ class MessageFieldPattern(BytesFieldPattern):
             initialized class with defined parameters.
         """
         return cls(
-            field_type="basic",
+            typename="basic",
             fmt=fmt,
             expected=expected,
             order=order,
@@ -407,7 +358,7 @@ class MessageFieldPattern(BytesFieldPattern):
             initialized class with defined parameters.
         """
         return cls(
-            field_type="single",
+            typename="single",
             fmt=fmt,
             order=order,
             default=default,
@@ -438,7 +389,7 @@ class MessageFieldPattern(BytesFieldPattern):
             initialized class with defined parameters.
         """
         return cls(
-            field_type="static",
+            typename="static",
             fmt=fmt,
             default=default,
             order=order,
@@ -466,7 +417,7 @@ class MessageFieldPattern(BytesFieldPattern):
             initialized class with defined parameters.
         """
         return cls(
-            field_type="address",
+            typename="address",
             fmt=fmt,
             order=order,
         )
@@ -502,7 +453,7 @@ class MessageFieldPattern(BytesFieldPattern):
         if wo_fields is None:
             wo_fields = set()
         return cls(
-            field_type="crc",
+            typename="crc",
             fmt=fmt,
             order=order,
             algorithm_name=algorithm_name,
@@ -534,7 +485,7 @@ class MessageFieldPattern(BytesFieldPattern):
             initialized class with defined parameters.
         """
         return cls(
-            field_type="data",
+            typename="data",
             fmt=fmt,
             expected=expected,
             order=order,
@@ -572,7 +523,7 @@ class MessageFieldPattern(BytesFieldPattern):
             initialized class with defined parameters.
         """
         return cls(
-            field_type="data_length",
+            typename="data_length",
             fmt=fmt,
             order=order,
             behaviour=behaviour,
@@ -603,7 +554,7 @@ class MessageFieldPattern(BytesFieldPattern):
             initialized class with defined parameters.
         """
         return cls(
-            field_type="id",
+            typename="id",
             fmt=fmt,
             order=order,
         )
@@ -636,7 +587,7 @@ class MessageFieldPattern(BytesFieldPattern):
         if descriptions is None:
             descriptions = {Code.READ: 0, Code.WRITE: 1}
         return cls(
-            field_type="operation",
+            typename="operation",
             fmt=fmt,
             order=order,
             descriptions=descriptions,
@@ -674,7 +625,7 @@ class MessageFieldPattern(BytesFieldPattern):
             initialized class with defined parameters.
         """
         return cls(
-            field_type="response",
+            typename="response",
             fmt=fmt,
             order=order,
             codes=codes,

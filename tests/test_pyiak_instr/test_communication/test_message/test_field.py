@@ -2,16 +2,16 @@ import unittest
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.communication.message import (
-    MessageFieldParameters,
-    SingleMessageFieldParameters,
-    StaticMessageFieldParameters,
-    AddressMessageFieldParameters,
-    CrcMessageFieldParameters,
-    DataMessageFieldParameters,
-    DataLengthMessageFieldParameters,
-    IdMessageFieldParameters,
-    OperationMessageFieldParameters,
-    ResponseMessageFieldParameters,
+    MessageFieldStruct,
+    SingleMessageFieldStruct,
+    StaticMessageFieldStruct,
+    AddressMessageFieldStruct,
+    CrcMessageFieldStruct,
+    DataMessageFieldStruct,
+    DataLengthMessageFieldStruct,
+    IdMessageFieldStruct,
+    OperationMessageFieldStruct,
+    ResponseMessageFieldStruct,
     MessageFieldPattern,
 )
 
@@ -23,7 +23,7 @@ class TestMessageFieldParameters(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            MessageFieldParameters(
+            MessageFieldStruct(
                 expected=20,
                 fmt=Code.I64,
                 start=10,
@@ -45,7 +45,7 @@ class TestSingleMessageFieldParameters(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            SingleMessageFieldParameters(
+            SingleMessageFieldStruct(
                 fmt=Code.U8,
                 start=0,
                 expected=2,
@@ -61,7 +61,7 @@ class TestSingleMessageFieldParameters(unittest.TestCase):
             (b"\x00" * 2, True),
             (b"\x00" * 3, False),
         )
-        obj = SingleMessageFieldParameters(
+        obj = SingleMessageFieldStruct(
             fmt=Code.U16,
             start=0,
         )
@@ -75,14 +75,14 @@ class TestStaticMessageFieldParameters(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            StaticMessageFieldParameters(
+            StaticMessageFieldStruct(
                 fmt=Code.U8,
                 start=0,
             )
         self.assertEqual("default value not specified", exc.exception.args[0])
 
     def test_validate(self) -> None:
-        obj = StaticMessageFieldParameters(
+        obj = StaticMessageFieldStruct(
             fmt=Code.U16,
             start=0,
             default=b"42"
@@ -99,7 +99,7 @@ class TestAddressMessageFieldParameters(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            AddressMessageFieldParameters(
+            AddressMessageFieldStruct(
                 fmt=Code.I64,
                 start=10,
             ),
@@ -120,11 +120,11 @@ class TestCrcMessageFieldParameters(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            CrcMessageFieldParameters(fmt=Code.U8, start=0, algorithm_name="None")
+            CrcMessageFieldStruct(fmt=Code.U8, start=0, algorithm_name="None")
         self.assertEqual("invalid algorithm: 'None'", exc.exception.args[0])
 
     def test_algorithm(self) -> None:
-        obj = CrcMessageFieldParameters(fmt=Code.U16, start=0)
+        obj = CrcMessageFieldStruct(fmt=Code.U16, start=0)
 
         for i, (data, ref) in enumerate((
             (b"\x10\x01\x20\x04", 0x6af5),
@@ -141,7 +141,7 @@ class TestDataMessageFieldParameters(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            DataMessageFieldParameters(
+            DataMessageFieldStruct(
                 fmt=Code.I64,
                 start=10,
                 expected=-1,
@@ -164,7 +164,7 @@ class TestDataLengthMessageFieldParameters(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            DataLengthMessageFieldParameters(
+            DataLengthMessageFieldStruct(
                 fmt=Code.U16,
                 start=10,
             ),
@@ -199,7 +199,7 @@ class TestDataLengthMessageFieldParameters(unittest.TestCase):
         )):
             with self.subTest(test=i):
                 with self.assertRaises(ValueError) as exc:
-                    DataLengthMessageFieldParameters(fmt=Code.U8, start=0, **kw)
+                    DataLengthMessageFieldStruct(fmt=Code.U8, start=0, **kw)
                 self.assertEqual(msg, exc.exception.args[0])
 
 
@@ -208,7 +208,7 @@ class TestIdMessageFieldParameters(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            IdMessageFieldParameters(
+            IdMessageFieldStruct(
                 fmt=Code.U16,
                 start=10,
             ),
@@ -230,7 +230,7 @@ class TestOperationMessageFieldParameters(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            OperationMessageFieldParameters(
+            OperationMessageFieldStruct(
                 fmt=Code.U16,
                 start=10,
             ),
@@ -253,7 +253,7 @@ class TestResponseMessageFieldParameters(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            ResponseMessageFieldParameters(
+            ResponseMessageFieldStruct(
                 fmt=Code.U16,
                 start=10,
                 codes={0: Code.OK, 1: Code.ERROR},
@@ -279,51 +279,51 @@ class TestMessageFieldPattern(unittest.TestCase):
         data = dict(
             basic=(
                 MessageFieldPattern.basic(fmt=Code.U8, expected=0),
-                MessageFieldParameters,
+                MessageFieldStruct,
             ),
             single=(
-                MessageFieldPattern.single(fmt=Code.U8), SingleMessageFieldParameters,
+                MessageFieldPattern.single(fmt=Code.U8), SingleMessageFieldStruct,
             ),
             static=(
                 MessageFieldPattern.static(
                     fmt=Code.U32, default=b"\x00\x01\x02\x03"
                 ),
-                StaticMessageFieldParameters,
+                StaticMessageFieldStruct,
             ),
             address=(
                 MessageFieldPattern.address(fmt=Code.U8),
-                AddressMessageFieldParameters,
+                AddressMessageFieldStruct,
             ),
             crc=(
-                MessageFieldPattern.crc(fmt=Code.U16), CrcMessageFieldParameters,
+                MessageFieldPattern.crc(fmt=Code.U16), CrcMessageFieldStruct,
             ),
             data=(
-                MessageFieldPattern.data(fmt=Code.U64), DataMessageFieldParameters,
+                MessageFieldPattern.data(fmt=Code.U64), DataMessageFieldStruct,
             ),
             data_length=(
                 MessageFieldPattern.data_length(fmt=Code.I32),
-                DataLengthMessageFieldParameters,
+                DataLengthMessageFieldStruct,
             ),
             id=(
-                MessageFieldPattern.id(fmt=Code.U8), IdMessageFieldParameters,
+                MessageFieldPattern.id(fmt=Code.U8), IdMessageFieldStruct,
             ),
             operation=(
-                MessageFieldPattern.operation(fmt=Code.U16), OperationMessageFieldParameters,
+                MessageFieldPattern.operation(fmt=Code.U16), OperationMessageFieldStruct,
             ),
             response=(
-                MessageFieldPattern.response(fmt=Code.F16), ResponseMessageFieldParameters,
+                MessageFieldPattern.response(fmt=Code.F16), ResponseMessageFieldStruct,
             )
         )
 
-        self.assertSetEqual(set(data), set(MessageFieldPattern._FIELD_TYPES))
+        self.assertSetEqual(set(data), set(MessageFieldPattern._target_options))
         for type_name, (pattern, field_type) in data.items():
             pattern: MessageFieldPattern
             with self.subTest(test=type_name):
-                self.assertEqual(type_name, pattern.field_type)
+                self.assertEqual(type_name, pattern.typename)
                 res = pattern.get(start=0)
 
                 for key, val in pattern.__init_kwargs__().items():
-                    if key == "field_type":
+                    if key == "typename":
                         continue
                     with self.subTest(parameter=key):
                         self.assertEqual(val, getattr(res, key))

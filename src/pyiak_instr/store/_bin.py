@@ -13,11 +13,16 @@ from ..core import Code
 from ..rwfile import RWConfig
 from ..exceptions import NotConfiguredYet
 from ..utilities import BytesEncoder, split_complex_dict
-from ..typing import BytesFieldABC
+from ..typing import (
+    BytesFieldABC,
+    PatternABC,
+    PatternStorageABC,
+    WritablePatternABC,
+)
 
 
 __all__ = [
-    "BytesFieldParameters",
+    "BytesFieldStruct",
     "BytesField",
     "ContinuousBytesStorage",
     "BytesFieldPattern",
@@ -26,7 +31,7 @@ __all__ = [
 
 
 @dataclass(frozen=True, kw_only=True)
-class BytesFieldParameters:
+class BytesFieldStruct:
     """
     Represents field parameters with values encoded in bytes.
     """
@@ -178,13 +183,13 @@ class ContinuousBytesStorage:
     ----------
     name: str
         name of storage.
-    **fields: BytesFieldParameters
+    **fields: BytesFieldStruct
         fields of the storage. The kwarg Key is used as the field name.
     """
 
-    def __init__(self, name: str, **fields: BytesFieldParameters):
+    def __init__(self, name: str, **fields: BytesFieldStruct):
         for f_name, field in fields.items():
-            if not isinstance(field, BytesFieldParameters):
+            if not isinstance(field, BytesFieldStruct):
                 raise TypeError(
                     "invalid type of %r: %s" % (f_name, type(field))
                 )
@@ -365,7 +370,7 @@ class ContinuousBytesStorage:
 # todo: up to this level all functions and properties from BytesField
 # todo: __str__ method
 # todo: typing - set content with bytes
-class BytesField(BytesFieldABC[ContinuousBytesStorage, BytesFieldParameters]):
+class BytesField(BytesFieldABC[ContinuousBytesStorage, BytesFieldStruct]):
     """
     Represents parser for work with field content.
     """
@@ -459,24 +464,13 @@ class BytesField(BytesFieldABC[ContinuousBytesStorage, BytesFieldParameters]):
 # todo: typehint - Generic. Create via generic for children.
 # todo: to metaclass (because uses for generate new class)
 # todo: wait to 3.12 for TypeVar with default type.
-class BytesFieldPattern:
+class BytesFieldPattern(PatternABC[BytesFieldStruct]):
     """
     Represents class which storage common parameters for field.
-
-    Parameters
-    ----------
-    field_type: str, default=''
-        name of field type.
-    **parameters: Any
-        common parameters.
     """
 
-    _FIELD_TYPES: dict[str, type[BytesFieldParameters]] = {}
-    """dictionary of field types where key is a name of type."""
-
-    def __init__(self, field_type: str = "", **parameters: Any):
-        self._field_type = field_type
-        self._kw = parameters
+    _target_options = {}
+    _target_default = BytesFieldStruct
 
     def add(self, key: str, value: Any) -> None:
         """
@@ -498,45 +492,42 @@ class BytesFieldPattern:
             raise KeyError("parameter in pattern already")
         self._kw[key] = value
 
-    def get(self, **parameters: Any) -> BytesFieldParameters:
+    def get(
+        self, changes_allowed: bool = False, **additions: Any
+    ) -> BytesFieldStruct:
         """
-        Get field initialized with parameters from pattern and from
-        `parameters`.
+        Get field initialized with pattern and `additions`.
+
 
         Parameters
         ----------
-        **parameters: Any
-            additional field initialization parameters.
+        changes_allowed : bool, default=False
+            if False intersection between `additions` and pattern is
+            prohibited.
+        additions : Any
+            additional arguments for field.
 
         Returns
         -------
-        BytesFieldParameters
+        BytesFieldStruct
             initialized field.
+
+        Raises
+        ------
+        SyntaxError
+            if `changes_allowed` is False and pattern and `additions` has
+            intersection.
         """
-        # todo: check intersection and then call .get_updated
-        return self._get_field_class()(**self._kw, **parameters)
+        if not changes_allowed:
+            intersection = set(self._kw).intersection(set(additions))
+            if len(intersection) > 0:
+                raise SyntaxError(
+                    f"keyword argument(s) repeated: {', '.join(intersection)}"
+                )
 
-    def get_updated(self, **parameters: Any) -> BytesFieldParameters:
-        """
-        Get field initialized with parameters from pattern and from
-        `parameters`.
-
-        If parameters from pattern will be updated via `parameters` before
-        creation Field instance.
-
-        Parameters
-        ----------
-        **parameters: Any
-            parameters for field.
-
-        Returns
-        -------
-        BytesFieldParameters
-            initialized field.
-        """
-        kw_ = self._kw.copy()
-        kw_.update(parameters)
-        return self._get_field_class()(**kw_)  # pylint: disable=missing-kwoa
+        kwargs = self._kw.copy()
+        kwargs.update(additions)
+        return self._target(**kwargs)
 
     def pop(self, key: str) -> Any:
         """
@@ -554,32 +545,6 @@ class BytesFieldPattern:
         """
         return self._kw.pop(key)
 
-    def _get_field_class(self) -> type[BytesFieldParameters]:
-        """
-        Get field class by `field_type`.
-
-        Returns
-        -------
-        type[BytesFieldParameters]
-            field class.
-        """
-        return self._FIELD_TYPES.get(self._field_type, BytesFieldParameters)
-
-    @property
-    def field_type(self) -> str:
-        """
-        Returns
-        -------
-        str
-            name of field type.
-        """
-        return self._field_type
-
-    def __init_kwargs__(self) -> dict[str, Any]:
-        kwargs = {"field_type": self._field_type}
-        kwargs.update(self._kw)
-        return kwargs
-
     def __contains__(self, item: str) -> bool:
         return item in self._kw
 
@@ -592,51 +557,46 @@ class BytesFieldPattern:
         self._kw[parameter] = value
 
 
-# todo: to metaclass (because uses for generate new class)
-class BytesStoragePattern:
+# todo: to metaclass? (because uses for generate new class)
+class BytesStoragePattern(
+    PatternStorageABC[ContinuousBytesStorage, BytesFieldPattern],
+    WritablePatternABC,
+):
     """
-    Represents class which storage common parameters for storage.
+    Represents pattern for bytes storage.
 
     Parameters
     ----------
-    name: str
-        name of storage.
+    typename: {'continuous'}
+        typename of storage.
     **kwargs: Any
         parameters for storage initialization.
     """
 
-    def __init__(self, name: str, **kwargs: Any):
-        self._name = name
-        self._kw = dict(name=name, **kwargs)
-        self._continuous = True  # now available only with this option
-        self._p: dict[str, BytesFieldPattern] = {}
+    _target_options = {}
+    _target_default = ContinuousBytesStorage
 
-    def configure(self, **patterns: BytesFieldPattern) -> Self:
-        """
-        Configure storage pattern with field patterns.
+    def __init__(self, typename: str, name: str, **kwargs: Any):
+        if typename != "continuous":
+            raise ValueError(f"invalid typename: '{typename}'")
+        super().__init__(typename, name, **kwargs)
 
-        Parameters
-        ----------
-        **patterns : BytesFieldPattern
-            dictionary of field patterns where key is a name of field.
-
-        Returns
-        -------
-        Self
-            self instance.
-        """
-        self._p = patterns
-        return self
-
-    def get(self, **update: Any) -> ContinuousBytesStorage:
+    def get(
+        self, changes_allowed: bool = False, **additions: Any
+    ) -> ContinuousBytesStorage:
         """
         Get initialized storage.
 
         Parameters
         ----------
-        **update : Any
-            those keys that are separated by "__" will be defined as
-            parameters for the field, otherwise for the storage.
+        changes_allowed: bool, default = False
+            allows situations where keys from the pattern overlap with kwargs.
+            If False, it causes an error on intersection, otherwise the
+            `additions` take precedence.
+        **additions: Any
+            additional initialization parameters. Those keys that are
+            separated by "__" will be defined as parameters for other
+            patterns target, otherwise for the storage target.
 
         Returns
         -------
@@ -646,21 +606,22 @@ class BytesStoragePattern:
         Raises
         ------
         AssertionError
-            if in some reason `_continuous` is False.
+            if in some reason typename is invalid.
         NotConfiguredYet
             if patterns list is empty.
         """
         if len(self._p) == 0:
             raise NotConfiguredYet(self)
 
-        for_fields, for_storage = split_complex_dict(
-            update, without_sep="other"
+        for_field, for_storage = split_complex_dict(
+            additions, without_sep="other"
         )
-        if self._continuous:
-            return self._get_continuous(for_storage, for_fields)
-        raise AssertionError("not continuous storage not supports")
 
-    def to_config(self, path: Path) -> None:
+        if self._tn == "continuous":
+            return self._get_continuous(for_storage, for_field)
+        raise AssertionError(f"invalid typename: '{self._tn}'")
+
+    def write(self, path: Path) -> None:
         """
         Write pattern configuration to config file.
 
@@ -670,7 +631,7 @@ class BytesStoragePattern:
             path to config file.
         """
         pars = {self._name: self.__init_kwargs__()}
-        for name, pattern in self:
+        for name, pattern in self._p.items():
             pars[name] = pattern.__init_kwargs__()
 
         with RWConfig(path) as cfg:
@@ -711,15 +672,13 @@ class BytesStoragePattern:
             fields.update(after)
             object.__setattr__(fields[inf], "_stop", fields[next_].start)
 
-        return ContinuousBytesStorage(
-            **storage_kw, **fields  # type: ignore[arg-type]
-        )
+        return self._target(**storage_kw, **fields)  # type: ignore[arg-type]
 
     def _get_fields_after_inf(
         self,
         fields_kw: dict[str, dict[str, Any]],
         inf: str,
-    ) -> tuple[dict[str, BytesFieldParameters], str]:
+    ) -> tuple[dict[str, BytesFieldStruct], str]:
         """
         Get the dictionary of fields that go from infinite field
         (not included) to end.
@@ -733,7 +692,7 @@ class BytesStoragePattern:
 
         Returns
         -------
-        tuple[dict[str, BytesFieldParameters], str]
+        tuple[dict[str, BytesFieldStruct], str]
             fields - dictionary of fields from infinite (not included);
             next - name of next field after infinite.
         """
@@ -749,14 +708,16 @@ class BytesStoragePattern:
             )
             field_kw = fields_kw[name] if name in fields_kw else {}
             field_kw.update(start=start)
-            fields.append((name, pattern.get_updated(**field_kw)))
+            fields.append(
+                (name, pattern.get(changes_allowed=True, **field_kw))
+            )
             next_ = name
 
         return dict(fields[::-1]), next_
 
     def _get_fields_before_inf(
         self, fields_kw: dict[str, dict[str, Any]]
-    ) -> tuple[dict[str, BytesFieldParameters], str]:
+    ) -> tuple[dict[str, BytesFieldStruct], str]:
         """
         Get the dictionary of fields that go up to and including the infinite
         field.
@@ -768,7 +729,7 @@ class BytesStoragePattern:
 
         Returns
         -------
-        tuple[dict[str, BytesFieldParameters], str]
+        tuple[dict[str, BytesFieldStruct], str]
             fields - dictionary of fields up to infinite (include);
             inf - name of infinite field. Empty if there is no found.
         """
@@ -780,7 +741,7 @@ class BytesStoragePattern:
             # not supported, but it is correct behaviour
             # if len(set(for_field).intersection(pattern)) == 0:
             #     fields[name] = pattern.get(**for_field)
-            fields[name] = pattern.get_updated(**field_kw)
+            fields[name] = pattern.get(changes_allowed=True, **field_kw)
 
             stop = fields[name].stop
             if stop is None:
@@ -791,48 +752,35 @@ class BytesStoragePattern:
         return fields, inf
 
     @classmethod
-    def from_config(cls, path: Path, name: str) -> Self:
+    def read(cls, path: Path, *keys: str) -> Self:
         """
-        Initialize class instance by config file.
+        Read init kwargs from `path` and initialize class instance.
 
         Parameters
         ----------
         path : Path
-            path to config file.
-        name : str
-            section with parameters for class. Use as pattern name.
+            path to the file.
+        *keys : str
+            keys to search required pattern in file. Must include only one
+            argument - `name`.
 
         Returns
         -------
         Self
-            initialized class instance.
+            initialized self instance.
+
+        Raises
+        ------
+        TypeError
+            if given invalid count of keys.
         """
+        if len(keys) != 1:
+            raise TypeError(f"given {len(keys)}, expect 1")
+        (name,) = keys
+
         with RWConfig(path) as cfg:
             opts = cfg.api.options(name)
             opts.pop(opts.index(name))
             return cls(**cfg.get(name, name)).configure(
                 **{f: BytesFieldPattern(**cfg.get(name, f)) for f in opts}
             )
-
-    @property
-    def name(self) -> str:
-        """
-        Returns
-        -------
-        str
-            name of pattern.
-        """
-        # todo: TypedDict for this case
-        return self._name
-
-    def __init_kwargs__(self) -> dict[str, Any]:
-        return self._kw
-
-    def __getitem__(self, name: str) -> BytesFieldPattern:
-        return self._p[name]
-
-    def __iter__(
-        self,
-    ) -> Generator[tuple[str, BytesFieldPattern], None, None]:
-        for name, pattern in self._p.items():
-            yield name, pattern

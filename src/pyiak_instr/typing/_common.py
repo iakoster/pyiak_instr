@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 
-T = TypeVar("T")
+ApiT = TypeVar("ApiT")
 
 
 class ContextManager(ABC):
@@ -41,18 +41,18 @@ class SupportsInitKwargs(Protocol):
 
 
 # pylint: disable=too-few-public-methods
-class WithApi(ABC, Generic[T]):
+class WithApi(ABC, Generic[ApiT]):
     """Represents generic class with some API."""
 
-    def __init__(self, api: T):
+    def __init__(self, api: ApiT):
         self._api = api
 
     @property
-    def api(self) -> T:
+    def api(self) -> ApiT:
         """
         Returns
         -------
-        T
+        ApiT
             high-level api instance.
         """
         return self._api

@@ -1,5 +1,5 @@
 from src.pyiak_instr.core import Code
-from src.pyiak_instr.store import BytesFieldParameters, ContinuousBytesStorage
+from src.pyiak_instr.store import BytesFieldStruct, ContinuousBytesStorage
 
 
 __all__ = [
@@ -15,7 +15,7 @@ __all__ = [
 def get_cbs_one() -> ContinuousBytesStorage:
     return ContinuousBytesStorage(
         name="cbs_one",
-        f0=BytesFieldParameters(
+        f0=BytesFieldStruct(
             start=0,
             fmt=Code.I16,
             expected=2,
@@ -26,30 +26,30 @@ def get_cbs_one() -> ContinuousBytesStorage:
 def get_cbs_example() -> ContinuousBytesStorage:
     cbs = ContinuousBytesStorage(
         name="cbs_example",
-        f0=BytesFieldParameters(
+        f0=BytesFieldStruct(
             start=0,
             fmt=Code.U16,
             expected=1,
         ),
-        f1=BytesFieldParameters(
+        f1=BytesFieldStruct(
             start=2,
             fmt=Code.U8,
             expected=2,
             order=Code.LITTLE_ENDIAN,
         ),
-        f2=BytesFieldParameters(
+        f2=BytesFieldStruct(
             start=4,
             fmt=Code.I8,
             expected=-1,
             order=Code.LITTLE_ENDIAN,
         ),
-        f3=BytesFieldParameters(
+        f3=BytesFieldStruct(
             start=-3,
             fmt=Code.U8,
             expected=2,
             order=Code.LITTLE_ENDIAN,
         ),
-        f4=BytesFieldParameters(
+        f4=BytesFieldStruct(
             start=-1,
             fmt=Code.I8,
             expected=1,
@@ -63,7 +63,7 @@ def get_cbs_example() -> ContinuousBytesStorage:
 def get_cbs_one_infinite() -> ContinuousBytesStorage:
     return ContinuousBytesStorage(
         name="cbs_one_infinite",
-        f0=BytesFieldParameters(
+        f0=BytesFieldStruct(
             start=0,
             fmt=Code.I8,
             expected=-1,
@@ -75,18 +75,18 @@ def get_cbs_one_infinite() -> ContinuousBytesStorage:
 def get_cbs_first_infinite() -> ContinuousBytesStorage:
     cbs = ContinuousBytesStorage(
         name="cbs_first_infinite",
-        f0=BytesFieldParameters(
+        f0=BytesFieldStruct(
             start=0,
             fmt=Code.I8,
             expected=-1,
             order=Code.LITTLE_ENDIAN,
         ),
-        f1=BytesFieldParameters(
+        f1=BytesFieldStruct(
             start=-4,
             fmt=Code.U16,
             expected=1,
         ),
-        f2=BytesFieldParameters(
+        f2=BytesFieldStruct(
             start=-2,
             fmt=Code.U8,
             expected=2,
@@ -100,18 +100,18 @@ def get_cbs_first_infinite() -> ContinuousBytesStorage:
 def get_cbs_middle_infinite() -> ContinuousBytesStorage:
     cbs = ContinuousBytesStorage(
         name="cbs_middle_infinite",
-        f0=BytesFieldParameters(
+        f0=BytesFieldStruct(
             start=0,
             fmt=Code.U16,
             expected=2,
             order=Code.LITTLE_ENDIAN,
         ),
-        f1=BytesFieldParameters(
+        f1=BytesFieldStruct(
             start=4,
             fmt=Code.U16,
             expected=-1,
         ),
-        f2=BytesFieldParameters(
+        f2=BytesFieldStruct(
             start=-2,
             fmt=Code.U8,
             expected=2,
@@ -125,13 +125,13 @@ def get_cbs_middle_infinite() -> ContinuousBytesStorage:
 def get_cbs_last_infinite() -> ContinuousBytesStorage:
     return ContinuousBytesStorage(
         name="cbs_last_infinite",
-        f0=BytesFieldParameters(
+        f0=BytesFieldStruct(
             start=0,
             fmt=Code.U16,
             order=Code.LITTLE_ENDIAN,
             expected=1,
         ),
-        f1=BytesFieldParameters(
+        f1=BytesFieldStruct(
             start=2,
             fmt=Code.U32,
             expected=-1,

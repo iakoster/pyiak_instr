@@ -6,7 +6,7 @@ import numpy as np
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.store import (
-    BytesFieldParameters,
+    BytesFieldStruct,
     ContinuousBytesStorage,
     BytesFieldPattern,
     BytesStoragePattern,
@@ -27,12 +27,12 @@ from ...utils import validate_object, compare_values
 TEST_DATA_DIR = get_local_test_data_dir(__name__)
 
 
-class TestBytesFieldParameters(unittest.TestCase):
+class TestBytesFieldStruct(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            BytesFieldParameters(
+            BytesFieldStruct(
                 start=4,
                 fmt=Code.U32,
                 expected=-100,
@@ -51,7 +51,7 @@ class TestBytesFieldParameters(unittest.TestCase):
         )
 
     def test_decode(self) -> None:
-        obj = BytesFieldParameters(
+        obj = BytesFieldStruct(
             start=4,
             fmt=Code.U32,
             expected=-100,
@@ -66,7 +66,7 @@ class TestBytesFieldParameters(unittest.TestCase):
                 compare_values(self, ref, obj.decode(data))
 
     def test_encode(self) -> None:
-        obj = BytesFieldParameters(
+        obj = BytesFieldStruct(
             start=4,
             fmt=Code.U32,
             expected=-100,
@@ -82,7 +82,7 @@ class TestBytesFieldParameters(unittest.TestCase):
                 compare_values(self, ref, obj.encode(data))
 
     def test_validate(self) -> None:
-        obj = BytesFieldParameters(
+        obj = BytesFieldStruct(
             start=0,
             fmt=Code.I16,
             expected=2,
@@ -93,7 +93,7 @@ class TestBytesFieldParameters(unittest.TestCase):
         with self.subTest(test="finite False"):
             self.assertFalse(obj.validate(b"\x02\x04\x00\x00\x01"))
 
-        obj = BytesFieldParameters(
+        obj = BytesFieldStruct(
             start=0,
             fmt=Code.I16,
             expected=-1,
@@ -106,13 +106,13 @@ class TestBytesFieldParameters(unittest.TestCase):
 
     def test_stop_after_infinite(self) -> None:
         data = (
-            (BytesFieldParameters(
+            (BytesFieldStruct(
                 start=-4,
                 fmt=Code.I16,
                 expected=1,
                 order=Code.LITTLE_ENDIAN,
             ), -2),
-            (BytesFieldParameters(
+            (BytesFieldStruct(
                 start=-2,
                 fmt=Code.I16,
                 expected=1,
@@ -144,7 +144,7 @@ class TestBytesField(unittest.TestCase):
     def _get_cbs() -> ContinuousBytesStorage:
         return ContinuousBytesStorage(
                 name="cbs",
-                f0=BytesFieldParameters(
+                f0=BytesFieldStruct(
                     start=0,
                     fmt=Code.U32,
                     expected=-1,
@@ -348,7 +348,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
     def _get_cbs() -> ContinuousBytesStorage:
         return ContinuousBytesStorage(
             name="cbs",
-            f0=BytesFieldParameters(
+            f0=BytesFieldStruct(
                 start=0,
                 fmt=Code.U32,
                 expected=1,
@@ -371,6 +371,7 @@ class TestBytesFieldPattern(unittest.TestCase):
 
     def test_get(self) -> None:
         pattern = BytesFieldPattern(
+            typename="",
             fmt=Code.U8,
             order=Code.LITTLE_ENDIAN,
             expected=4,
@@ -387,19 +388,20 @@ class TestBytesFieldPattern(unittest.TestCase):
 
     def test_get_updated(self) -> None:
         pattern = BytesFieldPattern(
+            typename="",
             fmt=Code.U8,
             expected=4,
         )
-        with self.assertRaises(TypeError) as exc:
+        with self.assertRaises(SyntaxError) as exc:
             pattern.get(start=0, expected=1)
-        self.assertIn(
-            "got multiple values for keyword argument 'expected'",
+        self.assertEqual(
+            "keyword argument(s) repeated: expected",
             exc.exception.args[0],
         )
 
         validate_object(
             self,
-            pattern.get_updated(start=0, expected=1),
+            pattern.get(changes_allowed=True, start=0, expected=1),
             start=0,
             expected=1,
             check_attrs=False,
@@ -432,6 +434,7 @@ class TestBytesFieldPattern(unittest.TestCase):
     @staticmethod
     def _get_pattern() -> BytesFieldPattern:
         return BytesFieldPattern(
+            typename="",
             a=1,
             b=[],
             c={},
@@ -448,8 +451,9 @@ class TestBytesStoragePattern(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            BytesStoragePattern(name="cbs", kwarg="None"),
+            BytesStoragePattern(typename="continuous", name="cbs", kwarg="None"),
             name="cbs",
+            typename="continuous",
         )
 
     def test_get_continuous(self) -> None:
@@ -531,21 +535,21 @@ class TestBytesStoragePattern(unittest.TestCase):
 
     def test_get_exc(self) -> None:
         with self.assertRaises(NotConfiguredYet) as exc:
-            BytesStoragePattern(name="test").get()
+            BytesStoragePattern(typename="continuous", name="test").get()
         self.assertEqual(
             "BytesStoragePattern not configured yet", exc.exception.args[0]
         )
 
-    def test_to_from_config(self) -> None:
+    def test_read_write_config(self) -> None:
         path = TEST_DATA_DIR / "test.ini"
         ref = self._get_example_pattern()
-        ref.to_config(path)
-        res = BytesStoragePattern.from_config(path, "cbs_example")
+        ref.write(path)
+        res = BytesStoragePattern.read(path, "cbs_example")
 
         with self.subTest(test="storage"):
             self.assertDictEqual(ref._kw, res._kw)
 
-        for (name, rf), (_, rs) in zip(ref, res):
+        for (name, rf), (_, rs) in zip(ref._p.items(), res._p.items()):
             with self.subTest(test=name):
                 for (par, rf_kw), rs_kw in zip(
                         rf._kw.items(), rs._kw.values()
@@ -557,26 +561,33 @@ class TestBytesStoragePattern(unittest.TestCase):
 
     @staticmethod
     def _get_example_pattern() -> BytesStoragePattern:
-        pattern = BytesStoragePattern(name="cbs_example")
+        pattern = BytesStoragePattern(
+            name="cbs_example", typename="continuous"
+        )
         pattern.configure(
             f0=BytesFieldPattern(
+                typename="",
                 fmt=Code.U16,
                 expected=1,
                 order=Code.BIG_ENDIAN,
             ),
             f1=BytesFieldPattern(
+                typename="",
                 fmt=Code.U8,
                 expected=2,
             ),
             f2=BytesFieldPattern(
+                typename="",
                 fmt=Code.I8,
                 expected=-1,
             ),
             f3=BytesFieldPattern(
+                typename="",
                 fmt=Code.U8,
                 expected=2,
             ),
             f4=BytesFieldPattern(
+                typename="",
                 fmt=Code.I8,
                 expected=1,
             )

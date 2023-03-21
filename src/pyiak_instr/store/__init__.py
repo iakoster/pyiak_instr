@@ -6,7 +6,7 @@ Store (:mod:`pyiak_instr`)
 Package with classes for store some data.
 """
 from ._bin import (
-    BytesFieldParameters,
+    BytesFieldStruct,
     BytesField,
     BytesFieldPattern,
     BytesStoragePattern,
@@ -17,7 +17,7 @@ from ._common import BitVector
 
 __all__ = [
     "BitVector",
-    "BytesFieldParameters",
+    "BytesFieldStruct",
     "BytesField",
     "BytesFieldPattern",
     "BytesStoragePattern",
