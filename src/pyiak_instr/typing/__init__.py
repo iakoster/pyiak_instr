@@ -10,19 +10,19 @@ from ._common import (
     WithApi,
     WithBaseStringMethods,
 )
-from ._store import (
-    BytesFieldABC,
+from ._pattern import (
+    EditablePatternABC,
+    MetaPatternABC,
     PatternABC,
-    PatternStorageABC,
     WritablePatternABC,
 )
 
 
 __all__ = [
-    "BytesFieldABC",
     "ContextManager",
+    "EditablePatternABC",
+    "MetaPatternABC",
     "PatternABC",
-    "PatternStorageABC",
     "SupportsInitKwargs",
     "WithApi",
     "WithBaseStringMethods",

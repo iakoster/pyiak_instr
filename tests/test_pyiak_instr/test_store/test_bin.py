@@ -35,7 +35,7 @@ class TestBytesFieldStruct(unittest.TestCase):
             BytesFieldStruct(
                 start=4,
                 fmt=Code.U32,
-                expected=-100,
+                bytes_expected=-100,
             ),
             bytes_expected=0,
             default=b"",
@@ -54,7 +54,7 @@ class TestBytesFieldStruct(unittest.TestCase):
         obj = BytesFieldStruct(
             start=4,
             fmt=Code.U32,
-            expected=-100,
+            bytes_expected=-100,
         )
         cases = (
             (b"\x00\x00\x00\x01", 1),
@@ -69,7 +69,7 @@ class TestBytesFieldStruct(unittest.TestCase):
         obj = BytesFieldStruct(
             start=4,
             fmt=Code.U32,
-            expected=-100,
+            bytes_expected=-100,
             order=Code.BIG_ENDIAN,
         )
         cases = (
@@ -85,7 +85,7 @@ class TestBytesFieldStruct(unittest.TestCase):
         obj = BytesFieldStruct(
             start=0,
             fmt=Code.I16,
-            expected=2,
+            bytes_expected=2,
             order=Code.LITTLE_ENDIAN,
         )
         with self.subTest(test="finite True"):
@@ -96,7 +96,7 @@ class TestBytesFieldStruct(unittest.TestCase):
         obj = BytesFieldStruct(
             start=0,
             fmt=Code.I16,
-            expected=-1,
+            bytes_expected=-1,
             order=Code.LITTLE_ENDIAN,
         )
         with self.subTest(test="infinite True"):
@@ -109,13 +109,13 @@ class TestBytesFieldStruct(unittest.TestCase):
             (BytesFieldStruct(
                 start=-4,
                 fmt=Code.I16,
-                expected=1,
+                bytes_expected=1,
                 order=Code.LITTLE_ENDIAN,
             ), -2),
             (BytesFieldStruct(
                 start=-2,
                 fmt=Code.I16,
-                expected=1,
+                bytes_expected=1,
                 order=Code.LITTLE_ENDIAN,
             ), None)
         )
@@ -147,7 +147,7 @@ class TestBytesField(unittest.TestCase):
                 f0=BytesFieldStruct(
                     start=0,
                     fmt=Code.U32,
-                    expected=-1,
+                    bytes_expected=-1,
                     order=Code.BIG_ENDIAN,
                 )
             )
@@ -351,7 +351,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
             f0=BytesFieldStruct(
                 start=0,
                 fmt=Code.U32,
-                expected=1,
+                bytes_expected=1,
             ),
         )
 

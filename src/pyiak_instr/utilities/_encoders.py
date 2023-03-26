@@ -15,6 +15,7 @@ __all__ = ["BytesEncoder", "StringEncoder"]
 
 
 # todo: add string support
+# todo: ContentType
 class BytesEncoder:
     """
     Represents class for encoding/decoding numbers and arrays to/from bytes.

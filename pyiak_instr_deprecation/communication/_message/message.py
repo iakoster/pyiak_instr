@@ -615,7 +615,7 @@ class FieldMessage(object):
         for i_field, field in enumerate(fields):
 
             field.start = next_start_byte
-            next_start_byte += field.expected * field.wordsize
+            next_start_byte += field.bytes_expected * field.wordsize
 
             if field.finite:
                 field.stop_byte = next_start_byte
@@ -637,7 +637,7 @@ class FieldMessage(object):
                     field.stop_byte = next_start_byte
                 else:
                     field.stop_byte = None
-                next_start_byte -= field.expected * field.wordsize
+                next_start_byte -= field.bytes_expected * field.wordsize
                 field.start = next_start_byte
 
             else:
@@ -651,7 +651,7 @@ class FieldMessage(object):
     def _validate_content(self) -> None:
         """Validate content."""
         for field in self:
-            if not (field.words_count or field.may_be_empty):
+            if not (field.words_length or field.may_be_empty):
                 raise MessageContentError(
                     self.__class__.__name__, field.name, "field is empty"
                 )
