@@ -13,12 +13,14 @@ import numpy as np
 import numpy.typing as npt
 
 from ..core import Code
-from ..utilities import BytesEncoder
-from ..typing import PatternABC
+from ..utilities import BytesEncoder, split_complex_dict
+from ..exceptions import NotConfiguredYet
+from ..types import PatternABC
 from ..types.store import (
     BytesFieldABC,
     BytesFieldStructProtocol,
     BytesStorageABC,
+    ContinuousBytesStoragePatternABC,
 )
 
 
@@ -27,7 +29,7 @@ __all__ = [
     "BytesFieldStruct",
     "ContinuousBytesStorage",
     "BytesFieldPattern",
-    # "BytesStoragePattern",
+    "BytesStoragePattern",
 ]
 
 
@@ -121,11 +123,8 @@ class BytesFieldStruct(BytesFieldStructProtocol):
             True - content is correct, False - not.
         """
         if self.infinite:
-            if len(content) % self.word_length:
-                return False
-        elif len(content) != self.bytes_expected:
-            return False
-        return True
+            return not(len(content) % self.word_length)
+        return len(content) == self.bytes_expected
 
     @property
     def infinite(self) -> bool:
@@ -295,178 +294,65 @@ class BytesFieldPattern(PatternABC[BytesFieldStruct]):
         return self._target(**kwargs)
 
 
-# todo: to metaclass? (because uses for generate new class)
-# class BytesStoragePattern(
-#     MetaPatternABC[ContinuousBytesStorage, BytesFieldPattern],
-#     WritablePatternABC,
-# ):
-#     """
-#     Represents pattern for bytes storage.
-#
-#     Parameters
-#     ----------
-#     typename: {'continuous'}
-#         typename of storage.
-#     **kwargs: Any
-#         parameters for storage initialization.
-#     """
-#
-#     _target_options = {}
-#     _target_default = ContinuousBytesStorage
-#
-#     def __init__(self, typename: str, name: str, **kwargs: Any):
-#         if typename != "continuous":
-#             raise ValueError(f"invalid typename: '{typename}'")
-#         super().__init__(typename, name, **kwargs)
-#
-#     def get(
-#         self, changes_allowed: bool = False, **additions: Any
-#     ) -> ContinuousBytesStorage:
-#         """
-#         Get initialized storage.
-#
-#         Parameters
-#         ----------
-#         changes_allowed: bool, default = False
-#             allows situations where keys from the pattern overlap with kwargs.
-#             If False, it causes an error on intersection, otherwise the
-#             `additions` take precedence.
-#         **additions: Any
-#             additional initialization parameters. Those keys that are
-#             separated by "__" will be defined as parameters for other
-#             patterns target, otherwise for the storage target.
-#
-#         Returns
-#         -------
-#         ContinuousBytesStorage
-#             initialized storage.
-#
-#         Raises
-#         ------
-#         AssertionError
-#             if in some reason typename is invalid.
-#         NotConfiguredYet
-#             if patterns list is empty.
-#         """
-#         if len(self._p) == 0:
-#             raise NotConfiguredYet(self)
-#
-#         for_field, for_storage = split_complex_dict(
-#             additions, without_sep="other"
-#         )
-#
-#         if self._tn == "continuous":
-#             return self._get_continuous(for_storage, for_field)
-#         raise AssertionError(f"invalid typename: '{self._tn}'")
-#
-#     def _get_continuous(
-#         self,
-#         for_storage: dict[str, Any],
-#         for_fields: dict[str, dict[str, Any]],
-#     ) -> ContinuousBytesStorage:
-#         """
-#         Get initialized continuous storage.
-#
-#         Parameters
-#         ----------
-#         for_storage: dict[str, Any]:
-#             dictionary with parameters for storage in format
-#             {PARAMETER: VALUE}.
-#         for_fields: dict[str, dict[str, Any]]
-#             dictionary with parameters for fields in format
-#             {FIELD: {PARAMETER: VALUE}}.
-#
-#         Returns
-#         -------
-#         ContinuousBytesStorage
-#             initialized storage.
-#         """
-#         storage_kw = self._kw
-#         if len(for_storage) != 0:
-#             storage_kw.update(for_storage)
-#
-#         fields, inf = self._get_fields_before_inf(for_fields)
-#         if len(fields) != len(self._p):
-#             after, next_ = self._get_fields_after_inf(for_fields, inf)
-#             fields.update(after)
-#             object.__setattr__(fields[inf], "_stop", fields[next_].start)
-#
-#         return self._target(**storage_kw, **fields)  # type: ignore[arg-type]
-#
-#     def _get_fields_after_inf(
-#         self,
-#         fields_kw: dict[str, dict[str, Any]],
-#         inf: str,
-#     ) -> tuple[dict[str, BytesFieldStruct], str]:
-#         """
-#         Get the dictionary of fields that go from infinite field
-#         (not included) to end.
-#
-#         Parameters
-#         ----------
-#         fields_kw : dict[str, dict[str, Any]]
-#             dictionary of kwargs for fields.
-#         inf : str
-#             name of infinite fields.
-#
-#         Returns
-#         -------
-#         tuple[dict[str, BytesFieldStruct], str]
-#             fields - dictionary of fields from infinite (not included);
-#             next - name of next field after infinite.
-#         """
-#         rev_names = list(self._p)[::-1]
-#         fields, start, next_ = [], 0, ""
-#         for name in rev_names:
-#             if name == inf:
-#                 break
-#
-#             pattern = self._p[name]
-#             start -= pattern["expected"] * BytesEncoder.get_bytesize(
-#                 pattern["fmt"]
-#             )
-#             field_kw = fields_kw[name] if name in fields_kw else {}
-#             field_kw.update(start=start)
-#             fields.append(
-#                 (name, pattern.get(changes_allowed=True, **field_kw))
-#             )
-#             next_ = name
-#
-#         return dict(fields[::-1]), next_
-#
-#     def _get_fields_before_inf(
-#         self, fields_kw: dict[str, dict[str, Any]]
-#     ) -> tuple[dict[str, BytesFieldStruct], str]:
-#         """
-#         Get the dictionary of fields that go up to and including the infinite
-#         field.
-#
-#         Parameters
-#         ----------
-#         fields_kw : dict[str, dict[str, Any]]
-#             dictionary of kwargs for fields.
-#
-#         Returns
-#         -------
-#         tuple[dict[str, BytesFieldStruct], str]
-#             fields - dictionary of fields up to infinite (include);
-#             inf - name of infinite field. Empty if there is no found.
-#         """
-#         fields, start, inf = {}, 0, ""
-#         for name, pattern in self._p.items():
-#             field_kw = fields_kw[name] if name in fields_kw else {}
-#             field_kw.update(start=start)
-#
-#             # not supported, but it is correct behaviour
-#             # if len(set(for_field).intersection(pattern)) == 0:
-#             #     fields[name] = pattern.get(**for_field)
-#             fields[name] = pattern.get(changes_allowed=True, **field_kw)
-#
-#             stop = fields[name].stop
-#             if stop is None:
-#                 inf = name
-#                 break
-#             start = stop
-#
-#         return fields, inf
-#
+class BytesStoragePattern(
+    ContinuousBytesStoragePatternABC[
+        ContinuousBytesStorage, BytesFieldPattern, BytesFieldStruct
+    ]
+):
+    """
+    Represents pattern for bytes storage.
+    """
+
+    _options = {"continuous": ContinuousBytesStorage}
+
+    _sub_p_type = BytesFieldPattern
+
+    def get(
+        self, changes_allowed: bool = False, **additions: Any
+    ) -> ContinuousBytesStorage:
+        """
+        Get initialized class instance with parameters from pattern and from
+        `additions`.
+
+        Parameters
+        ----------
+        changes_allowed: bool, default = False
+            allows situations where keys from the pattern overlap with kwargs.
+            If False, it causes an error on intersection, otherwise the
+            `additions` take precedence.
+        **additions: Any
+            additional initialization parameters. Those keys that are
+            separated by "__" will be defined as parameters for other
+            patterns target, otherwise for the storage target.
+
+        Returns
+        -------
+        ContinuousBytesStorage
+            initialized target class.
+
+        Raises
+        ------
+        AssertionError
+            if in some reason typename is invalid.
+        NotConfiguredYet
+            if patterns list is empty.
+        """
+        if len(self._sub_p) == 0:
+            raise NotConfiguredYet(self)
+
+        for_field, for_storage = split_complex_dict(
+            additions, without_sep="other"
+        )
+
+        if not changes_allowed:
+            intersection = set(self._kw).intersection(set(for_storage))
+            if len(intersection) > 0:
+                raise SyntaxError(
+                    f"keyword argument(s) repeated: {', '.join(intersection)}"
+                )
+
+        if self._tn == "continuous":
+            return self._get_continuous(
+                changes_allowed, for_storage, for_field
+            )
+        raise AssertionError(f"invalid typename: '{self._tn}'")

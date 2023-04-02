@@ -39,15 +39,15 @@ class TestBytesFieldStruct(unittest.TestCase):
             ),
             bytes_expected=0,
             default=b"",
-            expected=0,
             fmt=Code.U32,
+            has_default=False,
             infinite=True,
             order=Code.BIG_ENDIAN,
-            slice=slice(4, None),
+            slice_=slice(4, None),
             start=4,
             stop=None,
-            word_size=4,
-            check_attrs=True,
+            word_length=4,
+            words_expected=0
         )
 
     def test_decode(self) -> None:
@@ -74,8 +74,8 @@ class TestBytesFieldStruct(unittest.TestCase):
         )
         cases = (
             (1, b"\x00\x00\x00\x01"),
-            # ([1, 2], b"\x00\x00\x00\x01\x00\x00\x00\x02"),
-            # (np.array([1, 0x22]), b"\x00\x00\x00\x01\x00\x00\x00\x22"),
+            ([1, 2], b"\x00\x00\x00\x01\x00\x00\x00\x02"),
+            (np.array([1, 0x22]), b"\x00\x00\x00\x01\x00\x00\x00\x22"),
         )
         for i_case, (data, ref) in enumerate(cases):
             with self.subTest(test=i_case):
@@ -85,7 +85,7 @@ class TestBytesFieldStruct(unittest.TestCase):
         obj = BytesFieldStruct(
             start=0,
             fmt=Code.I16,
-            bytes_expected=2,
+            bytes_expected=4,
             order=Code.LITTLE_ENDIAN,
         )
         with self.subTest(test="finite True"):
@@ -549,7 +549,7 @@ class TestBytesStoragePattern(unittest.TestCase):
         with self.subTest(test="storage"):
             self.assertDictEqual(ref._kw, res._kw)
 
-        for (name, rf), (_, rs) in zip(ref._p.items(), res._p.items()):
+        for (name, rf), (_, rs) in zip(ref._sub_p.items(), res._sub_p.items()):
             with self.subTest(test=name):
                 for (par, rf_kw), rs_kw in zip(
                         rf._kw.items(), rs._kw.values()

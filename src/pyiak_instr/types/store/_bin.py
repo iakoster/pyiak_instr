@@ -17,23 +17,24 @@ from typing import (
 import numpy as np
 import numpy.typing as npt
 
+from .._pattern import MetaPatternABC, PatternABC, WritablePatternABC
 from ...utilities import BytesEncoder
 from ...rwfile import RWConfig
 from ...exceptions import NotConfiguredYet
-from ...typing import MetaPatternABC, PatternABC, WritablePatternABC
 
 
 __all__ = [
     "BytesFieldABC",
     "BytesFieldStructProtocol",
     "BytesStorageABC",
+    "BytesStoragePatternABC",
+    "ContinuousBytesStoragePatternABC",
 ]
 
 
 StructT = TypeVar("StructT", bound="BytesFieldStructProtocol")
 ParserT = TypeVar("ParserT", bound="BytesFieldABC[Any]")
 StorageT = TypeVar("StorageT", bound="BytesStorageABC[Any, Any]")
-OptionsT = TypeVar("OptionsT")
 PatternT = TypeVar("PatternT", bound=PatternABC[Any])
 
 
@@ -44,7 +45,7 @@ class BytesFieldStructProtocol(Protocol):
 
     default: bytes
 
-    _stop: int | None = None
+    _stop: int | None
 
     @abstractmethod
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
@@ -82,6 +83,16 @@ class BytesFieldStructProtocol(Protocol):
             True - default more than zero.
         """
         return len(self.default) != 0
+
+    @property
+    def stop(self) -> int | None:
+        """
+        Returns
+        -------
+        int | None
+            index of stop byte. If None - stop is end of bytes.
+        """
+        return self._stop
 
 
 class BytesFieldABC(ABC, Generic[StructT]):
@@ -306,7 +317,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         if len(content) != 0 and len(fields) != 0:
             raise TypeError("takes a message or fields (both given)")
 
-        if content is not None:
+        if len(content) != 0:
             self._extract(content)
         elif len(fields) != 0:
             self._set(fields)
@@ -333,7 +344,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
 
     def _check_fields_list(self, fields: set[str]) -> None:
         diff = set(self._f).symmetric_difference(fields)
-        for name in diff:
+        for name in diff.copy():
             if name in self:
                 parser = self[name]
                 if parser.has_default or parser.infinite or len(parser) != 0:
@@ -461,15 +472,15 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
 
 
 class BytesStoragePatternABC(
-    MetaPatternABC[OptionsT, PatternT],
+    MetaPatternABC[StorageT, PatternT],
     WritablePatternABC,
-    Generic[OptionsT, PatternT],
+    Generic[StorageT, PatternT],
 ):
 
     @abstractmethod
     def get(
         self, changes_allowed: bool = False, **additions: Any
-    ) -> OptionsT:
+    ) -> StorageT:
         ...
 
     def write(self, path: Path) -> None:
@@ -481,11 +492,11 @@ class BytesStoragePatternABC(
         path : Path
             path to config file.
         """
-        if len(self._p) == 0:
+        if len(self._sub_p) == 0:
             raise NotConfiguredYet(self)
         pars = {
             self._name: self.__init_kwargs__(),
-            **{n: p.__init_kwargs__() for n, p in self._p.items()}
+            **{n: p.__init_kwargs__() for n, p in self._sub_p.items()}
         }
 
         with RWConfig(path) as cfg:
@@ -525,20 +536,27 @@ class BytesStoragePatternABC(
             opts = cfg.api.options(name)
             opts.pop(opts.index(name))
             return cls(**cfg.get(name, name)).configure(
-                **{f: cls._sub_pattern(**cfg.get(name, f)) for f in opts}
+                **{f: cls._sub_p_type(**cfg.get(name, f)) for f in opts}
             )
 
 
 class ContinuousBytesStoragePatternABC(
-    BytesStoragePatternABC[OptionsT, PatternT],
-    Generic[OptionsT, PatternT],
+    BytesStoragePatternABC[StorageT, PatternT],
+    Generic[StorageT, PatternT, StructT],
 ):
+
+    @abstractmethod
+    def get(
+        self, changes_allowed: bool = False, **additions: Any
+    ) -> StorageT:
+        ...
 
     def _get_continuous(
         self,
+        changes_allowed: bool,
         for_storage: dict[str, Any],
         for_fields: dict[str, dict[str, Any]],
-    ) -> PatternT:
+    ) -> StorageT:
         """
         Get initialized continuous storage.
 
@@ -556,21 +574,39 @@ class ContinuousBytesStoragePatternABC(
         ContinuousBytesStorage
             initialized storage.
         """
-        storage_kw = self._kw
+        storage_kw = self._kw.copy()
         if len(for_storage) != 0:
+
+            if not changes_allowed:
+                intersection = set(storage_kw).intersection(set(for_storage))
+                if len(intersection):
+                    raise SyntaxError(
+                        "keyword argument(s) repeated: "
+                        f"{', '.join(intersection)}"
+                    )
+
             storage_kw.update(for_storage)
 
-        fields, inf = self._get_fields_before_inf(for_fields)
-        if len(fields) != len(self._p):
-            after, next_ = self._get_fields_after_inf(for_fields, inf)
+        if "fields" in storage_kw:
+            raise TypeError(
+                "'fields' is an invalid keyword argument for continuous "
+                "storage"
+            )
+
+        fields, inf = self._get_fields_before_inf(changes_allowed, for_fields)
+        if len(fields) != len(self._sub_p):
+            after, next_ = self._get_fields_after_inf(
+                changes_allowed, for_fields, inf
+            )
             fields.update(after)
             object.__setattr__(fields[inf], "_stop", fields[next_].start)
 
-        # todo: Incompatible return value type (got "OptionsT", expected "PatternT")
-        return self._target(**storage_kw, **fields)
+        storage_kw["fields"] = fields
+        return self._target(**storage_kw)  # type: ignore[arg-type]
 
     def _get_fields_after_inf(
         self,
+        changes_allowed: bool,
         fields_kw: dict[str, dict[str, Any]],
         inf: str,
     ) -> tuple[dict[str, StructT], str]:
@@ -587,31 +623,31 @@ class ContinuousBytesStoragePatternABC(
 
         Returns
         -------
-        tuple[dict[str, BytesFieldStruct], str]
+        tuple[dict[str, OptionsT], str]
             fields - dictionary of fields from infinite (not included);
             next - name of next field after infinite.
         """
-        rev_names = list(self._p)[::-1]
+        rev_names = list(self._sub_p)[::-1]
         fields, start, next_ = [], 0, ""
         for name in rev_names:
             if name == inf:
                 break
 
-            pattern = self._p[name]
+            pattern = self._sub_p[name]
             start -= pattern["expected"] * BytesEncoder.get_bytesize(
-                pattern["fmt"]
+                pattern["fmt"]  # todo: not in pattern type
             )
             field_kw = fields_kw[name] if name in fields_kw else {}
             field_kw.update(start=start)
-            fields.append(
-                (name, pattern.get(changes_allowed=True, **field_kw))
-            )
+            fields.append((
+                name, pattern.get(changes_allowed=changes_allowed, **field_kw)
+            ))
             next_ = name
 
         return dict(fields[::-1]), next_
 
     def _get_fields_before_inf(
-        self, fields_kw: dict[str, dict[str, Any]]
+        self, changes_allowed: bool, fields_kw: dict[str, dict[str, Any]]
     ) -> tuple[dict[str, StructT], str]:
         """
         Get the dictionary of fields that go up to and including the infinite
@@ -624,19 +660,21 @@ class ContinuousBytesStoragePatternABC(
 
         Returns
         -------
-        tuple[dict[str, BytesFieldStruct], str]
+        tuple[dict[str, OptionsT], str]
             fields - dictionary of fields up to infinite (include);
             inf - name of infinite field. Empty if there is no found.
         """
         fields, start, inf = {}, 0, ""
-        for name, pattern in self._p.items():
+        for name, pattern in self._sub_p.items():
             field_kw = fields_kw[name] if name in fields_kw else {}
             field_kw.update(start=start)
 
             # not supported, but it is correct behaviour
             # if len(set(for_field).intersection(pattern)) == 0:
             #     fields[name] = pattern.get(**for_field)
-            fields[name] = pattern.get(changes_allowed=True, **field_kw)
+            fields[name] = pattern.get(
+                changes_allowed=changes_allowed, **field_kw
+            )
 
             stop = fields[name].stop
             if stop is None:

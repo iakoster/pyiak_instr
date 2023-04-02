@@ -9,7 +9,7 @@ from ._bin import (
     BytesField,
     BytesFieldStruct,
     BytesFieldPattern,
-    # BytesStoragePattern,
+    BytesStoragePattern,
     ContinuousBytesStorage,
 )
 from ._common import BitVector
@@ -20,6 +20,6 @@ __all__ = [
     "BytesField",
     "BytesFieldStruct",
     "BytesFieldPattern",
-    # "BytesStoragePattern",
+    "BytesStoragePattern",
     "ContinuousBytesStorage",
 ]
