@@ -1,3 +1,9 @@
+"""
+==========================
+Types (:mod:`pyiak_instr`)
+==========================
+"""
+# pylint: disable=duplicate-code
 from . import store
 from ._pattern import (
     EditablePatternABC,

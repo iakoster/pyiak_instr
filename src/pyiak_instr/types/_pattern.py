@@ -1,3 +1,4 @@
+"""Private module of ``pyiak_instr.types`` with pattern types."""
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Self, TypeVar
@@ -107,6 +108,9 @@ class PatternABC(ABC, Generic[OptionsT]):
 
 
 class EditablePatternABC(ABC):
+    """
+    Represents abstract class with methods to edit parameters.
+    """
 
     _kw: dict[str, Any]
 
@@ -121,8 +125,8 @@ class EditablePatternABC(ABC):
         value : Any
             new parameter value.
 
-        Returns
-        -------
+        Raises
+        ------
         KeyError
             if parameter name is already exists.
         """

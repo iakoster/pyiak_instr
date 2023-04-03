@@ -43,7 +43,7 @@ class BytesFieldStruct(BytesFieldStructProtocol):
     """the number of bytes in the message from which the fields begin."""
 
     bytes_expected: int
-    """expected bytes count for field. If less than 1, from the start byte 
+    """expected bytes count for field. If less than 1, from the start byte
     to the end of the message."""
 
     fmt: Code
@@ -123,7 +123,7 @@ class BytesFieldStruct(BytesFieldStructProtocol):
             True - content is correct, False - not.
         """
         if self.infinite:
-            return not(len(content) % self.word_length)
+            return len(content) % self.word_length == 0
         return len(content) == self.bytes_expected
 
     @property
@@ -214,9 +214,7 @@ class BytesField(BytesFieldABC[BytesFieldStruct]):
         return self._storage.content[self._struct.slice_]
 
 
-class ContinuousBytesStorage(
-    BytesStorageABC[BytesField, BytesFieldStruct]
-):
+class ContinuousBytesStorage(BytesStorageABC[BytesField, BytesFieldStruct]):
     """
     Represents continuous storage where data storage in bytes.
 
@@ -336,6 +334,9 @@ class BytesStoragePattern(
             if in some reason typename is invalid.
         NotConfiguredYet
             if patterns list is empty.
+        SyntaxError
+            if changes are not allowed, but there is an attempt to modify
+            the parameter.
         """
         if len(self._sub_p) == 0:
             raise NotConfiguredYet(self)

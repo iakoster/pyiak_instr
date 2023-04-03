@@ -1,8 +1,9 @@
 """
 =================================
-Store (:mod:`pyiak_instr.typing`)
+Store (:mod:`pyiak_instr.types`)
 =================================
 """
+# pylint: disable=duplicate-code
 from ._bin import (
     BytesFieldABC,
     BytesFieldStructProtocol,

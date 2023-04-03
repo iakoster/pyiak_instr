@@ -1,4 +1,5 @@
-"""Private module of ``pyiak_instr.store`` with types of store module."""
+"""Private module of ``pyiak_instr.types.store`` with types for store
+module."""
 from __future__ import annotations
 from pathlib import Path
 from dataclasses import dataclass
@@ -40,6 +41,9 @@ PatternT = TypeVar("PatternT", bound=PatternABC[Any])
 
 @dataclass(frozen=True, kw_only=True)
 class BytesFieldStructProtocol(Protocol):
+    """
+    Represents protocol for field structure.
+    """
 
     start: int
 
@@ -49,30 +53,81 @@ class BytesFieldStructProtocol(Protocol):
 
     @abstractmethod
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
-        ...
+        """
+        Decode content from bytes with parameters from struct.
+
+        Parameters
+        ----------
+        content : bytes
+            content for decoding.
+
+        Returns
+        -------
+        npt.NDArray[np.int_ | np.float_]
+            decoded content.
+        """
 
     @abstractmethod
     def encode(self, content: int | float | Iterable[int | float]) -> bytes:
-        ...
+        """
+        Encode content to bytes with parameters from struct.
+
+        Parameters
+        ----------
+        content : int | float | Iterable[int | float]
+            content for encoding.
+
+        Returns
+        -------
+        bytes
+            encoded content.
+        """
 
     @abstractmethod
-    def validate(self, content: bytes) -> bool:
-        ...
+    def validate(self, content: bytes) -> bool:  # todo: to verify.
+        """
+        Verify that `content` is correct for the given field structure.
+
+        Parameters
+        ----------
+        content : bytes
+            content to verifying.
+
+        Returns
+        -------
+        bool
+            True - content is correct, False - is not.
+        """
 
     @property
     @abstractmethod
     def infinite(self) -> bool:
-        ...
+        """
+        Returns
+        -------
+        bool
+            if True - field is infinite (from empty to any).
+        """
 
     @property
     @abstractmethod
     def slice_(self) -> slice:
-        ...
+        """
+        Returns
+        -------
+        slice
+            slice with start and stop indexes of field.
+        """
 
     @property
     @abstractmethod
     def word_length(self) -> int:
-        ...
+        """
+        Returns
+        -------
+        int
+            word bytesize.
+        """
 
     @property
     def has_default(self) -> bool:
@@ -290,6 +345,10 @@ class BytesFieldABC(ABC, Generic[StructT]):
 
 
 class BytesStorageABC(ABC, Generic[ParserT, StructT]):
+    """
+    Represents abstract class for bytes storage.
+    """
+
     def __init__(self, name: str, fields: dict[str, StructT]) -> None:
         self._name = name
         self._f = fields
@@ -298,7 +357,6 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
     @abstractmethod
     def __getitem__(self, name: str) -> ParserT:
         """Get field parser."""
-        ...
 
     def decode(self) -> dict[str, npt.NDArray[np.int_ | np.float_]]:
         """
@@ -324,6 +382,27 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         content: bytes = b"",
         **fields: int | float | Iterable[int | float],
     ) -> Self:
+        """
+        Encode new content to storage.
+
+        Parameters
+        ----------
+        content : bytes, default=b''
+            new full content for storage.
+        **fields : int | float | Iterable[int | float]
+            content for each field.
+
+        Returns
+        -------
+        Self
+            self instance.
+
+        Raises
+        ------
+        TypeError
+            if trying to set full content and content for each field;
+            if full message or fields list is empty.
+        """
         if len(content) != 0 and len(fields) != 0:
             raise TypeError("takes a message or fields (both given)")
 
@@ -337,6 +416,12 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         return self
 
     def items(self) -> Iterable[tuple[str, ParserT]]:
+        """
+        Returns
+        -------
+        Iterable[tuple[str, ParserT]]
+            Iterable of names and parsers.
+        """
         return ((n, self[n]) for n in self._f)
 
     def _change_field_content(self, name: str, content: bytes) -> None:
@@ -353,6 +438,19 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         self._c[self[name].slice_] = content
 
     def _check_fields_list(self, fields: set[str]) -> None:
+        """
+        Check that fields names is correct.
+
+        Parameters
+        ----------
+        fields : set[str]
+            set of field names for setting.
+
+        Raises
+        ------
+        AttributeError
+            if extra or missing field names founded.
+        """
         diff = set(self._f).symmetric_difference(fields)
         for name in diff.copy():
             if name in self:
@@ -416,6 +514,14 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
     def _set(
         self, fields: dict[str, int | float | Iterable[int | float]]
     ) -> None:
+        """
+        Set fields content.
+
+        Parameters
+        ----------
+        fields : dict[str, int | float | Iterable[int | float]]
+            dictionary of fields content where key is a field name.
+        """
         if len(self) == 0:
             self._set_full_content(fields)
         else:
@@ -427,6 +533,19 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
     def _set_full_content(
         self, fields: dict[str, int | float | Iterable[int | float]]
     ) -> None:
+        """
+        Set content to empty field.
+
+        Parameters
+        ----------
+        fields : dict[str, int | float | Iterable[int | float]]
+            dictionary of fields content where key is a field name.
+
+        Raises
+        ------
+        AssertionError
+            if in some reason message is not empty.
+        """
         assert len(self) == 0, "message must be empty"
 
         self._check_fields_list(set(fields))
@@ -486,6 +605,9 @@ class BytesStoragePatternABC(
     WritablePatternABC,
     Generic[StorageT, PatternT],
 ):
+    """
+    Represent abstract class of bytes storage.
+    """
 
     @abstractmethod
     def get(
@@ -501,12 +623,17 @@ class BytesStoragePatternABC(
         ----------
         path : Path
             path to config file.
+
+        Raises
+        ------
+        NotConfiguredYet
+            is patterns is not configured yet.
         """
         if len(self._sub_p) == 0:
             raise NotConfiguredYet(self)
         pars = {
             self._name: self.__init_kwargs__(),
-            **{n: p.__init_kwargs__() for n, p in self._sub_p.items()}
+            **{n: p.__init_kwargs__() for n, p in self._sub_p.items()},
         }
 
         with RWConfig(path) as cfg:
@@ -540,7 +667,7 @@ class BytesStoragePatternABC(
         """
         if len(keys) != 1:
             raise TypeError(f"given {len(keys)} keys, expect one")
-        name, = keys
+        (name,) = keys
 
         with RWConfig(path) as cfg:
             opts = cfg.api.options(name)
@@ -555,6 +682,12 @@ class ContinuousBytesStoragePatternABC(
     BytesStoragePatternABC[StorageT, PatternT],
     Generic[StorageT, PatternT, StructT],
 ):
+    """
+    Represents methods for configure continuous storage.
+
+    It's means `start` of the field is equal to `stop` of previous field
+    (e.g. without gaps in content).
+    """
 
     @abstractmethod
     def get(
@@ -573,6 +706,10 @@ class ContinuousBytesStoragePatternABC(
 
         Parameters
         ----------
+        changes_allowed: bool
+            allows situations where keys from the pattern overlap with kwargs.
+            If False, it causes an error on intersection, otherwise the
+            `additions` take precedence.
         for_storage: dict[str, Any]:
             dictionary with parameters for storage in format
             {PARAMETER: VALUE}.
@@ -584,10 +721,17 @@ class ContinuousBytesStoragePatternABC(
         -------
         ContinuousBytesStorage
             initialized storage.
-        """
-        storage_kw = self._kw.copy()
-        if len(for_storage) != 0:
 
+        Raises
+        ------
+        SyntaxError
+            if changes are not allowed, but there is an attempt to modify
+            the parameter.
+        TypeError
+            if trying to set 'fields'.
+        """
+        storage_kw = self._kw.copy()  # todo: to separated method
+        if len(for_storage) != 0:
             if not changes_allowed:
                 intersection = set(storage_kw).intersection(set(for_storage))
                 if len(intersection):
@@ -627,6 +771,10 @@ class ContinuousBytesStoragePatternABC(
 
         Parameters
         ----------
+        changes_allowed: bool
+            allows situations where keys from the pattern overlap with kwargs.
+            If False, it causes an error on intersection, otherwise the
+            `additions` take precedence.
         fields_kw : dict[str, dict[str, Any]]
             dictionary of kwargs for fields.
         inf : str
@@ -650,9 +798,12 @@ class ContinuousBytesStoragePatternABC(
             )
             field_kw = fields_kw[name] if name in fields_kw else {}
             field_kw.update(start=start)
-            fields.append((
-                name, pattern.get(changes_allowed=changes_allowed, **field_kw)
-            ))
+            fields.append(
+                (
+                    name,
+                    pattern.get(changes_allowed=changes_allowed, **field_kw),
+                )
+            )
             next_ = name
 
         return dict(fields[::-1]), next_
@@ -666,6 +817,10 @@ class ContinuousBytesStoragePatternABC(
 
         Parameters
         ----------
+        changes_allowed: bool
+            allows situations where keys from the pattern overlap with kwargs.
+            If False, it causes an error on intersection, otherwise the
+            `additions` take precedence.
         fields_kw : dict[str, dict[str, Any]]
             dictionary of kwargs for fields.
 
