@@ -651,7 +651,7 @@ class FieldMessage(object):
     def _validate_content(self) -> None:
         """Validate content."""
         for field in self:
-            if not (field.words_length or field.may_be_empty):
+            if not (field.words_count or field.may_be_empty):
                 raise MessageContentError(
                     self.__class__.__name__, field.name, "field is empty"
                 )

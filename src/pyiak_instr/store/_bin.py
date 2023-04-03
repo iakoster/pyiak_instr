@@ -234,7 +234,7 @@ class ContinuousBytesStorage(
     def __init__(self, name: str, fields: dict[str, BytesFieldStruct]):
         for f_name, field in fields.items():
             if not isinstance(field, BytesFieldStruct):
-                raise TypeError(f"invalid type of {f_name}: {type(field)}")
+                raise TypeError(f"invalid type of '{f_name}': {type(field)}")
 
         super().__init__(name, fields)
 
@@ -253,8 +253,8 @@ class BytesFieldPattern(PatternABC[BytesFieldStruct]):
 
     _options = {"base": BytesFieldStruct}
 
-    def __init__(self, **parameters: Any) -> None:
-        super().__init__(typename="base", **parameters)
+    def __init__(self, typename: str = "base", **parameters: Any) -> None:
+        super().__init__(typename=typename, **parameters)
 
     def get(
         self, changes_allowed: bool = False, **additions: Any

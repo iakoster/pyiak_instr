@@ -158,6 +158,7 @@ class TestBytesFieldABC(unittest.TestCase):
         validate_object(
             self,
             self._instance,
+            bytes_count=5,
             content=b"\x01\x02\x03\x04\x05",
             content_=b"\x01\x02\x03\x04\x05",
             default=b"",
@@ -166,7 +167,7 @@ class TestBytesFieldABC(unittest.TestCase):
             name="test",
             slice_=slice(0, 5),
             struct=Struct(),
-            words_length=1,
+            words_count=5,
         )
 
     def test_decode(self) -> None:

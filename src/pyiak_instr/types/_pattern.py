@@ -2,8 +2,6 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Self, TypeVar
 
-from ..typing import SupportsInitKwargs
-
 
 __all__ = [
     "EditablePatternABC",
@@ -91,14 +89,16 @@ class PatternABC(ABC, Generic[OptionsT]):
         """Check that parameter in Pattern by name."""
         return name in self._kw
 
-    def __eq__(self, other: SupportsInitKwargs) -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Compare `__init_kwargs__` in two objects.
 
         Beware: not supports numpy arrays in __init_kwargs__.
         """
         if hasattr(other, "__init_kwargs__"):
-            return self.__init_kwargs__() == other.__init_kwargs__()
+            return (  # type: ignore[no-any-return]
+                self.__init_kwargs__() == other.__init_kwargs__()
+            )
         return False
 
     def __getitem__(self, name: str) -> Any:

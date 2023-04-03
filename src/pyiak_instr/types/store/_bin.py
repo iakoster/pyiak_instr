@@ -45,7 +45,7 @@ class BytesFieldStructProtocol(Protocol):
 
     default: bytes
 
-    _stop: int | None
+    _stop: int | None  # todo: stop to public, remove bytes expected
 
     @abstractmethod
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
@@ -165,6 +165,16 @@ class BytesFieldABC(ABC, Generic[StructT]):
         return self._struct.validate(content)
 
     @property
+    def bytes_count(self) -> int:
+        """
+        Returns
+        -------
+        int
+            bytes count of the content.
+        """
+        return len(self.content)
+
+    @property
     def default(self) -> bytes:
         """
         Returns
@@ -225,14 +235,14 @@ class BytesFieldABC(ABC, Generic[StructT]):
         return self._struct
 
     @property
-    def words_length(self) -> int:
+    def words_count(self) -> int:
         """
         Returns
         -------
         int
             count of words in the field.
         """
-        return self._struct.word_length
+        return self.bytes_count // self._struct.word_length
 
     def __bytes__(self) -> bytes:
         """
@@ -276,7 +286,7 @@ class BytesFieldABC(ABC, Generic[StructT]):
         int
             bytes count of the content.
         """
-        return len(self.content)
+        return self.bytes_count
 
 
 class BytesStorageABC(ABC, Generic[ParserT, StructT]):
@@ -353,7 +363,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         if len(diff) != 0:
             raise AttributeError(
                 "missing or extra fields were found: "
-                f"{', '.join(map(repr, diff))}"
+                f"{', '.join(map(repr, sorted(diff)))}"
             )
 
     def _encode_field_content(
@@ -540,6 +550,7 @@ class BytesStoragePatternABC(
             )
 
 
+# todo: tests - separated
 class ContinuousBytesStoragePatternABC(
     BytesStoragePatternABC[StorageT, PatternT],
     Generic[StorageT, PatternT, StructT],
@@ -602,7 +613,7 @@ class ContinuousBytesStoragePatternABC(
             object.__setattr__(fields[inf], "_stop", fields[next_].start)
 
         storage_kw["fields"] = fields
-        return self._target(**storage_kw)  # type: ignore[arg-type]
+        return self._target(**storage_kw)
 
     def _get_fields_after_inf(
         self,
@@ -634,7 +645,7 @@ class ContinuousBytesStoragePatternABC(
                 break
 
             pattern = self._sub_p[name]
-            start -= pattern["expected"] * BytesEncoder.get_bytesize(
+            start -= pattern["bytes_expected"] * BytesEncoder.get_bytesize(
                 pattern["fmt"]  # todo: not in pattern type
             )
             field_kw = fields_kw[name] if name in fields_kw else {}
