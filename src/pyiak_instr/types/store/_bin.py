@@ -46,10 +46,47 @@ class BytesFieldStructProtocol(Protocol):
     """
 
     start: int
+    """the number of bytes in the message from which the fields begin."""
 
-    default: bytes
+    stop: int | None
+    """index of stop byte. If None - stop is end of bytes."""
 
-    _stop: int | None  # todo: stop to public, remove bytes expected
+    bytes_expected: int
+    """expected bytes count for field. If less than 1, from the start byte
+    to the end of the message."""
+
+    default: bytes  # todo: to ContentType
+    """default value of the field."""
+
+    def __post_init__(self) -> None:
+        if self.stop == 0:
+            raise ValueError("'stop' can't be equal to zero")
+        if self.stop is not None and self.bytes_expected > 0:
+            raise TypeError("'bytes_expected' or 'stop' setting allowed")
+
+        if self.bytes_expected < 0:
+            object.__setattr__(self, "bytes_expected", 0)
+
+        if self.stop is not None:
+            if (
+                self.start >= 0
+                and self.stop > 0
+                or self.start < 0
+                and self.stop < 0
+            ):
+                object.__setattr__(
+                    self, "bytes_expected", self.stop - self.start
+                )
+
+        elif self.bytes_expected > 0:
+            stop = self.start + self.bytes_expected
+            if stop != 0:
+                object.__setattr__(self, "stop", stop)
+
+        if self.bytes_expected % self.word_bytesize:
+            raise ValueError(
+                "'bytes_expected' does not match an integer word count"
+            )
 
     @abstractmethod
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
@@ -101,32 +138,12 @@ class BytesFieldStructProtocol(Protocol):
 
     @property
     @abstractmethod
-    def infinite(self) -> bool:
-        """
-        Returns
-        -------
-        bool
-            if True - field is infinite (from empty to any).
-        """
-
-    @property
-    @abstractmethod
-    def slice_(self) -> slice:
-        """
-        Returns
-        -------
-        slice
-            slice with start and stop indexes of field.
-        """
-
-    @property
-    @abstractmethod
-    def word_length(self) -> int:
+    def word_bytesize(self) -> int:
         """
         Returns
         -------
         int
-            word bytesize.
+            count of bytes in one word.
         """
 
     @property
@@ -140,14 +157,34 @@ class BytesFieldStructProtocol(Protocol):
         return len(self.default) != 0
 
     @property
-    def stop(self) -> int | None:
+    def is_floating(self) -> bool:
         """
         Returns
         -------
-        int | None
-            index of stop byte. If None - stop is end of bytes.
+        bool
+            if True - field is floating (from empty to any).
         """
-        return self._stop
+        return self.bytes_expected == 0
+
+    @property
+    def slice_(self) -> slice:
+        """
+        Returns
+        -------
+        slice
+            slice with start and stop indexes of field.
+        """
+        return slice(self.start, self.stop)
+
+    @property
+    def words_expected(self) -> int:
+        """
+        Returns
+        -------
+        int
+            expected words count in the field. Returns 0 if field is infinite.
+        """
+        return self.bytes_expected // self.word_bytesize
 
 
 class BytesFieldABC(ABC, Generic[StructT]):
@@ -230,36 +267,6 @@ class BytesFieldABC(ABC, Generic[StructT]):
         return len(self.content)
 
     @property
-    def default(self) -> bytes:
-        """
-        Returns
-        -------
-        bytes
-            default content.
-        """
-        return self._struct.default
-
-    @property
-    def has_default(self) -> bool:
-        """
-        Returns
-        -------
-        bool
-            True - default more than zero.
-        """
-        return self._struct.has_default
-
-    @property
-    def infinite(self) -> bool:
-        """
-        Returns
-        -------
-        bool
-            Indicate that it is infinite field.
-        """
-        return self._struct.infinite
-
-    @property
     def name(self) -> str:
         """
         Returns
@@ -268,16 +275,6 @@ class BytesFieldABC(ABC, Generic[StructT]):
             field name.
         """
         return self._name
-
-    @property
-    def slice_(self) -> slice:
-        """
-        Returns
-        -------
-        slice
-            field bytes slice.
-        """
-        return self._struct.slice_
 
     @property
     def struct(self) -> StructT:
@@ -297,7 +294,7 @@ class BytesFieldABC(ABC, Generic[StructT]):
         int
             count of words in the field.
         """
-        return self.bytes_count // self._struct.word_length
+        return self.bytes_count // self._struct.word_bytesize
 
     def __bytes__(self) -> bytes:
         """
@@ -435,7 +432,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         content : bytes
             new field content.
         """
-        self._c[self[name].slice_] = content
+        self._c[self[name].struct.slice_] = content
 
     def _check_fields_list(self, fields: set[str]) -> None:
         """
@@ -455,7 +452,11 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         for name in diff.copy():
             if name in self:
                 parser = self[name]
-                if parser.has_default or parser.infinite or len(parser) != 0:
+                if (
+                    parser.struct.has_default
+                    or parser.struct.is_floating
+                    or len(parser) != 0
+                ):
                     diff.remove(name)
 
         if len(diff) != 0:
@@ -509,7 +510,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         content: bytes
             new content.
         """
-        self._set({p.name: content[p.slice_] for p in self})
+        self._set({p.name: content[p.struct.slice_] for p in self})
 
     def _set(
         self, fields: dict[str, int | float | Iterable[int | float]]
@@ -556,10 +557,10 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
                     continue
                 self._c += self._encode_field_content(name, content)
 
-            elif parser.has_default:
-                self._c += parser.default
+            elif parser.struct.has_default:
+                self._c += parser.struct.default
 
-            elif parser.infinite:
+            elif parser.struct.is_floating:
                 continue
 
             else:

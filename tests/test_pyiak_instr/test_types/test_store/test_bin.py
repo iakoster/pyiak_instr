@@ -32,11 +32,13 @@ class Struct(BytesFieldStructProtocol):
 
     start: int = 0
 
+    stop: int | None = None
+
+    bytes_expected: int = 0
+
     default: bytes = b""
 
-    _stop: int | None = 5
-
-    is_infinite: bool | None = None
+    word_bytesize_: int = 1
 
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
         return np.frombuffer(content, np.uint8)
@@ -46,28 +48,16 @@ class Struct(BytesFieldStructProtocol):
 
     def validate(self, content: bytes) -> bool:
         length = len(content)
-        if self._stop is None:
+        if self.stop is None:
             return length == abs(self.start)
-        if self.start >= 0 and self._stop > 0 or self.start < 0 and self._stop < 0:
-            return length == (self._stop - self.start)
-        if self.start >= 0 and self._stop < 0:
+        if self.start >= 0 and self.stop > 0 or self.start < 0 and self.stop < 0:
+            return length == (self.stop - self.start)
+        if self.start >= 0 > self.stop:
             return True
 
     @property
-    def infinite(self) -> bool:
-        if self.is_infinite is not None:
-            return self.is_infinite
-        if self._stop is not None:
-            return self.start > 0 and self._stop < 0
-        return self.start > 0 and self._stop is None
-
-    @property
-    def slice_(self) -> slice:
-        return slice(self.start, self._stop)
-
-    @property
-    def word_length(self) -> int:
-        return 1
+    def word_bytesize(self) -> int:
+        return self.word_bytesize_
 
 
 class Field(BytesFieldABC[Struct]):
@@ -92,7 +82,7 @@ class FieldFull(BytesFieldABC[Struct]):
 
     @property
     def content(self) -> bytes:
-        return self._storage.content[self.slice_]
+        return self._storage.content[self.struct.slice_]
 
 
 class Storage(
@@ -152,6 +142,93 @@ class StoragePattern(BytesStoragePatternABC[Storage, FieldPattern]):
 #         raise NotImplementedError()
 
 
+class TestBytesFieldStructProtocol(unittest.TestCase):
+
+    def test_init(self) -> None:
+        validate_object(
+            self,
+            self._instance(),
+            bytes_expected=0,
+            default=b"",
+            has_default=False,
+            is_floating=True,
+            slice_=slice(0, None),
+            start=0,
+            stop=None,
+            word_bytesize=1,
+            word_bytesize_=1,
+            words_expected=0,
+        )
+
+    def test_magic_post_init(self) -> None:
+
+        with self.subTest(test="'bytes_expected' < 0"):
+            self.assertEqual(
+                0, self._instance(bytes_expected=-255).bytes_expected
+            )
+
+        cases = [
+            (dict(stop=2), 2),
+            (dict(start=-6, stop=-3), 3),
+            (dict(stop=-3), 0),
+        ]
+        for i_case, (kwargs, bytes_expected) in enumerate(cases):
+            with self.subTest(test="stop is not None", case=i_case):
+                self.assertEqual(
+                    bytes_expected,
+                    self._instance(**kwargs).bytes_expected,
+                )
+
+        cases = [
+            (dict(bytes_expected=2), 2),
+            (dict(start=-6, bytes_expected=3), -3),
+            (dict(start=-2, bytes_expected=2), None),
+        ]
+        for i_case, (kwargs, stop) in enumerate(cases):
+            with self.subTest(test="'bytes_expected' > 0", case=i_case):
+                self.assertEqual(stop, self._instance(**kwargs).stop)
+
+    def test_magic_post_init_exc(self) -> None:
+        with self.subTest(test="'stop' == 0"):
+            with self.assertRaises(ValueError) as exc:
+                self._instance(stop=0)
+            self.assertEqual(
+                "'stop' can't be equal to zero", exc.exception.args[0]
+            )
+
+        with self.subTest(test="'stop' and 'bytes_expected' setting"):
+            with self.assertRaises(TypeError) as exc:
+                self._instance(stop=1, bytes_expected=1)
+            self.assertEqual(
+                "'bytes_expected' or 'stop' setting allowed",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(
+                test="'bytes_expected' is not comparable with 'word_bytesize'"
+        ):
+            with self.assertRaises(ValueError) as exc:
+                self._instance(bytes_expected=5, word_bytesize=2)
+            self.assertEqual(
+                "'bytes_expected' does not match an integer word count",
+                exc.exception.args[0],
+            )
+
+    @staticmethod
+    def _instance(
+            start: int = 0,
+            stop: int | None = None,
+            bytes_expected: int = 0,
+            word_bytesize: int = 1
+    ) -> BytesFieldStructProtocol:
+        return Struct(
+            start=start,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            word_bytesize_=word_bytesize,
+        )
+
+
 class TestBytesFieldABC(unittest.TestCase):
 
     def test_init(self) -> None:
@@ -161,12 +238,8 @@ class TestBytesFieldABC(unittest.TestCase):
             bytes_count=5,
             content=b"\x01\x02\x03\x04\x05",
             content_=b"\x01\x02\x03\x04\x05",
-            default=b"",
-            has_default=False,
-            infinite=False,
             name="test",
-            slice_=slice(0, 5),
-            struct=Struct(),
+            struct=Struct(stop=5),
             words_count=5,
         )
 
@@ -196,7 +269,7 @@ class TestBytesFieldABC(unittest.TestCase):
 
     @property
     def _instance(self) -> Field:
-        return Field(name="test", struct=Struct())
+        return Field(name="test", struct=Struct(stop=5))
 
 
 class TestBytesStorageABC(unittest.TestCase):
@@ -363,11 +436,11 @@ class TestBytesStorageABC(unittest.TestCase):
     @property
     def _instance(self) -> Storage:
         return Storage("test_storage", dict(
-            first=Struct(start=0, default=b"\xfa", _stop=1),
-            second=Struct(start=1, _stop=3),
-            third=Struct(start=3, _stop=-4),
-            fourth=Struct(start=-4, _stop=-1),
-            fifth=Struct(start=-1, _stop=None),
+            first=Struct(start=0, default=b"\xfa", stop=1),
+            second=Struct(start=1, bytes_expected=2),
+            third=Struct(start=3, stop=-4),
+            fourth=Struct(start=-4, stop=-1),
+            fifth=Struct(start=-1, stop=None),
         ))
 
 

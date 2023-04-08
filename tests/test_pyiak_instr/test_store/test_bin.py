@@ -41,12 +41,12 @@ class TestBytesFieldStruct(unittest.TestCase):
             default=b"",
             fmt=Code.U32,
             has_default=False,
-            infinite=True,
+            is_floating=True,
             order=Code.BIG_ENDIAN,
             slice_=slice(4, None),
             start=4,
             stop=None,
-            word_length=4,
+            word_bytesize=4,
             words_expected=0
         )
 
@@ -133,11 +133,7 @@ class TestBytesField(unittest.TestCase):
             self._get_cbs()["f0"],
             bytes_count=0,
             content=b"",
-            default=b"",
-            has_default=False,
-            infinite=True,
             name="f0",
-            slice_=slice(0, None),
             words_count=0,
             wo_attrs=["struct"],
         )
@@ -542,7 +538,7 @@ class TestBytesStoragePattern(unittest.TestCase):
             for parser in res:
                 with self.subTest(field=parser.name):
                     compare_values(
-                        self, ref_slice[parser.name], parser.slice_
+                        self, ref_slice[parser.name], parser.struct.slice_
                     )
 
         with self.subTest(sub_test="decode"):

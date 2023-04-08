@@ -39,13 +39,6 @@ class BytesFieldStruct(BytesFieldStructProtocol):
     Represents field parameters with values encoded in bytes.
     """
 
-    start: int
-    """the number of bytes in the message from which the fields begin."""
-
-    bytes_expected: int
-    """expected bytes count for field. If less than 1, from the start byte
-    to the end of the message."""
-
     fmt: Code
     """format for packing or unpacking the content.
     The word length is calculated from the format."""
@@ -53,28 +46,22 @@ class BytesFieldStruct(BytesFieldStructProtocol):
     order: Code = Code.BIG_ENDIAN
     """bytes order for packing and unpacking."""
 
+    stop: int | None = None
+    """index of stop byte. If None - stop is end of bytes."""
+
+    bytes_expected: int = 0
+    """expected bytes count for field. If less than 1, from the start byte
+    to the end of the message."""
+
     default: bytes = b""  # todo: to ContentType
     """default value of the field."""
-
-    _stop: int | None = _field(default=None, repr=False)
-    """stop byte index of field content."""
 
     ORDERS: ClassVar[dict[Code, str]] = BytesEncoder.ORDERS
     ALLOWED_CODES: ClassVar[set[Code]] = BytesEncoder.ALLOWED_CODES
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         BytesEncoder.check_fmt_order(self.fmt, self.order)
-
-        if self.bytes_expected < 0:
-            object.__setattr__(self, "bytes_expected", 0)
-        if self.bytes_expected % self.word_length:
-            raise ValueError(
-                "'bytes_expected' does not match an integer word count"
-            )
-
-        stop = self.start + self.bytes_expected
-        if not self.infinite and stop != 0:
-            object.__setattr__(self, "_stop", stop)
 
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
         """
@@ -122,42 +109,12 @@ class BytesFieldStruct(BytesFieldStructProtocol):
         bool
             True - content is correct, False - not.
         """
-        if self.infinite:
-            return len(content) % self.word_length == 0
+        if self.is_floating:
+            return len(content) % self.word_bytesize == 0
         return len(content) == self.bytes_expected
 
     @property
-    def infinite(self) -> bool:
-        """
-        Returns
-        -------
-        bool
-            Indicate that it is finite field.
-        """
-        return not self.bytes_expected
-
-    @property
-    def slice_(self) -> slice:
-        """
-        Returns
-        -------
-        slice
-            The range of bytes from the message belonging to the field.
-        """
-        return slice(self.start, self.stop)
-
-    @property
-    def stop(self) -> int | None:
-        """
-        Returns
-        -------
-        int | None
-            The number of byte in the message to which the field stops.
-        """
-        return self._stop
-
-    @property
-    def word_length(self) -> int:
+    def word_bytesize(self) -> int:
         """
         Returns
         -------
@@ -165,16 +122,6 @@ class BytesFieldStruct(BytesFieldStructProtocol):
             The length of the one word in bytes.
         """
         return BytesEncoder.get_bytesize(self.fmt)
-
-    @property
-    def words_expected(self) -> int:
-        """
-        Returns
-        -------
-        int
-            expected words count in the field. Returns 0 if field is infinite.
-        """
-        return self.bytes_expected // self.word_length
 
 
 # todo: __str__ method
