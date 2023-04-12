@@ -6,6 +6,7 @@ from typing import Any, Self, Optional, Type, TypeVar, Generic, Protocol
 
 __all__ = [
     "ContextManager",
+    "SupportsContainsGetitem",
     "SupportsInitKwargs",
     "WithApi",
     "WithBaseStringMethods",
@@ -28,6 +29,18 @@ class ContextManager(ABC):
         exc_tb: Optional[TracebackType],
     ) -> None:
         pass
+
+
+class SupportsContainsGetitem(Protocol):
+    """
+    Represents class with `__contains__` and `__getitem__` magic methods.
+    """
+
+    def __contains__(self, key: Any) -> bool:
+        """Verify that the `key` belongs to the object"""
+
+    def __getitem__(self, key: Any) -> Any:
+        """Get item from object by `key`."""
 
 
 # pylint: disable=too-few-public-methods

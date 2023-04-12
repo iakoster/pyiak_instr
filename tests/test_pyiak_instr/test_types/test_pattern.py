@@ -16,6 +16,8 @@ class PatternABCTestInstance(PatternABC[dict]):
 
     _options = {"base": dict}
 
+    _only_auto_parameters = ("only_auto",)
+
     def get(
         self, changes_allowed: bool = False, **additions: Any
     ) -> dict:
@@ -47,6 +49,28 @@ class TestPatternABC(unittest.TestCase):
             self._instance,
             typename="base",
         )
+
+    def test__get_parameters_dict(self) -> None:
+        self.assertDictEqual(
+            dict(a=5, b=[], c=11),
+            self._instance._get_parameters_dict(False, {"c": 11}),
+        )
+
+    def test__get_parameters_dict_exc(self) -> None:
+        with self.subTest(test="repeat parameter"):
+            with self.assertRaises(SyntaxError) as exc:
+                self._instance._get_parameters_dict(False, {"a": 11})
+            self.assertEqual(
+                "keyword argument(s) repeated: a", exc.exception.args[0]
+            )
+
+        with self.subTest(test="set auto parameter"):
+            with self.assertRaises(TypeError) as exc:
+                self._instance._get_parameters_dict(True, {"only_auto": 1})
+            self.assertEqual(
+                "'only_auto' can only be set automatically",
+                exc.exception.args[0],
+            )
 
     def test_magic_init_kwargs(self) -> None:
         self.assertDictEqual(

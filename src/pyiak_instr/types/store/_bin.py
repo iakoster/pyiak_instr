@@ -19,9 +19,9 @@ import numpy as np
 import numpy.typing as npt
 
 from .._pattern import MetaPatternABC, PatternABC, WritablePatternABC
-from ...utilities import BytesEncoder
 from ...rwfile import RWConfig
 from ...exceptions import NotConfiguredYet
+from ...typing import SupportsContainsGetitem
 
 
 __all__ = [
@@ -610,6 +610,8 @@ class BytesStoragePatternABC(
     Represent abstract class of bytes storage.
     """
 
+    _only_auto_parameters = {"fields"}
+
     @abstractmethod
     def get(
         self, changes_allowed: bool = False, **additions: Any
@@ -677,8 +679,55 @@ class BytesStoragePatternABC(
                 **{f: cls._sub_p_type(**cfg.get(name, f)) for f in opts}
             )
 
+    @staticmethod
+    def _is_dynamic_pattern(
+        kwargs: dict[str, Any], pattern: PatternT
+    ) -> bool:  # todo: tests
+        """
+        Returns True if the joined parameters can be interpreted as a dynamic.
 
-# todo: tests - separated
+        Parameters
+        ----------
+        kwargs : dict[str, Any]
+            additional parameters.
+        pattern : PatternT
+            pattern instance
+
+        Returns
+        -------
+        bool
+            True if the `kwargs` or `pattern` can be interpreted as a
+            dynamic, otherwise - False
+        """
+
+        def check(
+            obj: SupportsContainsGetitem,
+        ) -> bool:
+            """
+            Check that the object can be interpreted as a dynamic.
+
+            Parameters
+            ----------
+            obj : SupportsContainsGetitem
+                object for checking.
+
+            Returns
+            -------
+            bool
+                True if the object can be interpreted as a dynamic,
+                otherwise - False
+            """
+            return (
+                "stop" in obj
+                and obj["stop"] is None
+                or "bytes_expected" in obj
+                and isinstance(obj["bytes_expected"], int)
+                and obj["bytes_expected"] <= 0
+            )
+
+        return check(kwargs) or check(pattern)
+
+
 class ContinuousBytesStoragePatternABC(
     BytesStoragePatternABC[StorageT, PatternT],
     Generic[StorageT, PatternT, StructT],
@@ -689,6 +738,8 @@ class ContinuousBytesStoragePatternABC(
     It's means `start` of the field is equal to `stop` of previous field
     (e.g. without gaps in content).
     """
+
+    _only_auto_parameters = {"fields", "start", "stop"}
 
     @abstractmethod
     def get(
@@ -731,41 +782,33 @@ class ContinuousBytesStoragePatternABC(
         TypeError
             if trying to set 'fields'.
         """
-        storage_kw = self._kw.copy()  # todo: to separated method
-        if len(for_storage) != 0:
-            if not changes_allowed:
-                intersection = set(storage_kw).intersection(set(for_storage))
-                if len(intersection):
-                    raise SyntaxError(
-                        "keyword argument(s) repeated: "
-                        f"{', '.join(intersection)}"
-                    )
+        storage_kw = self._get_parameters_dict(changes_allowed, for_storage)
 
-            storage_kw.update(for_storage)
+        fields, dyn_name, dyn_start = self._get_fields_before_dyn(
+            changes_allowed, for_fields
+        )
 
-        if "fields" in storage_kw:
-            raise TypeError(
-                "'fields' is an invalid keyword argument for continuous "
-                "storage"
+        if dyn_start >= 0:
+            after, dyn_stop = self._get_fields_after_dyn(
+                changes_allowed, for_fields, dyn_name
             )
 
-        fields, inf = self._get_fields_before_inf(changes_allowed, for_fields)
-        if len(fields) != len(self._sub_p):
-            after, next_ = self._get_fields_after_inf(
-                changes_allowed, for_fields, inf
+            dyn_kw = for_fields[dyn_name] if dyn_name in for_fields else {}
+            dyn_kw.update(start=dyn_start, stop=dyn_stop)
+            fields[dyn_name] = self._sub_p[dyn_name].get(
+                changes_allowed=changes_allowed, **dyn_kw
             )
+
             fields.update(after)
-            object.__setattr__(fields[inf], "_stop", fields[next_].start)
 
-        storage_kw["fields"] = fields
-        return self._target(**storage_kw)
+        return self._target(fields=fields, **storage_kw)
 
-    def _get_fields_after_inf(
+    def _get_fields_after_dyn(
         self,
         changes_allowed: bool,
         fields_kw: dict[str, dict[str, Any]],
-        inf: str,
-    ) -> tuple[dict[str, StructT], str]:
+        dyn: str,
+    ) -> tuple[dict[str, StructT], int | None]:
         """
         Get the dictionary of fields that go from infinite field
         (not included) to end.
@@ -778,26 +821,34 @@ class ContinuousBytesStoragePatternABC(
             `additions` take precedence.
         fields_kw : dict[str, dict[str, Any]]
             dictionary of kwargs for fields.
-        inf : str
-            name of infinite fields.
+        dyn : str
+            name of dynamic field.
 
         Returns
         -------
         tuple[dict[str, OptionsT], str]
             fields - dictionary of fields from infinite (not included);
-            next - name of next field after infinite.
+            dyn_stop - stop index of dynamic field.
+
+        Raises
+        ------
+        TypeError
+            if there is tow dynamic fields.
+        AssertionError
+            if for some reason the dynamic field is not found.
         """
-        rev_names = list(self._sub_p)[::-1]
-        fields, start, next_ = [], 0, ""
-        for name in rev_names:
-            if name == inf:
-                break
+        start = 0
+        fields: list[tuple[str, StructT]] = []
+        for name in list(self._sub_p)[::-1]:
+            if name == dyn:
+                return dict(fields[::-1]), start if start != 0 else None
 
             pattern = self._sub_p[name]
-            start -= pattern["bytes_expected"] * BytesEncoder.get_bytesize(
-                pattern["fmt"]  # todo: not in pattern type
-            )
             field_kw = fields_kw[name] if name in fields_kw else {}
+            if self._is_dynamic_pattern(field_kw, pattern):
+                raise TypeError("two dynamic field not allowed")
+
+            start -= pattern["bytes_expected"]
             field_kw.update(start=start)
             fields.append(
                 (
@@ -805,13 +856,12 @@ class ContinuousBytesStoragePatternABC(
                     pattern.get(changes_allowed=changes_allowed, **field_kw),
                 )
             )
-            next_ = name
 
-        return dict(fields[::-1]), next_
+        raise AssertionError("dynamic field not found")
 
-    def _get_fields_before_inf(
+    def _get_fields_before_dyn(
         self, changes_allowed: bool, fields_kw: dict[str, dict[str, Any]]
-    ) -> tuple[dict[str, StructT], str]:
+    ) -> tuple[dict[str, StructT], str, int]:
         """
         Get the dictionary of fields that go up to and including the infinite
         field.
@@ -827,26 +877,23 @@ class ContinuousBytesStoragePatternABC(
 
         Returns
         -------
-        tuple[dict[str, OptionsT], str]
+        tuple[dict[str, StructT], str, int]
             fields - dictionary of fields up to infinite (include);
-            inf - name of infinite field. Empty if there is no found.
+            dyn_name - name of infinite field. Empty if there is no found;
+            dyn_start - start index of infinite field. -1 if field is no
+                found.
         """
-        fields, start, inf = {}, 0, ""
+        start: int = 0
+        fields: dict[str, StructT] = {}
         for name, pattern in self._sub_p.items():
             field_kw = fields_kw[name] if name in fields_kw else {}
-            field_kw.update(start=start)
+            if self._is_dynamic_pattern(field_kw, pattern):
+                return fields, name, start
 
-            # not supported, but it is correct behaviour
-            # if len(set(for_field).intersection(pattern)) == 0:
-            #     fields[name] = pattern.get(**for_field)
+            field_kw.update(start=start)
             fields[name] = pattern.get(
                 changes_allowed=changes_allowed, **field_kw
             )
+            start = fields[name].stop  # type: ignore[assignment]
 
-            stop = fields[name].stop
-            if stop is None:
-                inf = name
-                break
-            start = stop
-
-        return fields, inf
+        return fields, "", -1

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from dataclasses import field as _field
 from typing import (
     Any,
     ClassVar,

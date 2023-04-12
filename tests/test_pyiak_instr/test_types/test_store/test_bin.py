@@ -129,17 +129,17 @@ class StoragePattern(BytesStoragePatternABC[Storage, FieldPattern]):
         raise NotImplementedError()
 
 
-# class ContinuousStoragePattern(
-#     ContinuousBytesStoragePatternABC[Storage, FieldPattern, Struct]
-# ):
-#
-#     _options = {"base": Storage}
-#     _sub_p_type = FieldPattern
-#
-#     def get(
-#         self, changes_allowed: bool = False, **additions: Any
-#     ) -> Storage:
-#         raise NotImplementedError()
+class ContinuousStoragePattern(
+    ContinuousBytesStoragePatternABC[Storage, FieldPattern, Struct]
+):
+
+    _options = {"base": dict}
+    _sub_p_type = FieldPattern
+
+    def get(
+        self, changes_allowed: bool = False, **additions: Any
+    ) -> Storage:
+        raise NotImplementedError()
 
 
 class TestBytesFieldStructProtocol(unittest.TestCase):
@@ -526,54 +526,104 @@ class TestBytesStoragePatternABC(unittest.TestCase):
         )
 
 
-# todo: fix tests for ContinuousBytesStorage
-# class TestContinuousBytesStoragePatternABC(unittest.TestCase):
-#
-#     def test_get_continuous(self) -> None:
-#         # obj = self._instance._get_continuous(
-#         #     True,
-#         #
-#         # )
-#         ...
-#
-#     def test_get_continuous_exc(self) -> None:
-#         with self.subTest(test="repeated kwarg"):
-#             with self.assertRaises(SyntaxError) as exc:
-#                 self._instance._get_continuous(
-#                     False,
-#                     {"name": "test"},
-#                     {}
-#                 )
-#             self.assertEqual(
-#                 "keyword argument(s) repeated: name", exc.exception.args[0]
-#             )
-#
-#         with self.subTest(test="with 'fields'"):
-#             with self.assertRaises(TypeError) as exc:
-#                 self._instance._get_continuous(
-#                     False,
-#                     {"fields": {}},
-#                     {}
-#                 )
-#             self.assertEqual(
-#                 "'fields' is an invalid keyword argument for continuous "
-#                 "storage",
-#                 exc.exception.args[0],
-#             )
-#
-#     @property
-#     def _instance(self) -> ContinuousStoragePattern:
-#         def get_pattern(**kwargs) -> FieldPattern:
-#             return FieldPattern(typename="base", **kwargs)
-#
-#         return ContinuousStoragePattern(
-#             typename="base",
-#             name="test",
-#         ).configure(
-#             first=get_pattern(default=b"\xfa"),
-#             second=get_pattern(),
-#             third=get_pattern(is_infinite=True),
-#             fourth=get_pattern(),
-#             fifth=get_pattern(),
-#
-#         )
+class TestContinuousBytesStoragePatternABC(unittest.TestCase):
+
+    def test__get_continuous(self) -> None:
+        self._validate_result(
+            dict(
+
+            ),
+            dict(
+                f0=dict(start=0, stop=4),
+                f1=dict(start=4, stop=6),
+                f2=dict(start=6, stop=-7),
+                f3=dict(start=-7, stop=-4),
+                f4=dict(start=-4, stop=None),
+            ),
+            ContinuousStoragePattern(
+                typename="base",
+                name="test",
+            ).configure(
+                f0=FieldPattern(typename="base", bytes_expected=4),
+                f1=FieldPattern(typename="base", bytes_expected=2),
+                f2=FieldPattern(typename="base", bytes_expected=0),
+                f3=FieldPattern(typename="base", bytes_expected=3),
+                f4=FieldPattern(typename="base", bytes_expected=4),
+            )._get_continuous(True, {}, {})
+        )
+
+    def test__get_continuous_last_dyn(self) -> None:
+        self._validate_result(
+            dict(
+
+            ),
+            dict(
+                f1=dict(start=0, stop=None),
+            ),
+            ContinuousStoragePattern(
+                typename="base",
+                name="test",
+            ).configure(
+                f1=FieldPattern(typename="base", bytes_expected=0),
+            )._get_continuous(True, {}, {})
+        )
+
+    def test__get_continuous_wo_dyn(self) -> None:
+        self._validate_result(
+            dict(
+
+            ),
+            dict(
+                f0=dict(start=0, stop=4),
+                f1=dict(start=4, stop=7),
+            ),
+            ContinuousStoragePattern(
+                typename="base",
+                name="test",
+            ).configure(
+                f0=FieldPattern(typename="base", bytes_expected=4),
+                f1=FieldPattern(typename="base", bytes_expected=3),
+            )._get_continuous(True, {}, {})
+        )
+
+    def test__get_continuous_exc(self) -> None:
+        with self.subTest(test="two dynamic field"):
+            with self.assertRaises(TypeError) as exc:
+                ContinuousStoragePattern(
+                    typename="base",
+                    name="test",
+                ).configure(
+                    f0=FieldPattern(typename="base", bytes_expected=0),
+                    f1=FieldPattern(typename="base", bytes_expected=0),
+                )._get_continuous(True, {}, {})
+            self.assertEqual(
+                "two dynamic field not allowed", exc.exception.args[0]
+            )
+
+    def _validate_result(
+            self,
+            storage: dict[str, Any],
+            fields: dict[str, dict[str, Any]],
+            res: ContinuousStoragePattern,
+    ) -> None:
+        for par, val in storage.items():
+            with self.subTest(test="field", parameter=par):
+                self.assertEqual(val, getattr(res, par))
+
+        for name, field_kw in fields.items():
+            for par, val in field_kw.items():
+                with self.subTest(field=name, parameter=par):
+                    self.assertEqual(val, getattr(res["fields"][name], par))
+
+    @property
+    def _instance(self) -> ContinuousStoragePattern:
+        return ContinuousStoragePattern(
+            typename="base",
+            name="test",
+        ).configure(
+            f0=FieldPattern(typename="base", bytes_expected=4),
+            f1=FieldPattern(typename="base", bytes_expected=2),
+            f2=FieldPattern(typename="base", bytes_expected=0),
+            f3=FieldPattern(typename="base", bytes_expected=3),
+            f4=FieldPattern(typename="base", bytes_expected=4),
+        )

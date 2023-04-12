@@ -31,6 +31,9 @@ class PatternABC(ABC, Generic[OptionsT]):
     _options: dict[str, type[OptionsT]]
     """pattern target options"""
 
+    _only_auto_parameters: set[str] = set()
+
+    # todo: parameters to TypedDict
     def __init__(self, typename: str, **parameters: Any) -> None:
         if typename not in self._options:
             raise KeyError(f"'{typename}' not in {set(self._options)}")
@@ -59,6 +62,50 @@ class PatternABC(ABC, Generic[OptionsT]):
         OptionsT
             initialized target class.
         """
+
+    def _get_parameters_dict(
+        self, changes_allowed: bool, additions: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Get joined additions with pattern parameters.
+
+        Parameters
+        ----------
+        changes_allowed : bool
+            allows situations where keys from the pattern overlap with kwargs.
+        additions : dict[str, Any]
+            additional initialization parameters.
+
+        Returns
+        -------
+        dict[str, Any]
+            joined parameters.
+
+        Raises
+        ------
+        SyntaxError
+            if changes not allowed but parameter repeated in `additions`.
+        TypeError
+            if parameter in `additions` and pattern, but it must be to set
+            automatically.
+        """
+        parameters = self._kw.copy()
+        if len(additions) != 0:
+            if not changes_allowed:
+                intersection = set(parameters).intersection(set(additions))
+                if len(intersection):
+                    raise SyntaxError(
+                        "keyword argument(s) repeated: "
+                        f"{', '.join(intersection)}"
+                    )
+
+            parameters.update(additions)
+
+        for auto_par in self._only_auto_parameters:
+            if auto_par in parameters:
+                raise TypeError(f"'{auto_par}' can only be set automatically")
+
+        return parameters
 
     @property
     def typename(self) -> str:

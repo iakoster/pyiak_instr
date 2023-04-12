@@ -163,11 +163,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
             f0=dict(
                 bytes_count=0,
                 content=b"",
-                default=b"",
-                has_default=False,
-                infinite=False,
                 name="f0",
-                slice_=slice(0, 4),
                 words_count=0,
             ),
         )
@@ -196,19 +192,11 @@ class TestContinuousBytesStorage(unittest.TestCase):
 
         def get_field_pars(
                 content: bytes,
-                slice_: slice,
                 words_count: int,
         ) -> dict[str, Any]:
-            infinite = slice_.start >= 0 and (
-                    slice_.stop is None or slice_.stop < 0
-            )
             return dict(
                 bytes_count=len(content),
                 content=content,
-                default=b"",
-                has_default=False,
-                infinite=infinite,
-                slice_=slice_,
                 words_count=words_count,
                 wo_attrs=["struct", "name"],
             )
@@ -221,7 +209,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
                     b"\x00\x01\xff\xff", "cbs_one"
                 ),
                 validate_fields=dict(
-                    f0=get_field_pars(b"\x00\x01\xff\xff", slice(0, 4), 2),
+                    f0=get_field_pars(b"\x00\x01\xff\xff", 2),
                 ),
                 decode=dict(
                     f0=[1, -1],
@@ -234,7 +222,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
                     b"\xef\x01\xff", "cbs_one_infinite"
                 ),
                 validate_fields=dict(
-                    f0=get_field_pars(b"\xef\x01\xff", slice(0, None), 3),
+                    f0=get_field_pars(b"\xef\x01\xff", 3),
                 ),
                 decode=dict(
                     f0=[-17, 1, -1],
@@ -247,9 +235,9 @@ class TestContinuousBytesStorage(unittest.TestCase):
                     b"\xef\x01\xff\xff\x0f\xab\xdd", "cbs_first_infinite"
                 ),
                 validate_fields=dict(
-                    f0=get_field_pars(b"\xef\x01\xff", slice(0, -4), 3),
-                    f1=get_field_pars(b"\xff\x0f", slice(-4, -2), 1),
-                    f2=get_field_pars(b"\xab\xdd", slice(-2, None), 2),
+                    f0=get_field_pars(b"\xef\x01\xff", 3),
+                    f1=get_field_pars(b"\xff\x0f", 1),
+                    f2=get_field_pars(b"\xab\xdd", 2),
                 ),
                 decode=dict(
                     f0=[-17, 1, -1],
@@ -265,9 +253,9 @@ class TestContinuousBytesStorage(unittest.TestCase):
                     "cbs_middle_infinite",
                 ),
                 validate_fields=dict(
-                    f0=get_field_pars(b"\xef\x01\xff\xff", slice(0, 4), 2),
-                    f1=get_field_pars(b"\x01\x02\x03\x04", slice(4, -2), 2),
-                    f2=get_field_pars(b"\xab\xdd", slice(-2, None), 2),
+                    f0=get_field_pars(b"\xef\x01\xff\xff", 2),
+                    f1=get_field_pars(b"\x01\x02\x03\x04", 2),
+                    f2=get_field_pars(b"\xab\xdd", 2),
                 ),
                 decode=dict(
                     f0=[0x1EF, 0xFFFF],
@@ -283,9 +271,9 @@ class TestContinuousBytesStorage(unittest.TestCase):
                     "cbs_last_infinite",
                 ),
                 validate_fields=dict(
-                    f0=get_field_pars(b"\xab\xcd", slice(0, 2), 1),
+                    f0=get_field_pars(b"\xab\xcd", 1),
                     f1=get_field_pars(
-                        b"\x00\x00\x01\x02\x03\x04\x00\x00", slice(2, None), 2
+                        b"\x00\x00\x01\x02\x03\x04\x00\x00", 2
                     ),
                 ),
                 decode=dict(
@@ -378,17 +366,6 @@ class TestContinuousBytesStorage(unittest.TestCase):
 # note: comment editable pattern tests
 class TestBytesFieldPattern(unittest.TestCase):
 
-    # def test_add(self) -> None:
-    #     pattern = self._get_pattern()
-    #     self.assertNotIn("e", pattern)
-    #     pattern.add("e", 223)
-    #     self.assertIn("e", pattern)
-    #
-    # def test_add_exc(self) -> None:
-    #     with self.assertRaises(KeyError) as exc:
-    #         self._get_pattern().add("a", 1)
-    #     self.assertEqual("parameter in pattern already", exc.exception.args[0])
-
     def test_get(self) -> None:
         pattern = BytesFieldPattern(
             fmt=Code.U8,
@@ -425,29 +402,11 @@ class TestBytesFieldPattern(unittest.TestCase):
             check_attrs=False,
         )
 
-    # def test_pop(self) -> None:
-    #     pattern = self._get_pattern()
-    #     self.assertIn("a", pattern)
-    #     self.assertEqual(1, pattern.pop("a"))
-    #     self.assertNotIn("a", pattern)
-
     def test_magic_contains(self) -> None:
         self.assertIn("a", self._get_pattern())
 
     def test_magic_getitem(self) -> None:
         self.assertEqual(1, self._get_pattern()["a"])
-
-    # def test_magic_setitem(self) -> None:
-    #     pattern = self._get_pattern()
-    #     self.assertListEqual([], pattern["b"])
-    #     pattern["b"] = 1
-    #     self.assertEqual(1, pattern["b"])
-    #
-    # def test_magic_setitem_exc(self) -> None:
-    #     pattern = self._get_pattern()
-    #     with self.assertRaises(KeyError) as exc:
-    #         pattern["e"] = 1
-    #     self.assertEqual("'e' not in parameters", exc.exception.args[0])
 
     @staticmethod
     def _get_pattern() -> BytesFieldPattern:
@@ -533,7 +492,7 @@ class TestBytesStoragePattern(unittest.TestCase):
                 self, field, **ref_fields[field.name], check_attrs=False,
             )
 
-        with self.subTest(sub_test="slice"):
+        with self.subTest(test="slice"):
             self.assertListEqual(list(ref_slice), [f.name for f in res])
             for parser in res:
                 with self.subTest(field=parser.name):
@@ -541,7 +500,7 @@ class TestBytesStoragePattern(unittest.TestCase):
                         self, ref_slice[parser.name], parser.struct.slice_
                     )
 
-        with self.subTest(sub_test="decode"):
+        with self.subTest(test="decode"):
             self.assertListEqual(list(ref_decode), [f.name for f in res])
             for f_name, decoded in res.decode().items():
                 with self.subTest(field=f_name):

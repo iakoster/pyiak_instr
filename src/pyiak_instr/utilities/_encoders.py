@@ -72,7 +72,9 @@ class BytesEncoder:
         content: bytes,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
-    ) -> npt.NDArray[np.int_ | np.float_]:
+    ) -> npt.NDArray[
+        np.int_ | np.float_
+    ]:  # todo: np.ndarray[int | float, Any]?
         """
         Decode bytes content to array.
 

@@ -7,6 +7,7 @@ Typing (:mod:`pyiak_instr`)
 from ._common import (
     ContextManager,
     SupportsInitKwargs,
+    SupportsContainsGetitem,
     WithApi,
     WithBaseStringMethods,
 )
@@ -15,6 +16,7 @@ from ._common import (
 __all__ = [
     "ContextManager",
     "SupportsInitKwargs",
+    "SupportsContainsGetitem",
     "WithApi",
     "WithBaseStringMethods",
 ]
