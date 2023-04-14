@@ -41,7 +41,7 @@ class TestBytesFieldStruct(unittest.TestCase):
             default=b"",
             fmt=Code.U32,
             has_default=False,
-            is_floating=True,
+            is_dynamic=True,
             order=Code.BIG_ENDIAN,
             slice_=slice(4, None),
             start=4,
@@ -89,9 +89,9 @@ class TestBytesFieldStruct(unittest.TestCase):
             order=Code.LITTLE_ENDIAN,
         )
         with self.subTest(test="finite True"):
-            self.assertTrue(obj.validate(b"\x02\x04\x00\x00"))
+            self.assertTrue(obj.verify(b"\x02\x04\x00\x00"))
         with self.subTest(test="finite False"):
-            self.assertFalse(obj.validate(b"\x02\x04\x00\x00\x01"))
+            self.assertFalse(obj.verify(b"\x02\x04\x00\x00\x01"))
 
         obj = BytesFieldStruct(
             start=0,
@@ -100,9 +100,9 @@ class TestBytesFieldStruct(unittest.TestCase):
             order=Code.LITTLE_ENDIAN,
         )
         with self.subTest(test="infinite True"):
-            self.assertTrue(obj.validate(b"\x02\x04\x00\x00"))
+            self.assertTrue(obj.verify(b"\x02\x04\x00\x00"))
         with self.subTest(test="infinite False"):
-            self.assertFalse(obj.validate(b"\x02\x04\x00"))
+            self.assertFalse(obj.verify(b"\x02\x04\x00"))
 
     def test_stop_after_infinite(self) -> None:
         data = (

@@ -121,7 +121,7 @@ class BytesFieldStructProtocol(Protocol):
         """
 
     @abstractmethod
-    def validate(self, content: bytes) -> bool:  # todo: to verify.
+    def verify(self, content: bytes) -> bool:
         """
         Verify that `content` is correct for the given field structure.
 
@@ -157,12 +157,12 @@ class BytesFieldStructProtocol(Protocol):
         return len(self.default) != 0
 
     @property
-    def is_floating(self) -> bool:
+    def is_dynamic(self) -> bool:
         """
         Returns
         -------
         bool
-            if True - field is floating (from empty to any).
+            if True - field is dynamic (from empty to any).
         """
         return self.bytes_expected == 0
 
@@ -240,7 +240,7 @@ class BytesFieldABC(ABC, Generic[StructT]):
         """
         return self._struct.encode(content)
 
-    def validate(self, content: bytes) -> bool:
+    def verify(self, content: bytes) -> bool:
         """
         Check the content for compliance with the field parameters.
 
@@ -254,7 +254,7 @@ class BytesFieldABC(ABC, Generic[StructT]):
         bool
             True - content is correct, False - not.
         """
-        return self._struct.validate(content)
+        return self._struct.verify(content)
 
     @property
     def bytes_count(self) -> int:
@@ -454,7 +454,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
                 parser = self[name]
                 if (
                     parser.struct.has_default
-                    or parser.struct.is_floating
+                    or parser.struct.is_dynamic
                     or len(parser) != 0
                 ):
                     diff.remove(name)
@@ -494,7 +494,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         if not isinstance(content, bytes):
             content = parser.encode(content)
 
-        if not parser.validate(content):
+        if not parser.verify(content):
             raise ValueError(
                 f"'{content.hex(' ')}' is not correct for '{parser.name}'"
             )
@@ -560,7 +560,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
             elif parser.struct.has_default:
                 self._c += parser.struct.default
 
-            elif parser.struct.is_floating:
+            elif parser.struct.is_dynamic:
                 continue
 
             else:

@@ -94,7 +94,7 @@ class BytesFieldStruct(BytesFieldStructProtocol):
         """
         return BytesEncoder.encode(content, fmt=self.fmt, order=self.order)
 
-    def validate(self, content: bytes) -> bool:
+    def verify(self, content: bytes) -> bool:
         """
         Check the content for compliance with the field parameters.
 
@@ -108,7 +108,7 @@ class BytesFieldStruct(BytesFieldStructProtocol):
         bool
             True - content is correct, False - not.
         """
-        if self.is_floating:
+        if self.is_dynamic:
             return len(content) % self.word_bytesize == 0
         return len(content) == self.bytes_expected
 

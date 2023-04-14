@@ -46,7 +46,7 @@ class Struct(BytesFieldStructProtocol):
     def encode(self, content: int | float | Iterable[int | float]) -> bytes:
         return np.array(content).astype(np.uint8).tobytes()
 
-    def validate(self, content: bytes) -> bool:
+    def verify(self, content: bytes) -> bool:
         length = len(content)
         if self.stop is None:
             return length == abs(self.start)
@@ -151,7 +151,7 @@ class TestBytesFieldStructProtocol(unittest.TestCase):
             bytes_expected=0,
             default=b"",
             has_default=False,
-            is_floating=True,
+            is_dynamic=True,
             slice_=slice(0, None),
             start=0,
             stop=None,
@@ -250,8 +250,8 @@ class TestBytesFieldABC(unittest.TestCase):
         self.assertEqual(b"\x01\x02", self._instance.encode([1, 2]))
 
     def test_validate(self) -> None:
-        self.assertTrue(self._instance.validate(b"\x00\x02\x05\x55\xaa"))
-        self.assertFalse(self._instance.validate(b"\x00"))
+        self.assertTrue(self._instance.verify(b"\x00\x02\x05\x55\xaa"))
+        self.assertFalse(self._instance.verify(b"\x00"))
 
     def test_magic_bytes(self) -> None:
         self.assertEqual(b"\x01\x02\x03\x04\x05", bytes(self._instance))
