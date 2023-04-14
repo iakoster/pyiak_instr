@@ -203,6 +203,17 @@ class BytesFieldABC(ABC, Generic[StructT]):
         self._name = name
         self._struct = struct
 
+    @abstractmethod
+    def encode(self, content: int | float | Iterable[int | float]) -> None:
+        """
+        Encode content to bytes and set .
+
+        Parameters
+        ----------
+        content : int | float | Iterable[int | float]
+            content to encoding.
+        """
+
     @property
     @abstractmethod
     def content(self) -> bytes:
@@ -223,22 +234,6 @@ class BytesFieldABC(ABC, Generic[StructT]):
             decoded content.
         """
         return self._struct.decode(self.content)
-
-    def encode(self, content: int | float | Iterable[int | float]) -> bytes:
-        """
-        Encode content to bytes.
-
-        Parameters
-        ----------
-        content : int | float | Iterable[int | float]
-            content to encoding.
-
-        Returns
-        -------
-        bytes
-            encoded bytes.
-        """
-        return self._struct.encode(content)
 
     def verify(self, content: bytes) -> bool:
         """
@@ -491,15 +486,17 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
             if new content is not correct for field.
         """
         parser = self[name]
-        if not isinstance(content, bytes):
-            content = parser.encode(content)
+        if isinstance(content, bytes):
+            bytes_ = content
+        else:
+            bytes_ = parser.struct.encode(content)
 
-        if not parser.verify(content):
+        if not parser.verify(bytes_):
             raise ValueError(
-                f"'{content.hex(' ')}' is not correct for '{parser.name}'"
+                f"'{bytes_.hex(' ')}' is not correct for '{parser.name}'"
             )
 
-        return content
+        return bytes_
 
     def _extract(self, content: bytes) -> None:
         """
@@ -509,7 +506,15 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         ----------
         content: bytes
             new content.
+
+        Raises
+        ------
+        ValueError
+            if content length smaller than minimal storage length
+            (`bytes_expected`).
         """
+        if len(content) < self.bytes_expected:
+            raise ValueError("bytes content too short")
         self._set({p.name: content[p.struct.slice_] for p in self})
 
     def _set(
@@ -577,6 +582,16 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
             content of the storage.
         """
         return bytes(self._c)
+
+    @property
+    def bytes_expected(self) -> int:
+        """
+        Returns
+        -------
+        int
+            expected bytes count or minimal length (if it has dynamic field).
+        """
+        return sum(s.bytes_expected for s in self._f.values())
 
     @property
     def name(self) -> str:

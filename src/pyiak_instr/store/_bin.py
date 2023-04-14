@@ -149,6 +149,17 @@ class BytesField(BytesFieldABC[BytesFieldStruct]):
         super().__init__(name, struct)
         self._storage = storage
 
+    def encode(self, content: int | float | Iterable[int | float]) -> None:
+        """
+        Encode content to bytes and set result to storage.
+
+        Parameters
+        ----------
+        content : int | float | Iterable[int | float]
+            content to encoding.
+        """
+        self._storage.encode(**{self._name: self.struct.encode(content)})
+
     @property
     def content(self) -> bytes:
         """

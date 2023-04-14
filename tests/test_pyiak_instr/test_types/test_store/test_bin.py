@@ -64,6 +64,9 @@ class Field(BytesFieldABC[Struct]):
 
     content_: bytes = bytes([1, 2, 3, 4, 5])
 
+    def encode(self, content: int | float | Iterable[int | float]) -> None:
+        raise NotImplementedError()
+
     @property
     def content(self) -> bytes:
         return self.content_
@@ -79,6 +82,11 @@ class FieldFull(BytesFieldABC[Struct]):
     ):
         super().__init__(name, struct)
         self._storage = storage
+
+    def encode(self, content: int | float | Iterable[int | float]) -> None:
+        self._storage.encode(
+            **{self._name: self._struct.encode(content)}
+        )
 
     @property
     def content(self) -> bytes:
@@ -246,9 +254,6 @@ class TestBytesFieldABC(unittest.TestCase):
     def test_decode(self) -> None:
         assert_array_equal([1, 2, 3, 4, 5], self._instance.decode())
 
-    def test_encode(self) -> None:
-        self.assertEqual(b"\x01\x02", self._instance.encode([1, 2]))
-
     def test_validate(self) -> None:
         self.assertTrue(self._instance.verify(b"\x00\x02\x05\x55\xaa"))
         self.assertFalse(self._instance.verify(b"\x00"))
@@ -278,6 +283,7 @@ class TestBytesStorageABC(unittest.TestCase):
         validate_object(
             self,
             self._instance,
+            bytes_expected=6,
             content=b"",
             name="test_storage",
         )
@@ -288,6 +294,7 @@ class TestBytesStorageABC(unittest.TestCase):
         validate_object(
             self,
             obj,
+            bytes_expected=6,
             content=bytes(range(20)),
             wo_attrs=["name"],
         )
@@ -395,6 +402,20 @@ class TestBytesStorageABC(unittest.TestCase):
                 fifth=[2, 3],
             )
         self.assertEqual("'02 03' is not correct for 'fifth'", exc.exception.args[0])
+
+    def test_struct_encode(self) -> None:
+        obj = self._instance.encode(
+            second=[1, 2],
+            fourth=(3, 4, 5),
+            fifth=6,
+        )
+        self.assertEqual(b"\xfa\x01\x02\x03\x04\x05\x06", obj.content)
+        obj["first"].encode([0xaa])
+        self.assertEqual(b"\xaa\x01\x02\x03\x04\x05\x06", obj.content)
+        obj["third"].encode([0xaa, 0, 0x77])
+        self.assertEqual(
+            b"\xaa\x01\x02\xaa\x00\x77\x03\x04\x05\x06", obj.content
+        )
 
     def test__check_fields_list(self) -> None:
         obj = self._instance

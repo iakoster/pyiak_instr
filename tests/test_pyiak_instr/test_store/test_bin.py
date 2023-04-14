@@ -168,7 +168,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
             ),
         )
 
-        validate_object(self, obj, content=b"", name="cbs")
+        validate_object(self, obj, bytes_expected=4, content=b"", name="cbs")
         for name, ref in ref_data.items():
             validate_object(self, obj[name], **ref, wo_attrs=["struct"])
 
@@ -182,10 +182,12 @@ class TestContinuousBytesStorage(unittest.TestCase):
     def test_encode_extract(self) -> None:
 
         def get_storage_pars(
+                bytes_expected: int,
                 content: bytes,
                 name: str,
         ) -> dict[str, Any]:
             return dict(
+                bytes_expected=bytes_expected,
                 content=content,
                 name=name,
             )
@@ -206,7 +208,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
                 obj=get_cbs_one(),
                 data=b"\x00\x01\xff\xff",
                 validate_storage=get_storage_pars(
-                    b"\x00\x01\xff\xff", "cbs_one"
+                    4, b"\x00\x01\xff\xff", "cbs_one"
                 ),
                 validate_fields=dict(
                     f0=get_field_pars(b"\x00\x01\xff\xff", 2),
@@ -219,7 +221,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
                 obj=get_cbs_one_infinite(),
                 data=b"\xef\x01\xff",
                 validate_storage=get_storage_pars(
-                    b"\xef\x01\xff", "cbs_one_infinite"
+                    0, b"\xef\x01\xff", "cbs_one_infinite"
                 ),
                 validate_fields=dict(
                     f0=get_field_pars(b"\xef\x01\xff", 3),
@@ -232,7 +234,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
                 obj=get_cbs_first_infinite(),
                 data=b"\xef\x01\xff\xff\x0f\xab\xdd",
                 validate_storage=get_storage_pars(
-                    b"\xef\x01\xff\xff\x0f\xab\xdd", "cbs_first_infinite"
+                    4, b"\xef\x01\xff\xff\x0f\xab\xdd", "cbs_first_infinite"
                 ),
                 validate_fields=dict(
                     f0=get_field_pars(b"\xef\x01\xff", 3),
@@ -249,6 +251,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
                 obj=get_cbs_middle_infinite(),
                 data=b"\xef\x01\xff\xff\x01\x02\x03\x04\xab\xdd",
                 validate_storage=get_storage_pars(
+                    6,
                     b"\xef\x01\xff\xff\x01\x02\x03\x04\xab\xdd",
                     "cbs_middle_infinite",
                 ),
@@ -267,6 +270,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
                 obj=get_cbs_last_infinite(),
                 data=b"\xab\xcd\x00\x00\x01\x02\x03\x04\x00\x00",
                 validate_storage=get_storage_pars(
+                    2,
                     b"\xab\xcd\x00\x00\x01\x02\x03\x04\x00\x00",
                     "cbs_last_infinite",
                 ),
@@ -338,6 +342,12 @@ class TestContinuousBytesStorage(unittest.TestCase):
             self.assertEqual(
                 "'02 03 04' is not correct for 'f1'", exc.exception.args[0]
             )
+
+    def test_struct_encode(self) -> None:
+        obj = get_cbs_example().encode(bytes(range(7)))
+        self.assertEqual(bytes(range(7)), obj.content)
+        obj["f3"].encode([1, 2])
+        self.assertEqual(bytes([0, 1, 2, 3, 1, 2, 6]), obj.content)
 
     def test_magic_contains(self) -> None:
         self.assertIn("f0", self._get_cbs())
@@ -436,6 +446,7 @@ class TestBytesStoragePattern(unittest.TestCase):
         data = b"\xaa\x55\xab\xcd\x11\x22\x33\x44\x55\xdc\xbb\x99"
         ref = dict(
             validate_storage=dict(
+                bytes_expected=7,
                 content=b"\xaa\x55\xab\xcd\x11\x22\x33\x44\x55\xdc\xbb\x99",
                 name="cbs_example"
             ),
