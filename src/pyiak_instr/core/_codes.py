@@ -67,3 +67,6 @@ class Code(IntEnum):
     ACTUAL = 0x600
     READ = auto()
     WRITE = auto()
+    DMA = auto()
+    STRONG = auto()
+    EXPECTED = auto()

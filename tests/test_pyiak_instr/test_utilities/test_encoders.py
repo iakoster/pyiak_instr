@@ -109,20 +109,23 @@ class TestBytesEncoder(unittest.TestCase):
         with self.assertRaises(CodeNotAllowed) as exc:
             BytesEncoder.get_bytesize(Code.NONE)
         self.assertEqual(
-            "code not allowed: <Code.NONE: 0>", exc.exception.args[0]
+            "code option not allowed, got <Code.NONE: 0>",
+            exc.exception.args[0],
         )
 
     def test_check_fmt_order_exc(self) -> None:
         with self.assertRaises(CodeNotAllowed) as exc:
             BytesEncoder.decode(b"", fmt=Code.NONE)
         self.assertEqual(
-            "code not allowed: <Code.NONE: 0>", exc.exception.args[0]
+            "code option not allowed, got <Code.NONE: 0>",
+            exc.exception.args[0],
         )
 
         with self.assertRaises(CodeNotAllowed) as exc:
             BytesEncoder.decode(b"", order=Code.NONE)
         self.assertEqual(
-            "code not allowed: <Code.NONE: 0>", exc.exception.args[0]
+            "code option not allowed, got <Code.NONE: 0>",
+            exc.exception.args[0],
         )
 
 
