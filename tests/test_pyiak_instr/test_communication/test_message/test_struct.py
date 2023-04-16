@@ -13,6 +13,7 @@ from src.pyiak_instr.communication.message import (
     IdMessageFieldStruct,
     OperationMessageFieldStruct,
     ResponseMessageFieldStruct,
+    MessageFieldPattern,
 )
 
 from ....utils import validate_object
@@ -314,4 +315,13 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
             stop=2,
             word_bytesize=2,
             words_expected=1,
+        )
+
+
+class TestMessageFieldPattern(unittest.TestCase):
+
+    def test_get(self) -> None:
+        self.assertIsInstance(
+            MessageFieldPattern("base", start=0).get(fmt=Code.U8),
+            MessageFieldStruct,
         )

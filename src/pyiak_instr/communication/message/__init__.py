@@ -16,6 +16,7 @@ from ._struct import (
     OperationMessageFieldStruct,
     ResponseMessageFieldStruct,
     MessageFieldStructUnionT,
+    MessageFieldPattern,
 )
 
 
@@ -31,4 +32,5 @@ __all__ = [
     "OperationMessageFieldStruct",
     "ResponseMessageFieldStruct",
     "MessageFieldStructUnionT",
+    "MessageFieldPattern",
 ]

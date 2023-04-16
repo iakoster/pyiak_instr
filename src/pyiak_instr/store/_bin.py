@@ -211,43 +211,6 @@ class BytesFieldPattern(PatternABC[BytesFieldStruct]):
     def __init__(self, typename: str = "base", **parameters: Any) -> None:
         super().__init__(typename=typename, **parameters)
 
-    def get(
-        self, changes_allowed: bool = False, **additions: Any
-    ) -> BytesFieldStruct:
-        """
-        Get field initialized with pattern and `additions`.
-
-
-        Parameters
-        ----------
-        changes_allowed : bool, default=False
-            if False intersection between `additions` and pattern is
-            prohibited.
-        additions : Any
-            additional arguments for field.
-
-        Returns
-        -------
-        BytesFieldStruct
-            initialized field.
-
-        Raises
-        ------
-        SyntaxError
-            if `changes_allowed` is False and pattern and `additions` has
-            intersection.
-        """
-        if not changes_allowed:
-            intersection = set(self._kw).intersection(set(additions))
-            if len(intersection) > 0:
-                raise SyntaxError(
-                    f"keyword argument(s) repeated: {', '.join(intersection)}"
-                )
-
-        kwargs = self._kw.copy()
-        kwargs.update(additions)
-        return self._target(**kwargs)
-
 
 class BytesStoragePattern(
     ContinuousBytesStoragePatternABC[

@@ -5,7 +5,24 @@ from typing import ClassVar, Union
 
 from ...core import Code
 from ...exceptions import NotAmongTheOptions
+from ...types import PatternABC
 from ...store import BytesFieldStruct
+
+
+__all__ = [
+    "MessageFieldStruct",
+    "SingleMessageFieldStruct",
+    "StaticMessageFieldStruct",
+    "AddressMessageFieldStruct",
+    "CrcMessageFieldStruct",
+    "DataMessageFieldStruct",
+    "DataLengthMessageFieldStruct",
+    "IdMessageFieldStruct",
+    "OperationMessageFieldStruct",
+    "ResponseMessageFieldStruct",
+    "MessageFieldStructUnionT",
+    "MessageFieldPattern",
+]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -209,3 +226,22 @@ MessageFieldStructUnionT = Union[
     OperationMessageFieldStruct,
     ResponseMessageFieldStruct,
 ]
+
+
+class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
+    """
+    Represents pattern for message field struct
+    """
+
+    _options = {
+        "base": MessageFieldStruct,
+        "single": SingleMessageFieldStruct,
+        "static": StaticMessageFieldStruct,
+        "address": AddressMessageFieldStruct,
+        "crc": CrcMessageFieldStruct,
+        "data": DataMessageFieldStruct,
+        "data_length": DataLengthMessageFieldStruct,
+        "id": IdMessageFieldStruct,
+        "operation": OperationMessageFieldStruct,
+        "response": ResponseMessageFieldStruct,
+    }

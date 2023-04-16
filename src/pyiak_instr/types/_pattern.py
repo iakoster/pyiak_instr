@@ -40,7 +40,6 @@ class PatternABC(ABC, Generic[OptionsT]):
         self._tn = typename
         self._kw = parameters
 
-    @abstractmethod
     def get(
         self, changes_allowed: bool = False, **additions: Any
     ) -> OptionsT:
@@ -62,6 +61,9 @@ class PatternABC(ABC, Generic[OptionsT]):
         OptionsT
             initialized target class.
         """
+        return self._target(
+            **self._get_parameters_dict(changes_allowed, additions)
+        )
 
     def _get_parameters_dict(
         self, changes_allowed: bool, additions: dict[str, Any]
