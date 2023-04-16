@@ -20,6 +20,8 @@ class SingleMessageFieldStruct(MessageFieldStruct):
     """
 
     def __post_init__(self) -> None:
+        if self.stop is None and self.bytes_expected == 0:
+            object.__setattr__(self, "bytes_expected", self.word_bytesize)
         super().__post_init__()
         if self.words_expected != 1:
             raise ValueError("single field should expect one word")
@@ -121,6 +123,7 @@ class DataMessageFieldStruct(MessageFieldStruct):
     """Represents a field of a Message with data."""
 
 
+@dataclass(frozen=True, kw_only=True)
 class DataLengthMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with data length.
