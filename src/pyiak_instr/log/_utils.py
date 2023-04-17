@@ -6,7 +6,6 @@ from typing import Any
 __all__ = ["get_logging_dict_config"]
 
 
-# pylint: disable=too-many-arguments
 def get_logging_dict_config(
     version: int = 1,
     disable_existing_loggers: bool = False,

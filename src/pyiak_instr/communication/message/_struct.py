@@ -1,7 +1,8 @@
 """Private module of ``pyiak_instr.communication.message`` with field
 structs."""
+from __future__ import annotations
 from dataclasses import dataclass, field as _field
-from typing import ClassVar, Union
+from typing import ClassVar, Self, Union
 
 from ...core import Code
 from ...exceptions import NotAmongTheOptions
@@ -234,7 +235,7 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
     """
 
     _options = {
-        "base": MessageFieldStruct,
+        "basic": MessageFieldStruct,
         "single": SingleMessageFieldStruct,
         "static": StaticMessageFieldStruct,
         "address": AddressMessageFieldStruct,
@@ -245,3 +246,351 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         "operation": OperationMessageFieldStruct,
         "response": ResponseMessageFieldStruct,
     }
+
+    @classmethod
+    def basic(
+        cls,
+        fmt: Code,
+        order: Code = Code.BIG_ENDIAN,
+        stop: int | None = None,
+        bytes_expected: int = 0,
+        default: bytes = b"",
+    ) -> Self:
+        """
+        Get initialized pattern for basic field.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format.
+        order : Code, default=Code.BIG_ENDIAN
+            value byte order.
+        stop : int | None, default=None
+            index of stop byte.
+        bytes_expected : int, default=0
+            expected count of bytes.
+        default : bytes, default=b''
+            default value for field.
+
+        Returns
+        -------
+        Self
+            initialized pattern.
+        """
+        return cls(
+            typename="basic",
+            fmt=fmt,
+            order=order,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            default=default,
+        )
+
+    @classmethod
+    def single(
+        cls,
+        fmt: Code,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"",
+    ) -> Self:
+        """
+        Get initialized pattern for single field.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format.
+        order : Code, default=Code.BIG_ENDIAN
+            value byte order.
+        default : bytes, default=b''
+            default value for field.
+
+        Returns
+        -------
+        Self
+            initialized pattern.
+        """
+        return cls(typename="single", fmt=fmt, order=order, default=default)
+
+    @classmethod
+    def static(
+        cls, fmt: Code, default: bytes, order: Code = Code.BIG_ENDIAN
+    ) -> Self:
+        """
+        Get initialized pattern for static field.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format.
+        default : bytes
+            default value for field.
+        order : Code, default=Code.BIG_ENDIAN
+            value byte order.
+
+        Returns
+        -------
+        Self
+            initialized pattern.
+        """
+        return cls(typename="static", fmt=fmt, order=order, default=default)
+
+    @classmethod
+    def address(
+        cls,
+        fmt: Code,
+        order: Code = Code.BIG_ENDIAN,
+        behaviour: Code = Code.DMA,
+        default: bytes = b"",
+    ) -> Self:
+        """
+        Get initialized pattern for address field.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format.
+        order : Code, default=Code.BIG_ENDIAN
+            value byte order.
+        behaviour : Code, default=Code.DMA
+            address field behaviour.
+        default : bytes, default=b''
+            default value for field.
+
+        Returns
+        -------
+        Self
+            initialized pattern.
+        """
+        return cls(
+            typename="address",
+            fmt=fmt,
+            order=order,
+            behaviour=behaviour,
+            default=default,
+        )
+
+    @classmethod
+    def crc(
+        cls,
+        fmt: Code,
+        order: Code = Code.BIG_ENDIAN,
+        poly: int = 0x1021,
+        init: int = 0,
+        default: bytes = b"",
+    ) -> Self:
+        """
+        Get initialized pattern for crc field.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format.
+        order : Code, default=Code.BIG_ENDIAN
+            value byte order.
+        poly : int, default=0x1021
+            poly for crc algorithm.
+        init : int, default=0
+            init value for crc algorithm.
+        default : bytes, default=b''
+            default value for field.
+
+        Returns
+        -------
+        Self
+            initialized pattern.
+        """
+        return cls(
+            typename="crc",
+            fmt=fmt,
+            order=order,
+            poly=poly,
+            init=init,
+            default=default,
+        )
+
+    @classmethod
+    def data(
+        cls,
+        fmt: Code,
+        order: Code = Code.BIG_ENDIAN,
+        stop: int | None = None,
+        bytes_expected: int = 0,
+        default: bytes = b"",
+    ) -> Self:
+        """
+        Get initialized pattern for data field.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format.
+        order : Code, default=Code.BIG_ENDIAN
+            value byte order.
+        stop : int | None, default=None
+            index of stop byte.
+        bytes_expected : int, default=0
+            expected count of bytes.
+        default : bytes, default=b''
+            default value for field.
+
+        Returns
+        -------
+        Self
+            initialized pattern.
+        """
+        return cls(
+            typename="data",
+            fmt=fmt,
+            order=order,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            default=default,
+        )
+
+    @classmethod
+    def data_length(
+        cls,
+        fmt: Code,
+        order: Code = Code.BIG_ENDIAN,
+        behaviour: Code = Code.ACTUAL,
+        units: Code = Code.BYTES,
+        additive: int = 0,
+        default: bytes = b"",
+    ) -> Self:
+        """
+        Get initialized pattern for data length field.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format.
+        order : Code, default=Code.BIG_ENDIAN
+            value byte order.
+        behaviour: Code, default=Code.ACTUAL
+            data length field behaviour.
+        units: Code, default=Code.BYTES
+            data length units.
+        additive: int, default=0
+            additive value for data length value.
+        default : bytes, default=b''
+            default value for field.
+
+        Returns
+        -------
+        Self
+            initialized pattern.
+        """
+        return cls(
+            typename="data_length",
+            fmt=fmt,
+            order=order,
+            behaviour=behaviour,
+            units=units,
+            additive=additive,
+            default=default,
+        )
+
+    @classmethod
+    def id_(
+        cls,
+        fmt: Code,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"",
+    ) -> Self:
+        """
+        Get initialized pattern for id field.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format.
+        order : Code, default=Code.BIG_ENDIAN
+            value byte order.
+        default : bytes, default=b''
+            default value for field.
+
+        Returns
+        -------
+        Self
+            initialized pattern.
+        """
+        return cls(typename="id", fmt=fmt, order=order, default=default)
+
+    @classmethod
+    def operation(
+        cls,
+        fmt: Code,
+        order: Code = Code.BIG_ENDIAN,
+        descriptions: dict[Code, int] | None = None,
+        default: bytes = b"",
+    ) -> Self:
+        """
+        Get initialized pattern for crc field.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format.
+        order : Code, default=Code.BIG_ENDIAN
+            value byte order.
+        descriptions: dict[Code, int] | None, default=None
+            operation value descriptions.
+        default : bytes, default=b''
+            default value for field.
+
+        Returns
+        -------
+        Self
+            initialized pattern.
+        """
+        if descriptions is None:
+            descriptions = {Code.READ: 0, Code.WRITE: 1}
+        return cls(
+            typename="operation",
+            fmt=fmt,
+            order=order,
+            descriptions=descriptions,
+            default=default,
+        )
+
+    @classmethod
+    def response(
+        cls,
+        fmt: Code,
+        order: Code = Code.BIG_ENDIAN,
+        descriptions: dict[int, Code] | None = None,
+        default_code: Code = Code.UNDEFINED,
+        default: bytes = b"",
+    ) -> Self:
+        """
+        Get initialized pattern for crc field.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format.
+        order : Code, default=Code.BIG_ENDIAN
+            value byte order.
+        descriptions: dict[Code, int] | None, default=None
+            response value descriptions.
+        default_code: Code=Code.UNDEFINED
+            default code for response value.
+        default : bytes, default=b''
+            default value for field.
+
+        Returns
+        -------
+        Self
+            initialized pattern.
+        """
+        if descriptions is None:
+            descriptions = {}
+        return cls(
+            typename="response",
+            fmt=fmt,
+            order=order,
+            descriptions=descriptions,
+            default_code=default_code,
+            default=default,
+        )
