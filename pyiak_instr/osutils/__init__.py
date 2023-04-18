@@ -7,8 +7,12 @@ match system():
             unhide_path,
             is_hidden_path,
         )
-    case _ as os_name:
-        raise SystemError("unsupported platform: %r" % os_name)
+    case _:
+        from ._linux import (
+            hide_path,
+            unhide_path,
+            is_hidden_path,
+        )
 
 
 __all__ = [
