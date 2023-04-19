@@ -39,13 +39,12 @@ def get_opened_connections(ip: str = None) -> set[IPV4_ADDRESS_TYPE]:
         set of opened connections.
     """
 
-    def add_if_ip_correct(addr: IPV4_ADDRESS_TYPE) -> None:
-        if len(addr) and IPV4_PATTERN.match(addr.ip) is not None \
-                and (ip == addr.ip or ip is None):
+    def add_if_ip_correct(addr: IPV4_ADDRESS_TYPE | str) -> None:
+        if isinstance(addr, IPV4_ADDRESS_TYPE) and (ip is None or ip == addr.ip):
             addrs.add(addr)
 
     addrs = set()
-    for con in psutil.net_connections(kind="all"):
+    for con in psutil.net_connections(kind="inet4"):
         add_if_ip_correct(con.laddr)
         add_if_ip_correct(con.raddr)
 
