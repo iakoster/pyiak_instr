@@ -133,6 +133,7 @@ class TestBytesField(unittest.TestCase):
             self._get_cbs()["f0"],
             bytes_count=0,
             content=b"",
+            is_empty=True,
             name="f0",
             words_count=0,
             wo_attrs=["struct"],
@@ -163,6 +164,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
             f0=dict(
                 bytes_count=0,
                 content=b"",
+                is_empty=True,
                 name="f0",
                 words_count=0,
             ),
@@ -200,7 +202,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
                 bytes_count=len(content),
                 content=content,
                 words_count=words_count,
-                wo_attrs=["struct", "name"],
+                wo_attrs=["struct", "name", "is_empty"],
             )
 
         data = dict(

@@ -246,6 +246,7 @@ class TestBytesFieldABC(unittest.TestCase):
             bytes_count=5,
             content=b"\x01\x02\x03\x04\x05",
             content_=b"\x01\x02\x03\x04\x05",
+            is_empty=False,
             name="test",
             struct=Struct(stop=5),
             words_count=5,

@@ -1,7 +1,6 @@
 """Private module of ``pyiak_instr.store`` for work with bytes."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import (
     Any,
     ClassVar,
@@ -16,6 +15,7 @@ from ..utilities import BytesEncoder, split_complex_dict
 from ..exceptions import NotConfiguredYet
 from ..types import PatternABC
 from ..types.store import (
+    STRUCT_DATACLASS,
     BytesFieldABC,
     BytesFieldStructProtocol,
     BytesStorageABC,
@@ -32,7 +32,7 @@ __all__ = [
 ]
 
 
-@dataclass(frozen=True, kw_only=True)
+@STRUCT_DATACLASS
 class BytesFieldStruct(BytesFieldStructProtocol):
     """
     Represents field parameters with values encoded in bytes.

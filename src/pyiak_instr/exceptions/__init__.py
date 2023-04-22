@@ -10,12 +10,14 @@ from ._common import (
     NotAmongTheOptions,
     WithoutParent,
 )
+from ._communication import ContentError
 from ._rwfile import RWFileError, FileSuffixError
 
 
 __all__ = [
     "PyiError",
     "CodeNotAllowed",
+    "ContentError",
     "NotConfiguredYet",
     "NotAmongTheOptions",
     "WithoutParent",

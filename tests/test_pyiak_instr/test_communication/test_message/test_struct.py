@@ -151,6 +151,7 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             slice_=slice(0, 2),
             start=0,
             stop=2,
+            wo_fields=set(),
             word_bytesize=2,
             words_expected=1,
         )
@@ -285,7 +286,8 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
             OperationMessageFieldStruct(start=0, fmt=Code.U16),
             bytes_expected=2,
             default=b"",
-            descriptions={Code.READ: 0, Code.WRITE: 1},
+            descs={0: Code.READ, 1: Code.WRITE},
+            descs_r={Code.READ: 0, Code.WRITE: 1},
             fmt=Code.U16,
             has_default=False,
             is_dynamic=False,
@@ -306,8 +308,8 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
             ResponseMessageFieldStruct(start=0, fmt=Code.U16),
             bytes_expected=2,
             default=b"",
-            default_code=Code.UNDEFINED,
-            descriptions={},
+            descs={},
+            descs_r={},
             fmt=Code.U16,
             has_default=False,
             is_dynamic=False,
@@ -377,6 +379,7 @@ class TestMessageFieldPattern(unittest.TestCase):
             2,
             poly=0x1021,
             init=0,
+            wo_fields=set(),
         )
 
     def test_data(self) -> None:
@@ -418,7 +421,8 @@ class TestMessageFieldPattern(unittest.TestCase):
             2,
             slice(1, 3),
             2,
-            descriptions={Code.READ: 0, Code.WRITE: 1},
+            descs={Code.READ: 0, Code.WRITE: 1},
+            descs_r={0: Code.READ, 1: Code.WRITE},
         )
 
     def test_response(self) -> None:
@@ -428,8 +432,8 @@ class TestMessageFieldPattern(unittest.TestCase):
             1,
             slice(0, 1),
             1,
-            descriptions={},
-            default_code=Code.UNDEFINED,
+            descs={},
+            descs_r={},
         )
 
     def _validate(

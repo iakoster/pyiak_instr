@@ -1,12 +1,13 @@
 """Private module of ``pyiak_instr.communication.message`` with field
 structs."""
 from __future__ import annotations
-from dataclasses import dataclass, field as _field
-from typing import ClassVar, Self, Union
+from dataclasses import field as _field
+from typing import ClassVar, Iterable, Self, Union
 
 from ...core import Code
-from ...exceptions import NotAmongTheOptions
+from ...exceptions import NotAmongTheOptions, ContentError
 from ...types import PatternABC
+from ...types.store import STRUCT_DATACLASS
 from ...store import BytesFieldStruct
 
 
@@ -26,12 +27,12 @@ __all__ = [
 ]
 
 
-@dataclass(frozen=True, kw_only=True)
+@STRUCT_DATACLASS
 class MessageFieldStruct(BytesFieldStruct):
     """Represents a general field of a Message."""
 
 
-@dataclass(frozen=True, kw_only=True)
+@STRUCT_DATACLASS
 class SingleMessageFieldStruct(MessageFieldStruct):
     """
     Represents a field of a Message with single word.
@@ -45,7 +46,7 @@ class SingleMessageFieldStruct(MessageFieldStruct):
             raise ValueError("single field should expect one word")
 
 
-@dataclass(frozen=True, kw_only=True)
+@STRUCT_DATACLASS
 class StaticMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with static single word (e.g. preamble).
@@ -77,7 +78,7 @@ class StaticMessageFieldStruct(SingleMessageFieldStruct):
         return False
 
 
-@dataclass(frozen=True, kw_only=True)
+@STRUCT_DATACLASS
 class AddressMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with address.
@@ -93,7 +94,7 @@ class AddressMessageFieldStruct(SingleMessageFieldStruct):
             )
 
 
-@dataclass(frozen=True, kw_only=True)
+@STRUCT_DATACLASS
 class CrcMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with crc value.
@@ -103,6 +104,8 @@ class CrcMessageFieldStruct(SingleMessageFieldStruct):
 
     init: int = 0
 
+    wo_fields: set[str] = _field(default_factory=set)
+
     def __post_init__(self) -> None:
         super().__post_init__()
         if self.bytes_expected != 2 or self.poly != 0x1021 or self.init != 0:
@@ -110,7 +113,7 @@ class CrcMessageFieldStruct(SingleMessageFieldStruct):
                 "Crc algorithm not verified for other values"
             )  # todo: optimize for any crc
 
-    def get_crc(self, content: bytes) -> int:
+    def get_crc(self, content: bytes) -> int:  # todo: rename to calculate
         """
         Calculate crc of content.
 
@@ -136,12 +139,12 @@ class CrcMessageFieldStruct(SingleMessageFieldStruct):
         return crc
 
 
-@dataclass(frozen=True, kw_only=True)
+@STRUCT_DATACLASS
 class DataMessageFieldStruct(MessageFieldStruct):
     """Represents a field of a Message with data."""
 
 
-@dataclass(frozen=True, kw_only=True)
+@STRUCT_DATACLASS
 class DataLengthMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with data length.
@@ -165,15 +168,43 @@ class DataLengthMessageFieldStruct(SingleMessageFieldStruct):
         if self.units not in {Code.BYTES, Code.WORDS}:
             raise NotAmongTheOptions("units", self.units)
 
+    # todo: auto encode type
+    def calculate(self, data: bytes) -> int:
+        """
+        Calculate length of `data`.
 
-@dataclass(frozen=True, kw_only=True)
+        Parameters
+        ----------
+        data : bytes
+            data bytes.
+
+        Returns
+        -------
+        int
+            `data` length.
+
+        Raises
+        ------
+        ValueError
+            if data not integer count of words.
+        """
+        if self.units is Code.WORDS:
+            if len(data) % self.word_bytesize != 0:
+                raise ValueError("'data' has a non-integer word count")
+            return len(data) // self.word_bytesize
+
+        # units is a WORDS
+        return len(data)
+
+
+@STRUCT_DATACLASS
 class IdMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field with a unique identifier of a particular message.
     """
 
 
-@dataclass(frozen=True, kw_only=True)
+@STRUCT_DATACLASS
 class OperationMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with operation (e.g. read).
@@ -186,33 +217,179 @@ class OperationMessageFieldStruct(SingleMessageFieldStruct):
     {READ: 0, WRITE: 1}.
     """
 
-    descriptions: dict[Code, int] = _field(
-        default_factory=lambda: {Code.READ: 0, Code.WRITE: 1}
+    # todo: class with descriptions type
+    descs: dict[int, Code] = _field(
+        default_factory=lambda: {0: Code.READ, 1: Code.WRITE}
     )
-    """dictionary of correspondence between the operation base and the value
-    in the content."""
+    """matching dictionary value and codes."""
 
-    _desc_r: ClassVar[dict[int, Code]] = {}
+    descs_r: ClassVar[dict[Code, int]]
     """reversed `descriptions`."""
 
     def __post_init__(self) -> None:
         super().__post_init__()
+        # pylint: disable=no-member
         object.__setattr__(
-            self, "_desc_r", {v: k for k, v in self.descriptions.items()}
+            self, "descs_r", {v: k for k, v in self.descs.items()}
         )
 
+    def encode(
+        self, content: Iterable[int | float] | int | float | Code
+    ) -> bytes:
+        """
+        Encode content to bytes.
 
-@dataclass(frozen=True, kw_only=True)
+        Parameters
+        ----------
+        content : npt.ArrayLike | Code
+            content to encoding.
+
+        Returns
+        -------
+        bytes
+            encoded content.
+
+        Raises
+        ------
+        ContentError
+            if `content` is a code which not represented in `descs`.
+        """
+        if isinstance(content, Code):
+            value = self.desc_r(content)
+            if value is None:
+                raise ContentError(self, f"can't encode {repr(content)}")
+            content = value
+        return super().encode(content)
+
+    def desc(self, value: int) -> Code:
+        """
+        Convert value to code.
+
+        Returns `UNDEFINED` if value not represented in `descs`.
+
+        Parameters
+        ----------
+        value : int
+            value for converting.
+
+        Returns
+        -------
+        Code
+            value code.
+        """
+        # pylint: disable=unsupported-membership-test,unsubscriptable-object
+        if value not in self.descs:
+            return Code.UNDEFINED
+        return self.descs[value]
+
+    def desc_r(self, code: Code) -> int | None:
+        """
+        Convert code to value.
+
+        Returns None if `code` not represented in `descs`.
+
+        Parameters
+        ----------
+        code : Code
+            code for converting.
+
+        Returns
+        -------
+        int | None
+            code value.
+        """
+        if code not in self.descs_r:
+            return None
+        return self.descs_r[code]
+
+
+@STRUCT_DATACLASS
 class ResponseMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with response field.
     """
 
-    descriptions: dict[int, Code] = _field(default_factory=dict)
+    descs: dict[int, Code] = _field(default_factory=dict)
     """matching dictionary value and codes."""
 
-    default_code: Code = Code.UNDEFINED
-    """default code if value undefined."""
+    descs_r: ClassVar[dict[Code, int]]
+    """reversed `descriptions`."""
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        # pylint: disable=no-member
+        object.__setattr__(
+            self, "descs_r", {v: k for k, v in self.descs.items()}
+        )
+
+    def encode(
+        self, content: Iterable[int | float] | int | float | Code
+    ) -> bytes:
+        """
+        Encode content to bytes.
+
+        Parameters
+        ----------
+        content : npt.ArrayLike | Code
+            content to encoding.
+
+        Returns
+        -------
+        bytes
+            encoded content.
+
+        Raises
+        ------
+        ContentError
+            if `content` is a code which not represented in `descs`.
+        """
+        if isinstance(content, Code):
+            value = self.desc_r(content)
+            if value is None:
+                raise ContentError(self, f"can't encode {repr(content)}")
+            content = value
+        return super().encode(content)
+
+    def desc(self, value: int) -> Code:
+        """
+        Convert value to code.
+
+        Returns `UNDEFINED` if value not represented in `descs`.
+
+        Parameters
+        ----------
+        value : int
+            value for converting.
+
+        Returns
+        -------
+        Code
+            value code.
+        """
+        # pylint: disable=unsupported-membership-test,unsubscriptable-object
+        if value not in self.descs:
+            return Code.UNDEFINED
+        return self.descs[value]
+
+    def desc_r(self, code: Code) -> int | None:
+        """
+        Convert code to value.
+
+        Returns None if `code` not represented in `descs`.
+
+        Parameters
+        ----------
+        code : Code
+            code for converting.
+
+        Returns
+        -------
+        int | None
+            code value.
+        """
+        if code not in self.descs_r:
+            return None
+        return self.descs_r[code]
 
 
 MessageFieldStructUnionT = Union[
@@ -522,7 +699,7 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         cls,
         fmt: Code,
         order: Code = Code.BIG_ENDIAN,
-        descriptions: dict[Code, int] | None = None,
+        descs: dict[Code, int] | None = None,
         default: bytes = b"",
     ) -> Self:
         """
@@ -534,7 +711,7 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
             value format.
         order : Code, default=Code.BIG_ENDIAN
             value byte order.
-        descriptions: dict[Code, int] | None, default=None
+        descs: dict[Code, int] | None, default=None
             operation value descriptions.
         default : bytes, default=b''
             default value for field.
@@ -544,13 +721,13 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         Self
             initialized pattern.
         """
-        if descriptions is None:
-            descriptions = {Code.READ: 0, Code.WRITE: 1}
+        if descs is None:
+            descs = {Code.READ: 0, Code.WRITE: 1}
         return cls(
             typename="operation",
             fmt=fmt,
             order=order,
-            descriptions=descriptions,
+            descs=descs,
             default=default,
         )
 
@@ -559,8 +736,7 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         cls,
         fmt: Code,
         order: Code = Code.BIG_ENDIAN,
-        descriptions: dict[int, Code] | None = None,
-        default_code: Code = Code.UNDEFINED,
+        descs: dict[int, Code] | None = None,
         default: bytes = b"",
     ) -> Self:
         """
@@ -572,10 +748,8 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
             value format.
         order : Code, default=Code.BIG_ENDIAN
             value byte order.
-        descriptions: dict[Code, int] | None, default=None
+        descs: dict[Code, int] | None, default=None
             response value descriptions.
-        default_code: Code=Code.UNDEFINED
-            default code for response value.
         default : bytes, default=b''
             default value for field.
 
@@ -584,13 +758,12 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         Self
             initialized pattern.
         """
-        if descriptions is None:
-            descriptions = {}
+        if descs is None:
+            descs = {}
         return cls(
             typename="response",
             fmt=fmt,
             order=order,
-            descriptions=descriptions,
-            default_code=default_code,
+            descs=descs,
             default=default,
         )

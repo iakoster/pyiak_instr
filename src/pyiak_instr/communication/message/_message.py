@@ -1,5 +1,19 @@
-"""Private module of ``pyiak_instr.communication.message`` with field
-parsers."""
+"""Private module of ``pyiak_instr.communication.message`` with message
+classes."""
+from __future__ import annotations
+
+from ._struct import MessageFieldStructUnionT
+from ...types.store import BytesStorageABC
+
+from ._field import MessageFieldUnionT
+
+
+class Message(BytesStorageABC[MessageFieldUnionT, MessageFieldStructUnionT]):
+    """
+    Message for communication between devices
+    """
+
+
 # from __future__ import annotations
 # from typing import Any, Generator, Self, Union
 #

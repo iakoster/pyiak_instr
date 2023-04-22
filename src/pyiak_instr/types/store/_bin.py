@@ -25,6 +25,7 @@ from ...typing import SupportsContainsGetitem
 
 
 __all__ = [
+    "STRUCT_DATACLASS",
     "BytesFieldABC",
     "BytesFieldStructProtocol",
     "BytesStorageABC",
@@ -39,7 +40,10 @@ StorageT = TypeVar("StorageT", bound="BytesStorageABC[Any, Any]")
 PatternT = TypeVar("PatternT", bound=PatternABC[Any])
 
 
-@dataclass(frozen=True, kw_only=True)
+STRUCT_DATACLASS = dataclass(frozen=True, kw_only=True)
+
+
+@STRUCT_DATACLASS
 class BytesFieldStructProtocol(Protocol):
     """
     Represents protocol for field structure.
@@ -262,6 +266,16 @@ class BytesFieldABC(ABC, Generic[StructT]):
         return len(self.content)
 
     @property
+    def is_empty(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - if field content is empty.
+        """
+        return len(self.content) == 0
+
+    @property
     def name(self) -> str:
         """
         Returns
@@ -300,9 +314,17 @@ class BytesFieldABC(ABC, Generic[StructT]):
         """
         return self.content
 
+    @overload
+    def __getitem__(self, index: int) -> int | float:
+        ...
+
+    @overload
+    def __getitem__(self, index: slice) -> npt.NDArray[np.int_ | np.float_]:
+        ...
+
     def __getitem__(
         self, index: int | slice
-    ) -> np.int_ | np.float_ | npt.NDArray[np.int_ | np.float_]:
+    ) -> int | float | npt.NDArray[np.int_ | np.float_]:
         """
         Parameters
         ----------
