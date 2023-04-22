@@ -44,7 +44,7 @@ class FileSuffixError(RWFileError):
 
     def __init__(self, suffixes: set[str], filepath: Path):
         super().__init__(
-            "suffix of '%s' not in %s" % (filepath, suffixes),
+            f"suffix of '{filepath}' not in {suffixes}",
             filepath,
             filepath.suffix,
         )

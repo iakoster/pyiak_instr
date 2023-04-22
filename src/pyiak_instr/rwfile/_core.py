@@ -111,7 +111,7 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
         str
             string which must be under brackets in result of .__str__ method.
         """
-        return str(self._fp)
+        return f"'{self._fp}'"
 
     def __exit__(
         self,

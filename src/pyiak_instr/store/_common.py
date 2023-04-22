@@ -171,7 +171,7 @@ class BitVector:
         """
         if not isinstance(values, int) and len(values) != self._vals.shape[0]:
             raise ValueError(
-                "Invalid array length, %d required" % self._vals.shape[0]
+                f"Invalid array length, {self._vals.shape[0]} required"
             )
 
         new = np.array(values, dtype=np.uint8)

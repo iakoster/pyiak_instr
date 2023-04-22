@@ -121,10 +121,7 @@ class RWSQLite(RWFile[sqlite3.Cursor]):
             list of columns in all tables.
         """
         return {
-            t: [
-                e[0]
-                for e in self.request("SELECT * FROM %s;" % t).description
-            ]
+            t: [e[0] for e in self.request(f"SELECT * FROM {t};").description]
             for t in self.tables
         }
 
@@ -140,9 +137,9 @@ class RWSQLite(RWFile[sqlite3.Cursor]):
         """
 
         return {
-            table: self.request(
-                "SELECT COUNT(*) FROM %s;" % table
-            ).fetchone()[0]
+            table: self.request(f"SELECT COUNT(*) FROM {table};").fetchone()[
+                0
+            ]
             for table in self.tables
         }
 

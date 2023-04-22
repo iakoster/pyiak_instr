@@ -13,7 +13,7 @@ match system():
             is_hidden_path,
         )
     case _ as os_name:
-        raise SystemError("unsupported platform: %r" % os_name)
+        raise SystemError(f"unsupported platform: {os_name}")
 
 
 __all__ = [

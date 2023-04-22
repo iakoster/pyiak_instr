@@ -38,15 +38,15 @@ def split_complex_dict(
     """
     if without_sep not in {"raise", "other"}:
         raise ValueError(
-            "invalid attribute 'without_sep': %r not in {'raise', 'other'}"
-            % without_sep
+            f"invalid attribute 'without_sep': '{without_sep}' not in "
+            "{'raise', 'other'}"
         )
 
     result: dict[str, dict[str, Any]]
     result, wo_sep_dict = {}, {}
     for key, value in complex_dict.items():
         if without_sep == "raise" and sep not in key:
-            raise KeyError("key %r does not have separator %r" % (key, sep))
+            raise KeyError(f"key '{key}' does not have separator '{sep}'")
         if sep not in key:
             wo_sep_dict[key] = value
             continue

@@ -202,7 +202,7 @@ class EditablePatternABC(ABC):
     def __setitem__(self, name: str, value: Any) -> None:
         """Change value of the existed parameter."""
         if name not in self._kw:
-            raise KeyError("%r not in parameters" % name)
+            raise KeyError(f"'{name}' not in parameters")
         self._kw[name] = value
 
 

@@ -13,6 +13,6 @@ class TestWithBaseStringMethods(unittest.TestCase):
 
     def test_magic_repr(self) -> None:
         self.assertEqual(
-            "<WithBaseStringMethodsTestInstance('test=5')>",
+            "<WithBaseStringMethodsTestInstance(test=5)>",
             repr(WithBaseStringMethodsTestInstance())
         )

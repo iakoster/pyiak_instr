@@ -613,7 +613,7 @@ class StringEncoder:
                 if not opened_sod:
                     return sod_pos, i_char
 
-        raise ValueError("SOD not closed in %r" % string)
+        raise ValueError(f"SOD not closed in '{string}'")
 
     @classmethod
     def _is_compound_string(cls, string: str) -> bool:

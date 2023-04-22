@@ -17,7 +17,7 @@ class NotConfiguredYet(PyiError):
     """Raised when further work requires the object to be configured."""
 
     def __init__(self, obj: object) -> None:
-        super().__init__(msg="%s not configured yet" % obj.__class__.__name__)
+        super().__init__(msg=f"{obj.__class__.__name__} not configured yet")
 
 
 class NotAmongTheOptions(PyiError):

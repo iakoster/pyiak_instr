@@ -90,7 +90,7 @@ class WithBaseStringMethods(ABC):
         str
             String interpretation of the class instance.
         """
-        return "<%s>" % self
+        return f"<{self}>"
 
     def __str__(self) -> str:
         """
@@ -99,7 +99,4 @@ class WithBaseStringMethods(ABC):
         str
             String interpretation of the class instance.
         """
-        return "%s(%r)" % (
-            self.__class__.__name__,
-            self.__str_under_brackets__(),
-        )
+        return f"{self.__class__.__name__}({self.__str_under_brackets__()})"
