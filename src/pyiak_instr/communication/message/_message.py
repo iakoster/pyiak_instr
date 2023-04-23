@@ -1,302 +1,364 @@
 """Private module of ``pyiak_instr.communication.message`` with message
 classes."""
 from __future__ import annotations
+from typing import TypeVar, Iterable
 
-from ._struct import MessageFieldStructUnionT
 from ...types.store import BytesStorageABC
+from ._struct import (
+    MessageFieldStruct,
+    SingleMessageFieldStruct,
+    StaticMessageFieldStruct,
+    AddressMessageFieldStruct,
+    CrcMessageFieldStruct,
+    DataMessageFieldStruct,
+    DataLengthMessageFieldStruct,
+    IdMessageFieldStruct,
+    OperationMessageFieldStruct,
+    ResponseMessageFieldStruct,
+    MessageFieldStructUnionT,
+)
+from ._field import (
+    MessageField,
+    SingleMessageField,
+    StaticMessageField,
+    AddressMessageField,
+    CrcMessageField,
+    DataMessageField,
+    DataLengthMessageField,
+    IdMessageField,
+    OperationMessageField,
+    ResponseMessageField,
+    MessageFieldUnionT,
+)
 
-from ._field import MessageFieldUnionT
+
+# Example from docs. Working but not for method
+# T = TypeVar('T', int, float, complex)
+# Vec = Iterable[tuple[T, T]]
+# def inproduct(v: Vec[T]) -> T:
+#   return sum(x*y for x, y in v)
 
 
+# todo: fix type hints
+class MessageGet:
+    """
+    Parser to get the field from message by it type.
+
+    Parameters
+    ----------
+    message: Message
+        message instance.
+    types: dict[type[MessageFieldUnionT], str]
+        dictionary of field types in the message.
+    """
+
+    def __init__(
+            self,
+            message: Message,
+            types: dict[type[MessageFieldUnionT], str],
+    ) -> None:
+        self._msg, self._types = message, types
+
+    @property
+    def basic(self) -> MessageField:
+        """
+        Returns
+        -------
+        MessageField
+            field instance.
+        """
+        return self[MessageField]  # type: ignore[return-value]
+
+    @property
+    def single(self) -> SingleMessageField:
+        """
+        Returns
+        -------
+        SingleMessageField
+            field instance.
+        """
+        return self[SingleMessageField]  # type: ignore[return-value]
+
+    @property
+    def static(self) -> StaticMessageField:
+        """
+        Returns
+        -------
+        StaticMessageField
+            field instance.
+        """
+        return self[StaticMessageField]  # type: ignore[return-value]
+
+    @property
+    def address(self) -> AddressMessageField:
+        """
+        Returns
+        -------
+        AddressMessageField
+            field instance.
+        """
+        return self[AddressMessageField]  # type: ignore[return-value]
+
+    @property
+    def crc(self) -> CrcMessageField:
+        """
+        Returns
+        -------
+        CrcMessageField
+            field instance.
+        """
+        return self[CrcMessageField]  # type: ignore[return-value]
+
+    @property
+    def data(self) -> DataMessageField:
+        """
+        Returns
+        -------
+        DataMessageField
+            field instance.
+        """
+        return self[DataMessageField]  # type: ignore[return-value]
+
+    @property
+    def data_length(self) -> DataLengthMessageField:
+        """
+        Returns
+        -------
+        DataLengthMessageField
+            field instance.
+        """
+        return self[DataLengthMessageField]  # type: ignore[return-value]
+
+    @property
+    def id_(self) -> IdMessageField:
+        """
+        Returns
+        -------
+        IdMessageField
+            field instance.
+        """
+        return self[IdMessageField]  # type: ignore[return-value]
+
+    @property
+    def operation(self) -> OperationMessageField:
+        """
+        Returns
+        -------
+        OperationMessageField
+            field instance.
+        """
+        return self[OperationMessageField]  # type: ignore[return-value]
+
+    @property
+    def response(self) -> ResponseMessageField:
+        """
+        Returns
+        -------
+        ResponseMessageField
+            field instance.
+        """
+        return self[ResponseMessageField]  # type: ignore[return-value]
+
+    def __getitem__(self, type_: type[MessageFieldUnionT]) -> MessageFieldUnionT:
+        """Get first field with specified type."""
+        if type_ not in self._types:
+            raise TypeError(f"field with type {type_.__name__} not found")
+        return self._msg[self._types[type_]]
+
+
+class MessageHas:
+    """
+    Parser to check the field class exists in the message.
+
+    Parameters
+    ----------
+    types: set[type[MessageFieldUnionT]]
+        set of field types in the message.
+    """
+
+    def __init__(self, types: set[type[MessageFieldUnionT]]) -> None:
+        self._types = types
+
+    @property
+    def basic(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- basic field exists in message.
+        """
+        return self[MessageField]
+
+    @property
+    def single(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- single field exists in message.
+        """
+        return self[SingleMessageField]
+
+    @property
+    def static(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- static field exists in message.
+        """
+        return self[StaticMessageField]
+
+    @property
+    def address(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- address field exists in message.
+        """
+        return self[AddressMessageField]
+
+    @property
+    def crc(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- crc field exists in message.
+        """
+        return self[CrcMessageField]
+
+    @property
+    def data(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- data field exists in message.
+        """
+        return self[DataMessageField]
+
+    @property
+    def data_length(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- data length field exists in message.
+        """
+        return self[DataLengthMessageField]
+
+    @property
+    def id_(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- id field exists in message.
+        """
+        return self[IdMessageField]
+
+    @property
+    def operation(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- operation field exists in message.
+        """
+        return self[OperationMessageField]
+
+    @property
+    def response(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True -- response field exists in message.
+        """
+        return self[ResponseMessageField]
+
+    def __getitem__(self, type_: type[MessageFieldUnionT]) -> bool:
+        """
+        Check that message has field of specified type.
+        """
+        return type_ in self._types
+
+
+# todo: __str__
 class Message(BytesStorageABC[MessageFieldUnionT, MessageFieldStructUnionT]):
     """
-    Message for communication between devices
+    Message for communication between devices.
+
+    Parameters
+    ----------
+    name: str, default='std'
+        name of storage.
+    divisible: bool, default=False
+        shows that the message can be divided by the infinite field.
+    part_size: int, default=1024
+        max message length.
+    **fields: MessageFieldStructUnionT
+        fields of the storage. The kwarg Key is used as the field name.
     """
 
+    _get_parser = MessageGet
+    _has_parser = MessageHas
+    _struct_field = {
+        MessageFieldStruct: MessageField,
+        SingleMessageFieldStruct: SingleMessageField,
+        StaticMessageFieldStruct: StaticMessageField,
+        AddressMessageFieldStruct: AddressMessageField,
+        CrcMessageFieldStruct: CrcMessageField,
+        DataMessageFieldStruct: DataMessageField,
+        DataLengthMessageFieldStruct: DataLengthMessageField,
+        IdMessageFieldStruct: IdMessageField,
+        OperationMessageFieldStruct: OperationMessageField,
+        ResponseMessageFieldStruct: ResponseMessageField,
+    }
 
-# # todo: fix return typing (how? i don't known)
-# class MessageGetParser:
-#     """
-#     Represents parser to get the field type from message.
-#
-#     Parameters
-#     ----------
-#     message: Message
-#         message instance.
-#     types: dict[type[FieldType], str]
-#         dictionary of field types in the message.
-#     """
-#
-#     def __init__(
-#         self,
-#         message: Message,
-#         types: dict[type[MessageFieldStructUnionT], str],
-#     ):
-#         self._msg, self._types = message, types
-#
-#     @property
-#     def basic(self) -> MessageField:
-#         """
-#         Returns
-#         -------
-#         MessageField
-#             field instance.
-#         """
-#         return self(MessageFieldStruct)  # type: ignore[return-value]
-#
-#     @property
-#     def single(self) -> SingleMessageField:
-#         """
-#         Returns
-#         -------
-#         SingleMessageField
-#             field instance.
-#         """
-#         return self(SingleMessageFieldStruct)  # type: ignore[return-value]
-#
-#     @property
-#     def static(self) -> StaticMessageField:
-#         """
-#         Returns
-#         -------
-#         StaticMessageField
-#             field instance.
-#         """
-#         return self(StaticMessageFieldStruct)  # type: ignore[return-value]
-#
-#     @property
-#     def address(self) -> AddressMessageField:
-#         """
-#         Returns
-#         -------
-#         AddressMessageField
-#             field instance.
-#         """
-#         return self(AddressMessageFieldStruct)  # type: ignore[return-value]
-#
-#     @property
-#     def crc(self) -> CrcMessageField:
-#         """
-#         Returns
-#         -------
-#         CrcMessageField
-#             field instance.
-#         """
-#         return self(CrcMessageFieldStruct)  # type: ignore[return-value]
-#
-#     @property
-#     def data(self) -> DataMessageField:
-#         """
-#         Returns
-#         -------
-#         DataMessageField
-#             field instance.
-#         """
-#         return self(DataMessageFieldStruct)  # type: ignore[return-value]
-#
-#     @property
-#     def data_length(self) -> DataLengthMessageField:
-#         """
-#         Returns
-#         -------
-#         DataLengthMessageField
-#             field instance.
-#         """
-#         return self(
-#             DataLengthMessageFieldStruct
-#         )  # type: ignore[return-value]
-#
-#     # pylint: disable=invalid-name
-#     @property
-#     def id(self) -> IdMessageField:
-#         """
-#         Returns
-#         -------
-#         IdMessageField
-#             field instance.
-#         """
-#         return self(IdMessageFieldStruct)  # type: ignore[return-value]
-#
-#     @property
-#     def operation(self) -> OperationMessageField:
-#         """
-#         Returns
-#         -------
-#         OperationMessageField
-#             field instance.
-#         """
-#         return self(OperationMessageFieldStruct)
-# # type: ignore[return-value]
-#
-#     @property
-#     def response(self) -> ResponseMessageField:
-#         """
-#         Returns
-#         -------
-#         ResponseMessageField
-#             field instance.
-#         """
-#         return self(ResponseMessageFieldStruct)
-# # type: ignore[return-value]
-#
-#     def __call__(
-#         self, type_: type[MessageFieldStructUnionT]
-#     ) -> MessageFieldUnionT:
-#         """
-#         Get first field with specified type.
-#
-#         Parameters
-#         ----------
-#         type_: type[MessageFieldParametersUnionT]
-#
-#         Returns
-#         -------
-#         MessageFieldUnionT
-#             field if specified type.
-#
-#         Raises
-#         ------
-#         TypeError
-#             if type not found in fields list.
-#         """
-#         if type_ not in self._types:
-#             raise TypeError(
-#             "there is no field with type %s" % type_.__name__)
-#         return self._msg[self._types[type_]]  # type: ignore[return-value]
-#
-#
-# class MessageHasParser:
-#     """
-#     Represents parser to check the field class exists in the message.
-#
-#     Parameters
-#     ----------
-#     types: set[type[MessageFieldParametersUnionT]]
-#         set of field types in the message.
-#     """
-#
-#     def __init__(
-#         self,
-#         types: set[type[MessageFieldStructUnionT]],
-#     ) -> None:
-#         self._types = types
-#
-#     @property
-#     def basic(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True -- basic field exists in message.
-#         """
-#         return self(MessageFieldStruct)
-#
-#     @property
-#     def single(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True -- single field exists in message.
-#         """
-#         return self(SingleMessageFieldStruct)
-#
-#     @property
-#     def static(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True -- static field exists in message.
-#         """
-#         return self(StaticMessageFieldStruct)
-#
-#     @property
-#     def address(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True -- address field exists in message.
-#         """
-#         return self(AddressMessageFieldStruct)
-#
-#     @property
-#     def crc(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True -- crc field exists in message.
-#         """
-#         return self(CrcMessageFieldStruct)
-#
-#     @property
-#     def data(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True -- data field exists in message.
-#         """
-#         return self(DataMessageFieldStruct)
-#
-#     @property
-#     def data_length(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True -- data length field exists in message.
-#         """
-#         return self(DataLengthMessageFieldStruct)
-#
-#     # pylint: disable=invalid-name
-#     @property
-#     def id(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True -- id field exists in message.
-#         """
-#         return self(IdMessageFieldStruct)
-#
-#     @property
-#     def operation(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True -- operation field exists in message.
-#         """
-#         return self(OperationMessageFieldStruct)
-#
-#     @property
-#     def response(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True -- response field exists in message.
-#         """
-#         return self(ResponseMessageFieldStruct)
-#
-#     def __call__(self, type_: type[MessageFieldStructUnionT]) -> bool:
-#         """
-#         Check that message has field of specified type.
-#
-#         Parameters
-#         ----------
-#         type_: type[MessageFieldParametersUnionT]
-#             the type of field whose existence is to be checked.
-#
-#         Returns
-#         -------
-#         bool
-#             True - if field type exists, False - not.
-#         """
-#         return type_ in self._types
+    def __init__(
+            self,
+            name: str = "std",
+            divisible: bool = False,
+            part_size: int = 1500,
+            **fields: MessageFieldStructUnionT
+    ):
+        super().__init__(name, fields)
+        self._div = divisible
+        self._part_size = part_size
+
+        self._types = {}
+        for name, struct in self._f.items():
+            if name not in self._types:
+                self._types[self._struct_field[struct.__class__]] = name
+
+    @property
+    def get(self) -> _get_parser:
+        """
+        Returns
+        -------
+        MessageGet
+            get parser instance.
+        """
+        return MessageGet(self, self._types)
+
+    @property
+    def has(self) -> _has_parser:
+        """
+        Returns
+        -------
+        MessageHas
+            get parser instance.
+        """
+        return MessageHas(set(self._types))
+
+    def __getitem__(self, name: str) -> MessageFieldUnionT:
+        struct = self._f[name]
+        return self._struct_field[struct.__class__](self, name, struct)
+
+
 #
 #
 # # todo: __str__

@@ -203,6 +203,7 @@ class BytesFieldABC(ABC, Generic[StructT]):
         field structure instance.
     """
 
+    # todo: storage as TypeAlias?
     def __init__(self, name: str, struct: StructT) -> None:
         self._name = name
         self._struct = struct

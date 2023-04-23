@@ -205,15 +205,15 @@ class DataLengthMessageField(MessageFieldABC[DataLengthMessageFieldStruct]):
         """
         if self.struct.behaviour is Code.ACTUAL:
             return self._struct.calculate(
-                self._storage["data"].content
-            )  # todo: GetParser
+                self._storage.get.data.content
+            )
 
         # behaviour is a EXPECTED
         decoded = self[0]
         if decoded == 0:
             return self._struct.calculate(
-                self._storage["data"].content
-            )  # todo: GetParser
+                self._storage.get.data.content
+            )
         return decoded  # type: ignore[return-value]
 
     def update(self) -> None:
@@ -279,9 +279,9 @@ class IdMessageField(MessageFieldABC[IdMessageFieldStruct]):
             return False
 
         if isinstance(other, Message):
-            if "id" not in other:  # todo: HasParser
+            if not other.has.id_:
                 return False
-            return self.content == other["id"].content  # todo: GetParser
+            return self.content == other.get.id_.content
 
         if isinstance(other, IdMessageField):
             other = other.content
