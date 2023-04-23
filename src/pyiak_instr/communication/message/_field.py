@@ -139,7 +139,7 @@ class CrcMessageField(MessageFieldABC[CrcMessageFieldStruct]):
         for name, field in self._storage.items():
             if name not in self._struct.wo_fields and field is not self:
                 content += field.content
-        return self._struct.get_crc(content)
+        return self._struct.calculate(content)
 
     def update(self) -> None:
         """

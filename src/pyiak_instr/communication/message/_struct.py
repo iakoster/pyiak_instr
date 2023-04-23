@@ -113,7 +113,7 @@ class CrcMessageFieldStruct(SingleMessageFieldStruct):
                 "Crc algorithm not verified for other values"
             )  # todo: optimize for any crc
 
-    def get_crc(self, content: bytes) -> int:  # todo: rename to calculate
+    def calculate(self, content: bytes) -> int:
         """
         Calculate crc of content.
 

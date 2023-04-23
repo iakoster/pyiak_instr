@@ -14,43 +14,6 @@ class Message(BytesStorageABC[MessageFieldUnionT, MessageFieldStructUnionT]):
     """
 
 
-# from __future__ import annotations
-# from typing import Any, Generator, Self, Union
-#
-# import numpy.typing as npt
-#
-# from ._field import (
-#     MessageFieldStruct,
-#     SingleMessageFieldStruct,
-#     StaticMessageFieldStruct,
-#     AddressMessageFieldStruct,
-#     CrcMessageFieldStruct,
-#     DataMessageFieldStruct,
-#     DataLengthMessageFieldStruct,
-#     IdMessageFieldStruct,
-#     OperationMessageFieldStruct,
-#     ResponseMessageFieldStruct,
-#     MessageFieldStructUnionT,
-#     MessageFieldPattern,
-# )
-# from ...store import BytesField, ContinuousBytesStorage, BytesStoragePattern
-# from ...core import Code
-# from ...typing import BytesFieldABC, PatternStorageABC
-#
-# __all__ = [
-#     "MessageField",
-#     "SingleMessageField",
-#     "StaticMessageField",
-#     "AddressMessageField",
-#     "CrcMessageField",
-#     "DataMessageField",
-#     "DataLengthMessageField",
-#     "IdMessageField",
-#     "OperationMessageField",
-#     "ResponseMessageField",
-# ]
-#
-#
 # # todo: fix return typing (how? i don't known)
 # class MessageGetParser:
 #     """

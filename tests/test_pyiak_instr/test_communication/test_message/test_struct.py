@@ -156,7 +156,7 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             words_expected=1,
         )
 
-    def test_get_crc(self) -> None:
+    def test_calculate(self) -> None:
         contents = (
             b"\xaa",
             b"\xaa\xbb",
@@ -181,7 +181,7 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             assert len(contents) == len(crcs)
             for i, (content, crc) in enumerate(zip(contents, crcs)):
                 with self.subTest(test=name, crc=i):
-                    self.assertEqual(crc, obj.get_crc(content))
+                    self.assertEqual(crc, obj.calculate(content))
 
 
 class TestDataMessageFieldStruct(unittest.TestCase):
