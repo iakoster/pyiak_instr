@@ -210,7 +210,7 @@ class BytesEncoder:
         content: Iterable[int | float] | int | float,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
-    ) -> bytes:
+    ) -> bytes:  # todo: add bytes supports
         """
         Encode values to bytes.
 

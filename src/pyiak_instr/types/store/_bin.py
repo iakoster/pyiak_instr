@@ -9,8 +9,10 @@ from typing import (
     Generic,
     Generator,
     Iterable,
+    Iterator,
     Protocol,
     Self,
+    TypeAlias,
     TypeVar,
     overload,
 )
@@ -19,6 +21,7 @@ import numpy as np
 import numpy.typing as npt
 
 from .._pattern import MetaPatternABC, PatternABC, WritablePatternABC
+from ...core import Code
 from ...rwfile import RWConfig
 from ...exceptions import NotConfiguredYet
 from ...typing import SupportsContainsGetitem
@@ -35,7 +38,7 @@ __all__ = [
 
 
 StructT = TypeVar("StructT", bound="BytesFieldStructProtocol")
-ParserT = TypeVar("ParserT", bound="BytesFieldABC[Any]")
+ParserT = TypeVar("ParserT", bound="BytesFieldABC[Any, Any]")
 StorageT = TypeVar("StorageT", bound="BytesStorageABC[Any, Any]")
 PatternT = TypeVar("PatternT", bound=PatternABC[Any])
 
@@ -49,48 +52,30 @@ class BytesFieldStructProtocol(Protocol):
     Represents protocol for field structure.
     """
 
-    start: int
+    start: int = 0
     """the number of bytes in the message from which the fields begin."""
 
-    stop: int | None
+    stop: int | None = None
     """index of stop byte. If None - stop is end of bytes."""
 
-    bytes_expected: int
+    bytes_expected: int = 0
     """expected bytes count for field. If less than 1, from the start byte
     to the end of the message."""
 
-    default: bytes  # todo: to ContentType
+    fmt: Code = Code.U8
+    """format for packing or unpacking the content.
+    The word length is calculated from the format."""
+
+    order: Code = Code.BIG_ENDIAN
+    """bytes order for packing and unpacking."""
+
+    default: bytes = b""  # todo: to ContentType
     """default value of the field."""
 
     def __post_init__(self) -> None:
-        if self.stop == 0:
-            raise ValueError("'stop' can't be equal to zero")
-        if self.stop is not None and self.bytes_expected > 0:
-            raise TypeError("'bytes_expected' or 'stop' setting allowed")
-
-        if self.bytes_expected < 0:
-            object.__setattr__(self, "bytes_expected", 0)
-
-        if self.stop is not None:
-            if (
-                self.start >= 0
-                and self.stop > 0
-                or self.start < 0
-                and self.stop < 0
-            ):
-                object.__setattr__(
-                    self, "bytes_expected", self.stop - self.start
-                )
-
-        elif self.bytes_expected > 0:
-            stop = self.start + self.bytes_expected
-            if stop != 0:
-                object.__setattr__(self, "stop", stop)
-
-        if self.bytes_expected % self.word_bytesize:
-            raise ValueError(
-                "'bytes_expected' does not match an integer word count"
-            )
+        self._verify_values_before_modifying()
+        self._modify_values()
+        self._verify_values_after_modifying()
 
     @abstractmethod
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
@@ -124,7 +109,16 @@ class BytesFieldStructProtocol(Protocol):
             encoded content.
         """
 
+    @property
     @abstractmethod
+    def word_bytesize(self) -> int:
+        """
+        Returns
+        -------
+        int
+            count of bytes in one word.
+        """
+
     def verify(self, content: bytes) -> bool:
         """
         Verify that `content` is correct for the given field structure.
@@ -139,16 +133,52 @@ class BytesFieldStructProtocol(Protocol):
         bool
             True - content is correct, False - is not.
         """
+        if self.is_dynamic:
+            return len(content) % self.word_bytesize == 0
+        return len(content) == self.bytes_expected
 
-    @property
-    @abstractmethod
-    def word_bytesize(self) -> int:
+    def _modify_values(self) -> None:
+        if self.bytes_expected < 0:
+            object.__setattr__(self, "bytes_expected", 0)
+
+        if self.bytes_expected > 0:
+            stop = self.start + self.bytes_expected
+            if stop != 0:
+                object.__setattr__(self, "stop", stop)
+
+        elif self.stop is not None:
+            if not (self.start >= 0 and self.stop < 0):
+                object.__setattr__(
+                    self, "bytes_expected", self.stop - self.start
+                )
+
+        elif self.start <= 0 and self.stop is None:
+            object.__setattr__(self, "bytes_expected", -self.start)
+
+        else:
+            raise AssertionError(
+                "impossible to modify start, stop and bytes_expected"
+            )
+
+    def _verify_values_after_modifying(self) -> None:
         """
-        Returns
-        -------
-        int
-            count of bytes in one word.
+        Verify values after modifying.
         """
+        if self.bytes_expected % self.word_bytesize:
+            raise ValueError(
+                "'bytes_expected' does not match an integer word count"
+            )
+
+    def _verify_values_before_modifying(self) -> None:
+        """
+        Verify values before modifying.
+        """
+        if self.stop == 0:
+            raise ValueError("'stop' can't be equal to zero")
+        if self.stop is not None and self.bytes_expected > 0:
+            raise TypeError("'bytes_expected' or 'stop' setting not allowed")
+        if 0 > self.start > -self.bytes_expected:
+            raise ValueError("it will be out of bounds")
 
     @property
     def has_default(self) -> bool:
@@ -191,7 +221,7 @@ class BytesFieldStructProtocol(Protocol):
         return self.bytes_expected // self.word_bytesize
 
 
-class BytesFieldABC(ABC, Generic[StructT]):
+class BytesFieldABC(ABC, Generic[StorageT, StructT]):
     """
     Represents base parser class for work with field content.
 
@@ -203,31 +233,10 @@ class BytesFieldABC(ABC, Generic[StructT]):
         field structure instance.
     """
 
-    # todo: storage as TypeAlias?
-    def __init__(self, name: str, struct: StructT) -> None:
+    def __init__(self, storage: StorageT, name: str, struct: StructT) -> None:
+        self._storage = storage
         self._name = name
         self._struct = struct
-
-    @abstractmethod
-    def encode(self, content: int | float | Iterable[int | float]) -> None:
-        """
-        Encode content to bytes and set .
-
-        Parameters
-        ----------
-        content : int | float | Iterable[int | float]
-            content to encoding.
-        """
-
-    @property
-    @abstractmethod
-    def content(self) -> bytes:
-        """
-        Returns
-        -------
-        bytes
-            field content.
-        """
 
     def decode(self) -> npt.NDArray[np.int_ | np.float_]:
         """
@@ -239,6 +248,17 @@ class BytesFieldABC(ABC, Generic[StructT]):
             decoded content.
         """
         return self._struct.decode(self.content)
+
+    def encode(self, content: int | float | Iterable[int | float]) -> None:
+        """
+        Encode content to bytes and set .
+
+        Parameters
+        ----------
+        content : int | float | Iterable[int | float]
+            content to encoding.
+        """
+        self._storage.change(self._name, content)
 
     def verify(self, content: bytes) -> bool:
         """
@@ -265,6 +285,16 @@ class BytesFieldABC(ABC, Generic[StructT]):
             bytes count of the content.
         """
         return len(self.content)
+
+    @property
+    def content(self) -> bytes:
+        """
+        Returns
+        -------
+        bytes
+            field content.
+        """
+        return self._storage.content[self._struct.slice_]
 
     @property
     def is_empty(self) -> bool:
@@ -364,14 +394,30 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
     Represents abstract class for bytes storage.
     """
 
+    _struct_field: dict[type[StructT], type[ParserT]]
+
     def __init__(self, name: str, fields: dict[str, StructT]) -> None:
         self._name = name
         self._f = fields
         self._c = bytearray()
 
-    @abstractmethod
-    def __getitem__(self, name: str) -> ParserT:
-        """Get field parser."""
+    def change(
+            self, name: str, content: int | float | Iterable[int | float]
+    ) -> None:
+        """
+        Change content of one field by name.
+
+        Parameters
+        ----------
+        name : str
+            field name.
+        content : bytes
+            new field content.
+        """
+        if len(self) == 0:
+            raise TypeError("message is empty")
+        parser = self[name]
+        self._c[parser.struct.slice_] = self._encode_content(parser, content)
 
     def decode(self) -> dict[str, npt.NDArray[np.int_ | np.float_]]:
         """
@@ -382,7 +428,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         dict[str, npt.NDArray[Any]]
             dictionary with decoded content where key is a field name.
         """
-        return {p.name: p.decode() for p in self}
+        return {n: f.decode() for n, f in self.items()}
 
     @overload
     def encode(self, content: bytes) -> Self:
@@ -430,27 +476,14 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
 
         return self
 
-    def items(self) -> Iterable[tuple[str, ParserT]]:
+    def items(self) -> Iterator[tuple[str, ParserT]]:
         """
         Returns
         -------
         Iterable[tuple[str, ParserT]]
             Iterable of names and parsers.
         """
-        return ((n, self[n]) for n in self._f)
-
-    def _change_field_content(self, name: str, content: bytes) -> None:
-        """
-        Change content of one field by name.
-
-        Parameters
-        ----------
-        name : str
-            field name.
-        content : bytes
-            new field content.
-        """
-        self._c[self[name].struct.slice_] = content
+        return ((f.name, f) for f in self)
 
     def _check_fields_list(self, fields: set[str]) -> None:
         """
@@ -483,44 +516,6 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
                 f"{', '.join(map(repr, sorted(diff)))}"
             )
 
-    def _encode_field_content(
-        self,
-        name: str,
-        content: Iterable[int | float] | int | float,
-    ) -> bytes:
-        """
-        Get new content to the field.
-
-        Parameters
-        ----------
-        name: str
-            field name.
-        content: ArrayLike
-            new content.
-
-        Returns
-        -------
-        bytes
-            new field content
-
-        Raises
-        ------
-        ValueError
-            if new content is not correct for field.
-        """
-        parser = self[name]
-        if isinstance(content, bytes):
-            bytes_ = content
-        else:
-            bytes_ = parser.struct.encode(content)
-
-        if not parser.verify(bytes_):
-            raise ValueError(
-                f"'{bytes_.hex(' ')}' is not correct for '{parser.name}'"
-            )
-
-        return bytes_
-
     def _extract(self, content: bytes) -> None:
         """
         Extract fields from existing bytes content.
@@ -536,9 +531,17 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
             if content length smaller than minimal storage length
             (`bytes_expected`).
         """
-        if len(content) < self.bytes_expected:
+        bytes_expected = self.bytes_expected
+        if len(content) < bytes_expected:
             raise ValueError("bytes content too short")
-        self._set({p.name: content[p.struct.slice_] for p in self})
+        if not self.is_dynamic and len(content) > bytes_expected:
+            raise ValueError("bytes content too long")
+
+        if len(self) != 0:
+            self._c = bytearray()
+        self._set_all(
+            {p.name: content[p.struct.slice_] for p in self}
+        )
 
     def _set(
         self, fields: dict[str, int | float | Iterable[int | float]]
@@ -552,14 +555,12 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
             dictionary of fields content where key is a field name.
         """
         if len(self) == 0:
-            self._set_full_content(fields)
+            self._set_all(fields)
         else:
             for name, content in fields.items():
-                self._change_field_content(
-                    name, self._encode_field_content(name, content)
-                )
+                self.change(name, content)
 
-    def _set_full_content(
+    def _set_all(
         self, fields: dict[str, int | float | Iterable[int | float]]
     ) -> None:
         """
@@ -580,10 +581,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         self._check_fields_list(set(fields))
         for name, parser in self.items():
             if name in fields:
-                content = fields[name]
-                if isinstance(content, bytes) and len(content) == 0:
-                    continue
-                self._c += self._encode_field_content(name, content)
+                self._c += self._encode_content(parser, fields[name])
 
             elif parser.struct.has_default:
                 self._c += parser.struct.default
@@ -595,6 +593,42 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
                 raise AssertionError(
                     f"it is impossible to set the value of the '{name}' field"
                 )
+
+    @staticmethod
+    def _encode_content(
+            parser: ParserT, raw: Iterable[int | float] | int | float,
+    ) -> bytes:
+        """
+        Get new content to the field.
+
+        Parameters
+        ----------
+        parser: str
+            field parser.
+        raw: ArrayLike
+            new content.
+
+        Returns
+        -------
+        bytes
+            new field content
+
+        Raises
+        ------
+        ValueError
+            if new content is not correct for field.
+        """
+        if isinstance(raw, bytes):
+            content = raw
+        else:
+            content = parser.struct.encode(raw)  # todo: bytes support
+
+        if not parser.verify(content):
+            raise ValueError(
+                f"'{content.hex(' ')}' is not correct for '{parser.name}'"
+            )
+
+        return content
 
     @property
     def content(self) -> bytes:
@@ -617,6 +651,10 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         return sum(s.bytes_expected for s in self._f.values())
 
     @property
+    def is_dynamic(self) -> bool:
+        return any(p.struct.is_dynamic for p in self)
+
+    @property
     def name(self) -> str:
         """
         Returns
@@ -630,7 +668,12 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         """Check that field name in message."""
         return name in self._f
 
-    def __iter__(self) -> Generator[ParserT, None, None]:
+    def __getitem__(self, name: str) -> ParserT:
+        """Get field parser."""
+        struct = self._f[name]
+        return self._struct_field[struct.__class__](self, name, struct)
+
+    def __iter__(self) -> Iterator[ParserT]:
         """Iterate by field parsers."""
         return (self[n] for n in self._f)
 
@@ -648,13 +691,7 @@ class BytesStoragePatternABC(
     Represent abstract class of bytes storage.
     """
 
-    _only_auto_parameters = {"fields"}
-
-    @abstractmethod
-    def get(
-        self, changes_allowed: bool = False, **additions: Any
-    ) -> StorageT:
-        ...
+    _sub_p_par_name = "fields"
 
     def write(self, path: Path) -> None:
         """
@@ -717,58 +754,58 @@ class BytesStoragePatternABC(
                 **{f: cls._sub_p_type(**cfg.get(name, f)) for f in opts}
             )
 
-    @staticmethod
-    def _is_dynamic_pattern(
-        kwargs: dict[str, Any], pattern: PatternT
-    ) -> bool:  # todo: tests
-        """
-        Returns True if the joined parameters can be interpreted as a dynamic.
-
-        Parameters
-        ----------
-        kwargs : dict[str, Any]
-            additional parameters.
-        pattern : PatternT
-            pattern instance
-
-        Returns
-        -------
-        bool
-            True if the `kwargs` or `pattern` can be interpreted as a
-            dynamic, otherwise - False
-        """
-
-        def check(
-            obj: SupportsContainsGetitem,
-        ) -> bool:
-            """
-            Check that the object can be interpreted as a dynamic.
-
-            Parameters
-            ----------
-            obj : SupportsContainsGetitem
-                object for checking.
-
-            Returns
-            -------
-            bool
-                True if the object can be interpreted as a dynamic,
-                otherwise - False
-            """
-            return (
-                "stop" in obj
-                and obj["stop"] is None
-                or "bytes_expected" in obj
-                and isinstance(obj["bytes_expected"], int)
-                and obj["bytes_expected"] <= 0
-            )
-
-        return check(kwargs) or check(pattern)
+    # @staticmethod
+    # def _is_dynamic_pattern(
+    #     kwargs: dict[str, Any], pattern: PatternT | None = None
+    # ) -> bool:  # todo: tests
+    #     """
+    #     Returns True if the joined parameters can be interpreted as a dynamic.
+    #
+    #     Parameters
+    #     ----------
+    #     kwargs : dict[str, Any]
+    #         additional parameters.
+    #     pattern : PatternT | None, default=None
+    #         pattern instance
+    #
+    #     Returns
+    #     -------
+    #     bool
+    #         True if the `kwargs` or `pattern` can be interpreted as a
+    #         dynamic, otherwise - False
+    #     """
+    #
+    #     def check(obj: SupportsContainsGetitem | None) -> bool:
+    #         """
+    #         Check that the object can be interpreted as a dynamic.
+    #
+    #         Parameters
+    #         ----------
+    #         obj : SupportsContainsGetitem
+    #             object for checking.
+    #
+    #         Returns
+    #         -------
+    #         bool
+    #             True if the object can be interpreted as a dynamic,
+    #             otherwise - False
+    #         """
+    #         if obj is None:
+    #             return False
+    #         return (
+    #             "stop" in obj
+    #             and obj["stop"] is None
+    #             or "bytes_expected" in obj
+    #             and isinstance(obj["bytes_expected"], int)
+    #             and obj["bytes_expected"] <= 0
+    #         )
+    #
+    #     return check(kwargs) or check(pattern)
 
 
 class ContinuousBytesStoragePatternABC(
     BytesStoragePatternABC[StorageT, PatternT],
-    Generic[StorageT, PatternT, StructT],
+    Generic[StorageT, PatternT],
 ):
     """
     Represents methods for configure continuous storage.
@@ -777,161 +814,193 @@ class ContinuousBytesStoragePatternABC(
     (e.g. without gaps in content).
     """
 
-    _only_auto_parameters = {"fields", "start", "stop"}
+    _only_auto_parameters = {"start", "stop"}
+    _step_name = "bytes_expected"  # todo: check exists in pattern
 
-    @abstractmethod
-    def get(
-        self, changes_allowed: bool = False, **additions: Any
-    ) -> StorageT:
-        ...
+    def _modify_all(
+            self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        dyn_name = self._modify_before_dyn(for_subs)
+        if len(dyn_name) > 0:
+            self._modify_after_dyn(dyn_name, for_subs)
+        return super()._modify_all(changes_allowed, for_subs)
 
-    def _get_continuous(
-        self,
-        changes_allowed: bool,
-        for_storage: dict[str, Any],
-        for_fields: dict[str, dict[str, Any]],
-    ) -> StorageT:
-        """
-        Get initialized continuous storage.
-
-        Parameters
-        ----------
-        changes_allowed: bool
-            allows situations where keys from the pattern overlap with kwargs.
-            If False, it causes an error on intersection, otherwise the
-            `additions` take precedence.
-        for_storage: dict[str, Any]:
-            dictionary with parameters for storage in format
-            {PARAMETER: VALUE}.
-        for_fields: dict[str, dict[str, Any]]
-            dictionary with parameters for fields in format
-            {FIELD: {PARAMETER: VALUE}}.
-
-        Returns
-        -------
-        ContinuousBytesStorage
-            initialized storage.
-
-        Raises
-        ------
-        SyntaxError
-            if changes are not allowed, but there is an attempt to modify
-            the parameter.
-        TypeError
-            if trying to set 'fields'.
-        """
-        storage_kw = self._get_parameters_dict(changes_allowed, for_storage)
-
-        fields, dyn_name, dyn_start = self._get_fields_before_dyn(
-            changes_allowed, for_fields
-        )
-
-        if dyn_start >= 0:
-            after, dyn_stop = self._get_fields_after_dyn(
-                changes_allowed, for_fields, dyn_name
-            )
-
-            dyn_kw = for_fields[dyn_name] if dyn_name in for_fields else {}
-            dyn_kw.update(start=dyn_start, stop=dyn_stop)
-            fields[dyn_name] = self._sub_p[dyn_name].get(
-                changes_allowed=changes_allowed, **dyn_kw
-            )
-
-            fields.update(after)
-
-        return self._target(fields=fields, **storage_kw)
-
-    def _get_fields_after_dyn(
-        self,
-        changes_allowed: bool,
-        fields_kw: dict[str, dict[str, Any]],
-        dyn: str,
-    ) -> tuple[dict[str, StructT], int | None]:
-        """
-        Get the dictionary of fields that go from infinite field
-        (not included) to end.
-
-        Parameters
-        ----------
-        changes_allowed: bool
-            allows situations where keys from the pattern overlap with kwargs.
-            If False, it causes an error on intersection, otherwise the
-            `additions` take precedence.
-        fields_kw : dict[str, dict[str, Any]]
-            dictionary of kwargs for fields.
-        dyn : str
-            name of dynamic field.
-
-        Returns
-        -------
-        tuple[dict[str, OptionsT], str]
-            fields - dictionary of fields from infinite (not included);
-            dyn_stop - stop index of dynamic field.
-
-        Raises
-        ------
-        TypeError
-            if there is tow dynamic fields.
-        AssertionError
-            if for some reason the dynamic field is not found.
-        """
+    def _modify_before_dyn(
+            self, for_subs: dict[str, dict[str, Any]]
+    ) -> str:
         start = 0
-        fields: list[tuple[str, StructT]] = []
-        for name in list(self._sub_p)[::-1]:
-            if name == dyn:
-                return dict(fields[::-1]), start if start != 0 else None
+        for name, kw in for_subs.items():
+            if kw[self._step_name] <= 0:  # is dynamic field
+                kw.update(start=start)
+                return name
+            kw.update(start=start, stop=start + kw[self._step_name])
+            start = kw["stop"]
+        return ""
 
-            pattern = self._sub_p[name]
-            field_kw = fields_kw[name] if name in fields_kw else {}
-            if self._is_dynamic_pattern(field_kw, pattern):
-                raise TypeError("two dynamic field not allowed")
-
-            start -= pattern["bytes_expected"]
-            field_kw.update(start=start)
-            fields.append(
-                (
-                    name,
-                    pattern.get(changes_allowed=changes_allowed, **field_kw),
-                )
+    def _modify_after_dyn(
+            self,
+            dyn_name: str,
+            for_subs: dict[str, dict[str, Any]],
+      ) -> None:
+        stop = 0
+        for name in list(for_subs)[::-1]:
+            kw = for_subs[name]
+            if name == dyn_name:
+                kw.update(stop=stop if stop != 0 else None)
+                return
+            kw.update(
+                start=stop - kw[self._step_name],
+                stop=stop if stop != 0 else None,
             )
+            stop -= kw["start"]
 
-        raise AssertionError("dynamic field not found")
-
-    def _get_fields_before_dyn(
-        self, changes_allowed: bool, fields_kw: dict[str, dict[str, Any]]
-    ) -> tuple[dict[str, StructT], str, int]:
-        """
-        Get the dictionary of fields that go up to and including the infinite
-        field.
-
-        Parameters
-        ----------
-        changes_allowed: bool
-            allows situations where keys from the pattern overlap with kwargs.
-            If False, it causes an error on intersection, otherwise the
-            `additions` take precedence.
-        fields_kw : dict[str, dict[str, Any]]
-            dictionary of kwargs for fields.
-
-        Returns
-        -------
-        tuple[dict[str, StructT], str, int]
-            fields - dictionary of fields up to infinite (include);
-            dyn_name - name of infinite field. Empty if there is no found;
-            dyn_start - start index of infinite field. -1 if field is no
-                found.
-        """
-        start: int = 0
-        fields: dict[str, StructT] = {}
-        for name, pattern in self._sub_p.items():
-            field_kw = fields_kw[name] if name in fields_kw else {}
-            if self._is_dynamic_pattern(field_kw, pattern):
-                return fields, name, start
-
-            field_kw.update(start=start)
-            fields[name] = pattern.get(
-                changes_allowed=changes_allowed, **field_kw
-            )
-            start = fields[name].stop  # type: ignore[assignment]
-
-        return fields, "", -1
+    # def _get_continuous(
+    #     self,
+    #     changes_allowed: bool,
+    #     for_storage: dict[str, Any],
+    #     for_fields: dict[str, dict[str, Any]],
+    # ) -> StorageT:
+    #     """
+    #     Get initialized continuous storage.
+    #
+    #     Parameters
+    #     ----------
+    #     changes_allowed: bool
+    #         allows situations where keys from the pattern overlap with kwargs.
+    #         If False, it causes an error on intersection, otherwise the
+    #         `additions` take precedence.
+    #     for_storage: dict[str, Any]:
+    #         dictionary with parameters for storage in format
+    #         {PARAMETER: VALUE}.
+    #     for_fields: dict[str, dict[str, Any]]
+    #         dictionary with parameters for fields in format
+    #         {FIELD: {PARAMETER: VALUE}}.
+    #
+    #     Returns
+    #     -------
+    #     ContinuousBytesStorage
+    #         initialized storage.
+    #
+    #     Raises
+    #     ------
+    #     SyntaxError
+    #         if changes are not allowed, but there is an attempt to modify
+    #         the parameter.
+    #     TypeError
+    #         if trying to set 'fields'.
+    #     """
+    #     storage_kw = self._get_parameters_dict(changes_allowed, for_storage)
+    #
+    #     fields, dyn_name, dyn_start = self._get_fields_before_dyn(
+    #         changes_allowed, for_fields
+    #     )
+    #
+    #     if dyn_start >= 0:
+    #         after, dyn_stop = self._get_fields_after_dyn(
+    #             changes_allowed, for_fields, dyn_name
+    #         )
+    #
+    #         dyn_kw = for_fields[dyn_name] if dyn_name in for_fields else {}
+    #         dyn_kw.update(start=dyn_start, stop=dyn_stop)
+    #         fields[dyn_name] = self._sub_p[dyn_name].get(
+    #             changes_allowed=changes_allowed, **dyn_kw
+    #         )
+    #
+    #         fields.update(after)
+    #
+    #     return self._target(fields=fields, **storage_kw)
+    #
+    # def _get_fields_after_dyn(
+    #     self,
+    #     changes_allowed: bool,
+    #     fields_kw: dict[str, dict[str, Any]],
+    #     dyn: str,
+    # ) -> tuple[dict[str, StructT], int | None]:
+    #     """
+    #     Get the dictionary of fields that go from infinite field
+    #     (not included) to end.
+    #
+    #     Parameters
+    #     ----------
+    #     changes_allowed: bool
+    #         allows situations where keys from the pattern overlap with kwargs.
+    #         If False, it causes an error on intersection, otherwise the
+    #         `additions` take precedence.
+    #     fields_kw : dict[str, dict[str, Any]]
+    #         dictionary of kwargs for fields.
+    #     dyn : str
+    #         name of dynamic field.
+    #
+    #     Returns
+    #     -------
+    #     tuple[dict[str, OptionsT], str]
+    #         fields - dictionary of fields from infinite (not included);
+    #         dyn_stop - stop index of dynamic field.
+    #
+    #     Raises
+    #     ------
+    #     TypeError
+    #         if there is tow dynamic fields.
+    #     AssertionError
+    #         if for some reason the dynamic field is not found.
+    #     """
+    #     start = 0
+    #     fields: list[tuple[str, StructT]] = []
+    #     for name in list(self._sub_p)[::-1]:
+    #         if name == dyn:
+    #             return dict(fields[::-1]), start if start != 0 else None
+    #
+    #         pattern = self._sub_p[name]
+    #         field_kw = fields_kw[name] if name in fields_kw else {}
+    #         if self._is_dynamic_pattern(field_kw, pattern):
+    #             raise TypeError("two dynamic field not allowed")
+    #
+    #         start -= pattern["bytes_expected"]
+    #         field_kw.update(start=start)
+    #         fields.append(
+    #             (
+    #                 name,
+    #                 pattern.get(changes_allowed=changes_allowed, **field_kw),
+    #             )
+    #         )
+    #
+    #     raise AssertionError("dynamic field not found")
+    #
+    # def _get_fields_before_dyn(
+    #     self, changes_allowed: bool, fields_kw: dict[str, dict[str, Any]]
+    # ) -> tuple[dict[str, StructT], str, int]:
+    #     """
+    #     Get the dictionary of fields that go up to and including the infinite
+    #     field.
+    #
+    #     Parameters
+    #     ----------
+    #     changes_allowed: bool
+    #         allows situations where keys from the pattern overlap with kwargs.
+    #         If False, it causes an error on intersection, otherwise the
+    #         `additions` take precedence.
+    #     fields_kw : dict[str, dict[str, Any]]
+    #         dictionary of kwargs for fields.
+    #
+    #     Returns
+    #     -------
+    #     tuple[dict[str, StructT], str, int]
+    #         fields - dictionary of fields up to infinite (include);
+    #         dyn_name - name of infinite field. Empty if there is no found;
+    #         dyn_start - start index of infinite field. -1 if field is no
+    #             found.
+    #     """
+    #     start: int = 0
+    #     fields: dict[str, StructT] = {}
+    #     for name, pattern in self._sub_p.items():
+    #         field_kw = fields_kw[name] if name in fields_kw else {}
+    #         if self._is_dynamic_pattern(field_kw, pattern):
+    #             return fields, name, start
+    #
+    #         field_kw.update(start=start)
+    #         fields[name] = pattern.get(
+    #             changes_allowed=changes_allowed, **field_kw
+    #         )
+    #         start = fields[name].stop  # type: ignore[assignment]
+    #
+    #     return fields, "", -1

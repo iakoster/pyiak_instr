@@ -3,6 +3,9 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Self, TypeVar
 
+from ..exceptions import NotConfiguredYet
+from ..utilities import split_complex_dict
+
 
 __all__ = [
     "EditablePatternABC",
@@ -31,7 +34,7 @@ class PatternABC(ABC, Generic[OptionsT]):
     _options: dict[str, type[OptionsT]]
     """pattern target options"""
 
-    _only_auto_parameters: set[str] = set()
+    _only_auto_parameters: set[str] = set()  # todo: only auto for subs
 
     # todo: parameters to TypedDict
     def __init__(self, typename: str, **parameters: Any) -> None:
@@ -66,7 +69,9 @@ class PatternABC(ABC, Generic[OptionsT]):
         )
 
     def _get_parameters_dict(
-        self, changes_allowed: bool, additions: dict[str, Any]
+        self,
+        changes_allowed: bool,
+        additions: dict[str, Any],
     ) -> dict[str, Any]:
         """
         Get joined additions with pattern parameters.
@@ -257,7 +262,7 @@ class MetaPatternABC(
     typename: str
         name of pattern target type.
     name: str
-        name of pattern storage format.
+        name of pattern meta-object format.
     **kwargs: Any
         parameters for target initialization.
     """
@@ -268,12 +273,38 @@ class MetaPatternABC(
     _sub_p_type: type[PatternT]
     """sub pattern type for initializing in class."""
 
+    _sub_p_par_name: str = ""
+    """is the name of the parameter that names the sub-pattern in the 
+    meta-object"""
+
+    # todo: required parameters and not allowed parameters
+
     def __init__(self, typename: str, name: str, **kwargs: Any):
+        if self._sub_p_par_name == "":
+            raise TypeError("'_sub_p_par_name' is empty string")
+        # todo: check _sub_p_par_name not in kwargs
         super().__init__(typename, name=name, **kwargs)
         self._name = name
         self._sub_p = {}
 
-    @abstractmethod
+    def configure(self, **patterns: PatternT) -> Self:
+        """
+        Configure storage pattern with other patterns.
+
+        Parameters
+        ----------
+        **patterns : PatternT
+            dictionary of patterns where key is a pattern name.
+
+        Returns
+        -------
+        Self
+            self instance.
+        """
+        # todo: check auto pars for subs
+        self._sub_p = patterns
+        return self
+
     def get(
         self, changes_allowed: bool = False, **additions: Any
     ) -> OptionsT:
@@ -296,25 +327,50 @@ class MetaPatternABC(
         -------
         OptionsT
             initialized target class.
+
+        Raises
+        ------
+        NotConfiguredYet
+            if sub-patterns list is empty.
         """
+        if len(self._sub_p) == 0:
+            raise NotConfiguredYet(self)
+        for_subs, for_meta = split_complex_dict(
+            additions, without_sep="other"
+        )
+        # todo: check that `for_subs` intersection all `sub_p`
+        return super().get(
+            changes_allowed,
+            **for_meta,
+            **self._get_subs(changes_allowed, for_subs),
+        )
 
-    def configure(self, **patterns: PatternT) -> Self:
-        """
-        Configure storage pattern with other patterns.
+    def _get_subs(
+            self, ch_a: bool, for_subs: dict[str, dict[str, Any]]
+    ) -> dict[str, Any]:  # ch_a - is changes allowed
+        for_subs = self._modify_all(ch_a, for_subs)
+        return {
+            self._sub_p_par_name: {
+                n: s.get(
+                    ch_a, **self._modify_each(
+                        ch_a, n, for_subs.get(n, {})
+                    )
+                ) for n, s in self._sub_p.items()
+            }
+        }
 
-        Parameters
-        ----------
-        **patterns : PatternT
-            dictionary of patterns where key is a pattern name.
+    def _modify_all(
+            self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        return for_subs
 
-        Returns
-        -------
-        Self
-            self instance.
-        """
-
-        self._sub_p = patterns
-        return self
+    def _modify_each(
+            self,
+            changes_allowed: bool,
+            name: str,
+            for_sub: dict[str, dict[str, Any]],
+    ) -> dict[str, dict[str, Any]]:
+        return for_sub
 
     @property
     def name(self) -> str:

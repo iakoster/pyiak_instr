@@ -5,6 +5,7 @@ from typing import (
     TYPE_CHECKING,
     Generic,
     Iterable,
+    TypeAlias,
     TypeVar,
     Union,
 )
@@ -47,30 +48,31 @@ __all__ = [
 
 
 StructT = TypeVar("StructT", bound=MessageFieldStructUnionT)
+StorageT: TypeAlias = "Message"
 
 
-class MessageFieldABC(BytesFieldABC[StructT], Generic[StructT]):
+class MessageFieldABC(BytesFieldABC[StorageT, StructT], Generic[StructT]):
     """
     Represents abstract class for message field parser.
 
-    Parameters
-    ----------
-    storage : ContinuousBytesStorage
-        storage of fields.
-    name : str
-        field name.
-    struct : BytesFieldStruct
-        field struct instance
-    """
-
-    def __init__(
-        self,
-        storage: Message,
-        name: str,
-        struct: StructT,
-    ) -> None:
-        super().__init__(name, struct)
-        self._storage = storage
+    # Parameters
+    # ----------
+    # storage : ContinuousBytesStorage
+    #     storage of fields.
+    # name : str
+    #     field name.
+    # struct : BytesFieldStruct
+    #     field struct instance
+    # """
+    #
+    # def __init__(
+    #     self,
+    #     storage: Message,
+    #     name: str,
+    #     struct: StructT,
+    # ) -> None:
+    #     super().__init__(name, struct)
+    #     self._storage = storage
 
     def encode(self, content: int | float | Iterable[int | float]) -> None:
         """
