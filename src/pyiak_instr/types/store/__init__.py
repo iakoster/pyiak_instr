@@ -7,6 +7,7 @@ Store (:mod:`pyiak_instr.types`)
 from ._bin import (
     STRUCT_DATACLASS,
     BytesFieldABC,
+    BytesFieldPatternABC,
     BytesFieldStructProtocol,
     BytesStorageABC,
     BytesStoragePatternABC,
@@ -17,6 +18,7 @@ from ._bin import (
 __all__ = [
     "STRUCT_DATACLASS",
     "BytesFieldABC",
+    "BytesFieldPatternABC",
     "BytesFieldStructProtocol",
     "BytesStorageABC",
     "BytesStoragePatternABC",

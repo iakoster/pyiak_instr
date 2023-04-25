@@ -30,6 +30,7 @@ from ...typing import SupportsContainsGetitem
 __all__ = [
     "STRUCT_DATACLASS",
     "BytesFieldABC",
+    "BytesFieldPatternABC",
     "BytesFieldStructProtocol",
     "BytesStorageABC",
     "BytesStoragePatternABC",
@@ -40,7 +41,7 @@ __all__ = [
 StructT = TypeVar("StructT", bound="BytesFieldStructProtocol")
 ParserT = TypeVar("ParserT", bound="BytesFieldABC[Any, Any]")
 StorageT = TypeVar("StorageT", bound="BytesStorageABC[Any, Any]")
-PatternT = TypeVar("PatternT", bound=PatternABC[Any])
+PatternT = TypeVar("PatternT", bound="BytesFieldPatternABC[Any]")
 
 
 STRUCT_DATACLASS = dataclass(frozen=True, kw_only=True)
@@ -147,7 +148,7 @@ class BytesFieldStructProtocol(Protocol):
                 object.__setattr__(self, "stop", stop)
 
         elif self.stop is not None:
-            if not (self.start >= 0 and self.stop < 0):
+            if not self.start >= 0 > self.stop:
                 object.__setattr__(
                     self, "bytes_expected", self.stop - self.start
                 )
@@ -155,7 +156,7 @@ class BytesFieldStructProtocol(Protocol):
         elif self.start <= 0 and self.stop is None:
             object.__setattr__(self, "bytes_expected", -self.start)
 
-        else:
+        elif not self.is_dynamic:
             raise AssertionError(
                 "impossible to modify start, stop and bytes_expected"
             )
@@ -682,6 +683,32 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         return len(self._c)
 
 
+class BytesFieldPatternABC(PatternABC[StructT], Generic[StructT]):
+
+    _required_init_parameters = {"bytes_expected"}
+
+    @property
+    def is_dynamic(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True if the pattern can be interpreted as a dynamic,
+            otherwise - False.
+        """
+        return self.size <= 0
+
+    @property
+    def size(self) -> int:
+        """
+        Returns
+        -------
+        int
+            size of the field in bytes.
+        """
+        return self._kw["bytes_expected"]
+
+
 class BytesStoragePatternABC(
     MetaPatternABC[StorageT, PatternT],
     WritablePatternABC,
@@ -754,54 +781,6 @@ class BytesStoragePatternABC(
                 **{f: cls._sub_p_type(**cfg.get(name, f)) for f in opts}
             )
 
-    # @staticmethod
-    # def _is_dynamic_pattern(
-    #     kwargs: dict[str, Any], pattern: PatternT | None = None
-    # ) -> bool:  # todo: tests
-    #     """
-    #     Returns True if the joined parameters can be interpreted as a dynamic.
-    #
-    #     Parameters
-    #     ----------
-    #     kwargs : dict[str, Any]
-    #         additional parameters.
-    #     pattern : PatternT | None, default=None
-    #         pattern instance
-    #
-    #     Returns
-    #     -------
-    #     bool
-    #         True if the `kwargs` or `pattern` can be interpreted as a
-    #         dynamic, otherwise - False
-    #     """
-    #
-    #     def check(obj: SupportsContainsGetitem | None) -> bool:
-    #         """
-    #         Check that the object can be interpreted as a dynamic.
-    #
-    #         Parameters
-    #         ----------
-    #         obj : SupportsContainsGetitem
-    #             object for checking.
-    #
-    #         Returns
-    #         -------
-    #         bool
-    #             True if the object can be interpreted as a dynamic,
-    #             otherwise - False
-    #         """
-    #         if obj is None:
-    #             return False
-    #         return (
-    #             "stop" in obj
-    #             and obj["stop"] is None
-    #             or "bytes_expected" in obj
-    #             and isinstance(obj["bytes_expected"], int)
-    #             and obj["bytes_expected"] <= 0
-    #         )
-    #
-    #     return check(kwargs) or check(pattern)
-
 
 class ContinuousBytesStoragePatternABC(
     BytesStoragePatternABC[StorageT, PatternT],
@@ -814,193 +793,98 @@ class ContinuousBytesStoragePatternABC(
     (e.g. without gaps in content).
     """
 
-    _only_auto_parameters = {"start", "stop"}
-    _step_name = "bytes_expected"  # todo: check exists in pattern
-
     def _modify_all(
             self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
+        """
+        Modify additional kwargs for sub-pattern objects.
+
+        Parameters
+        ----------
+        changes_allowed : bool
+            if True allows situations where keys from the pattern overlap
+            with kwargs.
+        for_subs : dict[str, dict[str, Any]]
+            additional kwargs for sub-pattern object if format
+            {FIELD: {PARAMETER: VALUE}}.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+            modified additional kwargs for sub-pattern object.
+        """
+        for_subs = super()._modify_all(changes_allowed, for_subs)
         dyn_name = self._modify_before_dyn(for_subs)
-        if len(dyn_name) > 0:
+        if dyn_name is not None:
             self._modify_after_dyn(dyn_name, for_subs)
-        return super()._modify_all(changes_allowed, for_subs)
+        return for_subs
 
     def _modify_before_dyn(
             self, for_subs: dict[str, dict[str, Any]]
-    ) -> str:
+    ) -> str | None:
+        """
+        Modify `for_subs` up to dynamic field.
+
+        Parameters
+        ----------
+        for_subs : dict[str, dict[str, Any]]
+            additional kwargs for sub-pattern object if format
+            {FIELD: {PARAMETER: VALUE}}.
+
+        Returns
+        -------
+        str | None
+            name of the dynamic field. If None - there is no dynamic field.
+        """
         start = 0
-        for name, kw in for_subs.items():
-            if kw[self._step_name] <= 0:  # is dynamic field
+        for (name, pattern), kw in zip(
+                self._sub_p.items(), for_subs.values()
+        ):
+
+            if pattern.is_dynamic:
                 kw.update(start=start)
                 return name
-            kw.update(start=start, stop=start + kw[self._step_name])
+
+            kw.update(start=start, stop=start + pattern.size)
             start = kw["stop"]
-        return ""
+        return None
 
     def _modify_after_dyn(
             self,
             dyn_name: str,
             for_subs: dict[str, dict[str, Any]],
       ) -> None:
-        stop = 0
-        for name in list(for_subs)[::-1]:
-            kw = for_subs[name]
-            if name == dyn_name:
-                kw.update(stop=stop if stop != 0 else None)
-                return
-            kw.update(
-                start=stop - kw[self._step_name],
-                stop=stop if stop != 0 else None,
-            )
-            stop -= kw["start"]
+        """
+        Modify `for_subs` from dynamic field to end.
 
-    # def _get_continuous(
-    #     self,
-    #     changes_allowed: bool,
-    #     for_storage: dict[str, Any],
-    #     for_fields: dict[str, dict[str, Any]],
-    # ) -> StorageT:
-    #     """
-    #     Get initialized continuous storage.
-    #
-    #     Parameters
-    #     ----------
-    #     changes_allowed: bool
-    #         allows situations where keys from the pattern overlap with kwargs.
-    #         If False, it causes an error on intersection, otherwise the
-    #         `additions` take precedence.
-    #     for_storage: dict[str, Any]:
-    #         dictionary with parameters for storage in format
-    #         {PARAMETER: VALUE}.
-    #     for_fields: dict[str, dict[str, Any]]
-    #         dictionary with parameters for fields in format
-    #         {FIELD: {PARAMETER: VALUE}}.
-    #
-    #     Returns
-    #     -------
-    #     ContinuousBytesStorage
-    #         initialized storage.
-    #
-    #     Raises
-    #     ------
-    #     SyntaxError
-    #         if changes are not allowed, but there is an attempt to modify
-    #         the parameter.
-    #     TypeError
-    #         if trying to set 'fields'.
-    #     """
-    #     storage_kw = self._get_parameters_dict(changes_allowed, for_storage)
-    #
-    #     fields, dyn_name, dyn_start = self._get_fields_before_dyn(
-    #         changes_allowed, for_fields
-    #     )
-    #
-    #     if dyn_start >= 0:
-    #         after, dyn_stop = self._get_fields_after_dyn(
-    #             changes_allowed, for_fields, dyn_name
-    #         )
-    #
-    #         dyn_kw = for_fields[dyn_name] if dyn_name in for_fields else {}
-    #         dyn_kw.update(start=dyn_start, stop=dyn_stop)
-    #         fields[dyn_name] = self._sub_p[dyn_name].get(
-    #             changes_allowed=changes_allowed, **dyn_kw
-    #         )
-    #
-    #         fields.update(after)
-    #
-    #     return self._target(fields=fields, **storage_kw)
-    #
-    # def _get_fields_after_dyn(
-    #     self,
-    #     changes_allowed: bool,
-    #     fields_kw: dict[str, dict[str, Any]],
-    #     dyn: str,
-    # ) -> tuple[dict[str, StructT], int | None]:
-    #     """
-    #     Get the dictionary of fields that go from infinite field
-    #     (not included) to end.
-    #
-    #     Parameters
-    #     ----------
-    #     changes_allowed: bool
-    #         allows situations where keys from the pattern overlap with kwargs.
-    #         If False, it causes an error on intersection, otherwise the
-    #         `additions` take precedence.
-    #     fields_kw : dict[str, dict[str, Any]]
-    #         dictionary of kwargs for fields.
-    #     dyn : str
-    #         name of dynamic field.
-    #
-    #     Returns
-    #     -------
-    #     tuple[dict[str, OptionsT], str]
-    #         fields - dictionary of fields from infinite (not included);
-    #         dyn_stop - stop index of dynamic field.
-    #
-    #     Raises
-    #     ------
-    #     TypeError
-    #         if there is tow dynamic fields.
-    #     AssertionError
-    #         if for some reason the dynamic field is not found.
-    #     """
-    #     start = 0
-    #     fields: list[tuple[str, StructT]] = []
-    #     for name in list(self._sub_p)[::-1]:
-    #         if name == dyn:
-    #             return dict(fields[::-1]), start if start != 0 else None
-    #
-    #         pattern = self._sub_p[name]
-    #         field_kw = fields_kw[name] if name in fields_kw else {}
-    #         if self._is_dynamic_pattern(field_kw, pattern):
-    #             raise TypeError("two dynamic field not allowed")
-    #
-    #         start -= pattern["bytes_expected"]
-    #         field_kw.update(start=start)
-    #         fields.append(
-    #             (
-    #                 name,
-    #                 pattern.get(changes_allowed=changes_allowed, **field_kw),
-    #             )
-    #         )
-    #
-    #     raise AssertionError("dynamic field not found")
-    #
-    # def _get_fields_before_dyn(
-    #     self, changes_allowed: bool, fields_kw: dict[str, dict[str, Any]]
-    # ) -> tuple[dict[str, StructT], str, int]:
-    #     """
-    #     Get the dictionary of fields that go up to and including the infinite
-    #     field.
-    #
-    #     Parameters
-    #     ----------
-    #     changes_allowed: bool
-    #         allows situations where keys from the pattern overlap with kwargs.
-    #         If False, it causes an error on intersection, otherwise the
-    #         `additions` take precedence.
-    #     fields_kw : dict[str, dict[str, Any]]
-    #         dictionary of kwargs for fields.
-    #
-    #     Returns
-    #     -------
-    #     tuple[dict[str, StructT], str, int]
-    #         fields - dictionary of fields up to infinite (include);
-    #         dyn_name - name of infinite field. Empty if there is no found;
-    #         dyn_start - start index of infinite field. -1 if field is no
-    #             found.
-    #     """
-    #     start: int = 0
-    #     fields: dict[str, StructT] = {}
-    #     for name, pattern in self._sub_p.items():
-    #         field_kw = fields_kw[name] if name in fields_kw else {}
-    #         if self._is_dynamic_pattern(field_kw, pattern):
-    #             return fields, name, start
-    #
-    #         field_kw.update(start=start)
-    #         fields[name] = pattern.get(
-    #             changes_allowed=changes_allowed, **field_kw
-    #         )
-    #         start = fields[name].stop  # type: ignore[assignment]
-    #
-    #     return fields, "", -1
+        Parameters
+        ----------
+        dyn_name : str
+            name of the dynamic field.
+        for_subs : dict[str, dict[str, Any]]
+            additional kwargs for sub-pattern object if format
+            {FIELD: {PARAMETER: VALUE}}.
+
+        Raises
+        ------
+        TypeError
+            if there is tow dynamic fields.
+        AssertionError
+            if for some reason the dynamic field is not found.
+        """
+        stop: int | None
+        start, stop = 0, None
+        for name in list(self._sub_p)[::-1]:
+            pattern, kw = self._sub_p[name], for_subs[name]
+
+            if pattern.is_dynamic:
+                if name == dyn_name:
+                    kw.update(stop=start if start != 0 else stop)
+                    return
+                raise TypeError("two dynamic field not allowed")
+
+            start -= pattern.size
+            kw.update(start=start, stop=stop)
+            stop = start if stop is None else stop + start
+
+        raise AssertionError("dynamic field not found")

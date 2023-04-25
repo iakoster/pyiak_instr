@@ -15,6 +15,7 @@ from src.pyiak_instr.types import PatternABC
 from src.pyiak_instr.types.store import (
     STRUCT_DATACLASS,
     BytesFieldABC,
+    BytesFieldPatternABC,
     BytesFieldStructProtocol,
     BytesStorageABC,
     BytesStoragePatternABC,
@@ -63,9 +64,9 @@ class TIStorage(BytesStorageABC[TIField, TIStruct]):
     _struct_field = {TIStruct: TIField}
 
 
-class TIPattern(PatternABC[dict]):
+class TIPattern(BytesFieldPatternABC[TIStruct]):
 
-    _options = {"basic": dict}
+    _options = {"basic": TIStruct}
 
 
 class TIStoragePattern(BytesStoragePatternABC[TIStorage, TIPattern]):
@@ -154,6 +155,7 @@ class TestBytesFieldStructProtocol(unittest.TestCase):
         cases = (
             ((0, None, 0), dict()),
             ((0, 2, 2), dict(bytes_expected=2)),
+            ((2, None, 0), dict(start=2)),
             ((2, 5, 3), dict(start=2, stop=5)),
             ((2, -2, 0), dict(start=2, stop=-2)),
             ((-4, -2, 2), dict(start=-4, bytes_expected=2)),
@@ -299,9 +301,10 @@ class TestBytesFieldABC(unittest.TestCase):
         self.assertEqual(10, len(self._instance()))
 
     def _instance(self, stop: int | None = None) -> TIField:
-        storage = TIStorage(
-            "std", {"test": TIStruct(stop=stop)}
-        ).encode(bytes(range(10)))
+        fields = {"test": TIStruct(stop=stop)}
+        if stop is not None:
+            fields["ph"] = TIStruct(start=stop, stop=None)
+        storage = TIStorage("std", fields).encode(bytes(range(10)))
         return storage["test"]
 
 
@@ -577,37 +580,35 @@ class TestBytesStoragePatternABC(unittest.TestCase):
         path = DATA_DIR / "test_write.ini"
         self._instance.write(path)
 
+        ref = [
+            "[test]",
+            r"test = \dct(typename,basic,name,test,val,\tpl(11))",
+            r"first = \dct(typename,basic,bytes_expected,0,int,3,"
+            r"list,\lst(2,3,4))",
+            r"second = \dct(typename,basic,bytes_expected,0,boolean,True)",
+            r"third = \dct(typename,basic,bytes_expected,0,"
+            r"dict,\dct(0,1,2,3))",
+        ]
         i_line = 0
         with open(path, "r") as file:
-            for ref, res in zip(
-                    [
-                        "[test]",
-                        r"test = \dct(typename,basic,name,test,val,\tpl(11))",
-                        r"first = \dct(typename,basic,int,3,list,\lst(2,3,4))",
-                        r"second = \dct(typename,basic,boolean,True)",
-                        r"third = \dct(typename,basic,dict,\dct(0,1,2,3))",
-                    ],
-                    file.read().split("\n")
-            ):
+            for ref, res in zip(ref, file.read().split("\n")):
                 i_line += 1
                 with self.subTest(test="new", line=i_line):
                     self.assertEqual(ref, res)
         self.assertEqual(5, i_line)
 
         TIStoragePattern(typename="basic", name="test", val=(11,)).configure(
-            first=TIPattern(typename="basic", int=11),
+            first=TIPattern(typename="basic", bytes_expected=0, int=11),
         ).write(path)
 
+        ref = [
+            "[test]",
+            r"test = \dct(typename,basic,name,test,val,\tpl(11))",
+            r"first = \dct(typename,basic,bytes_expected,0,int,11)",
+        ]
         i_line = 0
         with open(path, "r") as file:
-            for ref, res in zip(
-                    [
-                        "[test]",
-                        r"test = \dct(typename,basic,name,test,val,\tpl(11))",
-                        r"first = \dct(typename,basic,int,11)",
-                    ],
-                    file.read().split("\n")
-            ):
+            for ref, res in zip(ref, file.read().split("\n")):
                 i_line += 1
                 with self.subTest(test="rewrite", line=i_line):
                     self.assertEqual(ref, res)
@@ -642,10 +643,14 @@ class TestBytesStoragePatternABC(unittest.TestCase):
         return TIStoragePattern(
             typename="basic", name="test", val=(11,)
         ).configure(
-            first=TIPattern(typename="basic", int=3, list=[2, 3, 4]),
-            second=TIPattern(typename="basic", boolean=True),
+            first=TIPattern(
+                typename="basic", bytes_expected=0, int=3, list=[2, 3, 4]
+            ),
+            second=TIPattern(
+                typename="basic", bytes_expected=0, boolean=True
+            ),
             third=TIPattern(
-                typename="basic", dict={0: 1, 2: 3}
+                typename="basic", bytes_expected=0, dict={0: 1, 2: 3}
             )
         )
 
@@ -653,111 +658,79 @@ class TestBytesStoragePatternABC(unittest.TestCase):
 class TestContinuousBytesStoragePatternABC(unittest.TestCase):
 
     def test__modify_all(self) -> None:
-        ...
+        with self.subTest(test="dyn in middle"):
+            self.assertDictEqual(
+                dict(
+                    f0=dict(start=0, stop=4),
+                    f1=dict(start=4, stop=6),
+                    f2=dict(start=6, stop=-7),
+                    f3=dict(start=-7, stop=-4),
+                    f4=dict(start=-4, stop=None),
+                ),
+                TIContinuousStoragePattern(
+                    typename="basic", name="test"
+                ).configure(
+                    f0=TIPattern(typename="basic", bytes_expected=4),
+                    f1=TIPattern(typename="basic", bytes_expected=2),
+                    f2=TIPattern(typename="basic", bytes_expected=0),
+                    f3=TIPattern(typename="basic", bytes_expected=3),
+                    f4=TIPattern(typename="basic", bytes_expected=4),
+                )._modify_all(True, {})
+            )
 
-    def test__modify_before_dyn(self) -> None:
-        ...
+        with self.subTest(test="last dyn"):
+            self.assertDictEqual(
+                dict(
+                    f0=dict(start=0, stop=4),
+                    f1=dict(start=4, stop=6),
+                    f2=dict(start=6, stop=None, req=1),
+                ),
+                TIContinuousStoragePattern(
+                    typename="basic", name="test"
+                ).configure(
+                    f0=TIPattern(typename="basic", bytes_expected=4),
+                    f1=TIPattern(typename="basic", bytes_expected=2),
+                    f2=TIPattern(typename="basic", bytes_expected=0),
+                )._modify_all(True, {"f2": {"req": 1}})
+            )
 
-    def test__modify_after_dyn(self) -> None:
-        ...
+        with self.subTest(test="only dyn"):
+            self.assertDictEqual(
+                dict(
+                    f0=dict(start=0, stop=None),
+                ),
+                TIContinuousStoragePattern(
+                    typename="basic", name="test"
+                ).configure(
+                    f0=TIPattern(typename="basic", bytes_expected=0),
+                )._modify_all(True, {})
+            )
 
-#
-#     def test__get_continuous(self) -> None:
-#         self._validate_result(
-#             dict(
-#
-#             ),
-#             dict(
-#                 f0=dict(start=0, stop=4),
-#                 f1=dict(start=4, stop=6),
-#                 f2=dict(start=6, stop=-7),
-#                 f3=dict(start=-7, stop=-4),
-#                 f4=dict(start=-4, stop=None),
-#             ),
-#             ContinuousStoragePattern(
-#                 typename="base",
-#                 name="test",
-#             ).configure(
-#                 f0=FieldPattern(typename="base", bytes_expected=4),
-#                 f1=FieldPattern(typename="base", bytes_expected=2),
-#                 f2=FieldPattern(typename="base", bytes_expected=0),
-#                 f3=FieldPattern(typename="base", bytes_expected=3),
-#                 f4=FieldPattern(typename="base", bytes_expected=4),
-#             )._get_continuous(True, {}, {})
-#         )
-#
-#     def test__get_continuous_last_dyn(self) -> None:
-#         self._validate_result(
-#             dict(
-#
-#             ),
-#             dict(
-#                 f1=dict(start=0, stop=None),
-#             ),
-#             ContinuousStoragePattern(
-#                 typename="base",
-#                 name="test",
-#             ).configure(
-#                 f1=FieldPattern(typename="base", bytes_expected=0),
-#             )._get_continuous(True, {}, {})
-#         )
-#
-#     def test__get_continuous_wo_dyn(self) -> None:
-#         self._validate_result(
-#             dict(
-#
-#             ),
-#             dict(
-#                 f0=dict(start=0, stop=4),
-#                 f1=dict(start=4, stop=7),
-#             ),
-#             ContinuousStoragePattern(
-#                 typename="base",
-#                 name="test",
-#             ).configure(
-#                 f0=FieldPattern(typename="base", bytes_expected=4),
-#                 f1=FieldPattern(typename="base", bytes_expected=3),
-#             )._get_continuous(True, {}, {})
-#         )
-#
-#     def test__get_continuous_exc(self) -> None:
-#         with self.subTest(test="two dynamic field"):
-#             with self.assertRaises(TypeError) as exc:
-#                 ContinuousStoragePattern(
-#                     typename="base",
-#                     name="test",
-#                 ).configure(
-#                     f0=FieldPattern(typename="base", bytes_expected=0),
-#                     f1=FieldPattern(typename="base", bytes_expected=0),
-#                 )._get_continuous(True, {}, {})
-#             self.assertEqual(
-#                 "two dynamic field not allowed", exc.exception.args[0]
-#             )
-#
-#     def _validate_result(
-#             self,
-#             storage: dict[str, Any],
-#             fields: dict[str, dict[str, Any]],
-#             res: ContinuousStoragePattern,
-#     ) -> None:
-#         for par, val in storage.items():
-#             with self.subTest(test="field", parameter=par):
-#                 self.assertEqual(val, getattr(res, par))
-#
-#         for name, field_kw in fields.items():
-#             for par, val in field_kw.items():
-#                 with self.subTest(field=name, parameter=par):
-#                     self.assertEqual(val, getattr(res["fields"][name], par))
-#
-#     @property
-#     def _instance(self) -> ContinuousStoragePattern:
-#         return ContinuousStoragePattern(
-#             typename="base",
-#             name="test",
-#         ).configure(
-#             f0=FieldPattern(typename="base", bytes_expected=4),
-#             f1=FieldPattern(typename="base", bytes_expected=2),
-#             f2=FieldPattern(typename="base", bytes_expected=0),
-#             f3=FieldPattern(typename="base", bytes_expected=3),
-#             f4=FieldPattern(typename="base", bytes_expected=4),
-#         )
+        with self.subTest(test="without dyn"):
+            self.assertDictEqual(
+                dict(
+                    f0=dict(start=0, stop=4),
+                    f1=dict(start=4, stop=6),
+                    f2=dict(start=6, stop=9),
+                ),
+                TIContinuousStoragePattern(
+                    typename="basic", name="test"
+                ).configure(
+                    f0=TIPattern(typename="basic", bytes_expected=4),
+                    f1=TIPattern(typename="basic", bytes_expected=2),
+                    f2=TIPattern(typename="basic", bytes_expected=3),
+                )._modify_all(True, {})
+            )
+
+    def test__modify_all_exc(self) -> None:
+        with self.subTest(test="two dynamic field"):
+            with self.assertRaises(TypeError) as exc:
+                TIContinuousStoragePattern(
+                    typename="basic", name="test",
+                ).configure(
+                    f0=TIPattern(typename="basic", bytes_expected=0),
+                    f1=TIPattern(typename="basic", bytes_expected=0),
+                )._modify_all(True, {})
+            self.assertEqual(
+                "two dynamic field not allowed", exc.exception.args[0]
+            )

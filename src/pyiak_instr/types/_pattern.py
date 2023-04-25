@@ -360,7 +360,9 @@ class MetaPatternABC(
     def _modify_all(
             self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
-        return for_subs
+        return {k: (
+            for_subs[k] if k in for_subs else {}
+        ) for k in self._sub_p}
 
     def _modify_each(
             self,

@@ -200,6 +200,15 @@ class TestMetaPatternABC(unittest.TestCase):
                 "TIMetaPatternABC not configured yet", exc.exception.args[0]
             )
 
+    def test__modify_all(self) -> None:
+        obj = self._instance.configure(
+            f=TIPatternABC("basic", req=1), s=TIPatternABC("basic", req=1),
+        )
+        self.assertDictEqual(
+            {"f": {"a": 1}, "s": {}},
+            obj._modify_all(True, {"f": {"a": 1}})
+        )
+
     @property
     def _instance(self) -> TIMetaPatternABC:
         return TIMetaPatternABC(
