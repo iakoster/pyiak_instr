@@ -173,7 +173,7 @@ class TestBytesFieldStructProtocol(unittest.TestCase):
             with self.assertRaises(TypeError) as exc:
                 self._instance(stop=1, bytes_expected=1)
             self.assertEqual(
-                "'bytes_expected' or 'stop' setting not allowed",
+                "'bytes_expected' and 'stop' setting not allowed",
                 exc.exception.args[0],
             )
 

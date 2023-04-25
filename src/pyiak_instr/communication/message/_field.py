@@ -5,7 +5,6 @@ from typing import (
     TYPE_CHECKING,
     Generic,
     Iterable,
-    TypeAlias,
     TypeVar,
     Union,
 )
@@ -48,10 +47,9 @@ __all__ = [
 
 
 StructT = TypeVar("StructT", bound=MessageFieldStructUnionT)
-StorageT: TypeAlias = "Message"
 
 
-class MessageFieldABC(BytesFieldABC[StorageT, StructT], Generic[StructT]):
+class MessageFieldABC(BytesFieldABC["Message", StructT], Generic[StructT]):
     """
     Represents abstract class for message field parser.
 
@@ -63,7 +61,8 @@ class MessageFieldABC(BytesFieldABC[StorageT, StructT], Generic[StructT]):
     #     field name.
     # struct : BytesFieldStruct
     #     field struct instance
-    # """
+    #"""
+
     #
     # def __init__(
     #     self,
@@ -206,16 +205,12 @@ class DataLengthMessageField(MessageFieldABC[DataLengthMessageFieldStruct]):
             actual data length.
         """
         if self.struct.behaviour is Code.ACTUAL:
-            return self._struct.calculate(
-                self._storage.get.data.content
-            )
+            return self._struct.calculate(self._storage.get.data.content)
 
         # behaviour is a EXPECTED
         decoded = self[0]
         if decoded == 0:
-            return self._struct.calculate(
-                self._storage.get.data.content
-            )
+            return self._struct.calculate(self._storage.get.data.content)
         return decoded  # type: ignore[return-value]
 
     def update(self) -> None:

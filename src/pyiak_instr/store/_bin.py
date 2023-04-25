@@ -3,17 +3,13 @@ from __future__ import annotations
 
 from typing import (
     Any,
-    ClassVar,
     Iterable,
-    TypeAlias,
 )
 
 import numpy as np
 import numpy.typing as npt
 
-from ..core import Code
-from ..utilities import BytesEncoder, split_complex_dict
-from ..exceptions import NotConfiguredYet
+from ..utilities import BytesEncoder
 from ..types.store import (
     STRUCT_DATACLASS,
     BytesFieldABC,
@@ -103,9 +99,7 @@ class ContinuousBytesStorage(BytesStorageABC[BytesField, BytesFieldStruct]):
     where one field ends, another must begin.
     """
 
-    _struct_field = {
-        BytesFieldStruct: BytesField
-    }
+    _struct_field = {BytesFieldStruct: BytesField}
 
 
 # todo: typehint - Generic. Create via generic for children.
@@ -120,7 +114,9 @@ class BytesFieldPattern(BytesFieldPatternABC[BytesFieldStruct]):
 
 
 class BytesStoragePattern(
-    ContinuousBytesStoragePatternABC[ContinuousBytesStorage, BytesFieldPattern]
+    ContinuousBytesStoragePatternABC[
+        ContinuousBytesStorage, BytesFieldPattern
+    ]
 ):
     """
     Represents pattern for bytes storage.
@@ -131,7 +127,7 @@ class BytesStoragePattern(
     _sub_p_type = BytesFieldPattern
 
     def _modify_all(
-            self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
+        self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
         """
         Modify additional kwargs for sub-pattern objects.

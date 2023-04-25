@@ -12,7 +12,6 @@ from typing import (
     Iterator,
     Protocol,
     Self,
-    TypeAlias,
     TypeVar,
     overload,
 )
@@ -24,7 +23,6 @@ from .._pattern import MetaPatternABC, PatternABC, WritablePatternABC
 from ...core import Code
 from ...rwfile import RWConfig
 from ...exceptions import NotConfiguredYet
-from ...typing import SupportsContainsGetitem
 
 
 __all__ = [
@@ -139,6 +137,15 @@ class BytesFieldStructProtocol(Protocol):
         return len(content) == self.bytes_expected
 
     def _modify_values(self) -> None:
+        """
+        Modify values of the struct.
+
+        Raises
+        ------
+        AssertionError
+            if in some reason `start`, `stop` or `bytes_expected` can't be
+            modified.
+        """
         if self.bytes_expected < 0:
             object.__setattr__(self, "bytes_expected", 0)
 
@@ -164,6 +171,12 @@ class BytesFieldStructProtocol(Protocol):
     def _verify_values_after_modifying(self) -> None:
         """
         Verify values after modifying.
+
+        Raises
+        ------
+        ValueError
+            if the field expects a non-whole number of words (based on the
+            number of expected bytes).
         """
         if self.bytes_expected % self.word_bytesize:
             raise ValueError(
@@ -173,6 +186,14 @@ class BytesFieldStructProtocol(Protocol):
     def _verify_values_before_modifying(self) -> None:
         """
         Verify values before modifying.
+
+        Raises
+        ------
+        ValueError
+            if stop is equal to zero;
+            if start is negative and bigger than `bytes_expected`.
+        TypeError
+            if trying to set `stop` and `bytes_expected`
         """
         if self.stop == 0:
             raise ValueError("'stop' can't be equal to zero")
@@ -403,7 +424,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         self._c = bytearray()
 
     def change(
-            self, name: str, content: int | float | Iterable[int | float]
+        self, name: str, content: int | float | Iterable[int | float]
     ) -> None:
         """
         Change content of one field by name.
@@ -414,6 +435,11 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
             field name.
         content : bytes
             new field content.
+
+        Raises
+        ------
+        TypeError
+            if the message is empty.
         """
         if len(self) == 0:
             raise TypeError("message is empty")
@@ -540,9 +566,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
 
         if len(self) != 0:
             self._c = bytearray()
-        self._set_all(
-            {p.name: content[p.struct.slice_] for p in self}
-        )
+        self._set_all({p.name: content[p.struct.slice_] for p in self})
 
     def _set(
         self, fields: dict[str, int | float | Iterable[int | float]]
@@ -597,7 +621,8 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
 
     @staticmethod
     def _encode_content(
-            parser: ParserT, raw: Iterable[int | float] | int | float,
+        parser: ParserT,
+        raw: Iterable[int | float] | int | float,
     ) -> bytes:
         """
         Get new content to the field.
@@ -653,6 +678,12 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
 
     @property
     def is_dynamic(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - at least one field is dynamic.
+        """
         return any(p.struct.is_dynamic for p in self)
 
     @property
@@ -684,6 +715,9 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
 
 
 class BytesFieldPatternABC(PatternABC[StructT], Generic[StructT]):
+    """
+    Represent abstract class of pattern for bytes struct (field).
+    """
 
     _required_init_parameters = {"bytes_expected"}
 
@@ -706,7 +740,7 @@ class BytesFieldPatternABC(PatternABC[StructT], Generic[StructT]):
         int
             size of the field in bytes.
         """
-        return self._kw["bytes_expected"]
+        return self._kw["bytes_expected"]  # type: ignore[no-any-return]
 
 
 class BytesStoragePatternABC(
@@ -715,7 +749,7 @@ class BytesStoragePatternABC(
     Generic[StorageT, PatternT],
 ):
     """
-    Represent abstract class of bytes storage.
+    Represent abstract class of pattern for bytes storage.
     """
 
     _sub_p_par_name = "fields"
@@ -794,7 +828,7 @@ class ContinuousBytesStoragePatternABC(
     """
 
     def _modify_all(
-            self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
+        self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
         """
         Modify additional kwargs for sub-pattern objects.
@@ -820,7 +854,7 @@ class ContinuousBytesStoragePatternABC(
         return for_subs
 
     def _modify_before_dyn(
-            self, for_subs: dict[str, dict[str, Any]]
+        self, for_subs: dict[str, dict[str, Any]]
     ) -> str | None:
         """
         Modify `for_subs` up to dynamic field.
@@ -838,9 +872,8 @@ class ContinuousBytesStoragePatternABC(
         """
         start = 0
         for (name, pattern), kw in zip(
-                self._sub_p.items(), for_subs.values()
+            self._sub_p.items(), for_subs.values()
         ):
-
             if pattern.is_dynamic:
                 kw.update(start=start)
                 return name
@@ -850,10 +883,10 @@ class ContinuousBytesStoragePatternABC(
         return None
 
     def _modify_after_dyn(
-            self,
-            dyn_name: str,
-            for_subs: dict[str, dict[str, Any]],
-      ) -> None:
+        self,
+        dyn_name: str,
+        for_subs: dict[str, dict[str, Any]],
+    ) -> None:
         """
         Modify `for_subs` from dynamic field to end.
 
@@ -872,19 +905,17 @@ class ContinuousBytesStoragePatternABC(
         AssertionError
             if for some reason the dynamic field is not found.
         """
-        stop: int | None
-        start, stop = 0, None
+        start = 0
         for name in list(self._sub_p)[::-1]:
             pattern, kw = self._sub_p[name], for_subs[name]
 
             if pattern.is_dynamic:
                 if name == dyn_name:
-                    kw.update(stop=start if start != 0 else stop)
+                    kw.update(stop=start if start != 0 else None)
                     return
                 raise TypeError("two dynamic field not allowed")
 
             start -= pattern.size
             kw.update(start=start)
-            stop = start if stop is None else stop + start
 
         raise AssertionError("dynamic field not found")

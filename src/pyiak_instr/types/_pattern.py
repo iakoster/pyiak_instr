@@ -272,7 +272,7 @@ class MetaPatternABC(
     """sub pattern type for initializing in class."""
 
     _sub_p_par_name: str
-    """is the name of the parameter that names the sub-pattern in the 
+    """is the name of the parameter that names the sub-pattern in the
     meta-object"""
 
     def __init__(self, typename: str, name: str, **kwargs: Any):
@@ -344,32 +344,84 @@ class MetaPatternABC(
         )
 
     def _get_subs(
-            self, ch_a: bool, for_subs: dict[str, dict[str, Any]]
+        self, ch_a: bool, for_subs: dict[str, dict[str, Any]]
     ) -> dict[str, Any]:  # ch_a - is changes allowed
+        """
+        Get dictionary of sub-pattern objects.
+
+        Parameters
+        ----------
+        ch_a : bool
+            if True allows situations where keys from the pattern overlap
+            with kwargs.
+        for_subs : dict[str, dict[str, Any]]
+            additional kwargs for sub-pattern objects if format
+            {FIELD: {PARAMETER: VALUE}}.
+
+        Returns
+        -------
+        dict[str, Any]
+            dictionary of sub-pattern objects.
+        """
         for_subs = self._modify_all(ch_a, for_subs)
         return {
             self._sub_p_par_name: {
-                n: s.get(
-                    ch_a, **self._modify_each(
-                        ch_a, n, for_subs.get(n, {})
-                    )
-                ) for n, s in self._sub_p.items()
+                n: s.get(ch_a, **self._modify_each(ch_a, n, for_subs[n]))
+                for n, s in self._sub_p.items()
             }
         }
 
+    # pylint: disable=unused-argument
     def _modify_all(
-            self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
+        self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
-        return {k: (
-            for_subs[k] if k in for_subs else {}
-        ) for k in self._sub_p}
+        """
+        Modify additional kwargs for sub-pattern objects.
 
+        Parameters
+        ----------
+        changes_allowed : bool
+            if True allows situations where keys from the pattern overlap
+            with kwargs.
+        for_subs : dict[str, dict[str, Any]]
+            additional kwargs for sub-pattern object if format
+            {FIELD: {PARAMETER: VALUE}}.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+            modified additional kwargs for sub-pattern object.
+        """
+        return {
+            k: (for_subs[k] if k in for_subs else {}) for k in self._sub_p
+        }
+
+    # pylint: disable=unused-argument
     def _modify_each(
-            self,
-            changes_allowed: bool,
-            name: str,
-            for_sub: dict[str, dict[str, Any]],
-    ) -> dict[str, dict[str, Any]]:
+        self,
+        changes_allowed: bool,
+        name: str,
+        for_sub: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Modify additional kwargs for one sub-pattern object.
+
+        Parameters
+        ----------
+        changes_allowed : bool
+            if True allows situations where keys from the pattern overlap
+            with kwargs.
+        name: str
+            name of field
+        for_sub : dict[str, Any]
+            additional kwargs for sub-pattern object if format
+            {PARAMETER: VALUE}.
+
+        Returns
+        -------
+        dict[str, Any]
+            modified additional kwargs for one sub-pattern object.
+        """
         return for_sub
 
     @property

@@ -1,7 +1,6 @@
 """Private module of ``pyiak_instr.communication.message`` with message
 classes."""
 from __future__ import annotations
-from typing import TypeVar, Iterable
 
 from ...types.store import BytesStorageABC
 from ._struct import (
@@ -53,9 +52,9 @@ class MessageGet:
     """
 
     def __init__(
-            self,
-            message: Message,
-            types: dict[type[MessageFieldUnionT], str],
+        self,
+        message: Message,
+        types: dict[type[MessageFieldUnionT], str],
     ) -> None:
         self._msg, self._types = message, types
 
@@ -159,7 +158,9 @@ class MessageGet:
         """
         return self[ResponseMessageField]  # type: ignore[return-value]
 
-    def __getitem__(self, type_: type[MessageFieldUnionT]) -> MessageFieldUnionT:
+    def __getitem__(
+        self, type_: type[MessageFieldUnionT]
+    ) -> MessageFieldUnionT:
         """Get first field with specified type."""
         if type_ not in self._types:
             raise TypeError(f"field with type {type_.__name__} not found")
@@ -319,20 +320,20 @@ class Message(BytesStorageABC[MessageFieldUnionT, MessageFieldStructUnionT]):
     }
 
     def __init__(
-            self,
-            name: str = "std",
-            divisible: bool = False,
-            part_size: int = 1500,
-            **fields: MessageFieldStructUnionT
+        self,
+        name: str = "std",
+        divisible: bool = False,
+        part_size: int = 1500,
+        **fields: MessageFieldStructUnionT,
     ):
         super().__init__(name, fields)
         self._div = divisible
         self._part_size = part_size
 
         self._types = {}
-        for name, struct in self._f.items():
-            if name not in self._types:
-                self._types[self._struct_field[struct.__class__]] = name
+        for f_name, struct in self._f.items():
+            if f_name not in self._types:
+                self._types[self._struct_field[struct.__class__]] = f_name
 
     @property
     def get(self) -> _get_parser:
@@ -353,10 +354,6 @@ class Message(BytesStorageABC[MessageFieldUnionT, MessageFieldStructUnionT]):
             get parser instance.
         """
         return MessageHas(set(self._types))
-
-    def __getitem__(self, name: str) -> MessageFieldUnionT:
-        struct = self._f[name]
-        return self._struct_field[struct.__class__](self, name, struct)
 
 
 #
