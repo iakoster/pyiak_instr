@@ -23,7 +23,7 @@ from src.pyiak_instr.types.store import (
 )
 
 from ...env import TEST_DATA_DIR
-from ....utils import validate_object
+from ....utils import validate_object, compare_objects
 
 
 DATA_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
@@ -80,56 +80,6 @@ class TIContinuousStoragePattern(
 ):
     _options = {"basic": TIStorage}
     _sub_p_type = TIPattern
-
-
-#
-# class StorageKwargs(BytesStorageABC[TIField, TIStruct]):
-#
-#     def __init__(
-#             self,
-#             name: str,
-#             fields: dict[str, TIStruct],
-#             **kwargs: Any,
-#     ):
-#         super().__init__(name=name, fields=fields)
-#         self.kwargs = kwargs
-#
-#     def __getitem__(self, name: str) -> TIField:
-#         return TIField(self, name, self._f[name])
-#
-#
-# class FieldPattern(PatternABC[TIStruct]):
-#
-#     _options = {"base": TIStruct}
-#
-#     def get(
-#         self, changes_allowed: bool = False, **additions: Any
-#     ) -> TIStruct:
-#         return TIStruct(**self._kw, **additions)
-#
-#
-# class StoragePattern(BytesStoragePatternABC[TIStorage, FieldPattern]):
-#
-#     _options = {"base": TIStorage}
-#     _sub_p_type = FieldPattern
-#
-#     def get(
-#         self, changes_allowed: bool = False, **additions: Any
-#     ) -> TIStorage:
-#         raise NotImplementedError()
-#
-#
-# class ContinuousStoragePattern(
-#     ContinuousBytesStoragePatternABC[TIStorage, FieldPattern, TIStruct]
-# ):
-#
-#     _options = {"base": dict}
-#     _sub_p_type = FieldPattern
-#
-#     def get(
-#         self, changes_allowed: bool = False, **additions: Any
-#     ) -> TIStorage:
-#         raise NotImplementedError()
 
 
 class TestBytesFieldStructProtocol(unittest.TestCase):
@@ -657,15 +607,37 @@ class TestBytesStoragePatternABC(unittest.TestCase):
 
 class TestContinuousBytesStoragePatternABC(unittest.TestCase):
 
+    def test_get(self) -> None:
+        ref = TIStorage(name="test", fields=dict(
+                f0=TIStruct(start=0, bytes_expected=4),
+                f1=TIStruct(start=4, bytes_expected=2),
+                f2=TIStruct(start=6, stop=-7),
+                f3=TIStruct(start=-7, bytes_expected=3),
+                f4=TIStruct(start=-4, bytes_expected=4),
+        ))
+        res = TIContinuousStoragePattern(
+                typename="basic", name="test"
+        ).configure(
+            f0=TIPattern(typename="basic", bytes_expected=4),
+            f1=TIPattern(typename="basic", bytes_expected=2),
+            f2=TIPattern(typename="basic", bytes_expected=0),
+            f3=TIPattern(typename="basic", bytes_expected=3),
+            f4=TIPattern(typename="basic", bytes_expected=4),
+        ).get()
+        compare_objects(self, ref, res)
+        for ref_field, res_field in zip(ref, res):
+            with self.subTest(field=ref_field.name):
+                compare_objects(self, ref_field.struct, res_field.struct)
+
     def test__modify_all(self) -> None:
         with self.subTest(test="dyn in middle"):
             self.assertDictEqual(
                 dict(
-                    f0=dict(start=0, stop=4),
-                    f1=dict(start=4, stop=6),
+                    f0=dict(start=0),
+                    f1=dict(start=4),
                     f2=dict(start=6, stop=-7),
-                    f3=dict(start=-7, stop=-4),
-                    f4=dict(start=-4, stop=None),
+                    f3=dict(start=-7),
+                    f4=dict(start=-4),
                 ),
                 TIContinuousStoragePattern(
                     typename="basic", name="test"
@@ -681,8 +653,8 @@ class TestContinuousBytesStoragePatternABC(unittest.TestCase):
         with self.subTest(test="last dyn"):
             self.assertDictEqual(
                 dict(
-                    f0=dict(start=0, stop=4),
-                    f1=dict(start=4, stop=6),
+                    f0=dict(start=0),
+                    f1=dict(start=4),
                     f2=dict(start=6, stop=None, req=1),
                 ),
                 TIContinuousStoragePattern(
@@ -709,9 +681,9 @@ class TestContinuousBytesStoragePatternABC(unittest.TestCase):
         with self.subTest(test="without dyn"):
             self.assertDictEqual(
                 dict(
-                    f0=dict(start=0, stop=4),
-                    f1=dict(start=4, stop=6),
-                    f2=dict(start=6, stop=9),
+                    f0=dict(start=0),
+                    f1=dict(start=4),
+                    f2=dict(start=6),
                 ),
                 TIContinuousStoragePattern(
                     typename="basic", name="test"

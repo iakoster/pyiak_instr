@@ -14,10 +14,10 @@ import numpy.typing as npt
 from ..core import Code
 from ..utilities import BytesEncoder, split_complex_dict
 from ..exceptions import NotConfiguredYet
-from ..types import PatternABC
 from ..types.store import (
     STRUCT_DATACLASS,
     BytesFieldABC,
+    BytesFieldPatternABC,
     BytesFieldStructProtocol,
     BytesStorageABC,
     ContinuousBytesStoragePatternABC,
@@ -111,7 +111,7 @@ class ContinuousBytesStorage(BytesStorageABC[BytesField, BytesFieldStruct]):
 # todo: typehint - Generic. Create via generic for children.
 # todo: to metaclass (because uses for generate new class)
 # todo: wait to 3.12 for TypeVar with default type.
-class BytesFieldPattern(PatternABC[BytesFieldStruct]):
+class BytesFieldPattern(BytesFieldPatternABC[BytesFieldStruct]):
     """
     Represents class which storage common parameters for field.
     """
@@ -120,9 +120,7 @@ class BytesFieldPattern(PatternABC[BytesFieldStruct]):
 
 
 class BytesStoragePattern(
-    ContinuousBytesStoragePatternABC[
-        ContinuousBytesStorage, BytesFieldPattern, BytesFieldStruct
-    ]
+    ContinuousBytesStoragePatternABC[ContinuousBytesStorage, BytesFieldPattern]
 ):
     """
     Represents pattern for bytes storage.
@@ -132,38 +130,31 @@ class BytesStoragePattern(
 
     _sub_p_type = BytesFieldPattern
 
-    def _get(
-            self,
-            changes_allowed: bool,
-            for_meta: dict[str, Any],
-            for_sub: dict[str, dict[str, Any]],
-    ) -> ContinuousBytesStorage:
+    def _modify_all(
+            self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
         """
-        Get initialized class instance with parameters from pattern and from
-        `additions`.
+        Modify additional kwargs for sub-pattern objects.
 
         Parameters
         ----------
-        changes_allowed: bool
-            allows situations where keys from the pattern overlap with kwargs.
-            If False, it causes an error on intersection.
-        for_meta: dict[str, Any]:
-            dictionary with parameters for meta pattern in format
-            {PARAMETER: VALUE}.
-        for_sub: dict[str, dict[str, Any]]
-            dictionary with parameters for sub patterns in format
-            {PATTERN: {PARAMETER: VALUE}}.
+        changes_allowed : bool
+            if True allows situations where keys from the pattern overlap
+            with kwargs.
+        for_subs : dict[str, dict[str, Any]]
+            additional kwargs for sub-pattern object if format
+            {FIELD: {PARAMETER: VALUE}}.
 
         Returns
         -------
-        ContinuousBytesStorage
-            initialized target class.
+        dict[str, dict[str, Any]]
+            modified additional kwargs for sub-pattern object.
 
         Raises
         ------
-        NotConfiguredYet
-            if patterns list is empty.
+        AssertionError
+            if in some reason `typename` not in options.
         """
         if self._tn == "continuous":
-            return self._get_continuous(changes_allowed, for_meta, for_sub)
+            return super()._modify_all(changes_allowed, for_subs)
         raise AssertionError(f"invalid typename: '{self._tn}'")

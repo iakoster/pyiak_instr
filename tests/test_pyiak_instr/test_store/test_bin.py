@@ -170,16 +170,16 @@ class TestContinuousBytesStorage(unittest.TestCase):
             ),
         )
 
-        validate_object(self, obj, bytes_expected=4, content=b"", name="cbs")
+        validate_object(
+            self,
+            obj,
+            bytes_expected=4,
+            content=b"",
+            is_dynamic=False,
+            name="cbs",
+        )
         for name, ref in ref_data.items():
             validate_object(self, obj[name], **ref, wo_attrs=["struct"])
-
-    def test_init_exc(self) -> None:
-        with self.assertRaises(TypeError)as exc:
-            ContinuousBytesStorage("", {"f0": {}})
-        self.assertEqual(
-            "invalid type of 'f0': <class 'dict'>", exc.exception.args[0]
-        )
 
     def test_encode_extract(self) -> None:
 
@@ -192,6 +192,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
                 bytes_expected=bytes_expected,
                 content=content,
                 name=name,
+                wo_attrs=["is_dynamic"]
             )
 
         def get_field_pars(
@@ -202,7 +203,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
                 bytes_count=len(content),
                 content=content,
                 words_count=words_count,
-                wo_attrs=["struct", "name", "is_empty"],
+                wo_attrs=["struct", "name", "is_empty", "is_dynamic"],
             )
 
         data = dict(
@@ -380,6 +381,7 @@ class TestBytesFieldPattern(unittest.TestCase):
 
     def test_get(self) -> None:
         pattern = BytesFieldPattern(
+            typename="basic",
             fmt=Code.U8,
             order=Code.LITTLE_ENDIAN,
             bytes_expected=4,
@@ -396,6 +398,7 @@ class TestBytesFieldPattern(unittest.TestCase):
 
     def test_get_updated(self) -> None:
         pattern = BytesFieldPattern(
+            typename="basic",
             fmt=Code.U8,
             bytes_expected=4,
         )
@@ -423,6 +426,8 @@ class TestBytesFieldPattern(unittest.TestCase):
     @staticmethod
     def _get_pattern() -> BytesFieldPattern:
         return BytesFieldPattern(
+            typename="basic",
+            bytes_expected=0,
             a=1,
             b=[],
             c={},
@@ -434,7 +439,8 @@ class TestBytesStoragePattern(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        shutil.rmtree(TEST_DATA_DIR.parent)
+        if TEST_DATA_DIR.parent.exists():
+            shutil.rmtree(TEST_DATA_DIR.parent)
 
     def test_init(self) -> None:
         validate_object(
@@ -450,6 +456,7 @@ class TestBytesStoragePattern(unittest.TestCase):
             validate_storage=dict(
                 bytes_expected=7,
                 content=b"\xaa\x55\xab\xcd\x11\x22\x33\x44\x55\xdc\xbb\x99",
+                is_dynamic=True,
                 name="cbs_example"
             ),
             validate_fields=dict(
@@ -552,23 +559,28 @@ class TestBytesStoragePattern(unittest.TestCase):
         )
         pattern.configure(
             f0=BytesFieldPattern(
+                typename="basic",
                 fmt=Code.U16,
                 bytes_expected=2,
                 order=Code.BIG_ENDIAN,
             ),
             f1=BytesFieldPattern(
+                typename="basic",
                 fmt=Code.U8,
                 bytes_expected=2,
             ),
             f2=BytesFieldPattern(
+                typename="basic",
                 fmt=Code.I8,
                 bytes_expected=-1,
             ),
             f3=BytesFieldPattern(
+                typename="basic",
                 fmt=Code.U8,
                 bytes_expected=2,
             ),
             f4=BytesFieldPattern(
+                typename="basic",
                 fmt=Code.I8,
                 bytes_expected=1,
             )

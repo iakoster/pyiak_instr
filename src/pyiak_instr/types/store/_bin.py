@@ -177,7 +177,7 @@ class BytesFieldStructProtocol(Protocol):
         if self.stop == 0:
             raise ValueError("'stop' can't be equal to zero")
         if self.stop is not None and self.bytes_expected > 0:
-            raise TypeError("'bytes_expected' or 'stop' setting not allowed")
+            raise TypeError("'bytes_expected' and 'stop' setting not allowed")
         if 0 > self.start > -self.bytes_expected:
             raise ValueError("it will be out of bounds")
 
@@ -845,8 +845,8 @@ class ContinuousBytesStoragePatternABC(
                 kw.update(start=start)
                 return name
 
-            kw.update(start=start, stop=start + pattern.size)
-            start = kw["stop"]
+            kw.update(start=start)
+            start += pattern.size
         return None
 
     def _modify_after_dyn(
@@ -884,7 +884,7 @@ class ContinuousBytesStoragePatternABC(
                 raise TypeError("two dynamic field not allowed")
 
             start -= pattern.size
-            kw.update(start=start, stop=stop)
+            kw.update(start=start)
             stop = start if stop is None else stop + start
 
         raise AssertionError("dynamic field not found")
