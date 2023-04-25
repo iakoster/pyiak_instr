@@ -34,12 +34,18 @@ class PatternABC(ABC, Generic[OptionsT]):
     _options: dict[str, type[OptionsT]]
     """pattern target options"""
 
-    _only_auto_parameters: set[str] = set()  # todo: only auto for subs
+    _required_init_parameters: set[str] = set()
 
     # todo: parameters to TypedDict
     def __init__(self, typename: str, **parameters: Any) -> None:
         if typename not in self._options:
             raise KeyError(f"'{typename}' not in {set(self._options)}")
+        if not self._required_init_parameters.issubset(parameters):
+            raise TypeError(
+                f"{self._required_init_parameters.difference(parameters)} "
+                "not represented in parameters"
+            )
+
         self._tn = typename
         self._kw = parameters
 
@@ -107,11 +113,6 @@ class PatternABC(ABC, Generic[OptionsT]):
                     )
 
             parameters.update(additions)
-
-        for auto_par in self._only_auto_parameters:
-            if auto_par in parameters:
-                raise TypeError(f"'{auto_par}' can only be set automatically")
-
         return parameters
 
     @property
@@ -267,25 +268,22 @@ class MetaPatternABC(
         parameters for target initialization.
     """
 
-    _sub_p: dict[str, PatternT]
-    """list of sub patterns"""
-
     _sub_p_type: type[PatternT]
     """sub pattern type for initializing in class."""
 
-    _sub_p_par_name: str = ""
+    _sub_p_par_name: str
     """is the name of the parameter that names the sub-pattern in the 
     meta-object"""
 
-    # todo: required parameters and not allowed parameters
-
     def __init__(self, typename: str, name: str, **kwargs: Any):
-        if self._sub_p_par_name == "":
-            raise TypeError("'_sub_p_par_name' is empty string")
-        # todo: check _sub_p_par_name not in kwargs
+        if not hasattr(self, "_sub_p_par_name"):
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute "
+                "'_sub_p_par_name'"
+            )
         super().__init__(typename, name=name, **kwargs)
         self._name = name
-        self._sub_p = {}
+        self._sub_p: dict[str, PatternT] = {}
 
     def configure(self, **patterns: PatternT) -> Self:
         """

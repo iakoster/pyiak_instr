@@ -17,7 +17,7 @@ class TIPatternABC(PatternABC[dict]):
 
     _options = {"basic": dict}
 
-    _only_auto_parameters = ("only_auto",)
+    _required_init_parameters = {"req"}
 
 
 class TIEditablePatternABC(EditablePatternABC):
@@ -43,19 +43,27 @@ class TestPatternABC(unittest.TestCase):
         )
 
     def test_init_exc(self) -> None:
-        with self.assertRaises(KeyError) as exc:
-            TIPatternABC(typename="base")
-        self.assertEqual("'base' not in {'basic'}", exc.exception.args[0])
+        with self.subTest(test="invalid typename"):
+            with self.assertRaises(KeyError) as exc:
+                TIPatternABC(typename="base")
+            self.assertEqual("'base' not in {'basic'}", exc.exception.args[0])
+
+        with self.subTest(test="without required"):
+            with self.assertRaises(TypeError) as exc:
+                TIPatternABC(typename="basic")
+            self.assertEqual(
+                "{'req'} not represented in parameters", exc.exception.args[0]
+            )
 
     def test_get(self) -> None:
         self.assertDictEqual(
-            {'a': 5, 'b': [], 'c': 11},
+            {'a': 5, 'b': [], 'c': 11, "req": "rep"},
             self._instance.get(c=11)
         )
 
     def test_get_changes_allowed(self) -> None:
         self.assertDictEqual(
-            {'a': 11, 'b': [], 'c': 11},
+            {'a': 11, 'b': [], 'c': 11, "req": "rep"},
             self._instance.get(True, a=11, c=11)
         )
 
@@ -67,17 +75,9 @@ class TestPatternABC(unittest.TestCase):
                 "keyword argument(s) repeated: a", exc.exception.args[0]
             )
 
-        with self.subTest(test="set auto parameter"):
-            with self.assertRaises(TypeError) as exc:
-                self._instance.get(True, only_auto=1)
-            self.assertEqual(
-                "'only_auto' can only be set automatically",
-                exc.exception.args[0],
-            )
-
     def test_magic_init_kwargs(self) -> None:
         self.assertDictEqual(
-            {"typename": "basic", "a": 5, "b": []},
+            {"typename": "basic", "a": 5, "b": [], "req": "rep"},
             self._instance.__init_kwargs__()
         )
 
@@ -89,7 +89,9 @@ class TestPatternABC(unittest.TestCase):
     def test_magic_eq(self) -> None:
         self.assertEqual(self._instance, self._instance)
         self.assertNotEqual(
-            self._instance, TIPatternABC(typename="basic", a=5)
+            self._instance, TIPatternABC(
+                typename="basic", a=5, req="rep"
+            )
         )
         self.assertNotEqual(self._instance, 1)
 
@@ -99,8 +101,10 @@ class TestPatternABC(unittest.TestCase):
     def test_magic_eq_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
             _ = TIPatternABC(
-                typename="basic", a=np.array([1, 2])
-            ) == TIPatternABC(typename="basic", a=np.array([1, 2]))
+                typename="basic", a=np.array([1, 2]), req="rep"
+            ) == TIPatternABC(
+                typename="basic", a=np.array([1, 2]), req="rep"
+            )
         self.assertEqual(
             "The truth value of an array with more than one element is "
             "ambiguous. Use a.any() or a.all()",
@@ -109,7 +113,7 @@ class TestPatternABC(unittest.TestCase):
 
     @property
     def _instance(self) -> TIPatternABC:
-        return TIPatternABC(typename="basic", a=5, b=[])
+        return TIPatternABC(typename="basic", req="rep", a=5, b=[])
 
 
 class TestEditablePatternABC(unittest.TestCase):
@@ -158,16 +162,17 @@ class TestMetaPatternABC(unittest.TestCase):
         )
 
     def test_init_exc(self) -> None:
-        with self.subTest(exc="_sub_p_par_name not changed"):
-            with self.assertRaises(TypeError) as exc:
+        with self.subTest(exc="_sub_p_par_name not exists"):
+            with self.assertRaises(AttributeError) as exc:
                 MetaPatternABC("", "")
             self.assertEqual(
-                "'_sub_p_par_name' is empty string", exc.exception.args[0]
+                "'MetaPatternABC' object has no attribute '_sub_p_par_name'",
+                exc.exception.args[0],
             )
 
     def test_configure(self) -> None:
         obj = self._instance
-        pattern = TIPatternABC(typename="basic", a=0)
+        pattern = TIPatternABC(typename="basic", a=0, req="")
 
         self.assertDictEqual({}, obj._sub_p)
         obj.configure(pattern=pattern)
@@ -180,10 +185,10 @@ class TestMetaPatternABC(unittest.TestCase):
                 a=5,
                 b=[],
                 ii=99,
-                _={"f": {"a": 33}}
+                _={"f": {"a": 33, "req": ""}}
             ),
             self._instance.configure(
-                f=TIPatternABC("basic", a=33),
+                f=TIPatternABC("basic", a=33, req=""),
             ).get(ii=99)
         )
 
