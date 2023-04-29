@@ -3,8 +3,6 @@ parsers."""
 from __future__ import annotations
 from typing import (
     TYPE_CHECKING,
-    Generic,
-    Iterable,
     TypeVar,
     Union,
 )
@@ -23,7 +21,7 @@ from ._struct import (
     MessageFieldStructUnionT,
 )
 from ...core import Code
-from ...types.store import BytesFieldABC
+from ...types.communication import MessageFieldABC
 from ...exceptions import ContentError
 
 if TYPE_CHECKING:
@@ -31,7 +29,6 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "MessageFieldABC",
     "MessageField",
     "SingleMessageField",
     "StaticMessageField",
@@ -49,77 +46,37 @@ __all__ = [
 StructT = TypeVar("StructT", bound=MessageFieldStructUnionT)
 
 
-class MessageFieldABC(BytesFieldABC["Message", StructT], Generic[StructT]):
-    """
-    Represents abstract class for message field parser.
-
-    # Parameters
-    # ----------
-    # storage : ContinuousBytesStorage
-    #     storage of fields.
-    # name : str
-    #     field name.
-    # struct : BytesFieldStruct
-    #     field struct instance
-    #"""
-
-    #
-    # def __init__(
-    #     self,
-    #     storage: Message,
-    #     name: str,
-    #     struct: StructT,
-    # ) -> None:
-    #     super().__init__(name, struct)
-    #     self._storage = storage
-
-    def encode(self, content: int | float | Iterable[int | float]) -> None:
-        """
-        Encode and write content to the message.
-
-        Parameters
-        ----------
-        content : int | float | Iterable[int | float]
-            content to encoding.
-        """
-        self._storage.encode(**{self._name: self.content})
-
-    @property
-    def content(self) -> bytes:
-        """
-        Returns
-        -------
-        bytes
-            field content.
-        """
-        return self._storage.content[self._struct.slice_]
-
-
-class MessageField(MessageFieldABC[MessageFieldStruct]):
+class MessageField(MessageFieldABC["Message", MessageFieldStruct]):
     """
     Base message field.
     """
 
 
-class SingleMessageField(MessageFieldABC[SingleMessageFieldStruct]):
+class SingleMessageField(
+    MessageFieldABC["Message", SingleMessageFieldStruct]
+):
     """
     Message field with one (single) word.
     """
 
 
-class StaticMessageField(MessageFieldABC[StaticMessageFieldStruct]):
+class StaticMessageField(
+    MessageFieldABC["Message", StaticMessageFieldStruct]
+):
     """
     Message field with static single word (e.g. preamble).
     """
 
 
-class AddressMessageField(MessageFieldABC[AddressMessageFieldStruct]):
+class AddressMessageField(
+    MessageFieldABC["Message", AddressMessageFieldStruct]
+):
     """
     Message field with address.
     """
 
 
-class CrcMessageField(MessageFieldABC[CrcMessageFieldStruct]):
+class CrcMessageField(MessageFieldABC["Message", CrcMessageFieldStruct]):
     """
     Message field with crc value for message.
     """
@@ -165,7 +122,7 @@ class CrcMessageField(MessageFieldABC[CrcMessageFieldStruct]):
             raise ContentError(self, clarification="invalid crc value")
 
 
-class DataMessageField(MessageFieldABC[DataMessageFieldStruct]):
+class DataMessageField(MessageFieldABC["Message", DataMessageFieldStruct]):
     """
     Message field with data.
     """
@@ -190,7 +147,9 @@ class DataMessageField(MessageFieldABC[DataMessageFieldStruct]):
             raise TypeError("fails to add new data to a non-dynamic field")
 
 
-class DataLengthMessageField(MessageFieldABC[DataLengthMessageFieldStruct]):
+class DataLengthMessageField(
+    MessageFieldABC["Message", DataLengthMessageFieldStruct]
+):
     """
     Message field with data length value.
     """
@@ -238,7 +197,7 @@ class DataLengthMessageField(MessageFieldABC[DataLengthMessageFieldStruct]):
             )
 
 
-class IdMessageField(MessageFieldABC[IdMessageFieldStruct]):
+class IdMessageField(MessageFieldABC["Message", IdMessageFieldStruct]):
     """
     Message field with a unique identifier of a particular message.
     """
@@ -297,7 +256,9 @@ class IdMessageField(MessageFieldABC[IdMessageFieldStruct]):
         raise TypeError(f"invalid 'other' type: {other.__class__.__name__}")
 
 
-class OperationMessageField(MessageFieldABC[OperationMessageFieldStruct]):
+class OperationMessageField(
+    MessageFieldABC["Message", OperationMessageFieldStruct]
+):
     """
     Message field with operation (e.g. read).
     """
@@ -317,7 +278,7 @@ class OperationMessageField(MessageFieldABC[OperationMessageFieldStruct]):
 
 
 class ResponseMessageField(
-    MessageFieldABC[ResponseMessageFieldStruct],
+    MessageFieldABC["Message", ResponseMessageFieldStruct],
 ):
     """
     Message field with response.

@@ -19,7 +19,6 @@ from ._struct import (
     MessageFieldPattern,
 )
 from ._field import (
-    MessageFieldABC,
     MessageField,
     SingleMessageField,
     StaticMessageField,
@@ -47,7 +46,6 @@ __all__ = [
     "ResponseMessageFieldStruct",
     "MessageFieldStructUnionT",
     "MessageFieldPattern",
-    "MessageFieldABC",
     "MessageField",
     "SingleMessageField",
     "StaticMessageField",

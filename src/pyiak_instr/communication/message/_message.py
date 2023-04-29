@@ -2,7 +2,11 @@
 classes."""
 from __future__ import annotations
 
-from ...types.store import BytesStorageABC
+from ...types.communication import (
+    MessageABC,
+    MessageGetParserABC,
+    MessageHasParserABC,
+)
 from ._struct import (
     MessageFieldStruct,
     SingleMessageFieldStruct,
@@ -39,24 +43,10 @@ from ._field import (
 
 
 # todo: fix type hints
-class MessageGet:
+class MessageGetParser(MessageGetParserABC["Message", MessageFieldUnionT]):
     """
     Parser to get the field from message by it type.
-
-    Parameters
-    ----------
-    message: Message
-        message instance.
-    types: dict[type[MessageFieldUnionT], str]
-        dictionary of field types in the message.
     """
-
-    def __init__(
-        self,
-        message: Message,
-        types: dict[type[MessageFieldUnionT], str],
-    ) -> None:
-        self._msg, self._types = message, types
 
     @property
     def basic(self) -> MessageField:
@@ -66,7 +56,7 @@ class MessageGet:
         MessageField
             field instance.
         """
-        return self[MessageField]  # type: ignore[return-value]
+        return self(MessageField)
 
     @property
     def single(self) -> SingleMessageField:
@@ -76,7 +66,7 @@ class MessageGet:
         SingleMessageField
             field instance.
         """
-        return self[SingleMessageField]  # type: ignore[return-value]
+        return self(SingleMessageField)
 
     @property
     def static(self) -> StaticMessageField:
@@ -86,7 +76,7 @@ class MessageGet:
         StaticMessageField
             field instance.
         """
-        return self[StaticMessageField]  # type: ignore[return-value]
+        return self(StaticMessageField)
 
     @property
     def address(self) -> AddressMessageField:
@@ -96,7 +86,7 @@ class MessageGet:
         AddressMessageField
             field instance.
         """
-        return self[AddressMessageField]  # type: ignore[return-value]
+        return self(AddressMessageField)
 
     @property
     def crc(self) -> CrcMessageField:
@@ -106,7 +96,7 @@ class MessageGet:
         CrcMessageField
             field instance.
         """
-        return self[CrcMessageField]  # type: ignore[return-value]
+        return self(CrcMessageField)
 
     @property
     def data(self) -> DataMessageField:
@@ -116,7 +106,7 @@ class MessageGet:
         DataMessageField
             field instance.
         """
-        return self[DataMessageField]  # type: ignore[return-value]
+        return self(DataMessageField)
 
     @property
     def data_length(self) -> DataLengthMessageField:
@@ -126,7 +116,7 @@ class MessageGet:
         DataLengthMessageField
             field instance.
         """
-        return self[DataLengthMessageField]  # type: ignore[return-value]
+        return self(DataLengthMessageField)
 
     @property
     def id_(self) -> IdMessageField:
@@ -136,7 +126,7 @@ class MessageGet:
         IdMessageField
             field instance.
         """
-        return self[IdMessageField]  # type: ignore[return-value]
+        return self(IdMessageField)
 
     @property
     def operation(self) -> OperationMessageField:
@@ -146,7 +136,7 @@ class MessageGet:
         OperationMessageField
             field instance.
         """
-        return self[OperationMessageField]  # type: ignore[return-value]
+        return self(OperationMessageField)
 
     @property
     def response(self) -> ResponseMessageField:
@@ -156,29 +146,13 @@ class MessageGet:
         ResponseMessageField
             field instance.
         """
-        return self[ResponseMessageField]  # type: ignore[return-value]
-
-    def __getitem__(
-        self, type_: type[MessageFieldUnionT]
-    ) -> MessageFieldUnionT:
-        """Get first field with specified type."""
-        if type_ not in self._types:
-            raise TypeError(f"field with type {type_.__name__} not found")
-        return self._msg[self._types[type_]]
+        return self(ResponseMessageField)
 
 
-class MessageHas:
+class MessageHasParser(MessageHasParserABC[MessageFieldUnionT]):
     """
     Parser to check the field class exists in the message.
-
-    Parameters
-    ----------
-    types: set[type[MessageFieldUnionT]]
-        set of field types in the message.
     """
-
-    def __init__(self, types: set[type[MessageFieldUnionT]]) -> None:
-        self._types = types
 
     @property
     def basic(self) -> bool:
@@ -188,7 +162,7 @@ class MessageHas:
         bool
             True -- basic field exists in message.
         """
-        return self[MessageField]
+        return self(MessageField)
 
     @property
     def single(self) -> bool:
@@ -198,7 +172,7 @@ class MessageHas:
         bool
             True -- single field exists in message.
         """
-        return self[SingleMessageField]
+        return self(SingleMessageField)
 
     @property
     def static(self) -> bool:
@@ -208,7 +182,7 @@ class MessageHas:
         bool
             True -- static field exists in message.
         """
-        return self[StaticMessageField]
+        return self(StaticMessageField)
 
     @property
     def address(self) -> bool:
@@ -218,7 +192,7 @@ class MessageHas:
         bool
             True -- address field exists in message.
         """
-        return self[AddressMessageField]
+        return self(AddressMessageField)
 
     @property
     def crc(self) -> bool:
@@ -228,7 +202,7 @@ class MessageHas:
         bool
             True -- crc field exists in message.
         """
-        return self[CrcMessageField]
+        return self(CrcMessageField)
 
     @property
     def data(self) -> bool:
@@ -238,7 +212,7 @@ class MessageHas:
         bool
             True -- data field exists in message.
         """
-        return self[DataMessageField]
+        return self(DataMessageField)
 
     @property
     def data_length(self) -> bool:
@@ -248,7 +222,7 @@ class MessageHas:
         bool
             True -- data length field exists in message.
         """
-        return self[DataLengthMessageField]
+        return self(DataLengthMessageField)
 
     @property
     def id_(self) -> bool:
@@ -258,7 +232,7 @@ class MessageHas:
         bool
             True -- id field exists in message.
         """
-        return self[IdMessageField]
+        return self(IdMessageField)
 
     @property
     def operation(self) -> bool:
@@ -268,7 +242,7 @@ class MessageHas:
         bool
             True -- operation field exists in message.
         """
-        return self[OperationMessageField]
+        return self(OperationMessageField)
 
     @property
     def response(self) -> bool:
@@ -278,34 +252,24 @@ class MessageHas:
         bool
             True -- response field exists in message.
         """
-        return self[ResponseMessageField]
-
-    def __getitem__(self, type_: type[MessageFieldUnionT]) -> bool:
-        """
-        Check that message has field of specified type.
-        """
-        return type_ in self._types
+        return self(ResponseMessageField)
 
 
 # todo: __str__
-class Message(BytesStorageABC[MessageFieldUnionT, MessageFieldStructUnionT]):
+class Message(
+    MessageABC[
+        MessageFieldUnionT,
+        MessageFieldStructUnionT,
+        MessageGetParser,
+        MessageHasParser,
+    ]
+):
     """
     Message for communication between devices.
-
-    Parameters
-    ----------
-    name: str, default='std'
-        name of storage.
-    divisible: bool, default=False
-        shows that the message can be divided by the infinite field.
-    part_size: int, default=1024
-        max message length.
-    **fields: MessageFieldStructUnionT
-        fields of the storage. The kwarg Key is used as the field name.
     """
 
-    _get_parser = MessageGet
-    _has_parser = MessageHas
+    _get_parser = MessageGetParser
+    _has_parser = MessageHasParser
     _struct_field = {
         MessageFieldStruct: MessageField,
         SingleMessageFieldStruct: SingleMessageField,
@@ -318,42 +282,6 @@ class Message(BytesStorageABC[MessageFieldUnionT, MessageFieldStructUnionT]):
         OperationMessageFieldStruct: OperationMessageField,
         ResponseMessageFieldStruct: ResponseMessageField,
     }
-
-    def __init__(
-        self,
-        name: str = "std",
-        divisible: bool = False,
-        part_size: int = 1500,
-        **fields: MessageFieldStructUnionT,
-    ):
-        super().__init__(name, fields)
-        self._div = divisible
-        self._part_size = part_size
-
-        self._types = {}
-        for f_name, struct in self._f.items():
-            if f_name not in self._types:
-                self._types[self._struct_field[struct.__class__]] = f_name
-
-    @property
-    def get(self) -> _get_parser:
-        """
-        Returns
-        -------
-        MessageGet
-            get parser instance.
-        """
-        return MessageGet(self, self._types)
-
-    @property
-    def has(self) -> _has_parser:
-        """
-        Returns
-        -------
-        MessageHas
-            get parser instance.
-        """
-        return MessageHas(set(self._types))
 
 
 #
