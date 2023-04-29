@@ -173,9 +173,9 @@ class TestContinuousBytesStorage(unittest.TestCase):
         validate_object(
             self,
             obj,
-            bytes_expected=4,
             content=b"",
             is_dynamic=False,
+            minimum_size=4,
             name="cbs",
         )
         for name, ref in ref_data.items():
@@ -184,13 +184,13 @@ class TestContinuousBytesStorage(unittest.TestCase):
     def test_encode_extract(self) -> None:
 
         def get_storage_pars(
-                bytes_expected: int,
+                minimum_size: int,
                 content: bytes,
                 name: str,
         ) -> dict[str, Any]:
             return dict(
-                bytes_expected=bytes_expected,
                 content=content,
+                minimum_size=minimum_size,
                 name=name,
                 wo_attrs=["is_dynamic"]
             )
@@ -454,9 +454,9 @@ class TestBytesStoragePattern(unittest.TestCase):
         data = b"\xaa\x55\xab\xcd\x11\x22\x33\x44\x55\xdc\xbb\x99"
         ref = dict(
             validate_storage=dict(
-                bytes_expected=7,
                 content=b"\xaa\x55\xab\xcd\x11\x22\x33\x44\x55\xdc\xbb\x99",
                 is_dynamic=True,
+                minimum_size=7,
                 name="cbs_example"
             ),
             validate_fields=dict(

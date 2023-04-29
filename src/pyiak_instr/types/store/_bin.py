@@ -419,6 +419,11 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
     _struct_field: dict[type[StructT], type[ParserT]]
 
     def __init__(self, name: str, fields: dict[str, StructT]) -> None:
+        if len(fields) == 0:
+            raise ValueError(
+                f"{self.__class__.__name__} without fields are forbidden"
+            )
+
         self._name = name
         self._f = fields
         self._c = bytearray()
@@ -558,10 +563,10 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
             if content length smaller than minimal storage length
             (`bytes_expected`).
         """
-        bytes_expected = self.bytes_expected
-        if len(content) < bytes_expected:
+        minimum_size = self.minimum_size
+        if len(content) < minimum_size:
             raise ValueError("bytes content too short")
-        if not self.is_dynamic and len(content) > bytes_expected:
+        if not self.is_dynamic and len(content) > minimum_size:
             raise ValueError("bytes content too long")
 
         if len(self) != 0:
@@ -667,16 +672,6 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         return bytes(self._c)
 
     @property
-    def bytes_expected(self) -> int:
-        """
-        Returns
-        -------
-        int
-            expected bytes count or minimal length (if it has dynamic field).
-        """
-        return sum(s.bytes_expected for s in self._f.values())
-
-    @property
     def is_dynamic(self) -> bool:
         """
         Returns
@@ -685,6 +680,16 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
             True - at least one field is dynamic.
         """
         return any(p.struct.is_dynamic for p in self)
+
+    @property
+    def minimum_size(self) -> int:
+        """
+        Returns
+        -------
+        int
+            minimum message size in bytes.
+        """
+        return sum(s.bytes_expected for s in self._f.values())
 
     @property
     def name(self) -> str:

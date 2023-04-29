@@ -23,6 +23,7 @@ __all__ = [
 ]
 
 
+AddressT = TypeVar("AddressT")
 StructT = TypeVar("StructT", bound=BytesFieldStructProtocol)
 FieldT = TypeVar("FieldT", bound="MessageFieldABC[Any, Any]")
 FieldAnotherT = TypeVar("FieldAnotherT", bound="MessageFieldABC[Any, Any]")
@@ -93,7 +94,13 @@ class MessageHasParserABC(ABC, Generic[FieldT]):
 
 class MessageABC(
     BytesStorageABC[FieldT, StructT],
-    Generic[FieldT, StructT, MessageGetParserT, MessageHasParserT],
+    Generic[
+        FieldT,
+        StructT,
+        MessageGetParserT,
+        MessageHasParserT,
+        AddressT,
+    ],
 ):
     """
     Abstract base class message for communication between devices.
@@ -130,6 +137,43 @@ class MessageABC(
             if f_class not in self._types:
                 self._types[f_class] = f_name
 
+        self._src, self._dst = None, None
+
+        if divisible and mtu < self.minimum_size:
+            raise ValueError("MTU cannot be less than the minimum size")
+
+    @property
+    def divisible(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            shows that the message can be divided by the infinite field.
+        """
+        return self._div
+
+    @property
+    def dst(self) -> AddressT | None:
+        """
+        Returns
+        -------
+        AddressT | None
+            destination address.
+        """
+        return self._dst
+
+    @dst.setter
+    def dst(self, destination: AddressT | None) -> None:
+        """
+        Set destination address.
+
+        Parameters
+        ----------
+        destination : AddressT | None
+            destination address.
+        """
+        self._dst = destination
+
     @property
     def get(self) -> MessageGetParserT:
         """
@@ -149,6 +193,64 @@ class MessageABC(
             get parser instance.
         """
         return self._has_parser(set(self._types))
+
+    @property
+    def mtu(self) -> int:
+        """
+        Returns
+        -------
+        int
+            max size of one message part.
+        """
+        return self._mtu
+
+    @property
+    def src(self) -> AddressT | None:
+        """
+        Returns
+        -------
+        AddressT | None
+            source address.
+        """
+        return self._src
+
+    @src.setter
+    def src(self, source: AddressT | None) -> None:
+        """
+        Set source address.
+
+        Parameters
+        ----------
+        source : AddressT | None
+            source address.
+        """
+        self._src = source
+
+    @property
+    def src_dst(self) -> tuple[AddressT | None, AddressT | None]:
+        """
+        Returns
+        -------
+        tuple[AddressT | None, AddressT | None]
+            src - source address;
+            dst - destination address.
+        """
+        return self._src, self._dst
+
+    @src_dst.setter
+    def src_dst(
+            self, src_dst: tuple[AddressT | None, AddressT | None]
+    ) -> None:
+        """
+        Set source and destination addresses.
+
+        Parameters
+        ----------
+        src_dst : tuple[AddressT | None, AddressT | None]
+            src - source address;
+            dst - destination address.
+        """
+        self._src, self._dst = src_dst
 
 
 class MessageFieldPatternABC(BytesFieldPatternABC[StructT], Generic[StructT]):
