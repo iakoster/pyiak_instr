@@ -326,7 +326,9 @@ class TestMessageFieldPattern(unittest.TestCase):
 
     def test_get(self) -> None:
         self.assertIsInstance(
-            MessageFieldPattern("basic", start=0).get(fmt=Code.U8),
+            MessageFieldPattern(
+                "basic", start=0, bytes_expected=0
+            ).get(fmt=Code.U8),
             MessageFieldStruct,
         )
 

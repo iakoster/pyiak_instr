@@ -1,16 +1,25 @@
 """Private module of ``pyiak_instr.types.communication`` with types for
 communication module."""
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar  # pylint: disable=unused-import
 
-from ..store import BytesFieldABC, BytesFieldStructProtocol, BytesStorageABC
+from ...core import Code
+from ..store import (
+    BytesFieldABC,
+    BytesFieldPatternABC,
+    BytesFieldStructProtocol,
+    BytesStorageABC,
+    ContinuousBytesStoragePatternABC,
+)
 
 
 __all__ = [
     "MessageABC",
     "MessageFieldABC",
+    "MessageFieldPatternABC",
     "MessageGetParserABC",
     "MessageHasParserABC",
+    "MessagePatternABC",
 ]
 
 
@@ -24,6 +33,10 @@ MessageHasParserT = TypeVar(
     "MessageHasParserT", bound="MessageHasParserABC[Any]"
 )
 MessageT = TypeVar("MessageT", bound="MessageABC[Any, Any, Any, Any]")
+FieldPatternT = TypeVar("FieldPatternT", bound="MessageFieldPatternABC[Any]")
+MessagePatternT = TypeVar(
+    "MessagePatternT", bound="MessagePatternABC[Any, Any]"
+)
 
 
 class MessageFieldABC(
@@ -34,7 +47,6 @@ class MessageFieldABC(
     """
 
 
-# pylint: disable=too-few-public-methods
 class MessageGetParserABC(ABC, Generic[MessageT, FieldT]):
     """
     Abstract base class for parser to get the field from message by it type.
@@ -61,7 +73,6 @@ class MessageGetParserABC(ABC, Generic[MessageT, FieldT]):
         ]
 
 
-# pylint: disable=too-few-public-methods
 class MessageHasParserABC(ABC, Generic[FieldT]):
     """
     Abstract base class parser to check the field class exists in the message.
@@ -138,3 +149,35 @@ class MessageABC(
             get parser instance.
         """
         return self._has_parser(set(self._types))
+
+
+class MessageFieldPatternABC(BytesFieldPatternABC[StructT], Generic[StructT]):
+    """
+    Represent abstract class of pattern for message field.
+    """
+
+    @staticmethod
+    @abstractmethod
+    def get_bytesize(fmt: Code) -> int:
+        """
+        Get fmt size in bytes.
+
+        Parameters
+        ----------
+        fmt : Code
+            fmt code.
+
+        Returns
+        -------
+        int
+            fmt bytesize.
+        """
+
+
+class MessagePatternABC(
+    ContinuousBytesStoragePatternABC[MessageT, FieldPatternT],
+    Generic[MessageT, FieldPatternT],
+):
+    """
+    Represent abstract class of pattern for message.
+    """

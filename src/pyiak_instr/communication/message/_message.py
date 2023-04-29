@@ -6,6 +6,7 @@ from ...types.communication import (
     MessageABC,
     MessageGetParserABC,
     MessageHasParserABC,
+    MessagePatternABC,
 )
 from ._struct import (
     MessageFieldStruct,
@@ -19,6 +20,7 @@ from ._struct import (
     OperationMessageFieldStruct,
     ResponseMessageFieldStruct,
     MessageFieldStructUnionT,
+    MessageFieldPattern,
 )
 from ._field import (
     MessageField,
@@ -35,14 +37,6 @@ from ._field import (
 )
 
 
-# Example from docs. Working but not for method
-# T = TypeVar('T', int, float, complex)
-# Vec = Iterable[tuple[T, T]]
-# def inproduct(v: Vec[T]) -> T:
-#   return sum(x*y for x, y in v)
-
-
-# todo: fix type hints
 class MessageGetParser(MessageGetParserABC["Message", MessageFieldUnionT]):
     """
     Parser to get the field from message by it type.
@@ -284,10 +278,14 @@ class Message(
     }
 
 
+class MessagePattern(MessagePatternABC[Message, MessageFieldPattern]):
+    """
+    Pattern for message class
+    """
+
+
 #
 #
-# # todo: __str__
-# # todo: fix typing
 # class Message(ContinuousBytesStorage):
 #     """
 #     Represents message for communication.
@@ -445,196 +443,6 @@ class Message(
 #         self._src = source
 #
 #
-# class MessageField(BytesField, BytesFieldABC[Message, MessageFieldStruct]):
-#     """
-#     Represents parser for work with message field content.
-#     """
-#
-#
-# class SingleMessageField(
-#     MessageField, BytesFieldABC[Message, SingleMessageFieldStruct]
-# ):
-#     """
-#     Represents parser for work with single message field content.
-#     """
-#
-#
-# class StaticMessageField(
-#     MessageField, BytesFieldABC[Message, StaticMessageFieldStruct]
-# ):
-#     """
-#     Represents parser for work with static message field content.
-#     """
-#
-#
-# class AddressMessageField(
-#     SingleMessageField, BytesFieldABC[Message, AddressMessageFieldStruct]
-# ):
-#     """
-#     Represents parser for work with crc message field content.
-#     """
-#
-#
-# class CrcMessageField(
-#     SingleMessageField, BytesFieldABC[Message, CrcMessageFieldStruct]
-# ):
-#     """
-#     Represents parser for work with crc message field content.
-#     """
-#
-#     def calculate(self) -> int:
-#         """
-#         Raises
-#         ------
-#         NotImplementedError
-#             placeholder.
-#         """
-#         # content = b""
-#         # for field in msg:
-#         #     if field.name not in self.fld.wo_fields and field is not self:
-#         #         content += field.content
-#         # return self.fld.algorithm(content)
-#         raise NotImplementedError()
-#
-#     def update(self) -> None:
-#         """
-#         Raises
-#         ------
-#         NotImplementedError
-#             placeholder.
-#         """
-#         raise NotImplementedError()
-#
-#
-# class DataMessageField(
-#     MessageFieldStruct, BytesFieldABC[Message, DataMessageFieldStruct]
-# ):
-#     """
-#     Represents parser for work with data message field content.
-#     """
-#
-#     def append(self, content: npt.ArrayLike) -> None:
-#         """
-#         append new content.
-#
-#         Parameters
-#         ----------
-#         content : ArrayLike
-#             new content.
-#
-#         Raises
-#         ------
-#         NotImplementedError
-#             placeholder.
-#         """
-#         raise NotImplementedError()
-#
-#
-# class DataLengthMessageField(
-#     SingleMessageField,
-#     BytesFieldABC[Message, DataLengthMessageFieldStruct],
-# ):
-#     """
-#     Represents parser for work with data length message field content.
-#     """
-#
-#     def calculate(self) -> None:
-#         """
-#         Raises
-#         -------
-#         NotImplementedError
-#             placeholder
-#         """
-#         raise NotImplementedError()
-#
-#     def update(self) -> None:
-#         """
-#         Raises
-#         ------
-#         NotImplementedError
-#             placeholder.
-#         """
-#         raise NotImplementedError()
-#
-#
-# class IdMessageField(
-#     SingleMessageField, BytesFieldABC[Message, IdMessageFieldStruct]
-# ):
-#     """
-#     Represents parser for work with id message field content.
-#     """
-#
-#     def compare(self) -> None:
-#         """
-#         Returns
-#         -------
-#         NotImplementedError
-#             placeholder.
-#         """
-#         raise NotImplementedError()
-#
-#
-# class OperationMessageField(
-#     SingleMessageField,
-#     BytesFieldABC[Message, OperationMessageFieldStruct],
-# ):
-#     """
-#     Represents parser for work with operation message field content.
-#     """
-#
-#     def calculate(self) -> None:
-#         """
-#         Raises
-#         -------
-#         NotImplementedError
-#             placeholder
-#         """
-#         raise NotImplementedError()
-#
-#     def update(self) -> None:
-#         """
-#         Raises
-#         ------
-#         NotImplementedError
-#             placeholder.
-#         """
-#         raise NotImplementedError()
-#
-#
-# class ResponseMessageField(
-#     SingleMessageField, BytesFieldABC[Message, ResponseMessageFieldStruct]
-# ):
-#     """
-#     Represents parser for work with response message field content.
-#     """
-#
-#     @property
-#     def code(self) -> Code:
-#         """
-#         Raises
-#         ------
-#         NotImplementedError
-#             placeholder.
-#         """
-#         raise NotImplementedError()
-#
-#
-# MessageFieldUnionT = Union[
-#     MessageField,
-#     SingleMessageField,
-#     StaticMessageField,
-#     AddressMessageField,
-#     CrcMessageField,
-#     DataMessageField,
-#     DataLengthMessageField,
-#     IdMessageField,
-#     OperationMessageField,
-#     ResponseMessageField,
-# ]
-#
-#
-# # todo: implement storage only for one
-# # todo: fix typing (how?)
 # class MessagePattern(
 #     BytesStoragePattern, PatternStorageABC[Message, MessageFieldPattern]
 # ):

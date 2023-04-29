@@ -43,7 +43,6 @@ class SupportsContainsGetitem(Protocol):
         """Get item from object by `key`."""
 
 
-# pylint: disable=too-few-public-methods
 class SupportsInitKwargs(Protocol):
     """
     Represents class with method which returns kwargs for initialization.
@@ -53,7 +52,6 @@ class SupportsInitKwargs(Protocol):
         """Returns kwargs required for initialization."""
 
 
-# pylint: disable=too-few-public-methods
 class WithApi(ABC, Generic[ApiT]):
     """Represents generic class with some API."""
 

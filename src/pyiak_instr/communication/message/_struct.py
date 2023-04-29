@@ -5,10 +5,11 @@ from dataclasses import field as _field
 from typing import ClassVar, Iterable, Self, Union
 
 from ...core import Code
-from ...exceptions import NotAmongTheOptions, ContentError
-from ...types import PatternABC
-from ...types.store import STRUCT_DATACLASS
+from ...utilities import BytesEncoder
 from ...store import BytesFieldStruct
+from ...exceptions import NotAmongTheOptions, ContentError
+from ...types.communication import MessageFieldPatternABC
+from ...types.store import STRUCT_DATACLASS
 
 
 __all__ = [
@@ -406,7 +407,7 @@ MessageFieldStructUnionT = Union[
 ]
 
 
-class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
+class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
     """
     Represents pattern for message field struct
     """
@@ -487,7 +488,13 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         Self
             initialized pattern.
         """
-        return cls(typename="single", fmt=fmt, order=order, default=default)
+        return cls(
+            typename="single",
+            bytes_expected=cls.get_bytesize(fmt),
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
 
     @classmethod
     def static(
@@ -510,7 +517,13 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         Self
             initialized pattern.
         """
-        return cls(typename="static", fmt=fmt, order=order, default=default)
+        return cls(
+            typename="static",
+            bytes_expected=cls.get_bytesize(fmt),
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
 
     @classmethod
     def address(
@@ -541,6 +554,7 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         """
         return cls(
             typename="address",
+            bytes_expected=cls.get_bytesize(fmt),
             fmt=fmt,
             order=order,
             behaviour=behaviour,
@@ -579,6 +593,7 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         """
         return cls(
             typename="crc",
+            bytes_expected=cls.get_bytesize(fmt),
             fmt=fmt,
             order=order,
             poly=poly,
@@ -660,6 +675,7 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         """
         return cls(
             typename="data_length",
+            bytes_expected=cls.get_bytesize(fmt),
             fmt=fmt,
             order=order,
             behaviour=behaviour,
@@ -692,7 +708,13 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
         Self
             initialized pattern.
         """
-        return cls(typename="id", fmt=fmt, order=order, default=default)
+        return cls(
+            typename="id",
+            bytes_expected=cls.get_bytesize(fmt),
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
 
     @classmethod
     def operation(
@@ -725,6 +747,7 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
             descs = {Code.READ: 0, Code.WRITE: 1}
         return cls(
             typename="operation",
+            bytes_expected=cls.get_bytesize(fmt),
             fmt=fmt,
             order=order,
             descs=descs,
@@ -762,8 +785,26 @@ class MessageFieldPattern(PatternABC[MessageFieldStructUnionT]):
             descs = {}
         return cls(
             typename="response",
+            bytes_expected=cls.get_bytesize(fmt),
             fmt=fmt,
             order=order,
             descs=descs,
             default=default,
         )
+
+    @staticmethod
+    def get_bytesize(fmt: Code) -> int:
+        """
+        Get fmt size in bytes.
+
+        Parameters
+        ----------
+        fmt : Code
+            fmt code.
+
+        Returns
+        -------
+        int
+            fmt bytesize.
+        """
+        return BytesEncoder.get_bytesize(fmt)
