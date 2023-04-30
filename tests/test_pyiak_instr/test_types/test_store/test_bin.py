@@ -32,6 +32,13 @@ DATA_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
 @STRUCT_DATACLASS
 class TIStruct(BytesFieldStructProtocol):
 
+    def __post_init__(self) -> None:
+        if self.fmt not in {Code.U8, Code.U16}:
+            raise ValueError("invalid fmt")
+        if self.order is not Code.BIG_ENDIAN:
+            raise ValueError("invalid order")
+        super().__post_init__()
+
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
         return np.frombuffer(
             content, np.uint8 if self.fmt is Code.U8 else np.uint16
@@ -41,13 +48,6 @@ class TIStruct(BytesFieldStructProtocol):
         return np.array(content).astype(
             np.uint8 if self.fmt is Code.U8 else np.uint16
         ).tobytes()
-
-    def _verify_values_before_modifying(self) -> None:
-        if self.fmt not in {Code.U8, Code.U16}:
-            raise ValueError("invalid fmt")
-        if self.order is not Code.BIG_ENDIAN:
-            raise ValueError("invalid order")
-        super()._verify_values_before_modifying()
 
     @property
     def word_bytesize(self) -> int:

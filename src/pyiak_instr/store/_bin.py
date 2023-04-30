@@ -35,6 +35,10 @@ class BytesFieldStruct(BytesFieldStructProtocol):
     Represents field parameters with values encoded in bytes.
     """
 
+    def __post_init__(self) -> None:
+        BytesEncoder.check_fmt_order(self.fmt, self.order)
+        super().__post_init__()
+
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
         """
         Decode content from parent.
@@ -66,10 +70,6 @@ class BytesFieldStruct(BytesFieldStructProtocol):
             encoded content.
         """
         return BytesEncoder.encode(content, fmt=self.fmt, order=self.order)
-
-    def _verify_values_before_modifying(self) -> None:
-        BytesEncoder.check_fmt_order(self.fmt, self.order)
-        super()._verify_values_before_modifying()
 
     @property
     def word_bytesize(self) -> int:
