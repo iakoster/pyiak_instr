@@ -31,9 +31,11 @@ from ._field import (
     ResponseMessageField,
     MessageFieldUnionT,
 )
+from ._message import Message
 
 
 __all__ = [
+    "Message",
     "MessageFieldStruct",
     "SingleMessageFieldStruct",
     "StaticMessageFieldStruct",

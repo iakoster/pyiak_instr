@@ -40,13 +40,16 @@ class SingleMessageFieldStruct(MessageFieldStruct):
     """
 
     def __post_init__(self) -> None:
-        if self.stop is None and self.bytes_expected == 0:
-            object.__setattr__(self, "bytes_expected", self.word_bytesize)
         super().__post_init__()
         if self.words_expected != 1:
             raise ValueError(
                 f"{self.__class__.__name__} should expect one word"
             )
+
+    def _modify_values(self) -> None:
+        if self.stop is None and self.bytes_expected == 0:
+            object.__setattr__(self, "bytes_expected", self.word_bytesize)
+        super()._modify_values()
 
 
 @STRUCT_DATACLASS
@@ -304,7 +307,12 @@ class OperationMessageFieldStruct(SingleMessageFieldStruct):
     def _modify_values(self) -> None:
         super()._modify_values()
         object.__setattr__(
-            self, "descs_r", {v: k for k, v in self.descs.items()}
+            self,
+            "descs_r",
+            {
+                v: k
+                for k, v in self.descs.items()  # pylint: disable=no-member
+            },
         )
 
 

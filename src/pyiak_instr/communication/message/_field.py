@@ -25,7 +25,7 @@ from ...types.communication import MessageFieldABC
 from ...exceptions import ContentError
 
 if TYPE_CHECKING:
-    from ._message import Message
+    from ._message import Message  # noqa: F401
 
 
 __all__ = [
@@ -141,10 +141,9 @@ class DataMessageField(MessageFieldABC["Message", DataMessageFieldStruct]):
         TypeError
             if content not dynamic.
         """
-        if self._struct.is_dynamic:
-            self.encode(self.content + content)
-        else:
+        if not self.struct.is_dynamic:
             raise TypeError("fails to add new data to a non-dynamic field")
+        self.encode(self.content + content)
 
 
 class DataLengthMessageField(
@@ -164,12 +163,18 @@ class DataLengthMessageField(
             actual data length.
         """
         if self.struct.behaviour is Code.ACTUAL:
-            return self._struct.calculate(self._storage.get.data.content)
+            data_field = self._storage.get.data
+            return self._struct.calculate(
+                data_field.content, data_field.struct.fmt
+            )
 
         # behaviour is a EXPECTED
         decoded = self[0]
         if decoded == 0:
-            return self._struct.calculate(self._storage.get.data.content)
+            data_field = self._storage.get.data
+            return self._struct.calculate(
+                data_field.content, data_field.struct.fmt
+            )
         return decoded  # type: ignore[return-value]
 
     def update(self) -> None:
@@ -202,23 +207,16 @@ class IdMessageField(MessageFieldABC["Message", IdMessageFieldStruct]):
     Message field with a unique identifier of a particular message.
     """
 
-    # pylint: disable=too-many-return-statements
     def is_equal_to(
         self,
-        other: Message
-        | IdMessageField
-        | int
-        | float
-        | bytes
-        | list[int | float],
+        other: IdMessageField | int | float | bytes | list[int | float],
     ) -> bool:
         """
         Check that 'other' has the same value as the given instance.
 
         Parameters
         ----------
-        other : Message | IdMessageField | int | float | bytes
-            | list[int | float]
+        other : IdMessageField | int | float | bytes | list[int | float]
             other instance to comparing.
 
         Returns
@@ -234,18 +232,13 @@ class IdMessageField(MessageFieldABC["Message", IdMessageFieldStruct]):
         if self.is_empty:
             return False
 
-        if isinstance(other, Message):
-            if not other.has.id_:
-                return False
-            return self.content == other.get.id_.content
-
         if isinstance(other, IdMessageField):
             other = other.content
         if isinstance(other, bytes):
             return self.content == other
 
         if isinstance(other, list):
-            if len(other) == 0:
+            if len(other) != 1:
                 return False
             other = other[0]
 
