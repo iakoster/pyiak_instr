@@ -157,6 +157,14 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             words_expected=1,
         )
 
+    def test_init_exc(self) -> None:
+        with self.assertRaises(NotImplementedError) as exc:
+            CrcMessageFieldStruct(poly=0x1020)
+        self.assertEqual(
+            "Crc algorithm not verified for other values",
+            exc.exception.args[0],
+        )
+
     def test_calculate(self) -> None:
         contents = (
             b"\xaa",
@@ -258,6 +266,42 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
                 exc.exception.args[0],
             )
 
+    def test_calculate(self) -> None:
+        with self.subTest(test="U8 BYTES"):
+            self.assertEqual(
+                20,
+                DataLengthMessageFieldStruct().calculate(
+                    b"a" * 20, fmt=Code.U8
+                ),
+            )
+
+        with self.subTest(test="U16 BYTES"):
+            self.assertEqual(
+                20,
+                DataLengthMessageFieldStruct(
+                    units=Code.BYTES
+                ).calculate(b"a" * 20, fmt=Code.U8)
+            )
+
+        with self.subTest(test="U32 WORDS"):
+            self.assertEqual(
+                4,
+                DataLengthMessageFieldStruct(
+                    units=Code.WORDS
+                ).calculate(b"a" * 16, fmt=Code.U32)
+            )
+
+    def test_calculate_exc(self) -> None:
+        with self.assertRaises(ContentError) as exc:
+            DataLengthMessageFieldStruct(
+                units=Code.WORDS
+            ).calculate(b"a" * 5, fmt=Code.U32)
+        self.assertEqual(
+            "invalid content in DataLengthMessageFieldStruct: "
+            "non-integer words count in data",
+            exc.exception.args[0],
+        )
+
 
 class TestIdMessageFieldStruct(unittest.TestCase):
 
@@ -300,6 +344,43 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
             words_expected=1,
         )
 
+    def test_encode(self) -> None:
+        self.assertEqual(
+            b"\x00",
+            OperationMessageFieldStruct().encode(Code.READ)
+        )
+
+    def test_encode_exc(self) -> None:
+        with self.assertRaises(ContentError) as exc:
+            OperationMessageFieldStruct().encode(Code.UNDEFINED)
+        self.assertEqual(
+            "invalid content in OperationMessageFieldStruct: "
+            "can't encode <Code.UNDEFINED: 255>",
+            exc.exception.msg,
+        )
+
+    def test_desc(self) -> None:
+        obj = OperationMessageFieldStruct()
+        cases = (
+            (0, Code.READ),
+            (1, Code.WRITE),
+            (2, Code.UNDEFINED),
+        )
+        for input_, ref in cases:
+            with self.subTest(ref=repr(ref)):
+                self.assertEqual(ref, obj.desc(input_))
+
+    def test_desc_r(self) -> None:
+        obj = OperationMessageFieldStruct()
+        cases = (
+            (Code.READ, 0),
+            (Code.WRITE, 1),
+            (Code.UNDEFINED, None),
+        )
+        for input_, ref in cases:
+            with self.subTest(ref=repr(ref)):
+                self.assertEqual(ref, obj.desc_r(input_))
+
 
 class TestResponseMessageFieldStruct(unittest.TestCase):
 
@@ -321,6 +402,45 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
             word_bytesize=2,
             words_expected=1,
         )
+
+    def test_encode(self) -> None:
+        self.assertEqual(
+            b"\x00",
+            self._instance.encode(Code.U8)
+        )
+
+    def test_encode_exc(self) -> None:
+        with self.assertRaises(ContentError) as exc:
+            self._instance.encode(Code.UNDEFINED)
+        self.assertEqual(
+            "invalid content in ResponseMessageFieldStruct: "
+            "can't encode <Code.UNDEFINED: 255>",
+            exc.exception.msg,
+        )
+
+    def test_desc(self) -> None:
+        cases = (
+            (0, Code.U8),
+            (1, Code.WAIT),
+            (2, Code.UNDEFINED),
+        )
+        for input_, ref in cases:
+            with self.subTest(ref=repr(ref)):
+                self.assertEqual(ref, self._instance.desc(input_))
+
+    def test_desc_r(self) -> None:
+        cases = (
+            (Code.U8, 0),
+            (Code.WAIT, 1),
+            (Code.UNDEFINED, None),
+        )
+        for input_, ref in cases:
+            with self.subTest(ref=repr(ref)):
+                self.assertEqual(ref, self._instance.desc_r(input_))
+
+    @property
+    def _instance(self) -> ResponseMessageFieldStruct:
+        return ResponseMessageFieldStruct(descs={0: Code.U8, 1: Code.WAIT})
 
 
 class TestMessageFieldPattern(unittest.TestCase):

@@ -172,7 +172,7 @@ class DataLengthMessageFieldStruct(SingleMessageFieldStruct):
             raise NotAmongTheOptions("units", self.units)
 
     # todo: auto encode type
-    def calculate(self, data: bytes) -> int:
+    def calculate(self, data: bytes, fmt: Code) -> int:
         """
         Calculate length of `data`.
 
@@ -180,6 +180,8 @@ class DataLengthMessageFieldStruct(SingleMessageFieldStruct):
         ----------
         data : bytes
             data bytes.
+        fmt : Code
+            data fmt.
 
         Returns
         -------
@@ -192,11 +194,12 @@ class DataLengthMessageFieldStruct(SingleMessageFieldStruct):
             if data not integer count of words.
         """
         if self.units is Code.WORDS:
-            if len(data) % self.word_bytesize != 0:
-                raise ContentError(self, "has a non-integer word count")
-            return len(data) // self.word_bytesize
+            bytesize = BytesEncoder.get_bytesize(fmt)
+            if len(data) % bytesize != 0:
+                raise ContentError(self, "non-integer words count in data")
+            return len(data) // bytesize
 
-        # units is a WORDS
+        # units is a BYTES
         return len(data)
 
 
@@ -228,13 +231,6 @@ class OperationMessageFieldStruct(SingleMessageFieldStruct):
 
     descs_r: ClassVar[dict[Code, int]]
     """reversed `descriptions`."""
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        # pylint: disable=no-member
-        object.__setattr__(
-            self, "descs_r", {v: k for k, v in self.descs.items()}
-        )
 
     def encode(
         self, content: Iterable[int | float] | int | float | Code
@@ -304,6 +300,12 @@ class OperationMessageFieldStruct(SingleMessageFieldStruct):
         if code not in self.descs_r:
             return None
         return self.descs_r[code]
+
+    def _modify_values(self) -> None:
+        super()._modify_values()
+        object.__setattr__(
+            self, "descs_r", {v: k for k, v in self.descs.items()}
+        )
 
 
 @STRUCT_DATACLASS
