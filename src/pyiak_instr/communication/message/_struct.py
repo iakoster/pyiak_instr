@@ -188,7 +188,7 @@ class DataLengthMessageFieldStruct(SingleMessageFieldStruct):
 
         Raises
         ------
-        ValueError
+        ContentError
             if data not integer count of words.
         """
         if self.units is Code.WORDS:

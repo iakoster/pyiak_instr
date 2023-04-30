@@ -33,7 +33,7 @@ MessageGetParserT = TypeVar(
 MessageHasParserT = TypeVar(
     "MessageHasParserT", bound="MessageHasParserABC[Any]"
 )
-MessageT = TypeVar("MessageT", bound="MessageABC[Any, Any, Any, Any]")
+MessageT = TypeVar("MessageT", bound="MessageABC[Any, Any, Any, Any, Any]")
 FieldPatternT = TypeVar("FieldPatternT", bound="MessageFieldPatternABC[Any]")
 MessagePatternT = TypeVar(
     "MessagePatternT", bound="MessagePatternABC[Any, Any]"
@@ -119,6 +119,8 @@ class MessageABC(
 
     _get_parser: type[MessageGetParserT]
     _has_parser: type[MessageHasParserT]
+    _src: AddressT | None
+    _dst: AddressT | None
 
     def __init__(
         self,
@@ -239,7 +241,7 @@ class MessageABC(
 
     @src_dst.setter
     def src_dst(
-            self, src_dst: tuple[AddressT | None, AddressT | None]
+        self, src_dst: tuple[AddressT | None, AddressT | None]
     ) -> None:
         """
         Set source and destination addresses.

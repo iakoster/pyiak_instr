@@ -128,6 +128,7 @@ class BytesFieldStructProtocol(Protocol):
             count of bytes in one word.
         """
 
+    # todo: return Code and if raise=True - raise ContentError
     def verify(self, content: bytes) -> bool:
         """
         Verify that `content` is correct for the given field structure.
@@ -219,12 +220,15 @@ class BytesFieldStructProtocol(Protocol):
         return self.bytes_expected // self.word_bytesize
 
 
+# todo: verify current content
 class BytesFieldABC(ABC, Generic[StorageT, StructT]):
     """
     Represents base parser class for work with field content.
 
     Parameters
     ----------
+    storage: StorageT
+        bytes storage instance
     name : str
         field name.
     struct : StructT

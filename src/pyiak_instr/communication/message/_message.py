@@ -1,6 +1,7 @@
 """Private module of ``pyiak_instr.communication.message`` with message
 classes."""
 from __future__ import annotations
+from typing import Any
 
 from ...types.communication import (
     MessageABC,
@@ -256,6 +257,7 @@ class Message(
         MessageFieldStructUnionT,
         MessageGetParser,
         MessageHasParser,
+        Any,  # todo: to Generic?
     ]
 ):
     """
@@ -282,6 +284,8 @@ class MessagePattern(MessagePatternABC[Message, MessageFieldPattern]):
     """
     Pattern for message class
     """
+
+
 #
 #
 # class MessagePattern(
