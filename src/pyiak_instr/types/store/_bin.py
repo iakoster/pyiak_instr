@@ -72,9 +72,19 @@ class BytesFieldStructProtocol(Protocol):
     """default value of the field."""
 
     def __post_init__(self) -> None:
-        self._verify_values_before_modifying()
+        if self.stop == 0:
+            raise ValueError("'stop' can't be equal to zero")
+        if self.stop is not None and self.bytes_expected > 0:
+            raise TypeError("'bytes_expected' and 'stop' setting not allowed")
+        if 0 > self.start > -self.bytes_expected:
+            raise ValueError("it will be out of bounds")
+
         self._modify_values()
-        self._verify_values_after_modifying()
+
+        if self.bytes_expected % self.word_bytesize:
+            raise ValueError(
+                "'bytes_expected' does not match an integer word count"
+            )
 
     @abstractmethod
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
@@ -167,40 +177,6 @@ class BytesFieldStructProtocol(Protocol):
             raise AssertionError(
                 "impossible to modify start, stop and bytes_expected"
             )
-
-    def _verify_values_after_modifying(self) -> None:
-        """
-        Verify values after modifying.
-
-        Raises
-        ------
-        ValueError
-            if the field expects a non-whole number of words (based on the
-            number of expected bytes).
-        """
-        if self.bytes_expected % self.word_bytesize:
-            raise ValueError(
-                "'bytes_expected' does not match an integer word count"
-            )
-
-    def _verify_values_before_modifying(self) -> None:
-        """
-        Verify values before modifying.
-
-        Raises
-        ------
-        ValueError
-            if stop is equal to zero;
-            if start is negative and bigger than `bytes_expected`.
-        TypeError
-            if trying to set `stop` and `bytes_expected`
-        """
-        if self.stop == 0:
-            raise ValueError("'stop' can't be equal to zero")
-        if self.stop is not None and self.bytes_expected > 0:
-            raise TypeError("'bytes_expected' and 'stop' setting not allowed")
-        if 0 > self.start > -self.bytes_expected:
-            raise ValueError("it will be out of bounds")
 
     @property
     def has_default(self) -> bool:
