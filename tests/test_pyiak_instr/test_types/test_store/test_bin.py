@@ -273,9 +273,7 @@ class TestBytesStorageABC(unittest.TestCase):
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
             TIStorage("test", {})
-        self.assertEqual(
-            "TIStorage without fields are forbidden", exc.exception.args[0]
-        )
+        self.assertEqual("TIStorage without fields", exc.exception.args[0])
 
     def test_change(self) -> None:
         obj = self._instance.encode(

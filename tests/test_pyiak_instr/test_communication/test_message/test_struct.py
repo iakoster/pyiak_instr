@@ -2,7 +2,7 @@ import unittest
 from typing import Any
 
 from src.pyiak_instr.core import Code
-from src.pyiak_instr.exceptions import NotAmongTheOptions
+from src.pyiak_instr.exceptions import NotAmongTheOptions, ContentError
 from src.pyiak_instr.communication.message import (
     MessageFieldStruct,
     SingleMessageFieldStruct,
@@ -66,7 +66,8 @@ class TestSingleMessageFieldStruct(unittest.TestCase):
         with self.assertRaises(ValueError) as exc:
             SingleMessageFieldStruct(start=0, fmt=Code.U8, stop=2)
         self.assertEqual(
-            "single field should expect one word", exc.exception.args[0]
+            "SingleMessageFieldStruct should expect one word",
+            exc.exception.args[0],
         )
 
 

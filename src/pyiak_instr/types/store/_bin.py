@@ -420,9 +420,7 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
 
     def __init__(self, name: str, fields: dict[str, StructT]) -> None:
         if len(fields) == 0:
-            raise ValueError(
-                f"{self.__class__.__name__} without fields are forbidden"
-            )
+            raise ValueError(f"{self.__class__.__name__} without fields")
 
         self._name = name
         self._f = fields

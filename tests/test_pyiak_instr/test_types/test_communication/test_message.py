@@ -22,11 +22,17 @@ class TIMessageField(MessageFieldABC["TIMessage", TIMessageFieldStruct]):
 
 
 class TIMessageGetParser(MessageGetParserABC["TIMessage", TIMessageField]):
-    ...
+
+    @property
+    def basic(self) -> TIMessageField:
+        return self(TIMessageField)
 
 
 class TIMessageHasParser(MessageHasParserABC[TIMessageField]):
-    ...
+
+    @property
+    def basic(self) -> bool:
+        return self(TIMessageField)
 
 
 class TIMessage(
@@ -72,3 +78,36 @@ class TestMessageABC(unittest.TestCase):
         self.assertEqual(
             "MTU cannot be less than the minimum size", exc.exception.args[0]
         )
+
+    def test_get_has(self) -> None:
+        instance = TIMessage(
+            f0=TIMessageFieldStruct(stop=5),
+            f1=TIMessageFieldStruct(start=5),
+        )
+
+        with self.subTest(test="get basic"):
+            self.assertEqual("f0", instance.get.basic.name)
+
+        with self.subTest(test="has basic"):
+            self.assertTrue(instance.has.basic)
+
+        with self.subTest(test="hasn't other"):
+            self.assertFalse(instance.has(MessageFieldABC))
+
+    def test_get_exc(self) -> None:
+        with self.assertRaises(TypeError) as exc:
+            TIMessage("test", f0=TIMessageFieldStruct()).get(MessageFieldABC)
+        self.assertEqual(
+            "MessageFieldABC instance is not found", exc.exception.args[0]
+        )
+
+    def test_src_dst(self) -> None:
+        instance = TIMessage(f0=TIMessageFieldStruct())
+
+        self.assertTupleEqual((None, None), instance.src_dst)
+        instance.src_dst = None, "test"
+        self.assertTupleEqual((None, "test"), instance.src_dst)
+        instance.src = "alal"
+        self.assertEqual("alal", instance.src)
+        instance.dst = "test/2"
+        self.assertEqual("test/2", instance.dst)

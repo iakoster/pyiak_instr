@@ -44,7 +44,9 @@ class SingleMessageFieldStruct(MessageFieldStruct):
             object.__setattr__(self, "bytes_expected", self.word_bytesize)
         super().__post_init__()
         if self.words_expected != 1:
-            raise ValueError("single field should expect one word")
+            raise ValueError(
+                f"{self.__class__.__name__} should expect one word"
+            )
 
 
 @STRUCT_DATACLASS
@@ -112,7 +114,7 @@ class CrcMessageFieldStruct(SingleMessageFieldStruct):
         if self.bytes_expected != 2 or self.poly != 0x1021 or self.init != 0:
             raise NotImplementedError(
                 "Crc algorithm not verified for other values"
-            )  # todo: optimize for any crc
+            )  # todo: implement for any crc
 
     def calculate(self, content: bytes) -> int:
         """
@@ -191,7 +193,7 @@ class DataLengthMessageFieldStruct(SingleMessageFieldStruct):
         """
         if self.units is Code.WORDS:
             if len(data) % self.word_bytesize != 0:
-                raise ValueError("'data' has a non-integer word count")
+                raise ContentError(self, "has a non-integer word count")
             return len(data) // self.word_bytesize
 
         # units is a WORDS

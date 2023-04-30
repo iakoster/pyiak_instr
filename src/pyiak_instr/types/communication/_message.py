@@ -68,7 +68,7 @@ class MessageGetParserABC(ABC, Generic[MessageT, FieldT]):
     def __call__(self, type_: type[FieldAnotherT]) -> FieldAnotherT:
         """Get first field with specified type."""
         if type_ not in self._types:
-            raise TypeError(f"field with type {type_.__name__} not found")
+            raise TypeError(f"{type_.__name__} instance is not found")
         return self._msg[  # type: ignore[no-any-return]
             self._types[type_]  # type: ignore[index]
         ]
@@ -235,7 +235,7 @@ class MessageABC(
             src - source address;
             dst - destination address.
         """
-        return self._src, self._dst
+        return self.src, self.dst
 
     @src_dst.setter
     def src_dst(
@@ -250,7 +250,7 @@ class MessageABC(
             src - source address;
             dst - destination address.
         """
-        self._src, self._dst = src_dst
+        self.src, self.dst = src_dst
 
 
 class MessageFieldPatternABC(BytesFieldPatternABC[StructT], Generic[StructT]):
