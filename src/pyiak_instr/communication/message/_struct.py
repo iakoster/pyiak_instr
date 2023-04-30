@@ -405,7 +405,7 @@ class ResponseMessageFieldStruct(SingleMessageFieldStruct):
         return self.descs_r[code]
 
 
-MessageFieldStructUnionT = Union[
+MessageFieldStructUnionT = Union[  # pylint: disable=invalid-name
     MessageFieldStruct,
     SingleMessageFieldStruct,
     StaticMessageFieldStruct,

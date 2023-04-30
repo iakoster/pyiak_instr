@@ -122,7 +122,6 @@ class RWFile(ContextManager, WithApi[T], WithBaseStringMethods):
         self.close()
         return super().__exit__(exc_type, exc_val, exc_tb)
 
-    # pylint: disable=unused-argument
     def __new__(
         cls, filepath: Path | str, *args: Any, **kwargs: Any
     ) -> RWFile[T]:  # todo: typing - Self[T]

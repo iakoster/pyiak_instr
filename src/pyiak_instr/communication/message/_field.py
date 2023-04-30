@@ -242,7 +242,6 @@ class IdMessageField(MessageFieldABC["Message", IdMessageFieldStruct]):
                 return False
             other = other[0]
 
-        # pylint: disable=isinstance-second-argument-not-valid-type
         if isinstance(other, int | float):
             return self[0] == other
 
@@ -291,7 +290,7 @@ class ResponseMessageField(
         return self._struct.desc(self[0])  # type: ignore[arg-type]
 
 
-MessageFieldUnionT = Union[
+MessageFieldUnionT = Union[  # pylint: disable=invalid-name
     MessageField,
     SingleMessageField,
     StaticMessageField,
