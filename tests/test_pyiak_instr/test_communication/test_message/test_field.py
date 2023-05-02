@@ -23,25 +23,27 @@ def _get_instance(
         encode: bool = False,
 ) -> Message:
     instance = Message(
+        dict(
+            f0=MessageFieldStruct(start=0, stop=2),
+            f1=SingleMessageFieldStruct(start=2, stop=4, fmt=Code.U16),
+            f2=StaticMessageFieldStruct(
+                start=4, stop=8, fmt=Code.U32, default=b"iak_"
+            ),
+            f3=AddressMessageFieldStruct(start=8, stop=9),
+            f4=CrcMessageFieldStruct(
+                start=9, stop=11, fmt=Code.U16, wo_fields=["f0"]
+            ),
+            f5=DataMessageFieldStruct(start=11, stop=-5),
+            f6=DataLengthMessageFieldStruct(start=-5, stop=-4, additive=1),
+            f7=IdMessageFieldStruct(start=-4, stop=-2, fmt=Code.U16),
+            f8=OperationMessageFieldStruct(
+                start=-2, stop=-1, descs={7: Code.ERROR}
+            ),
+            f9=ResponseMessageFieldStruct(
+                start=-1, stop=None, descs={8: Code.DMA}
+            ),
+        ),
         name="test",
-        f0=MessageFieldStruct(start=0, stop=2),
-        f1=SingleMessageFieldStruct(start=2, stop=4, fmt=Code.U16),
-        f2=StaticMessageFieldStruct(
-            start=4, stop=8, fmt=Code.U32, default=b"iak_"
-        ),
-        f3=AddressMessageFieldStruct(start=8, stop=9),
-        f4=CrcMessageFieldStruct(
-            start=9, stop=11, fmt=Code.U16, wo_fields=["f0"]
-        ),
-        f5=DataMessageFieldStruct(start=11, stop=-5),
-        f6=DataLengthMessageFieldStruct(start=-5, stop=-4, additive=1),
-        f7=IdMessageFieldStruct(start=-4, stop=-2, fmt=Code.U16),
-        f8=OperationMessageFieldStruct(
-            start=-2, stop=-1, descs={7: Code.ERROR}
-        ),
-        f9=ResponseMessageFieldStruct(
-            start=-1, stop=None, descs={8: Code.DMA}
-        ),
     )
 
     if encode:
@@ -186,7 +188,9 @@ class TestDataMessageField(unittest.TestCase):
 
     def test_append_exc(self) -> None:
         with self.assertRaises(TypeError) as exc:
-            Message(d=DataMessageFieldStruct(stop=1)).get.data.append(b"")
+            Message(
+                {"d": DataMessageFieldStruct(stop=1)}
+            ).get.data.append(b"")
         self.assertEqual(
             "fails to add new data to a non-dynamic field",
             exc.exception.args[0],
@@ -209,10 +213,10 @@ class TestDataLengthMessageField(unittest.TestCase):
 
     def test_calculate(self) -> None:
         with self.subTest(test="actual behaviour"):
-            msg = Message(
+            msg = Message(dict(
                 dl=DataLengthMessageFieldStruct(stop=1),
                 d=DataMessageFieldStruct(start=1),
-            ).encode(dl=0)
+            )).encode(dl=0)
             data = msg.get.data
             dl_ = msg.get.data_length
             dl_.verify_content()
@@ -223,12 +227,12 @@ class TestDataLengthMessageField(unittest.TestCase):
             self.assertEqual(31, dl_.calculate())
 
         with self.subTest(test="expected behaviour"):
-            msg = Message(
+            msg = Message(dict(
                 dl=DataLengthMessageFieldStruct(
                     stop=1, behaviour=Code.EXPECTED
                 ),
                 d=DataMessageFieldStruct(start=1),
-            ).encode(dl=0)
+            )).encode(dl=0)
             data = msg.get.data
             dl_ = msg.get.data_length
             dl_.verify_content()
@@ -290,9 +294,9 @@ class TestIdMessageField(unittest.TestCase):
         field = msg.get.id_
         with self.subTest(test="id field"):
             self.assertTrue(field.is_equal_to(
-                Message(
+                Message(dict(
                     f0=IdMessageFieldStruct(fmt=Code.U16)
-                ).encode(f0=6).get.id_
+                )).encode(f0=6).get.id_
             ))
 
         with self.subTest(test="list"):

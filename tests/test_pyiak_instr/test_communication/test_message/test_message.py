@@ -23,7 +23,7 @@ class TestMessage(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            Message(f0=MessageFieldStruct()),
+            Message({"f0": MessageFieldStruct()}),
             content=b"",
             divisible=False,
             dst=None,
@@ -37,7 +37,7 @@ class TestMessage(unittest.TestCase):
         )
 
     def test_get_has(self) -> None:
-        instance = Message(
+        instance = Message(dict(
             f0=SingleMessageFieldStruct(start=0, stop=1),
             f1=AddressMessageFieldStruct(start=1, stop=2),
             f2=OperationMessageFieldStruct(start=2, stop=3),
@@ -45,7 +45,7 @@ class TestMessage(unittest.TestCase):
             f4=DataMessageFieldStruct(start=4, stop=-3),
             f5=CrcMessageFieldStruct(start=-3, stop=-1, fmt=Code.U16),
             f6=SingleMessageFieldStruct(start=-1, stop=None),
-        )
+        ))
 
         cases = [
             ("basic", False, ""),

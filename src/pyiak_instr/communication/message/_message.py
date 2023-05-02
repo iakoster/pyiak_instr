@@ -38,6 +38,9 @@ from ._field import (
 )
 
 
+__all__ = ["Message", "MessagePattern"]
+
+
 class MessageGetParser(MessageGetParserABC["Message", MessageFieldUnionT]):
     """
     Parser to get the field from message by it type.

@@ -124,10 +124,10 @@ class MessageABC(
 
     def __init__(
         self,
+        fields: dict[str, StructT],
         name: str = "std",
         divisible: bool = False,
         mtu: int = 1500,
-        **fields: StructT,
     ) -> None:
         super().__init__(name, fields)
         self._div = divisible

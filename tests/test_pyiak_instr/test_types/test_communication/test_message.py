@@ -1,12 +1,15 @@
 import unittest
 
+from src.pyiak_instr.core import Code
 from src.pyiak_instr.store import BytesFieldStruct
 from src.pyiak_instr.types.store import STRUCT_DATACLASS
 from src.pyiak_instr.types.communication import (
     MessageABC,
     MessageFieldABC,
+    MessageFieldPatternABC,
     MessageGetParserABC,
     MessageHasParserABC,
+    MessagePatternABC,
 )
 
 from ....utils import validate_object
@@ -50,12 +53,31 @@ class TIMessage(
     _struct_field = {TIMessageFieldStruct: TIMessageField}
 
 
+class TIMessageFieldPatternABC(MessageFieldPatternABC):
+
+    _options = {"basic": TIMessageFieldStruct}
+
+    @staticmethod
+    def get_bytesize(fmt: Code) -> int:
+        if fmt is Code.U8:
+            return 1
+        if fmt is Code.U16:
+            return 2
+        raise ValueError(f"invalid fmt: {repr(fmt)}")
+
+
+class TIMessagePatternABC(MessagePatternABC):
+
+    _options = {"basic": TIMessage}
+
+
+
 class TestMessageABC(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            TIMessage(f0=TIMessageFieldStruct()),
+            TIMessage({"f0": TIMessageFieldStruct()}),
             content=b"",
             divisible=False,
             dst=None,
@@ -71,19 +93,19 @@ class TestMessageABC(unittest.TestCase):
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
             TIMessage(
+                {"f0": TIMessageFieldStruct(bytes_expected=10)},
                 divisible=True,
                 mtu=5,
-                f0=TIMessageFieldStruct(bytes_expected=10),
             )
         self.assertEqual(
             "MTU cannot be less than the minimum size", exc.exception.args[0]
         )
 
     def test_get_has(self) -> None:
-        instance = TIMessage(
+        instance = TIMessage(dict(
             f0=TIMessageFieldStruct(stop=5),
             f1=TIMessageFieldStruct(start=5),
-        )
+        ))
 
         with self.subTest(test="get basic"):
             self.assertEqual("f0", instance.get.basic.name)
@@ -96,13 +118,15 @@ class TestMessageABC(unittest.TestCase):
 
     def test_get_exc(self) -> None:
         with self.assertRaises(TypeError) as exc:
-            TIMessage("test", f0=TIMessageFieldStruct()).get(MessageFieldABC)
+            TIMessage(
+                {"f0": TIMessageFieldStruct()}, "test"
+            ).get(MessageFieldABC)
         self.assertEqual(
             "MessageFieldABC instance is not found", exc.exception.args[0]
         )
 
     def test_src_dst(self) -> None:
-        instance = TIMessage(f0=TIMessageFieldStruct())
+        instance = TIMessage({"f0": TIMessageFieldStruct()})
 
         self.assertTupleEqual((None, None), instance.src_dst)
         instance.src_dst = None, "test"
@@ -111,3 +135,76 @@ class TestMessageABC(unittest.TestCase):
         self.assertEqual("alal", instance.src)
         instance.dst = "test/2"
         self.assertEqual("test/2", instance.dst)
+
+
+class TestMessagePatternABC(unittest.TestCase):
+
+    def test_get(self) -> None:
+        res = TIMessagePatternABC("basic", "test").configure(
+            f0=TIMessageFieldPatternABC("basic", bytes_expected=1),
+            f1=TIMessageFieldPatternABC(
+                "basic", bytes_expected=2, fmt=Code.U16
+            ),
+            f2=TIMessageFieldPatternABC("basic", bytes_expected=0),
+            f3=TIMessageFieldPatternABC("basic", bytes_expected=2),
+            f4=TIMessageFieldPatternABC("basic", bytes_expected=4, fmt=Code.U16),
+        ).get()
+
+        validate_object(
+            self,
+            res,
+            content=b"",
+            divisible=False,
+            dst=None,
+            is_dynamic=True,
+            minimum_size=9,
+            mtu=1500,
+            name="test",
+            src=None,
+            src_dst=(None, None),
+            wo_attrs=["get", "has"]
+        )
+
+        for field, pars in dict(
+            f0=dict(
+                fmt=Code.U8,
+                slice_=slice(0, 1),
+                words_expected=1,
+            ),
+            f1=dict(
+                fmt=Code.U16,
+                slice_=slice(1, 3),
+                words_expected=1,
+            ),
+            f2=dict(
+                fmt=Code.U8,
+                slice_=slice(3, -6),
+                words_expected=0,
+            ),
+            f3=dict(
+                fmt=Code.U8,
+                slice_=slice(-6, -4),
+                words_expected=2,
+            ),
+            f4=dict(
+                fmt=Code.U16,
+                slice_=slice(-4, None),
+                words_expected=2,
+            ),
+        ).items():
+            with self.subTest(field=field):
+                validate_object(
+                    self,
+                    res[field].struct,
+                    **pars,
+                    wo_attrs=[
+                        "bytes_expected",
+                        "default",
+                        "has_default",
+                        "is_dynamic",
+                        "order",
+                        "start",
+                        "stop",
+                        "word_bytesize",
+                    ]
+                )
