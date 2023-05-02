@@ -29,6 +29,7 @@ class TestMessage(unittest.TestCase):
             content=b"",
             divisible=False,
             dst=None,
+            has_pattern=False,
             is_dynamic=True,
             minimum_size=0,
             mtu=1500,
@@ -79,7 +80,7 @@ class TestMessage(unittest.TestCase):
 class TestMessagePattern(unittest.TestCase):
 
     def test_get(self) -> None:
-        res = MessagePattern("basic", "test").configure(
+        pattern = MessagePattern("basic", "test").configure(
             f0=MessageFieldPattern.basic(fmt=Code.U8, bytes_expected=2),
             f1=MessageFieldPattern.single(fmt=Code.U16),
             f2=MessageFieldPattern.static(fmt=Code.U32, default=b"iak_"),
@@ -90,7 +91,8 @@ class TestMessagePattern(unittest.TestCase):
             f7=MessageFieldPattern.id_(fmt=Code.U16),
             f8=MessageFieldPattern.operation(fmt=Code.U8),
             f9=MessageFieldPattern.response(fmt=Code.U8, descs={8: Code.DMA}),
-        ).get()
+        )
+        res = pattern.get()
 
         validate_object(
             self,
@@ -98,12 +100,14 @@ class TestMessagePattern(unittest.TestCase):
             content=b"",
             divisible=False,
             dst=None,
+            has_pattern=True,
             is_dynamic=True,
             minimum_size=16,
             mtu=1500,
             name="test",
             src=None,
             src_dst=(None, None),
+            pattern=pattern,
             wo_attrs=["get", "has"]
         )
 

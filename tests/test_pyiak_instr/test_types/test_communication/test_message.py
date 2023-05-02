@@ -40,6 +40,7 @@ class TIMessageHasParser(MessageHasParserABC[TIMessageField]):
 
 class TIMessage(
     MessageABC[
+        "TIMessagePatternABC",
         TIMessageField,
         TIMessageFieldStruct,
         TIMessageGetParser,
@@ -81,6 +82,7 @@ class TestMessageABC(unittest.TestCase):
             content=b"",
             divisible=False,
             dst=None,
+            has_pattern=False,
             is_dynamic=True,
             minimum_size=0,
             mtu=1500,
@@ -140,7 +142,7 @@ class TestMessageABC(unittest.TestCase):
 class TestMessagePatternABC(unittest.TestCase):
 
     def test_get(self) -> None:
-        res = TIMessagePatternABC("basic", "test").configure(
+        pattern = TIMessagePatternABC("basic", "test").configure(
             f0=TIMessageFieldPatternABC("basic", bytes_expected=1),
             f1=TIMessageFieldPatternABC(
                 "basic", bytes_expected=2, fmt=Code.U16
@@ -148,7 +150,8 @@ class TestMessagePatternABC(unittest.TestCase):
             f2=TIMessageFieldPatternABC("basic", bytes_expected=0),
             f3=TIMessageFieldPatternABC("basic", bytes_expected=2),
             f4=TIMessageFieldPatternABC("basic", bytes_expected=4, fmt=Code.U16),
-        ).get()
+        )
+        res = pattern.get()
 
         validate_object(
             self,
@@ -156,12 +159,14 @@ class TestMessagePatternABC(unittest.TestCase):
             content=b"",
             divisible=False,
             dst=None,
+            has_pattern=True,
             is_dynamic=True,
             minimum_size=9,
             mtu=1500,
             name="test",
             src=None,
             src_dst=(None, None),
+            pattern=pattern,
             wo_attrs=["get", "has"]
         )
 

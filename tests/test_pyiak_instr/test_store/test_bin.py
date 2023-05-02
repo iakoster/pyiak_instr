@@ -174,6 +174,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
             self,
             obj,
             content=b"",
+            has_pattern=False,
             is_dynamic=False,
             minimum_size=4,
             name="cbs",
@@ -190,6 +191,7 @@ class TestContinuousBytesStorage(unittest.TestCase):
         ) -> dict[str, Any]:
             return dict(
                 content=content,
+                has_pattern=False,
                 minimum_size=minimum_size,
                 name=name,
                 wo_attrs=["is_dynamic"]
@@ -451,13 +453,16 @@ class TestBytesStoragePattern(unittest.TestCase):
         )
 
     def test_get_continuous(self) -> None:
+        pattern = self._get_example_pattern()
         data = b"\xaa\x55\xab\xcd\x11\x22\x33\x44\x55\xdc\xbb\x99"
         ref = dict(
             validate_storage=dict(
                 content=b"\xaa\x55\xab\xcd\x11\x22\x33\x44\x55\xdc\xbb\x99",
+                has_pattern=True,
                 is_dynamic=True,
                 minimum_size=7,
-                name="cbs_example"
+                name="cbs_example",
+                pattern=pattern
             ),
             validate_fields=dict(
                 f0=dict(
@@ -497,7 +502,6 @@ class TestBytesStoragePattern(unittest.TestCase):
             ),
         )
 
-        pattern = self._get_example_pattern()
         res = pattern.get()
         res.encode(data)
 

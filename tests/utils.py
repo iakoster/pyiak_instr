@@ -105,13 +105,13 @@ def validate_object(
         **attrs: Any,
 ):
     if check_attrs:
-        case.assertListEqual(
-            get_object_attrs(
-                obj, wo_attrs=wo_attrs, wo_consts=wo_consts,
-            ),
-            [*attrs],
-            "attributes list is differ to reference",
-        )
+        diff = set(get_object_attrs(
+            obj, wo_attrs=wo_attrs, wo_consts=wo_consts,
+        )) - set(attrs)
+        if len(diff) != 0:
+            raise AssertionError(
+                f"the following parameters are not specified:\n{diff}"
+            )
 
     for attr, ref in attrs.items():
         with case.subTest(class_=obj.__class__.__name__, attr=attr):

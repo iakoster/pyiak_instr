@@ -256,6 +256,7 @@ class MessageHasParser(MessageHasParserABC[MessageFieldUnionT]):
 # todo: __str__
 class Message(
     MessageABC[
+        "MessagePattern",
         MessageFieldUnionT,
         MessageFieldStructUnionT,
         MessageGetParser,

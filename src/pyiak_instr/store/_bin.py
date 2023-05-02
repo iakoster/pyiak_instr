@@ -91,7 +91,9 @@ class BytesField(BytesFieldABC["ContinuousBytesStorage", BytesFieldStruct]):
     """
 
 
-class ContinuousBytesStorage(BytesStorageABC[BytesField, BytesFieldStruct]):
+class ContinuousBytesStorage(
+    BytesStorageABC["BytesStoragePattern", BytesField, BytesFieldStruct]
+):
     """
     Represents continuous storage where data storage in bytes.
 

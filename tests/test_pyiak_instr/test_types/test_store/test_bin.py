@@ -60,7 +60,7 @@ class TIField(BytesFieldABC["TIStorage", TIStruct]):
     ...
 
 
-class TIStorage(BytesStorageABC[TIField, TIStruct]):
+class TIStorage(BytesStorageABC["TIStoragePattern", TIField, TIStruct]):
     _struct_field = {TIStruct: TIField}
 
 
@@ -265,6 +265,7 @@ class TestBytesStorageABC(unittest.TestCase):
             self,
             self._instance,
             content=b"",
+            has_pattern=False,
             is_dynamic=True,
             minimum_size=7,
             name="test_storage",
@@ -531,6 +532,10 @@ class TestBytesStoragePatternABC(unittest.TestCase):
         if TEST_DATA_DIR.exists():
             shutil.rmtree(TEST_DATA_DIR)
 
+    def test_init(self) -> None:
+        obj = self._instance
+        self.assertIs(obj, obj["pattern"])
+
     def test_write(self) -> None:
         path = DATA_DIR / "test_write.ini"
         self._instance.write(path)
@@ -613,22 +618,24 @@ class TestBytesStoragePatternABC(unittest.TestCase):
 class TestContinuousBytesStoragePatternABC(unittest.TestCase):
 
     def test_get(self) -> None:
-        ref = TIStorage(name="test", fields=dict(
-                f0=TIStruct(start=0, bytes_expected=4),
-                f1=TIStruct(start=4, bytes_expected=2),
-                f2=TIStruct(start=6, stop=-7),
-                f3=TIStruct(start=-7, bytes_expected=3),
-                f4=TIStruct(start=-4, bytes_expected=4),
-        ))
-        res = TIContinuousStoragePattern(
-                typename="basic", name="test"
+        pattern = TIContinuousStoragePattern(
+            typename="basic", name="test"
         ).configure(
             f0=TIPattern(typename="basic", bytes_expected=4),
             f1=TIPattern(typename="basic", bytes_expected=2),
             f2=TIPattern(typename="basic", bytes_expected=0),
             f3=TIPattern(typename="basic", bytes_expected=3),
             f4=TIPattern(typename="basic", bytes_expected=4),
-        ).get()
+        )
+
+        ref = TIStorage(name="test", fields=dict(
+                f0=TIStruct(start=0, bytes_expected=4),
+                f1=TIStruct(start=4, bytes_expected=2),
+                f2=TIStruct(start=6, stop=-7),
+                f3=TIStruct(start=-7, bytes_expected=3),
+                f4=TIStruct(start=-4, bytes_expected=4),
+        ), pattern=pattern)
+        res = pattern.get()
         compare_objects(self, ref, res)
         for ref_field, res_field in zip(ref, res):
             with self.subTest(field=ref_field.name):

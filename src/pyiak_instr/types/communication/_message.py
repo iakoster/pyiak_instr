@@ -33,7 +33,9 @@ MessageGetParserT = TypeVar(
 MessageHasParserT = TypeVar(
     "MessageHasParserT", bound="MessageHasParserABC[Any]"
 )
-MessageT = TypeVar("MessageT", bound="MessageABC[Any, Any, Any, Any, Any]")
+MessageT = TypeVar(
+    "MessageT", bound="MessageABC[Any, Any, Any, Any, Any, Any]"
+)
 FieldPatternT = TypeVar("FieldPatternT", bound="MessageFieldPatternABC[Any]")
 MessagePatternT = TypeVar(
     "MessagePatternT", bound="MessagePatternABC[Any, Any]"
@@ -93,8 +95,9 @@ class MessageHasParserABC(ABC, Generic[FieldT]):
 
 
 class MessageABC(
-    BytesStorageABC[FieldT, StructT],
+    BytesStorageABC[MessagePatternT, FieldT, StructT],
     Generic[
+        MessagePatternT,
         FieldT,
         StructT,
         MessageGetParserT,
@@ -107,14 +110,16 @@ class MessageABC(
 
     Parameters
     ----------
+    fields: dict[str, StructT]
+        fields of the storage. The kwarg Key is used as the field name.
     name: str, default='std'
         name of storage.
     divisible: bool, default=False
         shows that the message can be divided by the infinite field.
     mtu: int, default=1500
         max size of one message part.
-    **fields: StructT
-        fields of the storage. The kwarg Key is used as the field name.
+    pattern: MessagePatternT | None, default=None
+        message pattern.
     """
 
     _get_parser: type[MessageGetParserT]
@@ -128,8 +133,9 @@ class MessageABC(
         name: str = "std",
         divisible: bool = False,
         mtu: int = 1500,
+        pattern: MessagePatternT | None = None,
     ) -> None:
-        super().__init__(name, fields)
+        super().__init__(name, fields, pattern=pattern)
         self._div = divisible
         self._mtu = mtu
 

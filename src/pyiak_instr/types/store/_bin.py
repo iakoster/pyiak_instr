@@ -38,8 +38,11 @@ __all__ = [
 
 StructT = TypeVar("StructT", bound="BytesFieldStructProtocol")
 ParserT = TypeVar("ParserT", bound="BytesFieldABC[Any, Any]")
-StorageT = TypeVar("StorageT", bound="BytesStorageABC[Any, Any]")
+StorageT = TypeVar("StorageT", bound="BytesStorageABC[Any, Any, Any]")
 PatternT = TypeVar("PatternT", bound="BytesFieldPatternABC[Any]")
+ParentPatternT = TypeVar(
+    "ParentPatternT", bound="BytesStoragePatternABC[Any, Any]"
+)
 
 
 STRUCT_DATACLASS = dataclass(frozen=True, kw_only=True)
@@ -391,19 +394,34 @@ class BytesFieldABC(ABC, Generic[StorageT, StructT]):
         return self.bytes_count
 
 
-class BytesStorageABC(ABC, Generic[ParserT, StructT]):
+class BytesStorageABC(ABC, Generic[ParentPatternT, ParserT, StructT]):
     """
     Represents abstract class for bytes storage.
+
+    Parameters
+    ----------
+    name : str
+        name of storage configuration.
+    fields : dict[str, StructT]
+        dictionary of fields.
+    pattern : ParentPatternT | None, default=None
+        storage pattern.
     """
 
     _struct_field: dict[type[StructT], type[ParserT]]
 
-    def __init__(self, name: str, fields: dict[str, StructT]) -> None:
+    def __init__(
+        self,
+        name: str,
+        fields: dict[str, StructT],
+        pattern: ParentPatternT | None = None,
+    ) -> None:
         if len(fields) == 0:
             raise ValueError(f"{self.__class__.__name__} without fields")
 
         self._name = name
         self._f = fields
+        self._p = pattern
         self._c = bytearray()
 
     def change(
@@ -650,6 +668,16 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
         return bytes(self._c)
 
     @property
+    def has_pattern(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            if True - storage has parent pattern.
+        """
+        return self._p is not None
+
+    @property
     def is_dynamic(self) -> bool:
         """
         Returns
@@ -678,6 +706,25 @@ class BytesStorageABC(ABC, Generic[ParserT, StructT]):
             name of the storage.
         """
         return self._name
+
+    @property
+    def pattern(self) -> ParentPatternT:
+        """
+        Returns
+        -------
+        ParentPatternT
+            parent pattern of self instance.
+
+        Raises
+        ------
+        AttributeError
+            if parent pattern is None (not set).
+        """
+        if self._p is None:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no parent pattern"
+            )
+        return self._p
 
     def __contains__(self, name: str) -> bool:
         """Check that field name in message."""
@@ -733,9 +780,21 @@ class BytesStoragePatternABC(
 ):
     """
     Represent abstract class of pattern for bytes storage.
+
+    Parameters
+    ----------
+    typename: str
+        name of pattern target type.
+    name: str
+        name of pattern meta-object format.
+    **kwargs: Any
+        parameters for target initialization.
     """
 
     _sub_p_par_name = "fields"
+
+    def __init__(self, typename: str, name: str, **kwargs: Any):
+        super().__init__(typename, name, pattern=self, **kwargs)
 
     def write(self, path: Path) -> None:
         """
@@ -797,6 +856,11 @@ class BytesStoragePatternABC(
             return cls(**cfg.get(name, name)).configure(
                 **{f: cls._sub_p_type(**cfg.get(name, f)) for f in opts}
             )
+
+    def __init_kwargs__(self) -> dict[str, Any]:
+        init_kw = super().__init_kwargs__()
+        init_kw.pop("pattern")
+        return init_kw
 
 
 class ContinuousBytesStoragePatternABC(
