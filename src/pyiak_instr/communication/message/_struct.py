@@ -437,7 +437,8 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
         "response": ResponseMessageFieldStruct,
     }
 
-    # todo: e.g. 'stop' not comparable with Continuous because 'stop' edited in meta pattern
+    # todo: e.g. 'stop' not comparable with Continuous because 'stop' edited
+    #  in meta pattern
     @classmethod
     def basic(
         cls,
@@ -608,7 +609,7 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
             initialized pattern.
         """
         if wo_fields is None:
-            wo_fields=set()
+            wo_fields = set()
         return cls(
             typename="crc",
             bytes_expected=cls.get_bytesize(fmt),
@@ -740,7 +741,7 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
         cls,
         fmt: Code,
         order: Code = Code.BIG_ENDIAN,
-        descs: dict[Code, int] | None = None,
+        descs: dict[int, Code] | None = None,
         default: bytes = b"",
     ) -> Self:
         """
@@ -752,7 +753,7 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
             value format.
         order : Code, default=Code.BIG_ENDIAN
             value byte order.
-        descs: dict[Code, int] | None, default=None
+        descs: dict[int, Code] | None, default=None
             operation value descriptions.
         default : bytes, default=b''
             default value for field.

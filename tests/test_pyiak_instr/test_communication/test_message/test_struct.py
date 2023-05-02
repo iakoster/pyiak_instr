@@ -544,8 +544,8 @@ class TestMessageFieldPattern(unittest.TestCase):
             2,
             slice(1, 3),
             2,
-            descs={Code.READ: 0, Code.WRITE: 1},
-            descs_r={0: Code.READ, 1: Code.WRITE},
+            descs={0: Code.READ, 1: Code.WRITE},
+            descs_r={Code.READ: 0, Code.WRITE: 1},
         )
 
     def test_response(self) -> None:
