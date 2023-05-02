@@ -248,7 +248,7 @@ class WritablePatternABC(ABC):
         """
 
 
-class MetaPatternABC(
+class MetaPatternABC(  # todo: rename to antonym of sub
     PatternABC[OptionsT],
     Generic[OptionsT, PatternT],
 ):
@@ -363,10 +363,12 @@ class MetaPatternABC(
         dict[str, Any]
             dictionary of sub-pattern objects.
         """
+        # todo: fix crutch? (changes_allowed always True for sub-patterns).
+        #  if needed for editing additions for sub-patterns in meta-pattern.
         for_subs = self._modify_all(ch_a, for_subs)
         return {
             self._sub_p_par_name: {
-                n: s.get(ch_a, **self._modify_each(ch_a, n, for_subs[n]))
+                n: s.get(True, **self._modify_each(ch_a, n, for_subs[n]))
                 for n, s in self._sub_p.items()
             }
         }

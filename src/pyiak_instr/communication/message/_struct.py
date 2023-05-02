@@ -437,6 +437,7 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
         "response": ResponseMessageFieldStruct,
     }
 
+    # todo: e.g. 'stop' not comparable with Continuous because 'stop' edited in meta pattern
     @classmethod
     def basic(
         cls,
@@ -581,6 +582,7 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
         poly: int = 0x1021,
         init: int = 0,
         default: bytes = b"",
+        wo_fields: set[str] | None = None,
     ) -> Self:
         """
         Get initialized pattern for crc field.
@@ -597,12 +599,16 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
             init value for crc algorithm.
         default : bytes, default=b''
             default value for field.
+        wo_fields : set[str] | None, default=None
+            a set of field names that are not used to calculate the crc.
 
         Returns
         -------
         Self
             initialized pattern.
         """
+        if wo_fields is None:
+            wo_fields=set()
         return cls(
             typename="crc",
             bytes_expected=cls.get_bytesize(fmt),
@@ -611,6 +617,7 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
             poly=poly,
             init=init,
             default=default,
+            wo_fields=wo_fields,
         )
 
     @classmethod
@@ -756,7 +763,7 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
             initialized pattern.
         """
         if descs is None:
-            descs = {Code.READ: 0, Code.WRITE: 1}
+            descs = {0: Code.READ, 1: Code.WRITE}
         return cls(
             typename="operation",
             bytes_expected=cls.get_bytesize(fmt),

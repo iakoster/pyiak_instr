@@ -288,6 +288,8 @@ class MessagePattern(MessagePatternABC[Message, MessageFieldPattern]):
     Pattern for message class
     """
 
+    _options = {"basic": Message}
+
 
 #
 #

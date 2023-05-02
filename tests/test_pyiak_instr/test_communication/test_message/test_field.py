@@ -14,6 +14,7 @@ from src.pyiak_instr.communication.message import (
     IdMessageFieldStruct,
     OperationMessageFieldStruct,
     ResponseMessageFieldStruct,
+    MessageFieldPattern,
 )
 
 from ....utils import validate_object
@@ -348,4 +349,141 @@ class TestResponseMessageField(unittest.TestCase):
     def test_desc(self) -> None:
         self.assertEqual(
             Code.DMA, _get_instance(True).get.response.desc()
+        )
+
+
+class TestMessageFieldPattern(unittest.TestCase):
+
+    def test_basic(self) -> None:
+        self.assertDictEqual(
+            dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                stop=None,
+                bytes_expected=0,
+                default=b"",
+                typename="basic",
+            ),
+            MessageFieldPattern.basic(fmt=Code.U8).__init_kwargs__()
+        )
+
+
+    def test_single(self) -> None:
+        self.assertDictEqual(
+            dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                bytes_expected=1,
+                default=b"",
+                typename="single",
+            ),
+            MessageFieldPattern.single(fmt=Code.U8).__init_kwargs__()
+        )
+
+    def test_static(self) -> None:
+        self.assertDictEqual(
+            dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                bytes_expected=1,
+                default=b"\x00",
+                typename="static",
+            ),
+            MessageFieldPattern.static(
+                fmt=Code.U8, default=b"\x00"
+            ).__init_kwargs__()
+        )
+
+    def test_address(self) -> None:
+        self.assertDictEqual(
+            dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                bytes_expected=1,
+                behaviour=Code.DMA,
+                default=b"",
+                typename="address",
+            ),
+            MessageFieldPattern.address(fmt=Code.U8).__init_kwargs__()
+        )
+
+    def test_crc(self) -> None:
+        self.assertDictEqual(
+            dict(
+                fmt=Code.U16,
+                order=Code.BIG_ENDIAN,
+                bytes_expected=2,
+                default=b"",
+                poly=0x1021,
+                init=0,
+                wo_fields=set(),
+                typename="crc",
+            ),
+            MessageFieldPattern.crc(fmt=Code.U16).__init_kwargs__()
+        )
+
+    def test_data(self) -> None:
+        self.assertDictEqual(
+            dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                stop=None,
+                bytes_expected=0,
+                default=b"",
+                typename="data",
+            ),
+            MessageFieldPattern.data(fmt=Code.U8).__init_kwargs__()
+        )
+
+    def test_data_length(self) -> None:
+        self.assertDictEqual(
+            dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                bytes_expected=1,
+                default=b"",
+                behaviour=Code.ACTUAL,
+                units=Code.BYTES,
+                additive=0,
+                typename="data_length",
+            ),
+            MessageFieldPattern.data_length(fmt=Code.U8).__init_kwargs__()
+        )
+
+    def test_id_(self) -> None:
+        self.assertDictEqual(
+            dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                bytes_expected=1,
+                default=b"",
+                typename="id",
+            ),
+            MessageFieldPattern.id_(fmt=Code.U8).__init_kwargs__()
+        )
+
+    def test_operations(self) -> None:
+        self.assertDictEqual(
+            dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                bytes_expected=1,
+                default=b"",
+                descs={0: Code.READ, 1: Code.WRITE},
+                typename="operation",
+            ),
+            MessageFieldPattern.operation(fmt=Code.U8).__init_kwargs__()
+        )
+
+    def test_response(self) -> None:
+        self.assertDictEqual(
+            dict(
+                fmt=Code.U24,
+                order=Code.BIG_ENDIAN,
+                bytes_expected=3,
+                default=b"",
+                descs={},
+                typename="response",
+            ),
+            MessageFieldPattern.response(fmt=Code.U24).__init_kwargs__()
         )
