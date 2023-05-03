@@ -7,7 +7,6 @@ from abc import ABC, abstractmethod
 from typing import (
     Any,
     Generic,
-    Generator,
     Iterable,
     Iterator,
     Protocol,
@@ -19,10 +18,11 @@ from typing import (
 import numpy as np
 import numpy.typing as npt
 
-from .._pattern import MetaPatternABC, PatternABC, WritablePatternABC
 from ...core import Code
 from ...rwfile import RWConfig
 from ...exceptions import NotConfiguredYet
+from ...typing import WithBaseStringMethods
+from .._pattern import MetaPatternABC, PatternABC, WritablePatternABC
 
 
 __all__ = [
@@ -224,7 +224,7 @@ class BytesFieldStructProtocol(Protocol):
 
 
 # todo: verify current content
-class BytesFieldABC(ABC, Generic[StorageT, StructT]):
+class BytesFieldABC(WithBaseStringMethods, Generic[StorageT, StructT]):
     """
     Represents base parser class for work with field content.
 
@@ -341,6 +341,17 @@ class BytesFieldABC(ABC, Generic[StorageT, StructT]):
         """
         return self.bytes_count // self._struct.word_bytesize
 
+    def __str_under_brackets__(self) -> str:
+        content = self.content
+        if len(content) == 0:
+            return "EMPTY"
+
+        string, step = "", self.struct.word_bytesize
+        for i in range(0, len(content), step):
+            word = content[i : i + step].hex().lstrip("0")
+            string += (word.upper() if len(word) else "0") + " "
+        return string[:-1]
+
     def __bytes__(self) -> bytes:
         """
         Returns
@@ -374,15 +385,14 @@ class BytesFieldABC(ABC, Generic[StorageT, StructT]):
         """
         return self.decode()[index]
 
-    def __iter__(self) -> Generator[int | float, None, None]:
+    def __iter__(self) -> Iterator[int | float]:
         """
         Yields
         ------
         int | float
             word value.
         """
-        for item in self.decode():
-            yield item
+        return (el for el in self.decode())
 
     def __len__(self) -> int:
         """

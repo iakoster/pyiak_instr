@@ -250,11 +250,37 @@ class TestBytesFieldABC(unittest.TestCase):
     def test_magic_len(self) -> None:
         self.assertEqual(10, len(self._instance()))
 
-    def _instance(self, stop: int | None = None) -> TIField:
-        fields = {"test": TIStruct(stop=stop)}
+    def test_magic_str(self) -> None:
+        with self.subTest(test="empty"):
+            self.assertEqual(
+                "TIField(EMPTY)", str(self._instance(encode=False))
+            )
+
+        with self.subTest(test="not empty"):
+            self.assertEqual(
+                "TIField(1 203 405 607 809)",
+                str(self._instance(fmt=Code.U16)),
+            )
+
+        with self.subTest(test="repr not empty"):
+            self.assertEqual(
+                "<TIField(0 1 2 3 4 5 6 7 8 9)>",
+                repr(self._instance()),
+            )
+
+    @staticmethod
+    def _instance(
+            stop: int | None = None,
+            fmt: Code = Code.U8,
+            encode: bool = True
+    ) -> TIField:
+        fields = {"test": TIStruct(stop=stop, fmt=fmt)}
         if stop is not None:
             fields["ph"] = TIStruct(start=stop, stop=None)
-        storage = TIStorage("std", fields).encode(bytes(range(10)))
+
+        storage = TIStorage("std", fields)
+        if encode:
+            storage.encode(bytes(range(10)))
         return storage["test"]
 
 
