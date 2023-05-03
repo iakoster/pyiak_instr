@@ -33,7 +33,9 @@ DATA_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
 class TIStruct(BytesFieldStructProtocol):
 
     def __post_init__(self) -> None:
-        if self.fmt not in {Code.U8, Code.U16}:
+        if self.fmt not in {
+            Code.U8, Code.U16, Code.U24, Code.U32, Code.U40
+        }:
             raise ValueError("invalid fmt")
         if self.order is not Code.BIG_ENDIAN:
             raise ValueError("invalid order")
@@ -51,9 +53,9 @@ class TIStruct(BytesFieldStructProtocol):
 
     @property
     def word_bytesize(self) -> int:
-        if self.fmt is Code.U16:
-            return 2
-        return 1
+        return (
+            Code.U8, Code.U16, Code.U24, Code.U32, Code.U40
+        ).index(self.fmt) + 1
 
 
 class TIField(BytesFieldABC["TIStorage", TIStruct]):
@@ -251,36 +253,48 @@ class TestBytesFieldABC(unittest.TestCase):
         self.assertEqual(10, len(self._instance()))
 
     def test_magic_str(self) -> None:
-        with self.subTest(test="empty"):
-            self.assertEqual(
-                "TIField(EMPTY)", str(self._instance(encode=False))
-            )
+        cases = (
+            ("empty", "TIField(EMPTY)", {"content": b""}),
+            ("not empty", "TIField(1 203 405 607 809)", {"fmt": Code.U16}),
+            (
+                "large u8",
+                "TIField(0 1 2 3 ... 1C 1D 1E 1F)",
+                {"content": bytes(range(32))},
+            ),
+            (
+                "large u16",
+                "TIField(1 203 405 ... 1A1B 1C1D 1E1F)",
+                {"content": bytes(range(32)), "fmt": Code.U16},
+            ),
+            (
+                "large u24",
+                "TIField(102 30405 ... 1B1C1D 1E1F20)",
+                {"content": bytes(range(33)), "fmt": Code.U24},
+            ),
+            (
+                "large u40",
+                "TIField(1020304 ... 1E1F202122)",
+                {"content": bytes(range(35)), "fmt": Code.U40},
+            ),
+        )
 
-        with self.subTest(test="not empty"):
-            self.assertEqual(
-                "TIField(1 203 405 607 809)",
-                str(self._instance(fmt=Code.U16)),
-            )
-
-        with self.subTest(test="repr not empty"):
-            self.assertEqual(
-                "<TIField(0 1 2 3 4 5 6 7 8 9)>",
-                repr(self._instance()),
-            )
+        for test, ref, kw in cases:
+            with self.subTest(test=test):
+                self.assertEqual(ref, str(self._instance(**kw)))
 
     @staticmethod
     def _instance(
             stop: int | None = None,
             fmt: Code = Code.U8,
-            encode: bool = True
+            content: bytes = bytes(range(10)),
     ) -> TIField:
         fields = {"test": TIStruct(stop=stop, fmt=fmt)}
         if stop is not None:
             fields["ph"] = TIStruct(start=stop, stop=None)
 
         storage = TIStorage("std", fields)
-        if encode:
-            storage.encode(bytes(range(10)))
+        if len(content):
+            storage.encode(content)
         return storage["test"]
 
 
@@ -539,6 +553,19 @@ class TestBytesStorageABC(unittest.TestCase):
         self.assertEqual(0, len(obj))
         obj.encode(b"f" * 255)
         self.assertEqual(255, len(obj))
+
+    def test_magic_str(self) -> None:
+        with self.subTest(test="empty"):
+            self.assertEqual(
+                "TIStorage(EMPTY)", str(self._instance)
+            )
+
+        with self.subTest(test="not empty"):
+            self.assertEqual(
+                "TIStorage(first=0, second=1 2, "
+                "third=3 4 5 6 ... C0 C1 C2 C3, fourth=C4 C5 C6, fifth=C7)",
+                str(self._instance.encode(bytes(range(200)))),
+            )
 
     @property
     def _instance(self) -> TIStorage:

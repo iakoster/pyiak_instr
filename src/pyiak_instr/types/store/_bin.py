@@ -1,9 +1,10 @@
 """Private module of ``pyiak_instr.types.store`` with types for store
 module."""
+# pylint: disable=too-many-lines
 from __future__ import annotations
 from pathlib import Path
 from dataclasses import dataclass
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import (
     Any,
     Generic,
@@ -224,6 +225,7 @@ class BytesFieldStructProtocol(Protocol):
 
 
 # todo: verify current content
+# todo: __format__
 class BytesFieldABC(WithBaseStringMethods, Generic[StorageT, StructT]):
     """
     Represents base parser class for work with field content.
@@ -343,14 +345,37 @@ class BytesFieldABC(WithBaseStringMethods, Generic[StorageT, StructT]):
 
     def __str_under_brackets__(self) -> str:
         content = self.content
-        if len(content) == 0:
+        length = len(content)
+        if length == 0:
             return "EMPTY"
 
-        string, step = "", self.struct.word_bytesize
-        for i in range(0, len(content), step):
-            word = content[i : i + step].hex().lstrip("0")
-            string += (word.upper() if len(word) else "0") + " "
-        return string[:-1]
+        step = self.struct.word_bytesize
+        if length > 20 and self.words_count > 2:
+            if step == 1:
+                border = 4
+            elif step == 2:
+                border = 6
+            elif step in {3, 4}:
+                border = 2 * step
+            else:
+                border = step
+        else:
+            border = length
+
+        string, start = "", 0
+        while start < length:
+            if start == border:
+                start = length - border
+                string += "... "
+
+            stop = start + step
+            word = content[start:stop].hex().lstrip("0")
+            string += (word.upper() if len(word) else "0") + (
+                " " if stop != length else ""
+            )
+            start = stop
+
+        return string
 
     def __bytes__(self) -> bytes:
         """
@@ -404,7 +429,11 @@ class BytesFieldABC(WithBaseStringMethods, Generic[StorageT, StructT]):
         return self.bytes_count
 
 
-class BytesStorageABC(ABC, Generic[ParentPatternT, ParserT, StructT]):
+# todo: create storage struct (dataclass)
+# todo: __format__
+class BytesStorageABC(
+    WithBaseStringMethods, Generic[ParentPatternT, ParserT, StructT]
+):
     """
     Represents abstract class for bytes storage.
 
@@ -735,6 +764,13 @@ class BytesStorageABC(ABC, Generic[ParentPatternT, ParserT, StructT]):
                 f"'{self.__class__.__name__}' object has no parent pattern"
             )
         return self._p
+
+    def __str_under_brackets__(self) -> str:
+        if len(self._c) == 0 and len(self._f) > 1:
+            return "EMPTY"
+        return ", ".join(
+            map(lambda x: f"{x.name}={x.__str_under_brackets__()}", self)
+        )
 
     def __contains__(self, name: str) -> bool:
         """Check that field name in message."""
