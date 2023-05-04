@@ -5,6 +5,7 @@ from typing import (
     TYPE_CHECKING,
     TypeVar,
     Union,
+    cast,
 )
 
 from ._struct import (
@@ -175,7 +176,7 @@ class DataLengthMessageField(
             return self._struct.calculate(
                 data_field.content, data_field.struct.fmt
             )
-        return decoded  # type: ignore[return-value]
+        return cast(int, decoded)
 
     def update(self) -> None:
         """
@@ -266,7 +267,7 @@ class OperationMessageField(
         Code
             operation code.
         """
-        return self._struct.desc(self[0])  # type: ignore[arg-type]
+        return self._struct.desc(cast(int, self[0]))
 
 
 class ResponseMessageField(
@@ -287,7 +288,7 @@ class ResponseMessageField(
         Code
             Response code.
         """
-        return self._struct.desc(self[0])  # type: ignore[arg-type]
+        return self._struct.desc(cast(int, self[0]))
 
 
 MessageFieldUnionT = Union[  # pylint: disable=invalid-name

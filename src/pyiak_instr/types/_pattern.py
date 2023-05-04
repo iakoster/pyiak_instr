@@ -1,7 +1,7 @@
 """Private module of ``pyiak_instr.types`` with pattern types."""
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Self, TypeVar
+from typing import Any, Generic, Self, TypeVar, cast
 
 from ..exceptions import NotConfiguredYet
 from ..utilities import split_complex_dict
@@ -152,8 +152,8 @@ class PatternABC(ABC, Generic[OptionsT]):
         Beware: not supports numpy arrays in __init_kwargs__.
         """
         if hasattr(other, "__init_kwargs__"):
-            return (  # type: ignore[no-any-return]
-                self.__init_kwargs__() == other.__init_kwargs__()
+            return cast(
+                bool, self.__init_kwargs__() == other.__init_kwargs__()
             )
         return False
 

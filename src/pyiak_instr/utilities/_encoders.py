@@ -2,7 +2,7 @@
 import re
 import itertools
 import struct
-from typing import Any, Callable, Generator, Iterable, Literal
+from typing import Any, Callable, Generator, Iterable, Literal, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -117,7 +117,7 @@ class BytesEncoder:
         content: bytes,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
-    ) -> np.int_ | np.float_:
+    ) -> int | float:
         """
         Decode one value from content.
 
@@ -143,7 +143,7 @@ class BytesEncoder:
         value = cls.decode(content, fmt=fmt, order=order)
         if len(value) != 1:
             raise ValueError("content must be specified by one value")
-        return value[0]  # type: ignore[no-any-return]
+        return cast(int | float, value[0])
 
     @classmethod
     def _decode_int(

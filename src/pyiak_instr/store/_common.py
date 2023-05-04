@@ -1,4 +1,6 @@
 """Private module of ``pyiak_instr.store`` with common store classes"""
+from typing import cast
+
 import numpy as np
 import numpy.typing as npt
 
@@ -78,7 +80,7 @@ class BitVector:
             bit value.
         """
         i_val, i_bit = self._get_coords(index)
-        return self._vals[i_val] >> i_bit & 1  # type: ignore[no-any-return]
+        return cast(int, self._vals[i_val] >> i_bit & 1)
 
     def set(self, index: int, bit: int | bool) -> None:
         """

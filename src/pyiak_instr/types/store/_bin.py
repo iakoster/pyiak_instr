@@ -13,6 +13,7 @@ from typing import (
     Protocol,
     Self,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -816,7 +817,7 @@ class BytesFieldPatternABC(PatternABC[StructT], Generic[StructT]):
         int
             size of the field in bytes.
         """
-        return self._kw["bytes_expected"]  # type: ignore[no-any-return]
+        return cast(int, self._kw["bytes_expected"])
 
 
 class BytesStoragePatternABC(

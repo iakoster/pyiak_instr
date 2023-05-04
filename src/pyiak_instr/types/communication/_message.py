@@ -1,7 +1,12 @@
 """Private module of ``pyiak_instr.types.communication`` with types for
 communication module."""
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar  # pylint: disable=unused-import
+from typing import (  # pylint: disable=unused-import
+    Any,
+    Generic,
+    TypeVar,
+    cast,
+)
 
 from ...core import Code
 from ..store import (
@@ -71,9 +76,10 @@ class MessageGetParserABC(ABC, Generic[MessageT, FieldT]):
         """Get first field with specified type."""
         if type_ not in self._types:
             raise TypeError(f"{type_.__name__} instance is not found")
-        return self._msg[  # type: ignore[no-any-return]
-            self._types[type_]  # type: ignore[index]
-        ]
+        return cast(
+            FieldAnotherT,
+            self._msg[self._types[type_]],  # type: ignore[index]
+        )
 
 
 class MessageHasParserABC(ABC, Generic[FieldT]):
