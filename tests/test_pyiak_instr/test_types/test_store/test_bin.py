@@ -197,18 +197,32 @@ class TestBytesFieldStructProtocol(unittest.TestCase):
                 exc.exception.args[0],
             )
 
+        with self.subTest(test="default changes"):
+            self._instance(stop=5, default=b"aaaaa")
+            self._instance(stop=4, fmt=Code.U16, default=b"aaaa")
+            with self.assertRaises(ValueError):
+                self._instance(fmt=Code.U16, default=b"aaa")
+            with self.assertRaises(ValueError) as exc:
+                self._instance(stop=4, default=b"aaa")
+            self.assertEqual(
+                "default value is incorrect",
+                exc.exception.args[0],
+            )
+
     @staticmethod
     def _instance(
             start: int = 0,
             stop: int | None = None,
             bytes_expected: int = 0,
             fmt: Code = Code.U8,
+            default: bytes = b"",
     ) -> BytesFieldStructProtocol:
         return TIStruct(
             start=start,
             stop=stop,
             bytes_expected=bytes_expected,
             fmt=fmt,
+            default=default,
         )
 
 

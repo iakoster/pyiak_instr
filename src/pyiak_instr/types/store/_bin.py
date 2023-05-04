@@ -50,6 +50,7 @@ ParentPatternT = TypeVar(
 STRUCT_DATACLASS = dataclass(frozen=True, kw_only=True)
 
 
+# todo: drop to default
 @STRUCT_DATACLASS
 class BytesFieldStructProtocol(Protocol):
     """
@@ -90,6 +91,8 @@ class BytesFieldStructProtocol(Protocol):
             raise ValueError(
                 "'bytes_expected' does not match an integer word count"
             )
+        if self.has_default and not self.verify(self.default):
+            raise ValueError("default value is incorrect")
 
     @abstractmethod
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
