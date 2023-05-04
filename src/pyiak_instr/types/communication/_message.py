@@ -100,6 +100,8 @@ class MessageHasParserABC(ABC, Generic[FieldT]):
         return type_ in self._types
 
 
+# todo: clear src and dst?
+# todo: get rx and tx class instance
 class MessageABC(
     BytesStorageABC[MessagePatternT, FieldT, StructT],
     Generic[

@@ -51,6 +51,7 @@ STRUCT_DATACLASS = dataclass(frozen=True, kw_only=True)
 
 
 # todo: drop to default
+# todo: shortcut decode default?
 @STRUCT_DATACLASS
 class BytesFieldStructProtocol(Protocol):
     """
@@ -763,11 +764,11 @@ class BytesStorageABC(
         AttributeError
             if parent pattern is None (not set).
         """
-        if self._p is None:
+        if not self.has_pattern:
             raise AttributeError(
                 f"'{self.__class__.__name__}' object has no parent pattern"
             )
-        return self._p
+        return cast(ParentPatternT, self._p)
 
     def __str_under_brackets__(self) -> str:
         if len(self._c) == 0 and len(self._f) > 1:

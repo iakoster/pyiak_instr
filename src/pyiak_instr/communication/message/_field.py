@@ -163,6 +163,7 @@ class DataLengthMessageField(
         int
             actual data length.
         """
+        # todo: refactor (EXPECTED is almost same)
         if self.struct.behaviour is Code.ACTUAL:
             data_field = self._storage.get.data
             return self._struct.calculate(
