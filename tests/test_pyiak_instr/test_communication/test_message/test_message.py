@@ -77,6 +77,7 @@ class TestMessage(unittest.TestCase):
                         getattr(instance.get, f_type)
 
 
+# todo: test init (check kwargs)
 class TestMessagePattern(unittest.TestCase):
 
     def test_get(self) -> None:
@@ -130,6 +131,7 @@ class TestMessagePattern(unittest.TestCase):
             f3=dict(
                 behaviour=Code.DMA,
                 fmt=Code.U8,
+                units=Code.WORDS,
                 slice_=slice(8, 9),
                 words_expected=1,
             ),

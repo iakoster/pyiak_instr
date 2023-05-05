@@ -1,4 +1,5 @@
 import unittest
+from typing import Generator, Self
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.store import BytesFieldStruct
@@ -53,6 +54,9 @@ class TIMessage(
     _has_parser = TIMessageHasParser
     _struct_field = {TIMessageFieldStruct: TIMessageField}
 
+    def split(self) -> Generator[Self, None, None]:
+        raise NotImplementedError()
+
 
 class TIMessageFieldPatternABC(MessageFieldPatternABC):
 
@@ -93,15 +97,33 @@ class TestMessageABC(unittest.TestCase):
         )
 
     def test_init_exc(self) -> None:
-        with self.assertRaises(ValueError) as exc:
-            TIMessage(
-                {"f0": TIMessageFieldStruct(bytes_expected=10)},
-                divisible=True,
-                mtu=5,
+        with self.subTest(test="divisible without dynamic field"):
+            with self.assertRaises(TypeError) as exc:
+                TIMessage(
+                    {"f0": TIMessageFieldStruct(bytes_expected=1)},
+                    divisible=True,
+                )
+            self.assertEqual(
+                "TIMessage can not be divided because it does not have "
+                "a dynamic field",
+                exc.exception.args[0],
             )
-        self.assertEqual(
-            "MTU cannot be less than the minimum size", exc.exception.args[0]
-        )
+
+        with self.subTest(test="invalid mtu"):
+            with self.assertRaises(ValueError) as exc:
+                TIMessage(
+                    {
+                        "f0": TIMessageFieldStruct(bytes_expected=10),
+                        "f1": TIMessageFieldStruct(fmt=Code.U16, start=10),
+                    },
+                    divisible=True,
+                    mtu=5,
+                )
+            self.assertEqual(
+                "MTU value does not allow you to split the message if "
+                "necessary. The minimum MTU is 12 (got 5)",
+                exc.exception.args[0],
+            )
 
     def test_get_has(self) -> None:
         instance = TIMessage(dict(

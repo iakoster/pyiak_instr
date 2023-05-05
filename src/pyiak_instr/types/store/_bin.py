@@ -468,6 +468,13 @@ class BytesStorageABC(
         self._p = pattern
         self._c = bytearray()
 
+        for f_name, struct in self._f.items():
+            if struct.is_dynamic:
+                self._dyn_field = f_name
+                break
+        else:
+            self._dyn_field = ""
+
     def change(
         self, name: str, content: int | float | Iterable[int | float]
     ) -> None:
@@ -729,7 +736,7 @@ class BytesStorageABC(
         bool
             True - at least one field is dynamic.
         """
-        return any(p.struct.is_dynamic for p in self)
+        return bool(len(self._dyn_field))
 
     @property
     def minimum_size(self) -> int:

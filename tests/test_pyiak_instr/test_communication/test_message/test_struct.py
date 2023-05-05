@@ -119,20 +119,31 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
             slice_=slice(0, 1),
             start=0,
             stop=1,
+            units=Code.WORDS,
             word_bytesize=1,
             words_expected=1,
         )
 
     def test_init_exc(self) -> None:
-        with self.assertRaises(NotAmongTheOptions) as exc:
-            AddressMessageFieldStruct(
-                start=0, fmt=Code.U8, behaviour=Code.EXPECTED
+        with self.subTest(test="invalid behaviour"):
+            with self.assertRaises(NotAmongTheOptions) as exc:
+                AddressMessageFieldStruct(
+                    start=0, fmt=Code.U8, behaviour=Code.EXPECTED
+                )
+            self.assertEqual(
+                "behaviour option not in {<Code.DMA: 1539>, "
+                "<Code.STRONG: 1540>}, got <Code.EXPECTED: 1541>",
+                exc.exception.args[0],
             )
-        self.assertEqual(
-            "behaviour option not in {<Code.DMA: 1539>, <Code.STRONG: 1540>}"
-            ", got <Code.EXPECTED: 1541>",
-            exc.exception.args[0],
-        )
+
+        with self.subTest(test="invalid units"):
+            with self.assertRaises(NotAmongTheOptions) as exc:
+                AddressMessageFieldStruct(units=Code.NONE)
+            self.assertEqual(
+                "units option not in {<Code.WORDS: 768>, "
+                "<Code.BYTES: 257>}, got <Code.NONE: 0>",
+                exc.exception.args[0]
+            )
 
 
 class TestCrcMessageFieldStruct(unittest.TestCase):
@@ -591,5 +602,6 @@ class TestMessageFieldPattern(unittest.TestCase):
                 "start",
                 "stop",
                 "words_expected",
+                "units"
             ],
         )

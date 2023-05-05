@@ -3,7 +3,9 @@ communication module."""
 from abc import ABC, abstractmethod
 from typing import (  # pylint: disable=unused-import
     Any,
+    Generator,
     Generic,
+    Self,
     TypeVar,
     cast,
 )
@@ -143,11 +145,29 @@ class MessageABC(
         mtu: int = 1500,
         pattern: MessagePatternT | None = None,
     ) -> None:
+        # todo: change positions (fields, name)
         super().__init__(name, fields, pattern=pattern)
+        if divisible:
+            if not self.is_dynamic:
+                raise TypeError(
+                    f"{self.__class__.__name__} can not be divided because "
+                    "it does not have a dynamic field"
+                )
+
+            min_mtu = self.minimum_size + self._f[
+                self._dyn_field
+            ].word_bytesize
+            if mtu < min_mtu:
+                raise ValueError(
+                    "MTU value does not allow you to split the message if "
+                    f"necessary. The minimum MTU is {min_mtu} (got {mtu})"
+                )
+
         self._div = divisible
         self._mtu = mtu
 
         self._types: dict[type[FieldT], str] = {}
+
         for f_name, struct in self._f.items():
             f_class = self._struct_field[struct.__class__]
             if f_class not in self._types:
@@ -155,8 +175,16 @@ class MessageABC(
 
         self._src, self._dst = None, None
 
-        if divisible and mtu < self.minimum_size:
-            raise ValueError("MTU cannot be less than the minimum size")
+    @abstractmethod
+    def split(self) -> Generator[Self, None, None]:
+        """
+        Split the message into parts over an infinite field.
+
+        Yields
+        ------
+        Self
+            message part.
+        """
 
     @property
     def divisible(self) -> bool:

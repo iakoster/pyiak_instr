@@ -92,11 +92,17 @@ class AddressMessageFieldStruct(SingleMessageFieldStruct):
 
     behaviour: Code = Code.DMA  # todo: logic
 
+    units: Code = Code.WORDS
+
     def __post_init__(self) -> None:
         super().__post_init__()
         if self.behaviour not in {Code.DMA, Code.STRONG}:
             raise NotAmongTheOptions(
                 "behaviour", self.behaviour, {Code.DMA, Code.STRONG}
+            )
+        if self.units not in {Code.BYTES, Code.WORDS}:
+            raise NotAmongTheOptions(
+                "units", self.units, {Code.BYTES, Code.WORDS}
             )
 
 
@@ -545,6 +551,7 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
         fmt: Code,
         order: Code = Code.BIG_ENDIAN,
         behaviour: Code = Code.DMA,
+        units: Code = Code.WORDS,
         default: bytes = b"",
     ) -> Self:
         """
@@ -558,6 +565,8 @@ class MessageFieldPattern(MessageFieldPatternABC[MessageFieldStructUnionT]):
             value byte order.
         behaviour : Code, default=Code.DMA
             address field behaviour.
+        units : Code, default=Code.WORDS
+            address units.
         default : bytes, default=b''
             default value for field.
 

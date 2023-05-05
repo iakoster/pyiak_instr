@@ -1,8 +1,9 @@
 """Private module of ``pyiak_instr.communication.message`` with message
 classes."""
 from __future__ import annotations
-from typing import Any
+from typing import Any, Generator, Self
 
+from ...core import Code
 from ...types.communication import (
     MessageABC,
     MessageGetParserABC,
@@ -282,6 +283,43 @@ class Message(
         OperationMessageFieldStruct: OperationMessageField,
         ResponseMessageFieldStruct: ResponseMessageField,
     }
+
+    def split(self) -> Generator[Self, None, None]:
+        if len(self) == 0:
+            raise TypeError("message is empty")
+
+        if not self._div or len(self._c) < self._mtu:
+            yield self
+            return
+
+        if not self.is_dynamic:
+            # todo: warning
+            yield self
+            return
+
+        if (
+            self.has.address
+            and self.get.address.struct.behaviour is not Code.DMA
+        ):
+            # todo: warning
+            yield self
+            return
+
+        f_dyn = self[self._dyn_field]
+        dyn_size = self._mtu - self.minimum_size
+        if f_dyn.bytes_count > 0:
+            if self.has.address:
+                address = self.get.address[0]
+            else:
+                address = -1
+
+            part = self._p.get()
+
+        elif self.has.data_length and self.get.data_length[0] > 0:
+            ...
+
+        else:
+            yield self
 
 
 class MessagePattern(MessagePatternABC[Message, MessageFieldPattern]):
