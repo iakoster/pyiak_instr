@@ -24,7 +24,11 @@ from src.pyiak_instr.core import Code
 from src.pyiak_instr.rwfile import RWConfig
 from src.pyiak_instr.exceptions import NotConfiguredYet
 from src.pyiak_instr.typing import WithBaseStringMethods
-from src.pyiak_instr.types._pattern import MetaPatternABC, PatternABC, WritablePatternABC
+from src.pyiak_instr.types._pattern import (
+    MetaPatternABC,
+    PatternABC,
+    WritablePatternABC,
+)
 
 
 __all__ = [

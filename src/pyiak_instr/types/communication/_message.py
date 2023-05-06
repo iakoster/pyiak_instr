@@ -154,9 +154,9 @@ class MessageABC(
                     "it does not have a dynamic field"
                 )
 
-            min_mtu = self.minimum_size + self._f[
-                self._dyn_field
-            ].word_bytesize
+            min_mtu = (
+                self.minimum_size + self._f[self._dyn_field].word_bytesize
+            )
             if mtu < min_mtu:
                 raise ValueError(
                     "MTU value does not allow you to split the message if "
