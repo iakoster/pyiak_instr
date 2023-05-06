@@ -22,8 +22,8 @@ from src.pyiak_instr.types.store import (
     ContinuousBytesStoragePatternABC,
 )
 
-from ...env import TEST_DATA_DIR
-from ....utils import validate_object, compare_objects
+from tests.test_pyiak_instr.env import TEST_DATA_DIR
+from tests.utils import validate_object, compare_objects
 
 
 DATA_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
