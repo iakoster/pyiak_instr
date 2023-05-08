@@ -7,6 +7,7 @@ from typing import Any, Callable, Generator, Iterable, Literal, cast
 import numpy as np
 import numpy.typing as npt
 
+from ..types import Encoder
 from ..core import Code
 from ..exceptions import CodeNotAllowed
 
@@ -14,9 +15,13 @@ from ..exceptions import CodeNotAllowed
 __all__ = ["BytesEncoder", "StringEncoder"]
 
 
+BytesDecodeT = ...
+BytesEncodeT = ...
+
+
 # todo: add string support
 # todo: ContentType
-class BytesEncoder:
+class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
     """
     Represents class for encoding/decoding numbers and arrays to/from bytes.
     """
@@ -65,6 +70,62 @@ class BytesEncoder:
 
     ALLOWED_CODES.update(_I_LENGTHS)
     ALLOWED_CODES.update(_F_LENGTHS)
+
+    def __init__(
+            self, fmt: Code = Code.U8, order: Code = Code.BIG_ENDIAN
+    ) -> None:
+        self.check_fmt_order(fmt, order)
+        self._fmt = fmt
+        self._order = order
+
+    def verify_fmt_order(self, fmt: Code, order: Code) -> None:
+        """
+        Check that `fmt` and `order` codes is allowed.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format code.
+        order : Code
+            order code.
+        """
+        self.verify_fmt(fmt)
+        self.verify_order(order)
+
+    def verify_fmt(self, fmt: Code) -> None:
+        """
+        Check that `fmt` codes is allowed.
+
+        Parameters
+        ----------
+        fmt : Code
+            value format code.
+
+        Raises
+        ------
+        CodeNotAllowed
+            if `fmt` not allowed.
+        """
+        if fmt not in self.ALLOWED_CODES:
+            raise CodeNotAllowed(fmt)
+
+    @staticmethod
+    def verify_order(order: Code) -> None:
+        """
+        Check that `order` codes is allowed.
+
+        Parameters
+        ----------
+        order : Code
+            order code.
+
+        Raises
+        ------
+        CodeNotAllowed
+            if `order` not allowed.
+        """
+        if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
+            raise CodeNotAllowed(order)
 
     @classmethod
     def decode(

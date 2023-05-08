@@ -20,11 +20,11 @@ from typing import (
 import numpy as np
 import numpy.typing as npt
 
-from src.pyiak_instr.core import Code
-from src.pyiak_instr.rwfile import RWConfig
-from src.pyiak_instr.exceptions import NotConfiguredYet
-from src.pyiak_instr.typing import WithBaseStringMethods
-from src.pyiak_instr.types._pattern import (
+from ....core import Code
+from ....rwfile import RWConfig
+from ....exceptions import NotConfiguredYet
+from ....typing import WithBaseStringMethods
+from ..._pattern import (
     MetaPatternABC,
     PatternABC,
     WritablePatternABC,

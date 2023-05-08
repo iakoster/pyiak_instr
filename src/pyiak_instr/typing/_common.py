@@ -16,7 +16,7 @@ __all__ = [
 ApiT = TypeVar("ApiT")
 
 
-class ContextManager(ABC):
+class ContextManager(ABC):  # todo: useless?
     """Represents context manager abstract class."""
 
     def __enter__(self) -> Self:
@@ -52,7 +52,7 @@ class SupportsInitKwargs(Protocol):
         """Returns kwargs required for initialization."""
 
 
-class WithApi(ABC, Generic[ApiT]):
+class WithApi(ABC, Generic[ApiT]):  # todo: rename to UsingApi (kinda)
     """Represents generic class with some API."""
 
     def __init__(self, api: ApiT):

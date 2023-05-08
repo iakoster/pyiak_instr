@@ -1,5 +1,6 @@
 """Private module of `pyiak_instr.exceptions` with common exceptions."""
 from typing import Any
+import inspect
 
 from ._base import PyiError
 from ..core import Code
@@ -9,6 +10,7 @@ __all__ = [
     "CodeNotAllowed",
     "NotConfiguredYet",
     "NotAmongTheOptions",
+    "NotSupportedMethod",
     "WithoutParent",
 ]
 
@@ -41,6 +43,31 @@ class NotAmongTheOptions(PyiError):
         super().__init__(msg=msg)
 
 
+class NotSupportedMethod(PyiError):
+    """
+    Raised when a class method is declared, but not implemented.
+    """
+
+    def __init__(self, frame: Any = None) -> None:  # todo: frame type
+        msg = ""
+        if frame is None:
+            msg = "not supported method"
+
+        if hasattr(frame, "f_code"):
+            frame = frame.f_code.co_qualname
+
+        if isinstance(frame, str):
+            qualname = frame.split(".")
+            if len(qualname) != 2:
+                raise ValueError(f"invalid method qualname: {frame!r}")
+            msg = f"{qualname[0]} does not support .{qualname[1]}"
+
+        if len(msg) == 0:
+            raise TypeError(f"invalid frame type: {frame.__class__}")
+
+        super().__init__(msg=msg)
+
+
 class WithoutParent(PyiError):
     """Raised when further work requires the parent to be specified."""
 
@@ -48,7 +75,7 @@ class WithoutParent(PyiError):
         super().__init__(msg="parent not specified")
 
 
-class CodeNotAllowed(NotAmongTheOptions):
+class CodeNotAllowed(NotAmongTheOptions):  # todo: useless
     """Raised when received code not in list of allowed codes."""
 
     def __init__(self, code: Code, options: set[Code] | None = None) -> None:

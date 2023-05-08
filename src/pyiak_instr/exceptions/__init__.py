@@ -8,6 +8,7 @@ from ._common import (
     CodeNotAllowed,
     NotConfiguredYet,
     NotAmongTheOptions,
+    NotSupportedMethod,
     WithoutParent,
 )
 from ._communication import ContentError
@@ -15,12 +16,14 @@ from ._rwfile import RWFileError, FileSuffixError
 
 
 __all__ = [
-    "PyiError",
     "CodeNotAllowed",
     "ContentError",
-    "NotConfiguredYet",
-    "NotAmongTheOptions",
-    "WithoutParent",
-    "RWFileError",
     "FileSuffixError",
+    "NotAmongTheOptions",
+    "NotConfiguredYet",
+    "NotSupportedMethod",
+    "PyiError",
+    "RWFileError",
+    "WithoutParent",
 ]
+

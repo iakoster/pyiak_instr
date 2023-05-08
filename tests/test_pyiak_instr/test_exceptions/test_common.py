@@ -1,4 +1,5 @@
 import unittest
+from inspect import currentframe
 
 from src.pyiak_instr.core import Code
 
@@ -6,11 +7,12 @@ from src.pyiak_instr.exceptions import (
     CodeNotAllowed,
     NotConfiguredYet,
     NotAmongTheOptions,
+    NotSupportedMethod,
     WithoutParent,
 )
 
 
-class TestCodeNoaAllowed(unittest.TestCase):
+class TestCodeNotAllowed(unittest.TestCase):
 
     def test_args(self) -> None:
         self.assertTupleEqual(
@@ -49,6 +51,39 @@ class TestNotAmongTheOptions(unittest.TestCase):
         assert len(sym_diff) == 0, f"case difference: {sym_diff}"
         for (test, msg), (_, init_kw) in zip(ref.items(), init.items()):
             self.assertTupleEqual(msg, NotAmongTheOptions(**init_kw).args)
+
+
+class TestNotSupportedFunction(unittest.TestCase):
+
+    def test_init(self) -> None:
+        cases = [
+            ("not supported method", None),
+            (
+                "TestNotSupportedFunction does not support .test_init",
+                currentframe(),
+            ),
+            ("AnyClass does not support .any_method", "AnyClass.any_method"),
+        ]
+
+        for i_case, (msg, frame) in enumerate(cases):
+            with self.subTest(case=i_case):
+                self.assertEqual(msg, NotSupportedMethod(frame).msg)
+
+    def test_init_exc(self) -> None:
+        with self.subTest(test="invalid qualname"):
+            with self.assertRaises(ValueError) as exc:
+                NotSupportedMethod("Class.invalid.qualname")
+            self.assertEqual(
+                "invalid method qualname: 'Class.invalid.qualname'",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(test="invalid frame type"):
+            with self.assertRaises(TypeError) as exc:
+                NotSupportedMethod(1)
+            self.assertEqual(
+                "invalid frame type: <class 'int'>", exc.exception.args[0]
+            )
 
 
 class TestWithoutParent(unittest.TestCase):
