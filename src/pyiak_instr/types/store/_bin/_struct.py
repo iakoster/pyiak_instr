@@ -1,6 +1,7 @@
 """Private module of ``pyiak_instr.types.store`` with types for store
 module."""
 from __future__ import annotations
+import inspect
 from dataclasses import InitVar, dataclass, field as field_
 from abc import ABC, abstractmethod
 from typing import (
@@ -17,12 +18,18 @@ import numpy as np
 import numpy.typing as npt
 
 from ....core import Code
+from ..._utilities import Encoder
 
 
 __all__ = ["STRUCT_DATACLASS", "BytesFieldStructABC", "BytesStorageStructABC"]
 
 
 FieldStructT = TypeVar("FieldStructT", bound="BytesFieldStructABC")
+
+BytesDecodeT = npt.NDArray[np.int_ | np.float_]
+BytesEncodeT = (
+    int | float | bytes | list[int | float] | npt.NDArray[np.int_ | np.float_]
+)
 
 
 STRUCT_DATACLASS = dataclass(frozen=True, kw_only=True)
@@ -59,7 +66,11 @@ class BytesFieldStructABC(ABC):
     default: bytes = b""  # todo: to ContentType
     """default value of the field."""
 
-    def __post_init__(self) -> None:
+    encoder: InitVar[type[Encoder] | Encoder | None] = None
+
+    _encoder: Encoder = field_(default=None, init=False)
+
+    def __post_init__(self, encoder: type[Encoder] | Encoder | None) -> None:
         if self.stop == 0:
             raise ValueError("'stop' can't be equal to zero")
         if self.stop is not None and self.bytes_expected > 0:
@@ -67,6 +78,11 @@ class BytesFieldStructABC(ABC):
         if 0 > self.start > -self.bytes_expected:
             raise ValueError("it will be out of bounds")
 
+        if encoder is None:
+            raise ValueError("struct encoder not specified")
+        if inspect.isclass(encoder):
+            encoder = encoder(self.fmt, self.order)
+        self._encoder = encoder
         self._modify_values()
 
         if self.bytes_expected % self.word_bytesize:
@@ -76,8 +92,7 @@ class BytesFieldStructABC(ABC):
         if self.has_default and not self.verify(self.default):
             raise ValueError("default value is incorrect")
 
-    @abstractmethod
-    def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
+    def decode(self, content: bytes) -> BytesDecodeT:
         """
         Decode content from bytes with parameters from struct.
 
@@ -88,18 +103,19 @@ class BytesFieldStructABC(ABC):
 
         Returns
         -------
-        npt.NDArray[np.int_ | np.float_]
+        BytesDecodeT
             decoded content.
         """
+        return self._encoder.decode(content)
 
     @abstractmethod
-    def encode(self, content: int | float | Iterable[int | float]) -> bytes:
+    def encode(self, content: BytesEncodeT) -> bytes:
         """
         Encode content to bytes with parameters from struct.
 
         Parameters
         ----------
-        content : int | float | Iterable[int | float]
+        content : BytesEncodeT
             content for encoding.
 
         Returns
@@ -107,16 +123,7 @@ class BytesFieldStructABC(ABC):
         bytes
             encoded content.
         """
-
-    @property
-    @abstractmethod
-    def word_bytesize(self) -> int:
-        """
-        Returns
-        -------
-        int
-            count of bytes in one word.
-        """
+        return self._encoder.encode(content)
 
     # todo: return Code and if raise=True - raise ContentError
     def verify(self, content: bytes) -> bool:
@@ -198,6 +205,16 @@ class BytesFieldStructABC(ABC):
             slice with start and stop indexes of field.
         """
         return slice(self.start, self.stop)
+
+    @property
+    @abstractmethod
+    def word_bytesize(self) -> int:
+        """
+        Returns
+        -------
+        int
+            count of bytes in one word.
+        """
 
     @property
     def words_expected(self) -> int:

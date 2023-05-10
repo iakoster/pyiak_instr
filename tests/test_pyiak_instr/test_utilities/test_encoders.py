@@ -76,53 +76,27 @@ class TestBytesEncoder(unittest.TestCase):
             with self.subTest(test=name, fmt=repr(fmt)):
                 assert_array_almost_equal(
                     decoded,
-                    BytesEncoder.decode(encoded, fmt=fmt, order=order),
+                    BytesEncoder(fmt=fmt, order=order).decode(encoded),
                 )
-
-    def test_decode_value(self) -> None:
-        self.assertEqual(1, BytesEncoder.decode_value(b"\x01"))
-
-    def test_decode_value_exc(self) -> None:
-        with self.assertRaises(ValueError) as exc:
-            BytesEncoder.decode_value(b"\x01\x02")
-        self.assertEqual(
-            "content must be specified by one value", exc.exception.args[0]
-        )
 
     def test_encode(self) -> None:
         for name, (fmt, decoded, encoded, order) in self.DATA.items():
             with self.subTest(test=name, fmt=repr(fmt)):
                 self.assertEqual(
                     encoded,
-                    BytesEncoder.encode(decoded, fmt=fmt, order=order),
+                    BytesEncoder(fmt=fmt, order=order).encode(decoded),
                 )
 
-    def test_get_value_size(self) -> None:
-        for code, size in {
-            Code.U16: 2,
-            Code.I56: 7,
-            Code.F32: 4,
-        }.items():
-            self.assertEqual(size, BytesEncoder.get_bytesize(code))
-
-    def test_get_value_size_exc(self) -> None:
+    def test_verify_fmt_order_exc(self) -> None:
         with self.assertRaises(CodeNotAllowed) as exc:
-            BytesEncoder.get_bytesize(Code.NONE)
-        self.assertEqual(
-            "code option not allowed, got <Code.NONE: 0>",
-            exc.exception.args[0],
-        )
-
-    def test_check_fmt_order_exc(self) -> None:
-        with self.assertRaises(CodeNotAllowed) as exc:
-            BytesEncoder.decode(b"", fmt=Code.NONE)
+            BytesEncoder().verify_fmt_order(Code.NONE, Code.NONE)
         self.assertEqual(
             "code option not allowed, got <Code.NONE: 0>",
             exc.exception.args[0],
         )
 
         with self.assertRaises(CodeNotAllowed) as exc:
-            BytesEncoder.decode(b"", order=Code.NONE)
+            BytesEncoder().verify_fmt_order(Code.U8, Code.NONE)
         self.assertEqual(
             "code option not allowed, got <Code.NONE: 0>",
             exc.exception.args[0],
@@ -197,7 +171,7 @@ class TestStringEncoder(unittest.TestCase):
                 self.DATA.items(), self.DATA_CHAIN.items()
         ):
             with self.subTest(name=name, ref=ref):
-                res = StringEncoder.decode(src)
+                res = StringEncoder().decode(src)
 
                 if name in ("ch3",):
                     self.assertEqual(str(res), str(ref))
@@ -208,7 +182,7 @@ class TestStringEncoder(unittest.TestCase):
 
     def test_decode_single(self) -> None:
         self.assertEqual(
-            [1, 2, (3,)], StringEncoder.decode(r"\lst(1,2,\tpl(3))")
+            [1, 2, (3,)], StringEncoder().decode(r"\lst(1,2,\tpl(3))")
         )
 
     def test_encode(self):
@@ -217,26 +191,26 @@ class TestStringEncoder(unittest.TestCase):
                 self.DATA.items(), self.DATA_CHAIN.items()
         ):
             with self.subTest(name=name, ref=ref):
-                self.assertEqual(ref, StringEncoder.encode(src))
+                self.assertEqual(ref, StringEncoder().encode(src))
 
     def test_encode_single(self) -> None:
         self.assertEqual(
-            r"\lst(1,2,\tpl(3))", StringEncoder.encode([1, 2, (3,)])
+            r"\lst(1,2,\tpl(3))", StringEncoder().encode([1, 2, (3,)])
         )
 
     def test_encode_invalid(self) -> None:
         self.assertEqual(
-            "\\tpl\t1,2,3", StringEncoder.encode("\\tpl\t1,2,3")
+            "\\tpl\t1,2,3", StringEncoder().encode("\\tpl\t1,2,3")
         )
 
     def test_encode_code_support(self) -> None:
         self.assertEqual(
-            "\cod(1)", StringEncoder.encode(Code.OK)
+            "\cod(1)", StringEncoder().encode(Code.OK)
         )
 
     def test_decorate(self) -> None:
         self.assertEqual(
-            "\\dct(1,2,3,4)", StringEncoder._decorate(Code.DICT, "1,2,3,4")
+            "\\dct(1,2,3,4)", StringEncoder()._decorate(Code.DICT, "1,2,3,4")
         )
 
     def test_determine_type(self) -> None:
@@ -253,11 +227,11 @@ class TestStringEncoder(unittest.TestCase):
             ("text", Code.STRING),
         ):
             with self.subTest(string=string, ref=repr(ref)):
-                res = StringEncoder._determine_type(string)
+                res = StringEncoder()._determine_type(string)
                 self.assertEqual(ref, res)
 
     def test_get_data_border(self) -> None:
-        func = StringEncoder._get_data_border
+        func = StringEncoder()._get_data_border
         self.assertTupleEqual((4, 8), func("\\tpl(1,2)"))
         self.assertTupleEqual((4, 8), func("\\lst(1,2),3,4)"))
 
@@ -268,23 +242,23 @@ class TestStringEncoder(unittest.TestCase):
         ):
             with self.subTest(string=string, msg=msg):
                 with self.assertRaises(ValueError) as exc:
-                    StringEncoder._get_data_border(string)
+                    StringEncoder()._get_data_border(string)
                 self.assertEqual(msg, exc.exception.args[0])
 
     def test_iter(self) -> None:
         self.assertListEqual(
             ["1", "2", "\\tpl(3,4)", "gg"],
-            [*StringEncoder._iter("1,2,\\tpl(3,4),gg")]
+            [*StringEncoder()._iter("1,2,\\tpl(3,4),gg")]
         )
 
     def test_read(self) -> None:
         self.assertTupleEqual(
-            (Code.TUPLE, "1,2"), StringEncoder._read("\\tpl(1,2)")
+            (Code.TUPLE, "1,2"), StringEncoder()._read("\\tpl(1,2)")
         )
 
     def test_split(self) -> None:
         for string, ref in (
             (r"\lol(1,2,3)", ("lol", "1,2,3")),
         ):
-            self.assertTupleEqual(ref, StringEncoder._split(string))
+            self.assertTupleEqual(ref, StringEncoder()._split(string))
 

@@ -21,7 +21,7 @@ import numpy as np
 import numpy.typing as npt
 
 from ....core import Code
-from ....rwfile import RWConfig
+# from ....rwfile import RWConfig
 from ....exceptions import NotConfiguredYet
 from ....typing import WithBaseStringMethods
 from ..._pattern import (
@@ -872,18 +872,18 @@ class BytesStoragePatternABC(
         NotConfiguredYet
             is patterns is not configured yet.
         """
-        if len(self._sub_p) == 0:
-            raise NotConfiguredYet(self)
-        pars = {
-            self._name: self.__init_kwargs__(),
-            **{n: p.__init_kwargs__() for n, p in self._sub_p.items()},
-        }
-
-        with RWConfig(path) as cfg:
-            if cfg.api.has_section(self._name):
-                cfg.api.remove_section(self._name)
-            cfg.set({self._name: pars})
-            cfg.commit()
+        # if len(self._sub_p) == 0:
+        #     raise NotConfiguredYet(self)
+        # pars = {
+        #     self._name: self.__init_kwargs__(),
+        #     **{n: p.__init_kwargs__() for n, p in self._sub_p.items()},
+        # }
+        #
+        # with RWConfig(path) as cfg:
+        #     if cfg.api.has_section(self._name):
+        #         cfg.api.remove_section(self._name)
+        #     cfg.set({self._name: pars})
+        #     cfg.commit()
 
     @classmethod
     def read(cls, path: Path, *keys: str) -> Self:
@@ -908,16 +908,16 @@ class BytesStoragePatternABC(
         TypeError
             if given invalid count of keys.
         """
-        if len(keys) != 1:
-            raise TypeError(f"given {len(keys)} keys, expect one")
-        (name,) = keys
-
-        with RWConfig(path) as cfg:
-            opts = cfg.api.options(name)
-            opts.pop(opts.index(name))
-            return cls(**cfg.get(name, name)).configure(
-                **{f: cls._sub_p_type(**cfg.get(name, f)) for f in opts}
-            )
+        # if len(keys) != 1:
+        #     raise TypeError(f"given {len(keys)} keys, expect one")
+        # (name,) = keys
+        #
+        # with RWConfig(path) as cfg:
+        #     opts = cfg.api.options(name)
+        #     opts.pop(opts.index(name))
+        #     return cls(**cfg.get(name, name)).configure(
+        #         **{f: cls._sub_p_type(**cfg.get(name, f)) for f in opts}
+        #     )
 
     def __init_kwargs__(self) -> dict[str, Any]:
         init_kw = super().__init_kwargs__()
