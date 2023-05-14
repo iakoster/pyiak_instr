@@ -1,6 +1,5 @@
 import unittest
 from itertools import chain
-from typing import Collection
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal
@@ -8,6 +7,8 @@ from numpy.testing import assert_array_almost_equal
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import CodeNotAllowed
 from src.pyiak_instr.utilities import BytesEncoder, StringEncoder
+
+from ...utils import validate_object
 
 
 def _get_value_instance(
@@ -44,6 +45,12 @@ class TestBytesEncoder(unittest.TestCase):
             b"\xff\x12\x34\x00\x23\x07",
             Code.LITTLE_ENDIAN,
         ),
+        u24_single=(
+            Code.U24,
+            0x123456,
+            b"\x12\x34\x56",
+            Code.BIG_ENDIAN,
+        ),
         i8=(Code.I8, [-127, -37], b"\x81\xdb", Code.BIG_ENDIAN),
         i32=(
             Code.I32,
@@ -71,6 +78,13 @@ class TestBytesEncoder(unittest.TestCase):
         ),
     )
 
+    def test_init(self) -> None:
+        validate_object(
+            self,
+            BytesEncoder(),
+            value_size=1,
+        )
+
     def test_decode(self) -> None:
         for name, (fmt, decoded, encoded, order) in self.DATA.items():
             with self.subTest(test=name, fmt=repr(fmt)):
@@ -87,6 +101,11 @@ class TestBytesEncoder(unittest.TestCase):
                     BytesEncoder(fmt=fmt, order=order).encode(decoded),
                 )
 
+        with self.subTest(test="bytes", fmt=repr(Code.F64)):
+            self.assertEqual(
+                b"abc", BytesEncoder(fmt=Code.F64).encode(b"abc")
+            )
+
     def test_verify_fmt_order_exc(self) -> None:
         with self.assertRaises(CodeNotAllowed) as exc:
             BytesEncoder().verify_fmt_order(Code.NONE, Code.NONE)
@@ -102,6 +121,25 @@ class TestBytesEncoder(unittest.TestCase):
             exc.exception.args[0],
         )
 
+    def test_value_size(self) -> None:
+        cases = (
+            (Code.U16, 2),
+            (Code.U40, 5),
+            (Code.I56, 7),
+            (Code.F32, 4),
+        )
+        for code, bytesize in cases:
+            with self.subTest(code=repr(code)):
+                self.assertEqual(bytesize, BytesEncoder(fmt=code).value_size)
+
+    def test_value_size_exc(self) -> None:
+        with self.assertRaises(AssertionError) as exc:
+            obj = BytesEncoder()
+            obj._fmt = Code.FLOAT
+            _ = obj.value_size
+        self.assertEqual(
+            "invalid value format: <Code.FLOAT: 260>", exc.exception.args[0]
+        )
 
 class TestStringEncoder(unittest.TestCase):
 
@@ -166,7 +204,14 @@ class TestStringEncoder(unittest.TestCase):
         )
     )
 
-    def test_decode(self):
+    def test_init(self) -> None:
+        validate_object(
+            self,
+            StringEncoder(),
+            value_size=-1
+        )
+
+    def test_decode(self) -> None:
         for name, (src, ref) in chain(
                 self.DATA.items(), self.DATA_CHAIN.items()
         ):

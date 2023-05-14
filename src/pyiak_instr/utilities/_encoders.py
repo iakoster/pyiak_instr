@@ -34,8 +34,8 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         bytes order.
     """
 
-    DecodeT = BytesDecodeT
-    EncodeT = BytesEncodeT
+    DECODE_TYPE = BytesDecodeT
+    ENCODE_TYPE = BytesEncodeT
 
     _U_LENGTHS = {
         Code.U8: 1,
@@ -86,10 +86,11 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
             self, fmt: Code = Code.U8, order: Code = Code.BIG_ENDIAN
     ) -> None:
         self.verify_fmt_order(fmt, order)
+        self._fmt, self._order = fmt, order
         self._decode_func, self._encode_func = self._get_funcs(fmt, order)
 
     # todo: return np.ndarray[int | float, Any]?
-    def decode(self, value: bytes) -> DecodeT:
+    def decode(self, value: bytes) -> DECODE_TYPE:
         """
         Decode bytes content to array.
 
@@ -116,7 +117,7 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
             bytesize: int,
             byteorder: Literal["little", "big"],
             signed: bool,
-    ) -> DecodeT:
+    ) -> DECODE_TYPE:
         encoded = np.empty(len(value) // bytesize, np.int_)
         for i in range(encoded.shape[0]):
             val = value[i * bytesize : (i + 1) * bytesize]
@@ -124,11 +125,10 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         return encoded
 
     @staticmethod
-    def _decode_float(value: bytes, dtype: str) -> DecodeT:
+    def _decode_float(value: bytes, dtype: str) -> DECODE_TYPE:
         return np.frombuffer(value, dtype=dtype)
 
-    # todo: add bytes supports
-    def encode(self, value: EncodeT) -> bytes:
+    def encode(self, value: ENCODE_TYPE) -> bytes:
         """
         Encode values to bytes.
 
@@ -150,7 +150,7 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
 
     @staticmethod
     def _encode_int(
-            value: EncodeT,
+            value: ENCODE_TYPE,
             bytesize: int,
             byteorder: Literal["little", "big"],
             signed: bool,
@@ -164,12 +164,12 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         return encoded
 
     @staticmethod
-    def _encode_float(value: EncodeT, dtype: str) -> bytes:
+    def _encode_float(value: ENCODE_TYPE, dtype: str) -> bytes:
         return np.array(value, dtype=dtype).tobytes()
 
     def _get_funcs(
             self, fmt: Code, order: Code
-    ) -> tuple[Callable[[bytes], DecodeT], Callable[[EncodeT], bytes]]:
+    ) -> tuple[Callable[[bytes], DECODE_TYPE], Callable[[ENCODE_TYPE], bytes]]:
         if fmt in self._F_LENGTHS:
             dtype = (
                 ">" if Code.BIG_ENDIAN else Code.LITTLE_ENDIAN
@@ -236,6 +236,27 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         """
         if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
             raise CodeNotAllowed(order)
+
+    @property
+    def value_size(self) -> int:
+        """
+        Returns
+        -------
+        int
+            single value size.
+
+        Raises
+        ------
+        AssertionError
+            if in some reason fmt not in allowed codes.
+        """
+        if self._fmt in self._U_LENGTHS:
+            return self._U_LENGTHS[self._fmt]
+        if self._fmt in self._I_LENGTHS:
+            return self._I_LENGTHS[self._fmt]
+        if self._fmt in self._F_LENGTHS:
+            return self._F_LENGTHS[self._fmt]
+        raise AssertionError(f"invalid value format: {self._fmt!r}")
 
 
 # todo: parameters (e.g. \npa[shape=\tpl(2,1),dtype=uint8](1,2))

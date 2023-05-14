@@ -1,6 +1,6 @@
 """Private module of ``pyiak_instr.types`` with encoder type."""
 from abc import abstractmethod
-from typing import Protocol, TypeVar
+from typing import Protocol, TypeVar, runtime_checkable
 
 
 __all__ = ["Encoder"]
@@ -11,6 +11,7 @@ EncodeT = TypeVar("EncodeT")
 TargetT = TypeVar("TargetT")
 
 
+@runtime_checkable
 class Encoder(Protocol[DecodeT, EncodeT, TargetT]):
     """
     Represents abstract base class of encoder.
@@ -47,3 +48,13 @@ class Encoder(Protocol[DecodeT, EncodeT, TargetT]):
         TargetT
             encoded value.
         """
+
+    @property
+    def value_size(self) -> int:
+        """
+        Returns
+        -------
+        int
+            single value size in encoded view.
+        """
+        return -1

@@ -6,6 +6,7 @@ from dataclasses import InitVar, dataclass, field as field_
 from abc import ABC, abstractmethod
 from typing import (
     Any,
+    Callable,
     Generator,
     Generic,
     Iterable,
@@ -66,7 +67,9 @@ class BytesFieldStructABC(ABC):
     default: bytes = b""  # todo: to ContentType
     """default value of the field."""
 
-    encoder: InitVar[type[Encoder] | Encoder | None] = None
+    encoder: InitVar[
+        Callable[[Code, Code], Encoder], type[Encoder] | Encoder | None
+    ] = None
 
     _encoder: Encoder = field_(default=None, init=False)
 
@@ -80,7 +83,7 @@ class BytesFieldStructABC(ABC):
 
         if encoder is None:
             raise ValueError("struct encoder not specified")
-        if inspect.isclass(encoder):
+        if not isinstance(encoder, Encoder):
             encoder = encoder(self.fmt, self.order)
         self._encoder = encoder
         self._modify_values()
@@ -207,7 +210,6 @@ class BytesFieldStructABC(ABC):
         return slice(self.start, self.stop)
 
     @property
-    @abstractmethod
     def word_bytesize(self) -> int:
         """
         Returns
@@ -215,6 +217,7 @@ class BytesFieldStructABC(ABC):
         int
             count of bytes in one word.
         """
+        return self._encoder.value_size
 
     @property
     def words_expected(self) -> int:
