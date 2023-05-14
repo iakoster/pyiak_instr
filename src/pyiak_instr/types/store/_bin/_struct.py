@@ -67,7 +67,7 @@ class BytesFieldStructABC(ABC):
     """default value of the field."""
 
     encoder: InitVar[
-        Callable[[Code, Code], Encoder], type[Encoder] | Encoder | None
+        Callable[[Code, Code], Encoder], type[Encoder] | None
     ] = None
 
     _encoder: Encoder = field_(default=None, init=False)
@@ -82,9 +82,7 @@ class BytesFieldStructABC(ABC):
 
         if encoder is None:
             raise ValueError("struct encoder not specified")
-        if not isinstance(encoder, Encoder):
-            encoder = encoder(self.fmt, self.order)
-        self._encoder = encoder
+        object.__setattr__(self, "_encoder", encoder(self.fmt, self.order))
         self._modify_values()
 
         if self.bytes_expected % self.word_bytesize:
@@ -110,7 +108,6 @@ class BytesFieldStructABC(ABC):
         """
         return self._encoder.decode(content)
 
-    @abstractmethod
     def encode(self, content: BytesEncodeT) -> bytes:
         """
         Encode content to bytes with parameters from struct.
@@ -283,7 +280,7 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
             case (str() as name, bytes() as content):
                 return self[name].decode(content)
 
-            case (bytes() as content):
+            case (bytes() as content,):
                 return {f.name: f.decode(content[f.slice_]) for f in self}
 
             case _:
@@ -304,15 +301,19 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
     ) -> dict[str, bytes]:
         if len(args) != 0 and len(fields) != 0:
             raise TypeError("takes a bytes or fields (both given)")
+        if len(args) == 0 and len(fields) == 0:
+            raise TypeError("missing arguments")
 
         if len(args) != 0:
-            (content,) = args
-            return {f.name: content[f.slice_] for f in self}
+            content, = args
+            if len(content) == 0:
+                raise ValueError("content is empty")
+            return {f.name: f.encode(content[f.slice_]) for f in self}
 
         if len(fields) != 0:
             return {f: self[f].encode(c) for f, c in fields.items()}
 
-        raise TypeError("content is empty")
+        raise AssertionError()
 
     def items(self) -> Iterator[tuple[str, FieldStructT]]:
         """

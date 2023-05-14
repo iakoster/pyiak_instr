@@ -11,7 +11,7 @@ from numpy.testing import assert_array_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
-from src.pyiak_instr.types import PatternABC
+from src.pyiak_instr.types import Encoder
 from src.pyiak_instr.types.store._bin._struct import (
     STRUCT_DATACLASS,
     BytesFieldStructABC,
@@ -22,33 +22,39 @@ from tests.test_pyiak_instr.env import TEST_DATA_DIR
 from tests.utils import validate_object, compare_objects
 
 
-@STRUCT_DATACLASS
-class TIFieldStruct(BytesFieldStructABC):
+class TIEncoder(Encoder):
 
-    def __post_init__(self, encoder) -> None:
-        if self.fmt not in {
+    def __init__(self, fmt: Code = Code.U8, order: Code = Code.BIG_ENDIAN):
+        if fmt not in {
             Code.U8, Code.U16, Code.U24, Code.U32, Code.U40
         }:
             raise ValueError("invalid fmt")
-        if self.order is not Code.BIG_ENDIAN:
+        if order is not Code.BIG_ENDIAN:
             raise ValueError("invalid order")
-        super().__post_init__(encoder)
+        self.fmt, self.order = fmt, order
 
-    def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
+    def decode(self, value: bytes) -> npt.NDArray[np.int_ | np.float_]:
         return np.frombuffer(
-            content, np.uint8 if self.fmt is Code.U8 else np.uint16
+            value, np.uint8 if self.fmt is Code.U8 else np.uint16
         )
 
-    def encode(self, content: int | float | Iterable[int | float]) -> bytes:
-        return np.array(content).astype(
+    def encode(self, value: int | float | Iterable[int | float]) -> bytes:
+        if isinstance(value, bytes):
+            return value
+        return np.array(value).astype(
             np.uint8 if self.fmt is Code.U8 else np.uint16
         ).tobytes()
 
     @property
-    def word_bytesize(self) -> int:
+    def value_size(self) -> int:
         return (
             Code.U8, Code.U16, Code.U24, Code.U32, Code.U40
         ).index(self.fmt) + 1
+
+
+@STRUCT_DATACLASS
+class TIFieldStruct(BytesFieldStructABC):
+    ...
 
 
 @STRUCT_DATACLASS
@@ -74,6 +80,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
             stop=None,
             word_bytesize=1,
             words_expected=0,
+            wo_attrs=["encoder"],
         )
 
     def test_init_start_stop(self) -> None:
@@ -90,10 +97,20 @@ class TestBytesFieldStructABC(unittest.TestCase):
         )
         for case, ((start, stop, expected), kw) in enumerate(cases):
             with self.subTest(case=case):
-                res = TIFieldStruct(**kw)
+                res = TIFieldStruct(**kw, encoder=TIEncoder)
                 self.assertEqual(start, res.start)
                 self.assertEqual(stop, res.stop)
                 self.assertEqual(expected, res.bytes_expected)
+
+    def test_decode(self) -> None:
+        assert_array_equal(
+            [0, 2], self._instance().decode(b"\x00\x02")
+        )
+
+    def test_encode(self) -> None:
+        assert_array_equal(
+            b"\x00\x02", self._instance().encode([0, 2])
+        )
 
     def test_verify(self) -> None:
         obj = self._instance(fmt=Code.U16)
@@ -164,10 +181,17 @@ class TestBytesFieldStructABC(unittest.TestCase):
 
         with self.subTest(test="'bytes_expected' more than negative start"):
             with self.assertRaises(ValueError) as exc:
-                print(self._instance(start=-2, bytes_expected=3))
+                self._instance(start=-2, bytes_expected=3)
             self.assertEqual(
                 "it will be out of bounds",
                 exc.exception.args[0],
+            )
+
+        with self.subTest(test="without encoder"):
+            with self.assertRaises(ValueError) as exc:
+                TIFieldStruct()
+            self.assertEqual(
+                "struct encoder not specified", exc.exception.args[0]
             )
 
         with self.subTest(test="default changes"):
@@ -195,6 +219,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
             stop=stop,
             bytes_expected=bytes_expected,
             fmt=fmt,
+            encoder=TIEncoder,
             default=default,
         )
 
@@ -222,17 +247,88 @@ class TestBytesStorageStructABC(unittest.TestCase):
 
         with self.subTest(test="empty field name"):
             with self.assertRaises(KeyError) as exc:
-                TIStorageStruct(fields={"": TIFieldStruct()})
+                TIStorageStruct(fields={"": TIFieldStruct(encoder=TIEncoder)})
             self.assertEqual(
                 "empty field name not allowed", exc.exception.args[0]
             )
 
-        with self.subTest(test="empty field name"):
+        with self.subTest(test="wrong field name"):
             with self.assertRaises(KeyError) as exc:
-                TIStorageStruct(fields={"f0": TIFieldStruct()})
+                TIStorageStruct(fields={"f0": TIFieldStruct(encoder=TIEncoder)})
             self.assertEqual(
                 "invalid struct name: 'f0' != ''", exc.exception.args[0]
             )
+
+    def test_decode(self) -> None:
+        with self.subTest(test="decode one field"):
+            assert_array_equal(
+                [0, 2, 4, 6],
+                self._instance().decode("f2", b"\x00\x02\x04\x06"),
+            )
+
+        with self.subTest(test="decode all"):
+            ref = {
+                "f0": [0],
+                "f1": [1, 2],
+                "f2": [3, 4, 5],
+                "f3": [6, 7, 8],
+                "f4": [9],
+            }
+            res = self._instance().decode(bytes(range(10)))
+
+            for field in ref:
+                with self.subTest(field=field):
+                    assert_array_equal(ref[field], res[field])
+
+    def test_decode_exc(self) -> None:
+        with self.subTest(test="with kwargs"):
+            with self.assertRaises(TypeError) as exc:
+                self._instance().decode(content=b"")
+            self.assertEqual(
+                "takes no keyword arguments", exc.exception.args[0]
+            )
+
+        with self.subTest(test="invalid argument"):
+            with self.assertRaises(TypeError) as exc:
+                self._instance().decode(b"", b"")
+            self.assertEqual("invalid arguments", exc.exception.args[0])
+
+    def test_encode(self) -> None:
+        with self.subTest(test="bytes"):
+            self.assertEqual(
+                {
+                    "f0": b"\x00",
+                    "f1": b"\x01\x02",
+                    "f2": b"\x03\x04\x05",
+                    "f3": b"\x06\x07\x08",
+                    "f4": b"\x09",
+                },
+                self._instance().encode(bytes(range(10))),
+            )
+
+        with self.subTest(test="fields"):
+            self.assertEqual(
+                {"f0": b"\x00", "f2": b"\x03\x04\x05", "f3": b"\x06\x07\x08"},
+                self._instance().encode(f0=0, f2=[3, 4, 5], f3=[6, 7, 8]),
+            )
+
+    def test_encode_exc(self) -> None:
+        with self.subTest(test="with args and kwargs"):
+            with self.assertRaises(TypeError) as exc:
+                self._instance().encode(b"", f0=[])
+            self.assertEqual(
+                "takes a bytes or fields (both given)", exc.exception.args[0]
+            )
+
+        with self.subTest(test="without args and kwargs"):
+            with self.assertRaises(TypeError) as exc:
+                self._instance().encode()
+            self.assertEqual("missing arguments", exc.exception.args[0])
+
+        with self.subTest(test="empty content"):
+            with self.assertRaises(ValueError) as exc:
+                self._instance().encode(b"")
+            self.assertEqual("content is empty", exc.exception.args[0])
 
     def test_items(self) -> None:
         obj = self._instance()
@@ -265,10 +361,24 @@ class TestBytesStorageStructABC(unittest.TestCase):
     ) -> TIStorageStruct:
         if len(fields) == 0:
             fields = dict(
-                f0=TIFieldStruct(name="f0", start=0, default=b"\xfa", stop=1),
-                f1=TIFieldStruct(name="f1", start=1, bytes_expected=2),
-                f2=TIFieldStruct(name="f2", start=3, stop=-4),
-                f3=TIFieldStruct(name="f3", start=-4, stop=-1),
-                f4=TIFieldStruct(name="f4", start=-1, stop=None),
+                f0=TIFieldStruct(
+                    name="f0",
+                    start=0,
+                    default=b"\xfa",
+                    stop=1,
+                    encoder=TIEncoder,
+                ),
+                f1=TIFieldStruct(
+                    name="f1", start=1, bytes_expected=2, encoder=TIEncoder
+                ),
+                f2=TIFieldStruct(
+                    name="f2", start=3, stop=-4, encoder=TIEncoder
+                ),
+                f3=TIFieldStruct(
+                    name="f3", start=-4, stop=-1, encoder=TIEncoder
+                ),
+                f4=TIFieldStruct(
+                    name="f4", start=-1, stop=None, encoder=TIEncoder
+                ),
             )
         return TIStorageStruct(fields=fields)
