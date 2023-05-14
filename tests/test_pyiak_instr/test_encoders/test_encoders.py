@@ -6,9 +6,9 @@ from numpy.testing import assert_array_almost_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import CodeNotAllowed
-from src.pyiak_instr.utilities import BytesEncoder, StringEncoder
+from src.pyiak_instr.encoders import BytesEncoder, StringEncoder
 
-from ...utils import validate_object
+from tests.utils import validate_object
 
 
 def _get_value_instance(

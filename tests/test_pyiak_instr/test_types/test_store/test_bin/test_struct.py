@@ -25,14 +25,14 @@ from tests.utils import validate_object, compare_objects
 @STRUCT_DATACLASS
 class TIFieldStruct(BytesFieldStructABC):
 
-    def __post_init__(self) -> None:
+    def __post_init__(self, encoder) -> None:
         if self.fmt not in {
             Code.U8, Code.U16, Code.U24, Code.U32, Code.U40
         }:
             raise ValueError("invalid fmt")
         if self.order is not Code.BIG_ENDIAN:
             raise ValueError("invalid order")
-        super().__post_init__()
+        super().__post_init__(encoder)
 
     def decode(self, content: bytes) -> npt.NDArray[np.int_ | np.float_]:
         return np.frombuffer(

@@ -11,7 +11,7 @@ from ._pattern import (
     PatternABC,
     WritablePatternABC,
 )
-from ._utilities import Encoder
+from ._encoders import Encoder
 
 __all__ = [
     "EditablePatternABC",

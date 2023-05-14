@@ -1,7 +1,6 @@
 """Private module of ``pyiak_instr.types.store`` with types for store
 module."""
 from __future__ import annotations
-import inspect
 from dataclasses import InitVar, dataclass, field as field_
 from abc import ABC, abstractmethod
 from typing import (
@@ -19,7 +18,7 @@ import numpy as np
 import numpy.typing as npt
 
 from ....core import Code
-from ..._utilities import Encoder
+from ..._encoders import Encoder
 
 
 __all__ = ["STRUCT_DATACLASS", "BytesFieldStructABC", "BytesStorageStructABC"]

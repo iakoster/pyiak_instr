@@ -9,7 +9,7 @@ from typing import (
 import numpy as np
 import numpy.typing as npt
 
-from ..utilities import BytesEncoder
+from ..encoders import BytesEncoder
 from ..types.store import (
     STRUCT_DATACLASS,
     BytesFieldABC,
