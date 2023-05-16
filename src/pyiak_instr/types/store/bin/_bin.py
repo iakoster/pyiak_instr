@@ -29,7 +29,12 @@ from ..._pattern import (
     PatternABC,
     WritablePatternABC,
 )
-from ._struct import BytesFieldStructABC, BytesStorageStructABC
+from ._struct import (
+    BytesDecodeT,
+    BytesEncodeT,
+    BytesFieldStructABC,
+    BytesStorageStructABC,
+)
 
 
 __all__ = [
@@ -45,14 +50,6 @@ StorageStructT = TypeVar(
     "StorageStructT", bound=BytesStorageStructABC[BytesFieldStructABC]
 )
 
-StructT = TypeVar("StructT", bound="BytesFieldStructProtocol")
-ParserT = TypeVar("ParserT", bound="BytesFieldABC[Any, Any]")
-StorageT = TypeVar("StorageT", bound="BytesStorageABC[Any, Any, Any]")
-PatternT = TypeVar("PatternT", bound="BytesFieldPatternABC[Any]")
-ParentPatternT = TypeVar(
-    "ParentPatternT", bound="BytesStoragePatternABC[Any, Any]"
-)
-
 
 class BytesStorageABC(
     WithBaseStringMethods, Generic[FieldStructT, StorageStructT]
@@ -62,36 +59,23 @@ class BytesStorageABC(
 
     Parameters
     ----------
-    fields : dict[str, StructT]
-        dictionary of fields.
-    pattern : ParentPatternT | None, default=None
-        storage pattern.
-    **storage_kw : Any
-        keyword arguments for storage struct.
+    storage : StorageStructT
+        storage struct instance.
     """
 
-    _storage_struct_type: type[StorageStructT]
-
-    def __init__(
-            self, fields: dict[str, FieldStructT], **storage_kw: Any
-    ) -> None:
-        if len(fields) == 0:
-            raise ValueError(f"{self.__class__.__name__} without fields")
-
-        self._s = self._storage_struct_type(fields=fields, **storage_kw)
+    def __init__(self, storage: StorageStructT) -> None:
+        self._s = storage
         self._c = bytearray()
 
     @overload
-    def decode(self, field: str) -> npt.NDArray[np.int_, np.float_]:
+    def decode(self, field: str) -> BytesDecodeT:
         ...
 
     @overload
-    def decode(self) -> dict[str, npt.NDArray[np.int_, np.float_]]:
+    def decode(self) -> dict[str, BytesDecodeT]:
         ...
 
-    def decode(
-            self, *args: str
-    ) -> dict[str, npt.NDArray[np.int_, np.float_]]:
+    def decode(self, *args: str) -> BytesDecodeT | dict[str, BytesDecodeT]:
         """
         Decode content.
 
@@ -100,40 +84,73 @@ class BytesStorageABC(
         *args : str
             arguments for function
         """
-        match args:
-            case (str() as name,):
-                return self._s.decode(name, self.content(name))
-
-            case tuple():
-                return self._s.decode(self._c)
-
-            case _:
-                raise TypeError("invalid arguments")
+        args_len = len(args)
+        if args_len == 0:
+            return self._s.decode(self._c)
+        if args_len == 1 and isinstance(args[0], str):
+            return self._s.decode(args[0], self.content(args[0]))
+        raise TypeError("invalid arguments")
 
     @overload
-    def content(self, field: str) -> bytes:
+    def encode(self, content: bytes) -> Self:
         ...
 
     @overload
-    def content(self) -> bytes:
+    def encode(self, **fields: BytesEncodeT) -> Self:
         ...
 
-    def content(self, *args: str) -> bytes:
+    def encode(self, *args: bytes, **kwargs: BytesEncodeT) -> Self:
+        is_empty = self.is_empty()
+        encoded = self._s.encode(*args, all_fields=is_empty, **kwargs)
+
+        if is_empty:
+            for content in encoded.values():
+                self._c += content
+
+        else:
+            for name, content in encoded.items():
+                self._c[self._s[name].slice_] = content
+
+        return self
+
+    # kinda properties
+
+    def bytes_count(self, field: str | None = None):
+        return len(self.content(field))
+
+    def content(self, field: str | None = None) -> bytes:
         """
         Returns
         -------
         bytes
             content of the storage.
         """
-        match args:
-            case (str() as name,):
-                return bytes(self._c[self._s[name].slice_])
+        content = self._c if field is None else self._c[self._s[field].slice_]
+        return bytes(content)
 
-            case tuple():
-                return bytes(self._c)
+    def is_empty(self, field: str | None = None) -> bool:
+        return self.bytes_count(field) == 0
 
-            case _:
-                raise TypeError("invalid arguments")
+    @overload
+    def words_count(self) -> dict[str, int]:
+        ...
+
+    @overload
+    def words_count(self, field: str) -> int:
+        ...
+
+    def words_count(self, *args: str) -> int | dict[str, int]:
+        if len(args) == 0:
+            return {
+                n: self.bytes_count(n) // f.words_bytesize
+                for n, f in self._s.items()
+            }
+
+        if len(args) == 1:
+            name, = args
+            return self.bytes_count(name) // self._s[name].words_bytesize
+
+        raise TypeError("invalid arguments")
 
     @property
     def struct(self) -> StorageStructT:
@@ -145,17 +162,54 @@ class BytesStorageABC(
         """
         return self._s
 
+    def __str_field_content__(self, name: str) -> str:
+        field = self._s[name]
+        content = self.content(name)
+        length = len(content)
+        if length == 0:
+            return "EMPTY"
+
+        step = field.word_bytesize
+        if length > 20 and self.words_count(name) > 2:
+            if step == 1:
+                border = 4
+            elif step == 2:
+                border = 6
+            elif step in {3, 4}:
+                border = 2 * step
+            else:
+                border = step
+        else:
+            border = length
+
+        string, start = "", 0
+        while start < length:
+            if start == border:
+                start = length - border
+                string += "... "
+
+            stop = start + step
+            word = content[start:stop].hex().lstrip("0")
+            string += (word.upper() if len(word) else "0") + (
+                " " if stop != length else ""
+            )
+            start = stop
+
+        return string
+
     def __str_under_brackets__(self) -> str:
-        return "EMPTY"
-        # if len(self._c) == 0 and len(self._f) > 1:
-        #     return "EMPTY"
-        # return ", ".join(
-        #     map(lambda x: f"{x.name}={x.__str_under_brackets__()}", self)
-        # )
+        if self.is_empty():
+            return "EMPTY"
+        return ", ".join(
+           f"{n}={self.__str_field_content__(n)}" for n, _ in self._s.items()
+        )
+
+    def __bytes__(self) -> bytes:
+        return self.content()
 
     def __len__(self) -> int:
         """Bytes count in message"""
-        return len(self._c)
+        return self.bytes_count()
 
 
 # # todo: verify current content
@@ -179,135 +233,6 @@ class BytesStorageABC(
 #         self._name = name
 #         self._struct = struct
 #
-#     def encode(self, content: int | float | Iterable[int | float]) -> None:
-#         """
-#         Encode content to bytes and set .
-#
-#         Parameters
-#         ----------
-#         content : int | float | Iterable[int | float]
-#             content to encoding.
-#         """
-#         self._storage.change(self._name, content)
-#
-#     def verify(self, content: bytes) -> bool:
-#         """
-#         Check the content for compliance with the field parameters.
-#
-#         Parameters
-#         ----------
-#         content: bytes
-#             content for validating.
-#
-#         Returns
-#         -------
-#         bool
-#             True - content is correct, False - not.
-#         """
-#         return self._struct.verify(content)
-#
-#     @property
-#     def bytes_count(self) -> int:
-#         """
-#         Returns
-#         -------
-#         int
-#             bytes count of the content.
-#         """
-#         return len(self.content)
-#
-#     @property
-#     def content(self) -> bytes:
-#         """
-#         Returns
-#         -------
-#         bytes
-#             field content.
-#         """
-#         return self._storage.content[self._struct.slice_]
-#
-#     @property
-#     def is_empty(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True - if field content is empty.
-#         """
-#         return len(self.content) == 0
-#
-#     @property
-#     def name(self) -> str:
-#         """
-#         Returns
-#         -------
-#         str
-#             field name.
-#         """
-#         return self._name
-#
-#     @property
-#     def struct(self) -> StructT:
-#         """
-#         Returns
-#         -------
-#         StructT
-#             struct instance.
-#         """
-#         return self._struct
-#
-#     @property
-#     def words_count(self) -> int:
-#         """
-#         Returns
-#         -------
-#         int
-#             count of words in the field.
-#         """
-#         return self.bytes_count // self._struct.word_bytesize
-#
-#     def __str_under_brackets__(self) -> str:
-#         content = self.content
-#         length = len(content)
-#         if length == 0:
-#             return "EMPTY"
-#
-#         step = self.struct.word_bytesize
-#         if length > 20 and self.words_count > 2:
-#             if step == 1:
-#                 border = 4
-#             elif step == 2:
-#                 border = 6
-#             elif step in {3, 4}:
-#                 border = 2 * step
-#             else:
-#                 border = step
-#         else:
-#             border = length
-#
-#         string, start = "", 0
-#         while start < length:
-#             if start == border:
-#                 start = length - border
-#                 string += "... "
-#
-#             stop = start + step
-#             word = content[start:stop].hex().lstrip("0")
-#             string += (word.upper() if len(word) else "0") + (
-#                 " " if stop != length else ""
-#             )
-#             start = stop
-#
-#         return string
-#
-#     def __bytes__(self) -> bytes:
-#         """
-#         Returns
-#         -------
-#         bytes
-#             field content.
-#         """
-#         return self.content
 #
 #     @overload
 #     def __getitem__(self, index: int) -> int | float:
@@ -333,24 +258,6 @@ class BytesStorageABC(
 #         """
 #         return self.decode()[index]
 #
-#     def __iter__(self) -> Iterator[int | float]:
-#         """
-#         Yields
-#         ------
-#         int | float
-#             word value.
-#         """
-#         return (el for el in self.decode())
-#
-#     def __len__(self) -> int:
-#         """
-#         Returns
-#         -------
-#         int
-#             bytes count of the content.
-#         """
-#         return self.bytes_count
-#
 #
 # # todo: create storage struct (dataclass)
 # # todo: __format__
@@ -371,162 +278,6 @@ class BytesStorageABC(
 #     """
 #
 #     _struct_field: dict[type[StructT], type[ParserT]]
-#
-#     def __init__(
-#         self,
-#         name: str,
-#         fields: dict[str, StructT],
-#         pattern: ParentPatternT | None = None,
-#     ) -> None:
-#         if len(fields) == 0:
-#             raise ValueError(f"{self.__class__.__name__} without fields")
-#
-#         self._name = name
-#         self._f = fields
-#         self._p = pattern
-#         self._c = bytearray()
-#
-#         for f_name, struct in self._f.items():
-#             if struct.is_dynamic:
-#                 self._dyn_field = f_name
-#                 break
-#         else:
-#             self._dyn_field = ""
-#
-#     def change(
-#         self, name: str, content: int | float | Iterable[int | float]
-#     ) -> None:
-#         """
-#         Change content of one field by name.
-#
-#         Parameters
-#         ----------
-#         name : str
-#             field name.
-#         content : bytes
-#             new field content.
-#
-#         Raises
-#         ------
-#         TypeError
-#             if the message is empty.
-#         """
-#         if len(self) == 0:
-#             raise TypeError("message is empty")
-#         parser = self[name]
-#         self._c[parser.struct.slice_] = self._encode_content(parser, content)
-#
-#     def decode(self) -> dict[str, npt.NDArray[np.int_ | np.float_]]:
-#         """
-#         Iterate by fields end decode each.
-#
-#         Returns
-#         -------
-#         dict[str, npt.NDArray[Any]]
-#             dictionary with decoded content where key is a field name.
-#         """
-#         return {n: f.decode() for n, f in self.items()}
-#
-#     @overload
-#     def encode(self, content: bytes) -> Self:
-#         ...
-#
-#     @overload
-#     def encode(self, **fields: int | float | Iterable[int | float]) -> Self:
-#         ...
-#
-#     def encode(  # type: ignore[misc]
-#         self,
-#         content: bytes = b"",
-#         **fields: int | float | Iterable[int | float],
-#     ) -> Self:
-#         """
-#         Encode new content to storage.
-#
-#         Parameters
-#         ----------
-#         content : bytes, default=b''
-#             new full content for storage.
-#         **fields : int | float | Iterable[int | float]
-#             content for each field.
-#
-#         Returns
-#         -------
-#         Self
-#             self instance.
-#
-#         Raises
-#         ------
-#         TypeError
-#             if trying to set full content and content for each field;
-#             if full message or fields list is empty.
-#         """
-#         if len(content) != 0 and len(fields) != 0:
-#             raise TypeError("takes a message or fields (both given)")
-#
-#         if len(content) != 0:
-#             self._extract(content)
-#         elif len(fields) != 0:
-#             self._set(fields)
-#         else:
-#             raise TypeError("message is empty")
-#
-#         return self
-#
-#     def _set(
-#         self, fields: dict[str, int | float | Iterable[int | float]]
-#     ) -> None:
-#         """
-#         Set fields content.
-#
-#         Parameters
-#         ----------
-#         fields : dict[str, int | float | Iterable[int | float]]
-#             dictionary of fields content where key is a field name.
-#         """
-#         if len(self) == 0:
-#             self._set_all(fields)
-#         else:
-#             for name, content in fields.items():
-#                 self.change(name, content)
-#
-#
-#     @staticmethod
-#     def _encode_content(
-#         parser: ParserT,
-#         raw: Iterable[int | float] | int | float,
-#     ) -> bytes:
-#         """
-#         Get new content to the field.
-#
-#         Parameters
-#         ----------
-#         parser: str
-#             field parser.
-#         raw: ArrayLike
-#             new content.
-#
-#         Returns
-#         -------
-#         bytes
-#             new field content
-#
-#         Raises
-#         ------
-#         ValueError
-#             if new content is not correct for field.
-#         """
-#         if isinstance(raw, bytes):
-#             content = raw
-#         else:
-#             content = parser.struct.encode(raw)  # todo: bytes support
-#
-#         if not parser.verify(content):
-#             raise ValueError(
-#                 f"'{content.hex(' ')}' is not correct for '{parser.name}'"
-#             )
-#
-#         return content
 #
 #     @property
 #     def has_pattern(self) -> bool:

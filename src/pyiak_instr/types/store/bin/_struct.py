@@ -23,7 +23,13 @@ from ....exceptions import ContentError
 from ..._encoders import Encoder
 
 
-__all__ = ["STRUCT_DATACLASS", "BytesFieldStructABC", "BytesStorageStructABC"]
+__all__ = [
+    "BytesDecodeT",
+    "BytesEncodeT",
+    "STRUCT_DATACLASS",
+    "BytesFieldStructABC",
+    "BytesStorageStructABC",
+]
 
 BytesDecodeT = npt.NDArray[np.int_ | np.float_]
 BytesEncodeT = (
@@ -323,7 +329,13 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
     ) -> dict[str, bytes]:
         ...
 
-    def encode(  # type: ignore[misc]
+    @overload
+    def encode(
+        self, *args: bytes, all_fields: bool = False, **kwargs: BytesEncodeT,
+    ) -> dict[str, bytes]:
+        ...
+
+    def encode(
         self, *args: bytes, all_fields: bool = False, **kwargs: BytesEncodeT,
     ) -> dict[str, bytes]:
         if len(args) != 0 and len(kwargs) != 0:
