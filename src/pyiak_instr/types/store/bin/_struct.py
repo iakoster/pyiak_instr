@@ -25,9 +25,6 @@ from ..._encoders import Encoder
 
 __all__ = ["STRUCT_DATACLASS", "BytesFieldStructABC", "BytesStorageStructABC"]
 
-
-FieldStructT = TypeVar("FieldStructT", bound="BytesFieldStructABC")
-
 BytesDecodeT = npt.NDArray[np.int_ | np.float_]
 BytesEncodeT = (
     int | float | bytes | list[int | float] | npt.NDArray[np.int_ | np.float_]
@@ -98,7 +95,7 @@ class BytesFieldStructABC(ABC):
         if self.has_default and not self.verify(self.default):
             raise ValueError("default value is incorrect")
 
-    def decode(self, content: bytes) -> BytesDecodeT:
+    def decode(self, content: bytes, verify: bool = False) -> BytesDecodeT:
         """
         Decode content from bytes with parameters from struct.
 
@@ -106,15 +103,19 @@ class BytesFieldStructABC(ABC):
         ----------
         content : bytes
             content for decoding.
+        verify : bool, default=False
+            verify `content` before decoding.
 
         Returns
         -------
         BytesDecodeT
             decoded content.
         """
+        if verify:
+            self.verify(content, raise_if_false=True)
         return self._encoder.decode(content)
 
-    def encode(self, content: BytesEncodeT) -> bytes:
+    def encode(self, content: BytesEncodeT, verify: bool = False) -> bytes:
         """
         Encode content to bytes with parameters from struct.
 
@@ -122,13 +123,18 @@ class BytesFieldStructABC(ABC):
         ----------
         content : BytesEncodeT
             content for encoding.
+        verify : bool, default=False
+            verify content after encoding.
 
         Returns
         -------
         bytes
             encoded content.
         """
-        return self._encoder.encode(content)
+        encoded = self._encoder.encode(content)
+        if verify:
+            self.verify(encoded, raise_if_false=True)
+        return encoded
 
     # todo: return Code
     def verify(self, content: bytes, raise_if_false: bool = False) -> bool:
@@ -240,6 +246,9 @@ class BytesFieldStructABC(ABC):
         return self.bytes_expected // self.word_bytesize
 
 
+FieldStructT = TypeVar("FieldStructT", bound=BytesFieldStructABC)
+
+
 @STRUCT_DATACLASS
 class BytesStorageStructABC(ABC, Generic[FieldStructT]):
     """
@@ -266,7 +275,7 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
             if name != s_name:
                 raise KeyError(f"invalid struct name: {name!r} != {s_name!r}")
 
-        object.__setattr__(self, "_f", fields)
+        self._setattr("_f", fields)
         self._modify_values()
 
     @overload
@@ -292,10 +301,14 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
 
         match args:
             case (str() as name, bytes() as content):
-                return self[name].decode(content)
+                return self[name].decode(content, verify=True)
 
             case (bytes() as content,):
-                return {f.name: f.decode(content[f.slice_]) for f in self}
+                return {
+                    f.name: f.decode(
+                        content[f.slice_], verify=True
+                    ) for f in self
+                }
 
             case _:
                 raise TypeError("invalid arguments")
@@ -305,45 +318,95 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
         ...
 
     @overload
-    def encode(self, **fields: BytesEncodeT) -> dict[str, bytes]:
+    def encode(
+            self, all_fields: bool = False, **fields: BytesEncodeT
+    ) -> dict[str, bytes]:
         ...
 
     def encode(  # type: ignore[misc]
-        self, *args: bytes, **fields: BytesEncodeT,
+        self, *args: bytes, all_fields: bool = False, **kwargs: BytesEncodeT,
     ) -> dict[str, bytes]:
-        if len(args) != 0 and len(fields) != 0:
+        if len(args) != 0 and len(kwargs) != 0:
             raise TypeError("takes a bytes or fields (both given)")
-        if len(args) == 0 and len(fields) == 0:
+        if len(args) == 0 and len(kwargs) == 0:
             raise TypeError("missing arguments")
 
-        if len(args) != 0:
-            content, = args
-            if len(content) == 0:
-                raise ValueError("content is empty")
-            return {f.name: f.encode(content[f.slice_]) for f in self}
+        match args, kwargs:
+            case (bytes() as content,), {} if len(kwargs) == 0:
+                self._verify_bytes_content(content)
+                return {
+                    f.name: f.encode(
+                        content[f.slice_], verify=True
+                    ) for f in self
+                }
 
-        if len(fields) != 0:
-            return {f: self[f].encode(c) for f, c in fields.items()}
+            case tuple(), dict() as fields if len(args) == 0:
+                if all_fields:
+                    return self._get_all_fields(fields)
+                return {
+                    f: self[f].encode(
+                        c, verify=True
+                    ) for f, c in fields.items()
+                }
 
-        raise AssertionError()
+            case _:
+                raise TypeError("invalid arguments")
 
-    def items(self) -> Iterator[tuple[str, FieldStructT]]:
+    def items(self) -> Generator[tuple[str, FieldStructT], None, None]:
         """
-        Returns
-        -------
-        Iterator[tuple[str, ParserT]]
+        Yields
+        ------
+        Generator[tuple[str, FieldStructT], None, None]
             Iterator of names and parsers.
         """
-        return ((f.name, f) for f in self)
+        for field in self:
+            yield field.name, field
+
+    def _get_all_fields(
+            self, fields: dict[str, BytesEncodeT]
+    ) -> dict[str, bytes]:
+        """
+
+        Parameters
+        ----------
+        fields : dict[str, BytesEncodeT]
+            dictionary of fields content where key is a field name.
+
+        Raises
+        ------
+        """
+        self._verify_fields_list(set(fields))
+        content: dict[str, bytes] = {}
+
+        for name, field in self.items():
+            if name in fields:
+                content[name] = field.encode(fields[name], verify=True)
+
+            elif field.has_default:
+                content[name] = field.default
+
+            elif field.is_dynamic:
+                content[name] = b""
+
+            else:
+                raise AssertionError(
+                    f"it is impossible to encode the value for {name!r}"
+                )
+
+        return content
 
     def _modify_values(self) -> None:
         """
         Modify values of the struct.
         """
         for name, struct in self.items():
-            if struct.is_dynamic:  # todo: raise if second dynamic
-                object.__setattr__(self, "dynamic_field_name", name)
-                break
+            if struct.is_dynamic and self.is_dynamic:
+                raise TypeError("two dynamic field not allowed")
+            if struct.is_dynamic:
+                self._setattr("dynamic_field_name", name)
+
+    def _setattr(self, key: str, value: Any) -> None:
+        object.__setattr__(self, key, value)
 
     def _verify_bytes_content(self, content: bytes) -> None:
         """
@@ -353,11 +416,17 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
             if content length smaller than minimal storage length
             (`bytes_expected`).
         """
-        minimum_size = self.minimum_size
-        if len(content) < minimum_size:
-            raise ValueError("bytes content too short")
-        if not self.is_dynamic and len(content) > minimum_size:
-            raise ValueError("bytes content too long")
+        minimum_size, content_len = self.minimum_size, len(content)
+        if content_len < minimum_size:
+            raise ValueError(
+                "bytes content too short: expected at least "
+                f"{minimum_size}, got {content_len}"
+            )
+        if not self.is_dynamic and content_len > minimum_size:
+            raise ValueError(
+                "bytes content too long: expected "
+                f"{minimum_size}, got {content_len}"
+            )
 
     def _verify_fields_list(self, fields: set[str]) -> None:
         """
@@ -373,7 +442,7 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
         AttributeError
             if extra or missing field names founded.
         """
-        diff = self.fields_set.symmetric_difference(fields)
+        diff = set(self._f).symmetric_difference(fields)
         for name in diff.copy():
             if name in self:
                 field = self[name]
@@ -385,10 +454,6 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
                 "missing or extra fields were found: "
                 f"{', '.join(map(repr, sorted(diff)))}"
             )
-
-    @property
-    def fields_set(self) -> set[str]:
-        return set(self._f)
 
     @property
     def is_dynamic(self) -> bool:

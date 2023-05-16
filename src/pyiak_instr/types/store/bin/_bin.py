@@ -473,62 +473,6 @@ class BytesStorageABC(
 #
 #         return self
 #
-#     def _check_fields_list(self, fields: set[str]) -> None:
-#         """
-#         Check that fields names is correct.
-#
-#         Parameters
-#         ----------
-#         fields : set[str]
-#             set of field names for setting.
-#
-#         Raises
-#         ------
-#         AttributeError
-#             if extra or missing field names founded.
-#         """
-#         diff = set(self._f).symmetric_difference(fields)
-#         for name in diff.copy():
-#             if name in self:
-#                 parser = self[name]
-#                 if (
-#                     parser.struct.has_default
-#                     or parser.struct.is_dynamic
-#                     or len(parser) != 0
-#                 ):
-#                     diff.remove(name)
-#
-#         if len(diff) != 0:
-#             raise AttributeError(
-#                 "missing or extra fields were found: "
-#                 f"{', '.join(map(repr, sorted(diff)))}"
-#             )
-#
-#     def _extract(self, content: bytes) -> None:
-#         """
-#         Extract fields from existing bytes content.
-#
-#         Parameters
-#         ----------
-#         content: bytes
-#             new content.
-#
-#         Raises
-#         ------
-#         ValueError
-#             if content length smaller than minimal storage length
-#             (`bytes_expected`).
-#         """
-#         minimum_size = self.minimum_size
-#         if len(content) < minimum_size:
-#             raise ValueError("bytes content too short")
-#         if not self.is_dynamic and len(content) > minimum_size:
-#             raise ValueError("bytes content too long")
-#
-#         if len(self) != 0:
-#             self._c = bytearray()
-#         self._set_all({p.name: content[p.struct.slice_] for p in self})
-#
 #     def _set(
 #         self, fields: dict[str, int | float | Iterable[int | float]]
 #     ) -> None:
@@ -546,39 +490,6 @@ class BytesStorageABC(
 #             for name, content in fields.items():
 #                 self.change(name, content)
 #
-#     def _set_all(
-#         self, fields: dict[str, int | float | Iterable[int | float]]
-#     ) -> None:
-#         """
-#         Set content to empty field.
-#
-#         Parameters
-#         ----------
-#         fields : dict[str, int | float | Iterable[int | float]]
-#             dictionary of fields content where key is a field name.
-#
-#         Raises
-#         ------
-#         AssertionError
-#             if in some reason message is not empty.
-#         """
-#         assert len(self) == 0, "message must be empty"
-#
-#         self._check_fields_list(set(fields))
-#         for name, parser in self.items():
-#             if name in fields:
-#                 self._c += self._encode_content(parser, fields[name])
-#
-#             elif parser.struct.has_default:
-#                 self._c += parser.struct.default
-#
-#             elif parser.struct.is_dynamic:
-#                 continue
-#
-#             else:
-#                 raise AssertionError(
-#                     f"it is impossible to set the value of the '{name}' field"
-#                 )
 #
 #     @staticmethod
 #     def _encode_content(
