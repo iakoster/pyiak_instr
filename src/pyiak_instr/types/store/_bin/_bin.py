@@ -136,16 +136,6 @@ class BytesStorageABC(
                 raise TypeError("invalid arguments")
 
     @property
-    def minimum_size(self) -> int:
-        """
-        Returns
-        -------
-        int
-            minimum message size in bytes.
-        """
-        return sum(s.bytes_expected for s in self._s)
-
-    @property
     def struct(self) -> StorageStructT:
         """
         Returns

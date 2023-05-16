@@ -10,6 +10,7 @@ from typing import (
     Generic,
     Iterable,
     Iterator,
+    TypeAlias,
     TypeVar,
     overload,
 )
@@ -30,6 +31,7 @@ BytesDecodeT = npt.NDArray[np.int_ | np.float_]
 BytesEncodeT = (
     int | float | bytes | list[int | float] | npt.NDArray[np.int_ | np.float_]
 )
+EncoderT: TypeAlias = Encoder[BytesDecodeT, BytesEncodeT, bytes]
 
 
 STRUCT_DATACLASS = dataclass(frozen=True, kw_only=True)
@@ -67,10 +69,10 @@ class BytesFieldStructABC(ABC):
     """default value of the field."""
 
     encoder: InitVar[
-        Callable[[Code, Code], Encoder], type[Encoder] | None
+        Callable[[Code, Code], EncoderT], type[EncoderT] | None
     ] = None
 
-    _encoder: Encoder = field_(default=None, init=False)
+    _encoder: EncoderT = field_(default=None, init=False)
 
     def __post_init__(self, encoder: type[Encoder] | Encoder | None) -> None:
         if self.stop == 0:
@@ -82,7 +84,7 @@ class BytesFieldStructABC(ABC):
 
         if encoder is None:
             raise ValueError("struct encoder not specified")
-        object.__setattr__(self, "_encoder", encoder(self.fmt, self.order))
+        self._set_attr("_encoder", encoder(self.fmt, self.order))
         self._modify_values()
 
         if self.bytes_expected % self.word_bytesize:
@@ -154,26 +156,27 @@ class BytesFieldStructABC(ABC):
             modified.
         """
         if self.bytes_expected < 0:
-            object.__setattr__(self, "bytes_expected", 0)
+            self._set_attr("bytes_expected", 0)
 
         if self.bytes_expected > 0:
             stop = self.start + self.bytes_expected
             if stop != 0:
-                object.__setattr__(self, "stop", stop)
+                self._set_attr("stop", stop)
 
         elif self.stop is not None:
             if not self.start >= 0 > self.stop:
-                object.__setattr__(
-                    self, "bytes_expected", self.stop - self.start
-                )
+                self._set_attr("bytes_expected", self.stop - self.start)
 
         elif self.start <= 0 and self.stop is None:
-            object.__setattr__(self, "bytes_expected", -self.start)
+            self._set_attr("bytes_expected", -self.start)
 
         elif not self.is_dynamic:
             raise AssertionError(
                 "impossible to modify start, stop and bytes_expected"
             )
+
+    def _set_attr(self, attr: str, value: Any) -> None:
+        object.__setattr__(self, attr, value)
 
     @property
     def has_default(self) -> bool:
@@ -327,7 +330,7 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
         Modify values of the struct.
         """
         for name, struct in self.items():
-            if struct.is_dynamic:
+            if struct.is_dynamic:  # todo: raise if second dynamic
                 object.__setattr__(self, "dynamic_field_name", name)
                 break
 
