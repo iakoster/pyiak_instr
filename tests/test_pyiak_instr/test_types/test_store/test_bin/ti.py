@@ -12,7 +12,7 @@ from numpy.testing import assert_array_equal
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
 from src.pyiak_instr.types import Encoder
-from src.pyiak_instr.types.store import (
+from src.pyiak_instr.types.store.bin import (
     STRUCT_DATACLASS,
     BytesFieldStructABC,
     BytesStorageABC,
