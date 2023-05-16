@@ -12,11 +12,11 @@ from typing import (  # pylint: disable=unused-import
 
 from ...core import Code
 from ..store import (
-    BytesFieldABC,
-    BytesFieldPatternABC,
-    BytesFieldStructProtocol,
+    # BytesFieldABC,
+    # BytesFieldPatternABC,
+    # BytesFieldStructProtocol,
     BytesStorageABC,
-    ContinuousBytesStoragePatternABC,
+    # ContinuousBytesStoragePatternABC,
 )
 
 
@@ -31,7 +31,7 @@ __all__ = [
 
 
 AddressT = TypeVar("AddressT")
-StructT = TypeVar("StructT", bound=BytesFieldStructProtocol)
+StructT = TypeVar("StructT") # , bound=BytesFieldStructProtocol)
 FieldT = TypeVar("FieldT", bound="MessageFieldABC[Any, Any]")
 FieldAnotherT = TypeVar("FieldAnotherT", bound="MessageFieldABC[Any, Any]")
 MessageGetParserT = TypeVar(
@@ -50,7 +50,7 @@ MessagePatternT = TypeVar(
 
 
 class MessageFieldABC(
-    BytesFieldABC[MessageT, StructT], Generic[MessageT, StructT]
+    Generic[MessageT, StructT], # BytesFieldABC[MessageT, StructT],
 ):
     """
     Represents abstract class for message field parser.
@@ -105,7 +105,7 @@ class MessageHasParserABC(ABC, Generic[FieldT]):
 # todo: clear src and dst?
 # todo: get rx and tx class instance
 class MessageABC(
-    BytesStorageABC[MessagePatternT, FieldT, StructT],
+    # BytesStorageABC[MessagePatternT, FieldT, StructT],
     Generic[
         MessagePatternT,
         FieldT,
@@ -297,7 +297,7 @@ class MessageABC(
         self.src, self.dst = src_dst
 
 
-class MessageFieldPatternABC(BytesFieldPatternABC[StructT], Generic[StructT]):
+class MessageFieldPatternABC(Generic[StructT]):  # BytesFieldPatternABC[StructT]
     """
     Represent abstract class of pattern for message field.
     """
@@ -321,7 +321,7 @@ class MessageFieldPatternABC(BytesFieldPatternABC[StructT], Generic[StructT]):
 
 
 class MessagePatternABC(
-    ContinuousBytesStoragePatternABC[MessageT, FieldPatternT],
+    # ContinuousBytesStoragePatternABC[MessageT, FieldPatternT],
     Generic[MessageT, FieldPatternT],
 ):
     """

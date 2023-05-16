@@ -2,7 +2,7 @@
 module."""
 from __future__ import annotations
 from dataclasses import InitVar, dataclass, field as field_
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import (
     Any,
     Callable,
