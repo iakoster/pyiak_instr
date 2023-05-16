@@ -10,13 +10,8 @@ import numpy.typing as npt
 from numpy.testing import assert_array_equal
 
 from src.pyiak_instr.core import Code
-from src.pyiak_instr.exceptions import NotConfiguredYet
+from src.pyiak_instr.exceptions import ContentError
 from src.pyiak_instr.types import Encoder
-from src.pyiak_instr.types.store.bin import (
-    STRUCT_DATACLASS,
-    BytesFieldStructABC,
-    BytesStorageStructABC,
-)
 
 from tests.test_pyiak_instr.env import TEST_DATA_DIR
 from tests.utils import validate_object, compare_objects
@@ -77,6 +72,14 @@ class TestBytesFieldStructABC(unittest.TestCase):
         obj = self._instance(fmt=Code.U16)
         self.assertTrue(obj.verify(b"\x01\x02"))
         self.assertFalse(obj.verify(b"\x01\x02\x03"))
+
+        self.assertTrue(obj.verify(b"\x01\x02", raise_if_false=True))
+        with self.assertRaises(ContentError) as exc:
+            obj.verify(b"\x01\x02\x03", raise_if_false=True)
+        self.assertEqual(
+            "invalid content in TIFieldStruct: 01 02 03",
+            exc.exception.args[0]
+        )
 
         obj = self._instance(stop=4, fmt=Code.U16)
         self.assertTrue(obj.verify(b"\xff" * 4))
@@ -174,7 +177,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
             bytes_expected: int = 0,
             fmt: Code = Code.U8,
             default: bytes = b"",
-    ) -> BytesFieldStructABC:
+    ) -> TIFieldStruct:
         return TIFieldStruct(
             start=start,
             stop=stop,

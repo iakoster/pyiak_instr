@@ -19,6 +19,7 @@ import numpy as np
 import numpy.typing as npt
 
 from ....core import Code
+from ....exceptions import ContentError
 from ..._encoders import Encoder
 
 
@@ -69,12 +70,15 @@ class BytesFieldStructABC(ABC):
     """default value of the field."""
 
     encoder: InitVar[
-        Callable[[Code, Code], EncoderT], type[EncoderT] | None
+        Callable[[Code, Code], EncoderT] | type[EncoderT] | None
     ] = None
 
     _encoder: EncoderT = field_(default=None, init=False)
 
-    def __post_init__(self, encoder: type[Encoder] | Encoder | None) -> None:
+    def __post_init__(
+            self,
+            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+    ) -> None:
         if self.stop == 0:
             raise ValueError("'stop' can't be equal to zero")
         if self.stop is not None and self.bytes_expected > 0:
@@ -84,7 +88,7 @@ class BytesFieldStructABC(ABC):
 
         if encoder is None:
             raise ValueError("struct encoder not specified")
-        self._set_attr("_encoder", encoder(self.fmt, self.order))
+        self._setattr("_encoder", encoder(self.fmt, self.order))
         self._modify_values()
 
         if self.bytes_expected % self.word_bytesize:
@@ -126,8 +130,8 @@ class BytesFieldStructABC(ABC):
         """
         return self._encoder.encode(content)
 
-    # todo: return Code and if raise=True - raise ContentError
-    def verify(self, content: bytes) -> bool:
+    # todo: return Code
+    def verify(self, content: bytes, raise_if_false: bool = False) -> bool:
         """
         Verify that `content` is correct for the given field structure.
 
@@ -135,6 +139,8 @@ class BytesFieldStructABC(ABC):
         ----------
         content : bytes
             content to verifying.
+        raise_if_false : bool
+            raise `ContentError` if content not correct.
 
         Returns
         -------
@@ -142,8 +148,13 @@ class BytesFieldStructABC(ABC):
             True - content is correct, False - is not.
         """
         if self.is_dynamic:
-            return len(content) % self.word_bytesize == 0
-        return len(content) == self.bytes_expected
+            correct = len(content) % self.word_bytesize == 0
+        else:
+            correct = len(content) == self.bytes_expected
+
+        if raise_if_false and not correct:
+            raise ContentError(self, clarification=content.hex(" "))
+        return correct
 
     def _modify_values(self) -> None:
         """
@@ -156,26 +167,26 @@ class BytesFieldStructABC(ABC):
             modified.
         """
         if self.bytes_expected < 0:
-            self._set_attr("bytes_expected", 0)
+            self._setattr("bytes_expected", 0)
 
         if self.bytes_expected > 0:
             stop = self.start + self.bytes_expected
             if stop != 0:
-                self._set_attr("stop", stop)
+                self._setattr("stop", stop)
 
         elif self.stop is not None:
             if not self.start >= 0 > self.stop:
-                self._set_attr("bytes_expected", self.stop - self.start)
+                self._setattr("bytes_expected", self.stop - self.start)
 
         elif self.start <= 0 and self.stop is None:
-            self._set_attr("bytes_expected", -self.start)
+            self._setattr("bytes_expected", -self.start)
 
         elif not self.is_dynamic:
             raise AssertionError(
                 "impossible to modify start, stop and bytes_expected"
             )
 
-    def _set_attr(self, attr: str, value: Any) -> None:
+    def _setattr(self, attr: str, value: Any) -> None:
         object.__setattr__(self, attr, value)
 
     @property
