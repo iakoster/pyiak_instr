@@ -10,14 +10,14 @@ from pathlib import Path
 from configparser import ConfigParser
 from typing import overload, Any
 
-from ._core import RWFile
-from ..utilities import StringEncoder
+from ..types import RWData
+from ..encoders import StringEncoder
 
 
 __all__ = ["RWConfig"]
 
 
-class RWConfig(RWFile[ConfigParser]):
+class RWConfig(RWData[ConfigParser]):
     """
     Class for reading and writing to the configfile as *.ini.
 
@@ -25,14 +25,15 @@ class RWConfig(RWFile[ConfigParser]):
 
     Parameters
     ----------
-    filepath: Path | str
+    filepath: Path
         path to config file *.ini.
     """
 
     ALLOWED_SUFFIXES = {".ini"}
 
-    def __init__(self, filepath: Path | str):
-        super().__init__(filepath, self._get_parser(filepath))
+    def __init__(self, filepath: Path):
+        super().__init__(filepath)
+        self._encoder = StringEncoder()
 
     def close(self) -> None:
         pass
@@ -51,7 +52,7 @@ class RWConfig(RWFile[ConfigParser]):
         Drop changes by reading config from `filepath`.
         """
         self.close()
-        self._api = self._get_parser(self._fp)
+        self._api = self._get_api(self._fp)
 
     def get(self, section: str, option: str, convert: bool = True) -> Any:
         """
@@ -77,7 +78,7 @@ class RWConfig(RWFile[ConfigParser]):
         """
         value = self._api.get(section, option)
         if convert:
-            return StringEncoder.decode(value)
+            return self._encoder.decode(value)
         return value
 
     @overload
@@ -155,7 +156,7 @@ class RWConfig(RWFile[ConfigParser]):
 
         def __convert(value: Any) -> Any:
             if convert:
-                value = StringEncoder.encode(value)
+                value = self._encoder.encode(value)
             return value
 
         match args:
@@ -176,8 +177,7 @@ class RWConfig(RWFile[ConfigParser]):
 
         self._api.read_dict(set_dict)
 
-    @staticmethod
-    def _get_parser(filepath: Path | str) -> ConfigParser:
+    def _get_api(self, filepath: Path) -> ConfigParser:
         """
         Read config from `filepath`.
 

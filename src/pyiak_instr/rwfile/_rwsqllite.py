@@ -5,13 +5,13 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from ._core import RWFile
+from ..types import RWData
 
 
 __all__ = ["RWSQLite"]
 
 
-class RWSQLite(RWFile[sqlite3.Cursor]):
+class RWSQLite(RWData[sqlite3.Cursor]):
     """
     Class for reading and writing to the database as *.db.
 
@@ -38,7 +38,7 @@ class RWSQLite(RWFile[sqlite3.Cursor]):
         timeout: float = 5,
     ):
         self._con = sqlite3.connect(filepath, timeout=timeout)
-        super().__init__(filepath, self._con.cursor())
+        super().__init__(filepath)
         self._autocommit = autocommit
 
     def request(
@@ -88,6 +88,9 @@ class RWSQLite(RWFile[sqlite3.Cursor]):
     def commit(self) -> None:
         """Commit changes."""
         self._con.commit()
+
+    def _get_api(self, filepath: Path) -> sqlite3.Cursor:
+        return self._con.cursor()
 
     @property
     def tables(self) -> list[str]:

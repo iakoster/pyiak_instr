@@ -49,7 +49,6 @@ def check_filepath(cls: type[RWData[ApiT]], filepath: Path) -> None:
 
 # todo: expand to any data
 # todo: split to RWData and RWFile
-# todo: tests
 class RWData(ContextManager, WithApi[ApiT], WithBaseStringMethods):
     """
     Represents a base class for read/write file.
@@ -228,9 +227,8 @@ class RWData(ContextManager, WithApi[ApiT], WithBaseStringMethods):
         self.close()
         return super().__exit__(exc_type, exc_val, exc_tb)
 
-    @classmethod
     def __new__(
         cls, filepath: Path, *args: Any, **kwargs: Any
-    ) -> Self:  # todo: typing - Self[T]
+    ):  # todo: typing - Self[T]
         check_filepath(cls, filepath)
         return super().__new__(cls)
