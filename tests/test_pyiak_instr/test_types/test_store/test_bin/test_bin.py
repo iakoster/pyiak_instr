@@ -141,11 +141,11 @@ class TestBytesStorageABC(unittest.TestCase):
             wo_attrs=["struct"],
         )
 
-    # def test_init_exc(self) -> None:
-    #     with self.assertRaises(ValueError) as exc:
-    #         TIStorage("test", {})
-    #     self.assertEqual("TIStorage without fields", exc.exception.args[0])
-    #
+    def test_init_exc(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            TIStorage({})
+        self.assertEqual("TIStorage without fields", exc.exception.args[0])
+
     # def test_change(self) -> None:
     #     obj = self._instance.encode(
     #             second=[1, 2],

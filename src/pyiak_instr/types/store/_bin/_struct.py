@@ -258,13 +258,13 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
     @overload
     def decode(
         self, name: str, content: bytes
-    ) -> npt.NDArray[np.int_ | np.float_]:
+    ) -> BytesDecodeT:
         ...
 
     @overload
     def decode(
         self, content: bytes
-    ) -> dict[str, npt.NDArray[np.int_ | np.float_]]:
+    ) -> dict[str, BytesDecodeT]:
         ...
 
     def decode(
@@ -291,13 +291,11 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
         ...
 
     @overload
-    def encode(
-        self, **fields: int | float | Iterable[int | float]
-    ) -> dict[str, bytes]:
+    def encode(self, **fields: BytesEncodeT) -> dict[str, bytes]:
         ...
 
     def encode(  # type: ignore[misc]
-        self, *args: bytes, **fields: int | float | Iterable[int | float]
+        self, *args: bytes, **fields: BytesEncodeT,
     ) -> dict[str, bytes]:
         if len(args) != 0 and len(fields) != 0:
             raise TypeError("takes a bytes or fields (both given)")
@@ -332,6 +330,51 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
             if struct.is_dynamic:
                 object.__setattr__(self, "dynamic_field_name", name)
                 break
+
+    def _verify_bytes_content(self, content: bytes) -> None:
+        """
+        Raises
+        ------
+        ValueError
+            if content length smaller than minimal storage length
+            (`bytes_expected`).
+        """
+        minimum_size = self.minimum_size
+        if len(content) < minimum_size:
+            raise ValueError("bytes content too short")
+        if not self.is_dynamic and len(content) > minimum_size:
+            raise ValueError("bytes content too long")
+
+    def _verify_fields_list(self, fields: set[str]) -> None:
+        """
+        Check that fields names is correct.
+
+        Parameters
+        ----------
+        fields : set[str]
+            set of field names for setting.
+
+        Raises
+        ------
+        AttributeError
+            if extra or missing field names founded.
+        """
+        diff = self.fields_set.symmetric_difference(fields)
+        for name in diff.copy():
+            if name in self:
+                field = self[name]
+                if field.has_default or field.is_dynamic:
+                    diff.remove(name)
+
+        if len(diff) != 0:
+            raise AttributeError(
+                "missing or extra fields were found: "
+                f"{', '.join(map(repr, sorted(diff)))}"
+            )
+
+    @property
+    def fields_set(self) -> set[str]:
+        return set(self._f)
 
     @property
     def is_dynamic(self) -> bool:
