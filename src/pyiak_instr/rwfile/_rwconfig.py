@@ -186,7 +186,7 @@ class RWConfig(RWData[ConfigParser]):
 
         Parameters
         ----------
-        filepath: Path | str
+        filepath: Path
             path to the parser.
 
         Returns
@@ -194,9 +194,6 @@ class RWConfig(RWData[ConfigParser]):
         configparser.ConfigParser
             config contains settings from file path.
         """
-        if isinstance(filepath, str):
-            filepath = Path(filepath)
-
         cfg = ConfigParser()
         if filepath.exists():
             cfg.read(filepath)

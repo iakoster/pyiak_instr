@@ -33,6 +33,7 @@ class TestBytesStorageABC(unittest.TestCase):
         validate_object(
             self,
             self._instance(),
+            has_pattern=False,
             wo_attrs=["struct"],
         )
 
@@ -267,95 +268,7 @@ class TestBytesStorageABC(unittest.TestCase):
             name="test",
         ))
 
-
-# class TestBytesStoragePatternABC(unittest.TestCase):
 #
-#     @classmethod
-#     def tearDownClass(cls) -> None:
-#         if TEST_DATA_DIR.exists():
-#             shutil.rmtree(TEST_DATA_DIR)
-#
-#     def test_init(self) -> None:
-#         obj = self._instance
-#         self.assertIs(obj, obj["pattern"])
-#
-#     def test_write(self) -> None:
-#         path = DATA_DIR / "test_write.ini"
-#         self._instance.write(path)
-#
-#         ref = [
-#             "[test]",
-#             r"test = \dct(typename,basic,name,test,val,\tpl(11))",
-#             r"first = \dct(typename,basic,bytes_expected,0,int,3,"
-#             r"list,\lst(2,3,4))",
-#             r"second = \dct(typename,basic,bytes_expected,0,boolean,True)",
-#             r"third = \dct(typename,basic,bytes_expected,0,"
-#             r"dict,\dct(0,1,2,3))",
-#         ]
-#         i_line = 0
-#         with open(path, "r") as file:
-#             for ref, res in zip(ref, file.read().split("\n")):
-#                 i_line += 1
-#                 with self.subTest(test="new", line=i_line):
-#                     self.assertEqual(ref, res)
-#         self.assertEqual(5, i_line)
-#
-#         TIStoragePattern(typename="basic", name="test", val=(11,)).configure(
-#             first=TIPattern(typename="basic", bytes_expected=0, int=11),
-#         ).write(path)
-#
-#         ref = [
-#             "[test]",
-#             r"test = \dct(typename,basic,name,test,val,\tpl(11))",
-#             r"first = \dct(typename,basic,bytes_expected,0,int,11)",
-#         ]
-#         i_line = 0
-#         with open(path, "r") as file:
-#             for ref, res in zip(ref, file.read().split("\n")):
-#                 i_line += 1
-#                 with self.subTest(test="rewrite", line=i_line):
-#                     self.assertEqual(ref, res)
-#         self.assertEqual(3, i_line)
-#
-#     def test_write_exc_not_configured(self) -> None:
-#         with self.assertRaises(NotConfiguredYet) as exc:
-#             TIStoragePattern(typename="basic", name="test", val=(11,)).write(
-#                 DATA_DIR / "test.ini"
-#             )
-#         self.assertEqual(
-#             "TIStoragePattern not configured yet", exc.exception.args[0]
-#         )
-#
-#     def test_write_read(self) -> None:
-#         path = DATA_DIR / "test_write_read.ini"
-#         ref = self._instance
-#         ref.write(path)
-#         res = TIStoragePattern.read(path, "test")
-#
-#         self.assertIsNot(ref, res)
-#         self.assertEqual(ref, res)
-#         self.assertEqual(ref._sub_p, res._sub_p)
-#
-#     def test_read_many_keys(self) -> None:
-#         with self.assertRaises(TypeError) as exc:
-#             TIStoragePattern.read(DATA_DIR, "key_1", "key_2")
-#         self.assertEqual("given 2 keys, expect one", exc.exception.args[0])
-#
-#     @property
-#     def _instance(self) -> TIStoragePattern:
-#         return TIStoragePattern(
-#             typename="basic", name="test", val=(11,)
-#         ).configure(
-#             first=TIPattern(
-#                 typename="basic", bytes_expected=0, int=3, list=[2, 3, 4]
-#             ),
-#             second=TIPattern(
-#                 typename="basic", bytes_expected=0, boolean=True
-#             ),
-#             third=TIPattern(
-#                 typename="basic", bytes_expected=0, dict={0: 1, 2: 3}
-#             )
-#         )
 #
 #
 # class TestContinuousBytesStoragePatternABC(unittest.TestCase):

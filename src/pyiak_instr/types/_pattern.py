@@ -275,14 +275,13 @@ class MetaPatternABC(  # todo: rename to antonym of sub
     """is the name of the parameter that names the sub-pattern in the
     meta-object"""
 
-    def __init__(self, typename: str, name: str, **kwargs: Any):
+    def __init__(self, typename: str, **kwargs: Any):
         if not hasattr(self, "_sub_p_par_name"):
             raise AttributeError(
                 f"'{self.__class__.__name__}' object has no attribute "
                 "'_sub_p_par_name'"
             )
-        super().__init__(typename, name=name, **kwargs)
-        self._name = name
+        super().__init__(typename, **kwargs)
         self._sub_p: dict[str, PatternT] = {}
 
     def configure(self, **patterns: PatternT) -> Self:
@@ -425,13 +424,3 @@ class MetaPatternABC(  # todo: rename to antonym of sub
             modified additional kwargs for one sub-pattern object.
         """
         return for_sub
-
-    @property
-    def name(self) -> str:
-        """
-        Returns
-        -------
-        str
-            name of pattern storage.
-        """
-        return self._name

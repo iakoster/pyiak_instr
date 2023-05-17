@@ -2,9 +2,12 @@
 module."""
 # pylint: disable=too-many-lines
 from typing import (
+    TYPE_CHECKING,
     Generic,
     Self,
+    TypeAlias,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -17,6 +20,9 @@ from ._struct import (
     BytesStorageStructABC,
 )
 
+if TYPE_CHECKING:
+    from ._pattern import BytesStoragePatternABC
+
 
 __all__ = ["BytesStorageABC"]
 
@@ -24,12 +30,14 @@ FieldStructT = TypeVar("FieldStructT", bound=BytesFieldStructABC)
 StorageStructT = TypeVar(
     "StorageStructT", bound=BytesStorageStructABC[BytesFieldStructABC]
 )
+StoragePatternT = TypeVar("StoragePatternT", bound="BytesStoragePatternABC")
 
 
 # todo: verify current content
 # todo: __format__
 class BytesStorageABC(
-    WithBaseStringMethods, Generic[FieldStructT, StorageStructT]
+    WithBaseStringMethods,
+    Generic[FieldStructT, StorageStructT, StoragePatternT],
 ):
     """
     Represents abstract class for bytes storage.
@@ -40,8 +48,13 @@ class BytesStorageABC(
         storage struct instance.
     """
 
-    def __init__(self, storage: StorageStructT) -> None:
+    def __init__(
+            self,
+            storage: StorageStructT,
+            pattern: StoragePatternT | None = None,
+    ) -> None:
         self._s = storage
+        self._p = pattern
         self._c = bytearray()
 
     @overload
@@ -134,6 +147,35 @@ class BytesStorageABC(
                 raise TypeError("invalid arguments")
 
     @property
+    def has_pattern(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            if True - storage has parent pattern.
+        """
+        return self._p is not None
+
+    @property
+    def pattern(self) -> StoragePatternT:
+        """
+        Returns
+        -------
+        StoragePatternT
+            parent pattern of self instance.
+
+        Raises
+        ------
+        AttributeError
+            if parent pattern is None (not set).
+        """
+        if not self.has_pattern:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no parent pattern"
+            )
+        return cast(StoragePatternT, self._p)
+
+    @property
     def struct(self) -> StorageStructT:
         """
         Returns
@@ -193,155 +235,6 @@ class BytesStorageABC(
         return self.bytes_count()
 
 
-#     @property
-#     def has_pattern(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             if True - storage has parent pattern.
-#         """
-#         return self._p is not None
-#
-#     @property
-#     def pattern(self) -> ParentPatternT:
-#         """
-#         Returns
-#         -------
-#         ParentPatternT
-#             parent pattern of self instance.
-#
-#         Raises
-#         ------
-#         AttributeError
-#             if parent pattern is None (not set).
-#         """
-#         if not self.has_pattern:
-#             raise AttributeError(
-#                 f"'{self.__class__.__name__}' object has no parent pattern"
-#             )
-#         return cast(ParentPatternT, self._p)
-#
-#
-# class BytesFieldPatternABC(PatternABC[StructT], Generic[StructT]):
-#     """
-#     Represent abstract class of pattern for bytes struct (field).
-#     """
-#
-#     _required_init_parameters = {"bytes_expected"}
-#
-#     @property
-#     def is_dynamic(self) -> bool:
-#         """
-#         Returns
-#         -------
-#         bool
-#             True if the pattern can be interpreted as a dynamic,
-#             otherwise - False.
-#         """
-#         return self.size <= 0
-#
-#     @property
-#     def size(self) -> int:
-#         """
-#         Returns
-#         -------
-#         int
-#             size of the field in bytes.
-#         """
-#         return cast(int, self._kw["bytes_expected"])
-#
-#
-# class BytesStoragePatternABC(
-#     MetaPatternABC[StorageT, PatternT],
-#     WritablePatternABC,
-#     Generic[StorageT, PatternT],
-# ):
-#     """
-#     Represent abstract class of pattern for bytes storage.
-#
-#     Parameters
-#     ----------
-#     typename: str
-#         name of pattern target type.
-#     name: str
-#         name of pattern meta-object format.
-#     **kwargs: Any
-#         parameters for target initialization.
-#     """
-#
-#     _sub_p_par_name = "fields"
-#
-#     def __init__(self, typename: str, name: str, **kwargs: Any):
-#         super().__init__(typename, name, pattern=self, **kwargs)
-#
-#     def write(self, path: Path) -> None:
-#         """
-#         Write pattern configuration to config file.
-#
-#         Parameters
-#         ----------
-#         path : Path
-#             path to config file.
-#
-#         Raises
-#         ------
-#         NotConfiguredYet
-#             is patterns is not configured yet.
-#         """
-#         # if len(self._sub_p) == 0:
-#         #     raise NotConfiguredYet(self)
-#         # pars = {
-#         #     self._name: self.__init_kwargs__(),
-#         #     **{n: p.__init_kwargs__() for n, p in self._sub_p.items()},
-#         # }
-#         #
-#         # with RWConfig(path) as cfg:
-#         #     if cfg.api.has_section(self._name):
-#         #         cfg.api.remove_section(self._name)
-#         #     cfg.set({self._name: pars})
-#         #     cfg.commit()
-#
-#     @classmethod
-#     def read(cls, path: Path, *keys: str) -> Self:
-#         """
-#         Read init kwargs from `path` and initialize class instance.
-#
-#         Parameters
-#         ----------
-#         path : Path
-#             path to the file.
-#         *keys : str
-#             keys to search required pattern in file. Must include only one
-#             argument - `name`.
-#
-#         Returns
-#         -------
-#         Self
-#             initialized self instance.
-#
-#         Raises
-#         ------
-#         TypeError
-#             if given invalid count of keys.
-#         """
-#         # if len(keys) != 1:
-#         #     raise TypeError(f"given {len(keys)} keys, expect one")
-#         # (name,) = keys
-#         #
-#         # with RWConfig(path) as cfg:
-#         #     opts = cfg.api.options(name)
-#         #     opts.pop(opts.index(name))
-#         #     return cls(**cfg.get(name, name)).configure(
-#         #         **{f: cls._sub_p_type(**cfg.get(name, f)) for f in opts}
-#         #     )
-#
-#     def __init_kwargs__(self) -> dict[str, Any]:
-#         init_kw = super().__init_kwargs__()
-#         init_kw.pop("pattern")
-#         return init_kw
-#
-#
 # class ContinuousBytesStoragePatternABC(
 #     BytesStoragePatternABC[StorageT, PatternT],
 #     Generic[StorageT, PatternT],

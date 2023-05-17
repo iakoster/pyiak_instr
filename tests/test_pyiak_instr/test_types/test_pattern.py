@@ -157,14 +157,13 @@ class TestMetaPatternABC(unittest.TestCase):
         validate_object(
             self,
             self._instance,
-            name="test",
             typename="basic",
         )
 
     def test_init_exc(self) -> None:
         with self.subTest(exc="_sub_p_par_name not exists"):
             with self.assertRaises(AttributeError) as exc:
-                MetaPatternABC("", "")
+                MetaPatternABC("")
             self.assertEqual(
                 "'MetaPatternABC' object has no attribute '_sub_p_par_name'",
                 exc.exception.args[0],

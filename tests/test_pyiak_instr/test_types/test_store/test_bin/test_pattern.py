@@ -1,9 +1,15 @@
 import unittest
+import shutil
 
 from src.pyiak_instr.core import Code
+from src.pyiak_instr.exceptions import NotConfiguredYet
 
 from .....utils import validate_object
+from ....env import get_local_test_data_dir
 from .ti import TIFieldStructPattern, TIStorageStructPattern, TIStoragePattern
+
+
+TEST_DATA_DIR = get_local_test_data_dir(__name__)
 
 
 class TestBytesFieldStructPatternABC(unittest.TestCase):
@@ -46,7 +52,6 @@ class TestBytesStorageStructPatternABC(unittest.TestCase):
             self,
             TIStorageStructPattern(typename="basic", name="test"),
             typename="basic",
-            name="test",
         )
 
     def test_get(self) -> None:
@@ -86,26 +91,144 @@ class TestBytesStorageStructPatternABC(unittest.TestCase):
 
 class TestBytesStoragePatternABC(unittest.TestCase):
 
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if TEST_DATA_DIR.exists():
+            shutil.rmtree(TEST_DATA_DIR)
+
     def test_init(self) -> None:
         validate_object(
             self,
-            TIStoragePattern(typename="basic", name="std"),
+            TIStoragePattern(typename="basic", name="test"),
             typename="basic",
-            name="std",
         )
 
     def test_get(self) -> None:
         storage_struct = TIStorageStructPattern(
-            typename="basic", name="test"
-        ).configure(
-            f0=TIFieldStructPattern(typename="basic", bytes_expected=3)
+            typename="basic"
         )
-        storage = TIStoragePattern(typename="basic", name="std").configure(
+        storage_struct.configure(
+            f0=TIFieldStructPattern(typename="basic", bytes_expected=2)
+        )
+        storage = TIStoragePattern(typename="basic").configure(
                 test=storage_struct
             )
+        res = storage.get()
+
         validate_object(
             self,
-            storage.get(),
-            typename="basic",
-            name="std",
+            res,
+            has_pattern=True,
+            wo_attrs=["struct", "pattern"],
         )
+        validate_object(
+            self,
+            res.struct,
+            dynamic_field_name="",
+            is_dynamic=False,
+            minimum_size=2,
+            name="test",
+            fields={},
+        )
+
+    def test_configure_exc(self) -> None:
+        with self.assertRaises(TypeError) as exc:
+            TIStoragePattern(typename="basic").configure(
+                s0=TIStorageStructPattern(typename="basic"),
+                s1=TIStorageStructPattern(typename="basic"),
+            )
+        self.assertEqual(
+            "only one storage pattern allowed, got 2", exc.exception.args[0]
+        )
+
+    def test_write(self) -> None:
+        path = TEST_DATA_DIR / "test_write.ini"
+        self._instance().write(path)
+
+        ref = [
+            "[test]",
+            r"_ = \dct(typename,basic,val,\str(33))",
+            r"test = \dct(typename,basic,val,\tpl(11))",
+            r"first = \dct(typename,basic,bytes_expected,0,int,3,"
+            r"list,\lst(2,3,4))",
+            r"second = \dct(typename,basic,bytes_expected,0,boolean,True)",
+            r"third = \dct(typename,basic,bytes_expected,0,"
+            r"dict,\dct(0,1,2,3))",
+        ]
+        i_line = 0
+        with open(path, "r") as file:
+            for rf, rs in zip(ref, file.read().split("\n")):
+                i_line += 1
+                with self.subTest(test="new", line=i_line):
+                    self.assertEqual(rf, rs)
+        self.assertEqual(len(ref), i_line)
+
+        TIStoragePattern(typename="basic").configure(
+            test=TIStorageStructPattern(
+                typename="basic", in33=0
+            ).configure(
+                f0=TIFieldStructPattern(typename="basic", bytes_expected=33)
+            ),
+        ).write(path)
+
+        ref = [
+            "[test]",
+            r"_ = \dct(typename,basic)",
+            r"test = \dct(typename,basic,in33,0)",
+            r"f0 = \dct(typename,basic,bytes_expected,33)",
+        ]
+        i_line = 0
+        with open(path, "r") as file:
+            for rf, rs in zip(ref, file.read().split("\n")):
+                i_line += 1
+                with self.subTest(test="rewrite", line=i_line):
+                    self.assertEqual(rf, rs)
+        self.assertEqual(len(ref), i_line)
+
+    def test_write_exc_not_configured(self) -> None:
+        with self.assertRaises(NotConfiguredYet) as exc:
+            TIStoragePattern(typename="basic", name="test", val=(11,)).write(
+                TEST_DATA_DIR / "test.ini"
+            )
+        self.assertEqual(
+            "TIStoragePattern not configured yet", exc.exception.args[0]
+        )
+
+    def test_write_read(self) -> None:
+        path = TEST_DATA_DIR / "test_write_read.ini"
+        ref = self._instance()
+        ref.write(path)
+        res = TIStoragePattern.read(path, "test")
+
+        self.assertIsNot(ref, res)
+        self.assertEqual(ref, res)
+        self.assertEqual(ref._sub_p, res._sub_p)
+        self.assertEqual(ref._sub_p["test"]._sub_p, res._sub_p["test"]._sub_p)
+
+    def test_read_exc(self) -> None:
+        with self.assertRaises(TypeError) as exc:
+            TIStoragePattern.read(TEST_DATA_DIR, "key_1", "key_2")
+        self.assertEqual(
+            "TIStoragePattern takes only 1 argument (2 given)",
+            exc.exception.args[0],
+        )
+
+    @staticmethod
+    def _instance() -> TIStoragePattern:
+        struct_pattern = TIStorageStructPattern(
+            typename="basic", val=(11,)
+        )
+        struct_pattern.configure(
+            first=TIFieldStructPattern(
+                typename="basic", bytes_expected=0, int=3, list=[2, 3, 4]
+            ),
+            second=TIFieldStructPattern(
+                typename="basic", bytes_expected=0, boolean=True
+            ),
+            third=TIFieldStructPattern(
+                typename="basic", bytes_expected=0, dict={0: 1, 2: 3}
+            )
+        )
+        pattern = TIStoragePattern(typename="basic", val="33")
+        pattern.configure(test=struct_pattern)
+        return pattern

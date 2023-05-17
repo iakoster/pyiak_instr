@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import shutil
 import unittest
+import shutil
+from pathlib import Path
+from configparser import ConfigParser
 from dataclasses import dataclass, field as _field, InitVar
 from typing import Any, ClassVar, Iterable, TypeAlias
 
@@ -11,6 +13,7 @@ from numpy.testing import assert_array_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
+from src.pyiak_instr.rwfile import RWConfig
 from src.pyiak_instr.types import Encoder
 from src.pyiak_instr.types.store.bin import (
     STRUCT_DATACLASS,
@@ -22,8 +25,8 @@ from src.pyiak_instr.types.store.bin import (
     BytesStorageStructPatternABC,
 )
 
-from tests.test_pyiak_instr.env import TEST_DATA_DIR
-from tests.utils import validate_object, compare_objects
+from .....utils import validate_object, compare_objects
+from ....env import TEST_DATA_DIR
 
 
 class TIEncoder(Encoder):
@@ -67,7 +70,9 @@ class TIStorageStruct(BytesStorageStructABC[TIFieldStruct]):
     ...
 
 
-class TIStorage(BytesStorageABC[TIFieldStruct, TIStorageStruct]):
+class TIStorage(
+    BytesStorageABC[TIFieldStruct, TIStorageStruct, "TIStoragePattern"]
+):
     _storage_struct_type = TIStorageStruct
 
 
@@ -78,10 +83,13 @@ class TIFieldStructPattern(BytesFieldStructPatternABC[TIFieldStruct]):
 class TIStorageStructPattern(
     BytesStorageStructPatternABC[TIStorageStruct, TIFieldStructPattern]
 ):
+    _sub_p_type = TIFieldStructPattern
     _options = {"basic": TIStorageStruct}
 
 
 class TIStoragePattern(
     BytesStoragePatternABC[TIStorage, TIStorageStructPattern]
 ):
+    _rwdata = RWConfig
+    _sub_p_type = TIStorageStructPattern
     _options = {"basic": TIStorage}
