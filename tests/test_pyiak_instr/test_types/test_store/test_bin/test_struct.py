@@ -1,21 +1,12 @@
-from __future__ import annotations
-
-import shutil
 import unittest
-from dataclasses import dataclass
-from typing import Any, ClassVar, Iterable, TypeAlias
 
-import numpy as np
-import numpy.typing as npt
 from numpy.testing import assert_array_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import ContentError
-from src.pyiak_instr.types import Encoder
 
-from tests.test_pyiak_instr.env import TEST_DATA_DIR
-from tests.utils import validate_object, compare_objects
-from .ti import TIEncoder, TIFieldStruct, TIStorageStruct
+from tests.utils import validate_object
+from .ti import TIFieldStruct, TIStorageStruct
 
 
 class TestBytesFieldStructABC(unittest.TestCase):
@@ -53,7 +44,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
         )
         for case, ((start, stop, expected), kw) in enumerate(cases):
             with self.subTest(case=case):
-                res = TIFieldStruct(**kw, encoder=TIEncoder)
+                res = TIFieldStruct(**kw)
                 self.assertEqual(start, res.start)
                 self.assertEqual(stop, res.stop)
                 self.assertEqual(expected, res.bytes_expected)
@@ -167,7 +158,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
 
         with self.subTest(test="without encoder"):
             with self.assertRaises(ValueError) as exc:
-                TIFieldStruct()
+                TIFieldStruct(encoder=None)
             self.assertEqual(
                 "struct encoder not specified", exc.exception.args[0]
             )
@@ -197,7 +188,6 @@ class TestBytesFieldStructABC(unittest.TestCase):
             stop=stop,
             bytes_expected=bytes_expected,
             fmt=fmt,
-            encoder=TIEncoder,
             default=default,
         )
 
@@ -225,14 +215,14 @@ class TestBytesStorageStructABC(unittest.TestCase):
 
         with self.subTest(test="empty field name"):
             with self.assertRaises(KeyError) as exc:
-                TIStorageStruct(fields={"": TIFieldStruct(encoder=TIEncoder)})
+                TIStorageStruct(fields={"": TIFieldStruct()})
             self.assertEqual(
                 "empty field name not allowed", exc.exception.args[0]
             )
 
         with self.subTest(test="wrong field name"):
             with self.assertRaises(KeyError) as exc:
-                TIStorageStruct(fields={"f0": TIFieldStruct(encoder=TIEncoder)})
+                TIStorageStruct(fields={"f0": TIFieldStruct()})
             self.assertEqual(
                 "invalid struct name: 'f0' != ''", exc.exception.args[0]
             )
@@ -241,8 +231,8 @@ class TestBytesStorageStructABC(unittest.TestCase):
             with self.assertRaises(TypeError) as exc:
                 TIStorageStruct(
                     fields={
-                        "f0": TIFieldStruct(name="f0", encoder=TIEncoder),
-                        "f1": TIFieldStruct(name="f1", encoder=TIEncoder),
+                        "f0": TIFieldStruct(name="f0"),
+                        "f1": TIFieldStruct(name="f1"),
                     }
                 )
             self.assertEqual(
@@ -382,7 +372,7 @@ class TestBytesStorageStructABC(unittest.TestCase):
         with self.subTest(test="long content"):
             with self.assertRaises(ValueError) as exc:
                 self._instance(
-                    f0=TIFieldStruct(name="f0", stop=2, encoder=TIEncoder)
+                    f0=TIFieldStruct(name="f0", stop=2)
                 ).encode(b"aaaa")
             self.assertEqual(
                 "bytes content too long: expected 2, got 4",
@@ -457,19 +447,18 @@ class TestBytesStorageStructABC(unittest.TestCase):
                     start=0,
                     default=b"\xfa",
                     stop=1,
-                    encoder=TIEncoder,
                 ),
                 f1=TIFieldStruct(
-                    name="f1", start=1, bytes_expected=2, encoder=TIEncoder
+                    name="f1", start=1, bytes_expected=2
                 ),
                 f2=TIFieldStruct(
-                    name="f2", start=3, stop=-4, encoder=TIEncoder
+                    name="f2", start=3, stop=-4
                 ),
                 f3=TIFieldStruct(
-                    name="f3", start=-4, stop=-1, encoder=TIEncoder
+                    name="f3", start=-4, stop=-1
                 ),
                 f4=TIFieldStruct(
-                    name="f4", start=-1, stop=None, encoder=TIEncoder
+                    name="f4", start=-1, stop=None
                 ),
             )
         return TIStorageStruct(fields=fields)

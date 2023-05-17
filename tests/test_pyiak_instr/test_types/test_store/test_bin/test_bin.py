@@ -12,7 +12,7 @@ from numpy.testing import assert_array_equal
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
 from src.pyiak_instr.types import Encoder
-from src.pyiak_instr.types.store import (
+from src.pyiak_instr.types.store.bin import (
     STRUCT_DATACLASS,
     BytesFieldStructABC,
     BytesStorageABC,
@@ -21,114 +21,10 @@ from src.pyiak_instr.types.store import (
 
 from tests.test_pyiak_instr.env import TEST_DATA_DIR
 from tests.utils import validate_object, compare_objects
-from .ti import TIEncoder, TIFieldStruct, TIStorageStruct, TIStorage
+from .ti import TIFieldStruct, TIStorageStruct, TIStorage
 
 
 DATA_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
-
-
-# class TIPattern(BytesFieldPatternABC[TIStruct]):
-#
-#     _options = {"basic": TIStruct}
-#
-#
-# class TIStoragePattern(BytesStoragePatternABC[TIStorage, TIPattern]):
-#
-#     _options = {"basic": TIStorage}
-#     _sub_p_type = TIPattern
-#
-#
-# class TIContinuousStoragePattern(
-#     ContinuousBytesStoragePatternABC[TIStorage, TIPattern]
-# ):
-#     _options = {"basic": TIStorage}
-#     _sub_p_type = TIPattern
-#
-#
-# class TestBytesFieldABC(unittest.TestCase):
-#
-#     def test_init(self) -> None:
-#         validate_object(
-#             self,
-#             self._instance(),
-#             bytes_count=10,
-#             content=bytes(range(10)),
-#             is_empty=False,
-#             name="test",
-#             struct=TIStruct(),
-#             words_count=10,
-#         )
-#
-#     def test_decode(self) -> None:
-#         assert_array_equal([*range(10)], self._instance().decode())
-#
-#     def test_encode(self) -> None:
-#         obj = self._instance()
-#         obj.encode(0xff)
-#         self.assertEqual(b"\xff", obj.content)
-#
-#     def test_verify(self) -> None:
-#         self.assertTrue(self._instance(stop=5).verify(b"\x00\x02\x05\x55\xaa"))
-#         self.assertFalse(self._instance(stop=5).verify(b"\x00"))
-#
-#     def test_magic_bytes(self) -> None:
-#         self.assertEqual(bytes(range(10)), bytes(self._instance()))
-#
-#     def test_magic_getitem(self) -> None:
-#         self.assertEqual(2, self._instance()[2])
-#         assert_array_equal([0, 1, 2], self._instance()[:3])
-#
-#     def test_magic_iter(self) -> None:
-#         for ref, res in zip(range(10), self._instance()):
-#             self.assertEqual(ref, res)
-#
-#     def test_magic_len(self) -> None:
-#         self.assertEqual(10, len(self._instance()))
-#
-#     def test_magic_str(self) -> None:
-#         cases = (
-#             ("empty", "TIField(EMPTY)", {"content": b""}),
-#             ("not empty", "TIField(1 203 405 607 809)", {"fmt": Code.U16}),
-#             (
-#                 "large u8",
-#                 "TIField(0 1 2 3 ... 1C 1D 1E 1F)",
-#                 {"content": bytes(range(32))},
-#             ),
-#             (
-#                 "large u16",
-#                 "TIField(1 203 405 ... 1A1B 1C1D 1E1F)",
-#                 {"content": bytes(range(32)), "fmt": Code.U16},
-#             ),
-#             (
-#                 "large u24",
-#                 "TIField(102 30405 ... 1B1C1D 1E1F20)",
-#                 {"content": bytes(range(33)), "fmt": Code.U24},
-#             ),
-#             (
-#                 "large u40",
-#                 "TIField(1020304 ... 1E1F202122)",
-#                 {"content": bytes(range(35)), "fmt": Code.U40},
-#             ),
-#         )
-#
-#         for test, ref, kw in cases:
-#             with self.subTest(test=test):
-#                 self.assertEqual(ref, str(self._instance(**kw)))
-#
-#     @staticmethod
-#     def _instance(
-#             stop: int | None = None,
-#             fmt: Code = Code.U8,
-#             content: bytes = bytes(range(10)),
-#     ) -> TIField:
-#         fields = {"test": TIStruct(stop=stop, fmt=fmt)}
-#         if stop is not None:
-#             fields["ph"] = TIStruct(start=stop, stop=None)
-#
-#         storage = TIStorage("std", fields)
-#         if len(content):
-#             storage.encode(content)
-#         return storage["test"]
 
 
 class TestBytesStorageABC(unittest.TestCase):
@@ -137,118 +33,239 @@ class TestBytesStorageABC(unittest.TestCase):
         validate_object(
             self,
             self._instance(),
-            minimum_size=7,
             wo_attrs=["struct"],
         )
 
-    def test_init_exc(self) -> None:
-        with self.assertRaises(ValueError) as exc:
-            TIStorage({})
-        self.assertEqual("TIStorage without fields", exc.exception.args[0])
+    def test_decode(self) -> None:
+        obj = self._instance().encode(bytes(range(10)))
+        for (name, ref), (rs_name, res) in zip(dict(
+            f0=[0], f1=[1, 2], f2=[3, 4, 5], f3=[6, 7, 8], f4=[9]
+        ).items(), obj.decode().items()):
+            with self.subTest(test="decode all", field=name):
+                assert_array_equal(ref, res)
 
-    # def test_change(self) -> None:
-    #     obj = self._instance.encode(
-    #             second=[1, 2],
-    #             fourth=(3, 4, 5),
-    #             fifth=6,
-    #         )
-    #     self.assertEqual(b"\xfa" + bytes(range(1, 7)), obj.content)
-    #
-    #     obj.change("first", b"\x00")
-    #     self.assertEqual(bytes(range(7)), obj.content)
-    #
-    # def test_change_exc(self) -> None:
-    #     obj = self._instance
-    #     with self.subTest(test="change in empty message"):
-    #         with self.assertRaises(TypeError) as exc:
-    #             obj.change("", b"")
-    #         self.assertEqual("message is empty", exc.exception.args[0])
-    #
-    # def test_encode_change(self) -> None:
-    #     obj = self._instance.encode(
-    #         second=[1, 2],
-    #         fourth=(3, 4, 5),
-    #         fifth=6,
-    #     )
-    #     self.assertEqual(b"\xfa\x01\x02\x03\x04\x05\x06", obj.content)
-    #     obj.encode(first=b"\xaa", fourth=[5, 4, 3])
-    #     self.assertEqual(b"\xaa\x01\x02\x05\x04\x03\x06", obj.content)
-    #     obj["third"].encode([0xaa, 0, 0x77])
-    #     self.assertEqual(
-    #         b"\xaa\x01\x02\xaa\x00\x77\x05\x04\x03\x06", obj.content
-    #     )
-    #
-    # def test_encode_extract(self) -> None:
-    #     with self.subTest(test="extract all"):
-    #         obj = self._instance.encode(bytes(range(20)))
-    #         for (name, ref), res in zip(
-    #                 dict(
-    #                     first=b"\x00",
-    #                     second=b"\x01\x02",
-    #                     third=bytes(range(3, 16)),
-    #                     fourth=b"\x10\x11\x12",
-    #                     fifth=b"\x13",
-    #                 ).items(), obj
-    #         ):
-    #             with self.subTest(name=name):
-    #                 self.assertEqual(ref, res.content)
-    #
-    #     with self.subTest(test="without_infinite"):
-    #         obj = self._instance.encode(bytes(range(7)))
-    #         self.assertEqual(bytes(range(7)), obj.content)
-    #         for (name, ref), res in zip(
-    #                 dict(
-    #                     first=b"\x00",
-    #                     second=b"\x01\x02",
-    #                     third=b"",
-    #                     fourth=b"\x03\x04\x05",
-    #                     fifth=b"\x06",
-    #                 ).items(), obj
-    #         ):
-    #             with self.subTest(name=name):
-    #                 self.assertEqual(ref, res.content)
-    #
-    #     with self.subTest(test="drop past message"):
-    #         obj = self._instance.encode(bytes(range(7)))
-    #         self.assertEqual(bytes(range(7)), obj.content)
-    #
-    #         obj.encode(bytes(range(7, 0, -1)))
-    #         self.assertEqual(bytes(range(7, 0, -1)), obj.content)
-    #
+        with self.subTest(test="f2"):
+            assert_array_equal([3, 4, 5], obj.decode("f2"))
+
+    def test_decode_exc(self) -> None:
+        with self.assertRaises(TypeError) as exc:
+            self._instance().decode(1)
+        self.assertEqual("invalid arguments", exc.exception.args[0])
+
+    def test_encode(self) -> None:
+        obj = self._instance().encode(bytes(range(10)))
+        self._verify_content(
+            obj,
+            f0=b"\x00",
+            f1=b"\x01\x02",
+            f2=b"\x03\x04\x05",
+            f3=b"\x06\x07\x08",
+            f4=b"\x09",
+        )
+
+        obj.encode(f1=b"\xff\xfa", f2=b"abcsddd")
+        self._verify_content(
+            obj,
+            f0=b"\x00",
+            f1=b"\xff\xfa",
+            f2=b"abcsddd",
+            f3=b"\x06\x07\x08",
+            f4=b"\x09",
+        )
+
+        obj.encode(bytes(range(10, 20)))
+        self._verify_content(
+            obj,
+            f0=b"\x0a",
+            f1=b"\x0b\x0c",
+            f2=b"\x0d\x0e\x0f",
+            f3=b"\x10\x11\x12",
+            f4=b"\x13",
+        )
+
+    def test_bytes_count(self) -> None:
+        obj = self._instance()
+        with self.subTest(test="empty"):
+            self.assertEqual(0, obj.bytes_count())
+            self.assertEqual(0, obj.bytes_count("f0"))
+
+        obj.encode(bytes(range(7)))
+        with self.subTest(test="filled"):
+            self.assertEqual(7, obj.bytes_count())
+            self.assertEqual(2, obj.bytes_count("f1"))
+            self.assertEqual(0, obj.bytes_count("f2"))
+
+    def test_content(self) -> None:
+        obj = self._instance()
+        with self.subTest(test="empty"):
+            self.assertEqual(b"", obj.content())
+            self.assertEqual(b"", obj.content("f0"))
+
+        obj.encode(bytes(range(7)))
+        with self.subTest(test="filled"):
+            self.assertEqual(bytes(range(7)), obj.content())
+            self.assertEqual(b"\x01\x02", obj.content("f1"))
+            self.assertEqual(b"", obj.content("f2"))
+
+    def test_is_empty(self) -> None:
+        obj = self._instance()
+        with self.subTest(test="empty"):
+            self.assertEqual(True, obj.is_empty())
+            self.assertEqual(True, obj.is_empty("f0"))
+
+        obj.encode(bytes(range(7)))
+        with self.subTest(test="filled"):
+            self.assertEqual(False, obj.is_empty())
+            self.assertEqual(False, obj.is_empty("f1"))
+            self.assertEqual(True, obj.is_empty("f2"))
+
+    def test_words_count(self) -> None:
+        obj = self._instance()
+        with self.subTest(test="empty"):
+            self.assertDictEqual(dict(
+                f0=0, f1=0, f2=0, f3=0, f4=0
+            ), obj.words_count())
+            self.assertEqual(0, obj.words_count("f0"))
+
+        obj.encode(bytes(range(7)))
+        with self.subTest(test="filled"):
+            self.assertEqual(dict(
+                f0=1, f1=2, f2=0, f3=3, f4=1
+            ), obj.words_count())
+            self.assertEqual(2, obj.words_count("f1"))
+            self.assertEqual(0, obj.words_count("f2"))
+
+    def test_words_count_exc(self) -> None:
+        with self.assertRaises(TypeError) as exc:
+            self._instance().words_count("", "")
+        self.assertEqual("invalid arguments", exc.exception.args[0])
+
+    def test_magic_bytes(self) -> None:
+        obj = self._instance()
+        self.assertEqual(b"", bytes(obj))
+        obj.encode(b"f" * 255)
+        self.assertEqual(b"f" * 255, bytes(obj))
+
     def test_magic_len(self) -> None:
         obj = self._instance()
         self.assertEqual(0, len(obj))
-        # obj.encode(b"f" * 255)
-        # self.assertEqual(255, len(obj))
-    #
-    # def test_magic_str(self) -> None:
-    #     with self.subTest(test="empty"):
-    #         self.assertEqual(
-    #             "TIStorage(EMPTY)", str(self._instance)
-    #         )
-    #
-    #     with self.subTest(test="not empty"):
-    #         self.assertEqual(
-    #             "TIStorage(first=0, second=1 2, "
-    #             "third=3 4 5 6 ... C0 C1 C2 C3, fourth=C4 C5 C6, fifth=C7)",
-    #             str(self._instance.encode(bytes(range(200)))),
-    #         )
+        obj.encode(b"f" * 255)
+        self.assertEqual(255, len(obj))
+
+    def test_magic_str(self) -> None:
+        obj = TIStorage(TIStorageStruct(
+            fields=dict(
+                f0=TIFieldStruct(
+                    name="f0",
+                    start=0,
+                    default=b"\xfa",
+                    stop=1,
+                ),
+                f1=TIFieldStruct(
+                    name="f1",
+                    start=1,
+                    bytes_expected=2,
+                    fmt=Code.U16,
+                ),
+                f2=TIFieldStruct(
+                    name="f2",
+                    start=3,
+                    stop=-4,
+                    fmt=Code.U40,
+                ),
+                f3=TIFieldStruct(
+                    name="f3",
+                    start=-4,
+                    stop=-1,
+                ),
+                f4=TIFieldStruct(
+                    name="f4", start=-1, stop=None
+                ),
+            ),
+            name="test",
+        ))
+
+        with self.subTest(test="empty"):
+            self.assertEqual("TIStorage(EMPTY)", str(obj))
+
+        with self.subTest(test="with one empty field"):
+            self.assertEqual(
+                "TIStorage(f0=0, f1=102, f2=EMPTY, f3=3 4 5, f4=6)",
+                str(obj.encode(bytes(range(7)))),
+            )
+
+        with self.subTest(test="large"):
+            self.assertEqual(
+                "TIStorage(f0=0, f1=102, f2=304050607 ... BCBDBEBFC0, "
+                "f3=C1 C2 C3, f4=C4)",
+                str(obj.encode(bytes(range(197)))),
+            )
+
+        obj = TIStorage(TIStorageStruct(
+            fields={"f0": TIFieldStruct(name="f0")}
+        ))
+        with self.subTest(test="infinite u8"):
+            self.assertEqual(
+                "TIStorage(f0=0 1 2 3 ... 11 12 13 14)",
+                str(obj.encode(bytes(range(21)))),
+            )
+
+        obj = TIStorage(TIStorageStruct(
+            fields={"f0": TIFieldStruct(
+                name="f0", fmt=Code.U16
+            )}
+        ))
+        with self.subTest(test="infinite u16"):
+            self.assertEqual(
+                "TIStorage(f0=1 203 405 ... 1011 1213 1415)",
+                str(obj.encode(bytes(range(22)))),
+            )
+
+        obj = TIStorage(TIStorageStruct(
+            fields={"f0": TIFieldStruct(
+                name="f0", fmt=Code.U24
+            )}
+        ))
+        with self.subTest(test="infinite u24"):
+            self.assertEqual(
+                "TIStorage(f0=102 30405 ... 151617 18191A)",
+                str(obj.encode(bytes(range(27)))),
+            )
+
+    def _verify_content(self, res: TIStorage, **fields: bytes) -> None:
+        content = b""
+        for field, ref in fields.items():
+            with self.subTest(field=field):
+                self.assertEqual(ref, res.content(field))
+            content += ref
+        with self.subTest(field="all"):
+            self.assertEqual(content, res.content())
 
     @staticmethod
     def _instance() -> TIStorage:
-        return TIStorage(dict(
-            f0=TIFieldStruct(
-                name="f0", start=0, default=b"\xfa", stop=1, encoder=TIEncoder
+        return TIStorage(TIStorageStruct(
+            fields=dict(
+                f0=TIFieldStruct(
+                    name="f0",
+                    start=0,
+                    default=b"\xfa",
+                    stop=1,
+                ),
+                f1=TIFieldStruct(
+                    name="f1", start=1, bytes_expected=2
+                ),
+                f2=TIFieldStruct(
+                    name="f2", start=3, stop=-4
+                ),
+                f3=TIFieldStruct(
+                    name="f3", start=-4, stop=-1
+                ),
+                f4=TIFieldStruct(
+                    name="f4", start=-1, stop=None
+                ),
             ),
-            f1=TIFieldStruct(
-                name="f1", start=1, bytes_expected=2, encoder=TIEncoder
-            ),
-            f2=TIFieldStruct(name="f2", start=3, stop=-4, encoder=TIEncoder),
-            f3=TIFieldStruct(name="f3", start=-4, stop=-1, encoder=TIEncoder),
-            f4=TIFieldStruct(
-                name="f4", start=-1, stop=None, encoder=TIEncoder
-            ),
-        ), name="test")
+            name="test",
+        ))
 
 
 # class TestBytesStoragePatternABC(unittest.TestCase):

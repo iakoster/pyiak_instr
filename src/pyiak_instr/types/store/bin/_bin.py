@@ -1,34 +1,15 @@
 """Private module of ``pyiak_instr.types.store`` with types for store
 module."""
 # pylint: disable=too-many-lines
-from __future__ import annotations
-from pathlib import Path
-from dataclasses import dataclass
-from abc import abstractmethod
 from typing import (
-    Any,
     Generic,
-    Iterable,
-    Iterator,
-    Protocol,
     Self,
     TypeVar,
-    cast,
     overload,
 )
 
-import numpy as np
-import numpy.typing as npt
-
-from ....core import Code
-# from ....rwfile import RWConfig
-from ....exceptions import NotConfiguredYet
 from ....typing import WithBaseStringMethods
-from ..._pattern import (
-    MetaPatternABC,
-    PatternABC,
-    WritablePatternABC,
-)
+
 from ._struct import (
     BytesDecodeT,
     BytesEncodeT,
@@ -37,13 +18,7 @@ from ._struct import (
 )
 
 
-__all__ = [
-    # "BytesFieldABC",
-    # "BytesFieldPatternABC",
-    "BytesStorageABC",
-    # "BytesStoragePatternABC",
-    # "ContinuousBytesStoragePatternABC",
-]
+__all__ = ["BytesStorageABC"]
 
 FieldStructT = TypeVar("FieldStructT", bound=BytesFieldStructABC)
 StorageStructT = TypeVar(
@@ -51,6 +26,8 @@ StorageStructT = TypeVar(
 )
 
 
+# todo: verify current content
+# todo: __format__
 class BytesStorageABC(
     WithBaseStringMethods, Generic[FieldStructT, StorageStructT]
 ):
@@ -84,12 +61,15 @@ class BytesStorageABC(
         *args : str
             arguments for function
         """
-        args_len = len(args)
-        if args_len == 0:
-            return self._s.decode(self._c)
-        if args_len == 1 and isinstance(args[0], str):
-            return self._s.decode(args[0], self.content(args[0]))
-        raise TypeError("invalid arguments")
+        match args:
+            case _ if len(args) == 0:
+                return self._s.decode(self.content())
+
+            case (str() as name,):
+                return self._s.decode(name, self.content(name))
+
+            case _:
+                raise TypeError(f"invalid arguments")
 
     @overload
     def encode(self, content: bytes) -> Self:
@@ -140,17 +120,18 @@ class BytesStorageABC(
         ...
 
     def words_count(self, *args: str) -> int | dict[str, int]:
-        if len(args) == 0:
-            return {
-                n: self.bytes_count(n) // f.words_bytesize
-                for n, f in self._s.items()
-            }
+        match args:
+            case _ if len(args) == 0:
+                return {
+                    n: self.bytes_count(n) // f.word_bytesize
+                    for n, f in self._s.items()
+                }
 
-        if len(args) == 1:
-            name, = args
-            return self.bytes_count(name) // self._s[name].words_bytesize
+            case (str() as name,):
+                return self.bytes_count(name) // self._s[name].word_bytesize
 
-        raise TypeError("invalid arguments")
+            case _:
+                raise TypeError("invalid arguments")
 
     @property
     def struct(self) -> StorageStructT:
@@ -212,73 +193,6 @@ class BytesStorageABC(
         return self.bytes_count()
 
 
-# # todo: verify current content
-# # todo: __format__
-# class BytesFieldABC(WithBaseStringMethods, Generic[StorageT, StructT]):
-#     """
-#     Represents base parser class for work with field content.
-#
-#     Parameters
-#     ----------
-#     storage: StorageT
-#         bytes storage instance
-#     name : str
-#         field name.
-#     struct : StructT
-#         field structure instance.
-#     """
-#
-#     def __init__(self, storage: StorageT, name: str, struct: StructT) -> None:
-#         self._storage = storage
-#         self._name = name
-#         self._struct = struct
-#
-#
-#     @overload
-#     def __getitem__(self, index: int) -> int | float:
-#         ...
-#
-#     @overload
-#     def __getitem__(self, index: slice) -> npt.NDArray[np.int_ | np.float_]:
-#         ...
-#
-#     def __getitem__(
-#         self, index: int | slice
-#     ) -> int | float | npt.NDArray[np.int_ | np.float_]:
-#         """
-#         Parameters
-#         ----------
-#         index : int | slice
-#             word index.
-#
-#         Returns
-#         -------
-#         int | float | NDArray[int | float]
-#             word value.
-#         """
-#         return self.decode()[index]
-#
-#
-# # todo: create storage struct (dataclass)
-# # todo: __format__
-# class BytesStorageABC(
-#     WithBaseStringMethods, Generic[ParentPatternT, ParserT, StructT]
-# ):
-#     """
-#     Represents abstract class for bytes storage.
-#
-#     Parameters
-#     ----------
-#     name : str
-#         name of storage configuration.
-#     fields : dict[str, StructT]
-#         dictionary of fields.
-#     pattern : ParentPatternT | None, default=None
-#         storage pattern.
-#     """
-#
-#     _struct_field: dict[type[StructT], type[ParserT]]
-#
 #     @property
 #     def has_pattern(self) -> bool:
 #         """

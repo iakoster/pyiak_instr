@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shutil
 import unittest
-from dataclasses import dataclass
+from dataclasses import dataclass, field as _field, InitVar
 from typing import Any, ClassVar, Iterable, TypeAlias
 
 import numpy as np
@@ -15,8 +15,11 @@ from src.pyiak_instr.types import Encoder
 from src.pyiak_instr.types.store.bin import (
     STRUCT_DATACLASS,
     BytesFieldStructABC,
+    BytesFieldStructPatternABC,
     BytesStorageABC,
+    BytesStoragePatternABC,
     BytesStorageStructABC,
+    BytesStorageStructPatternABC,
 )
 
 from tests.test_pyiak_instr.env import TEST_DATA_DIR
@@ -55,7 +58,8 @@ class TIEncoder(Encoder):
 
 @STRUCT_DATACLASS
 class TIFieldStruct(BytesFieldStructABC):
-    ...
+
+    encoder: InitVar[type[TIEncoder]] = TIEncoder
 
 
 @STRUCT_DATACLASS
@@ -65,3 +69,19 @@ class TIStorageStruct(BytesStorageStructABC[TIFieldStruct]):
 
 class TIStorage(BytesStorageABC[TIFieldStruct, TIStorageStruct]):
     _storage_struct_type = TIStorageStruct
+
+
+class TIFieldStructPattern(BytesFieldStructPatternABC[TIFieldStruct]):
+    _options = {"basic": TIFieldStruct}
+
+
+class TIStorageStructPattern(
+    BytesStorageStructPatternABC[TIStorageStruct, TIFieldStructPattern]
+):
+    _options = {"basic": TIStorageStruct}
+
+
+class TIStoragePattern(
+    BytesStoragePatternABC[TIStorage, TIStorageStructPattern]
+):
+    _options = {"basic": TIStorage}
