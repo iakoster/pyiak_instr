@@ -74,7 +74,7 @@ class BytesFieldStructABC(ABC):
 
     encoder: InitVar[
         Callable[[Code, Code], EncoderT] | type[EncoderT] | None
-    ] = None
+    ] = None  # todo: variant with an already initialized instance
 
     _encoder: EncoderT = field_(default=None, init=False)
 
