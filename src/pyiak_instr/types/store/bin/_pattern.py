@@ -66,8 +66,6 @@ class BytesFieldStructPatternABC(PatternABC[FieldStructT]):
     Represent abstract class of pattern for bytes struct (field).
     """
 
-    _required_init_parameters = {"bytes_expected"}
-
     @property
     def is_dynamic(self) -> bool:
         """
@@ -87,7 +85,18 @@ class BytesFieldStructPatternABC(PatternABC[FieldStructT]):
         int
             size of the field in bytes.
         """
-        return cast(int, self._kw["bytes_expected"])
+        if "bytes_expected" in self._kw:
+            return cast(int, self._kw["bytes_expected"])
+
+        start = self._kw["start"] if "start" in self._kw else 0
+        stop = self._kw["stop"] if "stop" in self._kw else None
+
+        if stop is None:
+            if start < 0:
+                return -start
+        elif start >= 0 and stop > 0 or start < 0 and stop < 0:
+            return stop - start
+        return 0
 
 
 class BytesStorageStructPatternABC(

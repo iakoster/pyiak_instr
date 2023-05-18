@@ -1,5 +1,6 @@
 import unittest
 import shutil
+from typing import Any
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
@@ -17,7 +18,7 @@ class TestBytesFieldStructPatternABC(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIFieldStructPattern(typename="basic", bytes_expected=0),
+            TIFieldStructPattern(typename="basic"),
             typename="basic",
             is_dynamic=True,
             size=0,
@@ -43,6 +44,26 @@ class TestBytesFieldStructPatternABC(unittest.TestCase):
             fmt=Code.U16,
             wo_attrs=["encoder"],
         )
+
+    def test_size(self) -> None:
+        def __pattern(**parameters: Any):
+            return TIFieldStructPattern(typename="basic", **parameters)
+
+        for i, (ref, obj) in enumerate((
+            (0, __pattern(bytes_expected=0)),
+            (2, __pattern(bytes_expected=2)),
+            (0, __pattern()),
+            (0, __pattern(stop=None)),
+            (0, __pattern(start=2, stop=None)),
+            (4, __pattern(stop=4)),
+            (2, __pattern(start=2, stop=4)),
+            (2, __pattern(start=-4, stop=-2)),
+            (4, __pattern(start=-4, stop=None)),
+            (4, __pattern(start=-4)),
+            (0, __pattern(start=4, stop=-2)),
+        )):
+            with self.subTest(case=i):
+                self.assertEqual(ref, obj.size)
 
 
 class TestBytesStorageStructPatternABC(unittest.TestCase):
