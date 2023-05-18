@@ -24,6 +24,7 @@ from src.pyiak_instr.types.store.bin import (
     BytesStoragePatternABC,
     BytesStorageStructABC,
     BytesStorageStructPatternABC,
+    ContinuousBytesStorageStructPatternABC,
 )
 
 from .....utils import validate_object, compare_objects
@@ -53,6 +54,13 @@ class TIFieldStructPattern(BytesFieldStructPatternABC[TIFieldStruct]):
 
 class TIStorageStructPattern(
     BytesStorageStructPatternABC[TIStorageStruct, TIFieldStructPattern]
+):
+    _sub_p_type = TIFieldStructPattern
+    _options = {"basic": TIStorageStruct}
+
+
+class TIContinuousStorageStructPattern(
+    ContinuousBytesStorageStructPatternABC[TIStorageStruct, TIFieldStructPattern]
 ):
     _sub_p_type = TIFieldStructPattern
     _options = {"basic": TIStorageStruct}

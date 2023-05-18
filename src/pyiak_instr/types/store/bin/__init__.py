@@ -2,6 +2,7 @@ from ._pattern import (
     BytesFieldStructPatternABC,
     BytesStoragePatternABC,
     BytesStorageStructPatternABC,
+    ContinuousBytesStorageStructPatternABC,
 )
 from ._struct import (
     STRUCT_DATACLASS,
@@ -21,4 +22,5 @@ __all__ = [
     "BytesStoragePatternABC",
     "BytesStorageStructABC",
     "BytesStorageStructPatternABC",
+    "ContinuousBytesStorageStructPatternABC",
 ]

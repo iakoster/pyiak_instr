@@ -5,9 +5,16 @@ from typing import Any
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
 
-from .....utils import validate_object
+from .....utils import compare_objects, validate_object
 from ....env import get_local_test_data_dir
-from .ti import TIFieldStructPattern, TIStorageStructPattern, TIStoragePattern
+from .ti import (
+    TIFieldStruct,
+    TIFieldStructPattern,
+    TIStorageStruct,
+    TIStorageStructPattern,
+    TIStoragePattern,
+    TIContinuousStorageStructPattern,
+)
 
 
 TEST_DATA_DIR = get_local_test_data_dir(__name__)
@@ -253,3 +260,108 @@ class TestBytesStoragePatternABC(unittest.TestCase):
         pattern = TIStoragePattern(typename="basic", val="33")
         pattern.configure(test=struct_pattern)
         return pattern
+
+
+class TestContinuousBytesStorageStructPatternABC(unittest.TestCase):
+
+    def test_get(self) -> None:
+        pattern = TIContinuousStorageStructPattern(
+            typename="basic", name="test"
+        ).configure(
+            f0=TIFieldStructPattern(typename="basic", bytes_expected=4),
+            f1=TIFieldStructPattern(typename="basic", bytes_expected=2),
+            f2=TIFieldStructPattern(typename="basic", bytes_expected=0),
+            f3=TIFieldStructPattern(typename="basic", bytes_expected=3),
+            f4=TIFieldStructPattern(typename="basic", bytes_expected=4),
+        )
+
+        ref = TIStorageStruct(name="test", fields=dict(
+                f0=TIFieldStruct(name="f0", start=0, bytes_expected=4),
+                f1=TIFieldStruct(name="f1", start=4, bytes_expected=2),
+                f2=TIFieldStruct(name="f2", start=6, stop=-7),
+                f3=TIFieldStruct(name="f3", start=-7, bytes_expected=3),
+                f4=TIFieldStruct(name="f4", start=-4, bytes_expected=4),
+        ))
+        res = pattern.get()
+        compare_objects(self, ref, res)
+        for ref_field, res_field in zip(ref, res):
+            with self.subTest(field=ref_field.name):
+                compare_objects(self, ref_field, res_field)
+
+    def test__modify_all(self) -> None:
+        with self.subTest(test="dyn in middle"):
+            self.assertDictEqual(
+                dict(
+                    f0=dict(start=0),
+                    f1=dict(start=4),
+                    f2=dict(start=6, stop=-7),
+                    f3=dict(start=-7),
+                    f4=dict(start=-4),
+                ),
+                TIContinuousStorageStructPattern(
+                    typename="basic", name="test"
+                ).configure(
+                    f0=TIFieldStructPattern(name="f0", typename="basic", bytes_expected=4),
+                    f1=TIFieldStructPattern(name="f1", typename="basic", bytes_expected=2),
+                    f2=TIFieldStructPattern(name="f2", typename="basic", bytes_expected=0),
+                    f3=TIFieldStructPattern(name="f3", typename="basic", bytes_expected=3),
+                    f4=TIFieldStructPattern(name="f4", typename="basic", bytes_expected=4),
+                )._modify_all(True, {})
+            )
+
+        with self.subTest(test="last dyn"):
+            self.assertDictEqual(
+                dict(
+                    f0=dict(start=0),
+                    f1=dict(start=4),
+                    f2=dict(start=6, stop=None, req=1),
+                ),
+                TIContinuousStorageStructPattern(
+                    typename="basic", name="test"
+                ).configure(
+                    f0=TIFieldStructPattern(name="f0", typename="basic", bytes_expected=4),
+                    f1=TIFieldStructPattern(name="f1", typename="basic", bytes_expected=2),
+                    f2=TIFieldStructPattern(name="f2", typename="basic", bytes_expected=0),
+                )._modify_all(True, {"f2": {"req": 1}})
+            )
+
+        with self.subTest(test="only dyn"):
+            self.assertDictEqual(
+                dict(
+                    f0=dict(start=0, stop=None),
+                ),
+                TIContinuousStorageStructPattern(
+                    typename="basic", name="test"
+                ).configure(
+                    f0=TIFieldStructPattern(name="f0", typename="basic", bytes_expected=0),
+                )._modify_all(True, {})
+            )
+
+        with self.subTest(test="without dyn"):
+            self.assertDictEqual(
+                dict(
+                    f0=dict(start=0),
+                    f1=dict(start=4),
+                    f2=dict(start=6),
+                ),
+                TIContinuousStorageStructPattern(
+                    typename="basic", name="test"
+                ).configure(
+                    f0=TIFieldStructPattern(name="f0", typename="basic", bytes_expected=4),
+                    f1=TIFieldStructPattern(name="f1", typename="basic", bytes_expected=2),
+                    f2=TIFieldStructPattern(name="f2", typename="basic", bytes_expected=3),
+                )._modify_all(True, {})
+            )
+
+    def test__modify_all_exc(self) -> None:
+        with self.subTest(test="two dynamic field"):
+            with self.assertRaises(TypeError) as exc:
+                TIContinuousStorageStructPattern(
+                    typename="basic", name="test",
+                ).configure(
+                    f0=TIFieldStructPattern(name="f0", typename="basic", bytes_expected=0),
+                    f1=TIFieldStructPattern(name="f1", typename="basic", bytes_expected=0),
+                )._modify_all(True, {})
+            self.assertEqual(
+                "two dynamic field not allowed", exc.exception.args[0]
+            )
