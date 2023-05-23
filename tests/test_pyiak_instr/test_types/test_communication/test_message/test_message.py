@@ -1,21 +1,21 @@
-import unittest
-from typing import Generator, Self
-
-from src.pyiak_instr.core import Code
-from src.pyiak_instr.types.communication import (
-    MessageFieldStructABC,
-    SingleMessageFieldStructABC,
-    StaticMessageFieldStructABC,
-    AddressMessageFieldStructABC,
-    CrcMessageFieldStructABC,
-    DataMessageFieldStructABC,
-    DataLengthMessageFieldStructABC,
-    IdMessageFieldStructABC,
-    OperationMessageFieldStructABC,
-    ResponseMessageFieldStructABC,
-    MessageStructABC,
-    MessageABC,
-)
+# import unittest
+# from typing import Generator, Self
+#
+# from src.pyiak_instr.core import Code
+# from src.pyiak_instr.types.communication import (
+#     MessageFieldStructABC,
+#     SingleMessageFieldStructABC,
+#     StaticMessageFieldStructABC,
+#     AddressMessageFieldStructABC,
+#     CrcMessageFieldStructABC,
+#     DataMessageFieldStructABC,
+#     DataLengthMessageFieldStructABC,
+#     IdMessageFieldStructABC,
+#     OperationMessageFieldStructABC,
+#     ResponseMessageFieldStructABC,
+#     MessageStructABC,
+#     MessageABC,
+# )
 # from src.pyiak_instr.store import BytesFieldStruct
 # from src.pyiak_instr.types.store import STRUCT_DATACLASS
 # from src.pyiak_instr.types.communication import (
@@ -27,7 +27,7 @@ from src.pyiak_instr.types.communication import (
 #     MessagePatternABC,
 # )
 
-from ....utils import validate_object
+from tests.utils import validate_object
 #
 #
 # @STRUCT_DATACLASS
