@@ -244,6 +244,15 @@ class TestDataMessageFieldStruct(unittest.TestCase):
             wo_attrs=["encoder"],
         )
 
+    def test_init_exc(self) -> None:
+        with self.subTest(test="data not dynamic"):
+            with self.assertRaises(ValueError) as exc:
+                TIDataMessageFieldStruct(stop=1)
+            self.assertEqual(
+                "TIDataMessageFieldStruct can only be dynamic",
+                exc.exception.args[0],
+            )
+
 
 class TestDataLengthMessageFieldStruct(unittest.TestCase):
 

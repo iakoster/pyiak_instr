@@ -163,6 +163,14 @@ class CrcMessageFieldStructABC(SingleMessageFieldStructABC):
 class DataMessageFieldStructABC(MessageFieldStructABC):
     """Represents a field of a Message with data."""
 
+    def __post_init__(
+            self,
+            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+    ) -> None:
+        super().__post_init__(encoder)
+        if self.bytes_expected != 0:
+            raise ValueError(f"{self.__class__.__name__} can only be dynamic")
+
 
 @STRUCT_DATACLASS
 class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
