@@ -497,3 +497,32 @@ class TestMessageStructABC(unittest.TestCase):
             name="std",
             wo_attrs=["fields"]
         )
+
+    def test_init_exc(self) -> None:
+        with self.subTest(test="divisible without dynamic"):
+            with self.assertRaises(TypeError) as exc:
+                TIMessageStruct(
+                    fields={"f": TIMessageFieldStruct(name="f", stop=1)},
+                    divisible=True,
+                )
+            self.assertEqual(
+                "TIMessageStruct can not be divided because it does not "
+                "have a dynamic field",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(test="small mtu"):
+            with self.assertRaises(ValueError) as exc:
+                TIMessageStruct(
+                    fields={
+                        "f0": TIMessageFieldStruct(name="f0", stop=4),
+                        "f1": TIMessageFieldStruct(name="f1", start=4),
+                    },
+                    divisible=True,
+                    mtu=4,
+                )
+            self.assertEqual(
+                "MTU value does not allow you to split the message if "
+                "necessary. The minimum MTU is 5 (got 4)",
+                exc.exception.args[0],
+            )
