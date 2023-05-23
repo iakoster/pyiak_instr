@@ -11,6 +11,8 @@ from ._struct import (
     IdMessageFieldStructABC,
     OperationMessageFieldStructABC,
     ResponseMessageFieldStructABC,
+    MessageStructGetParserABC,
+    MessageStructHasParserABC,
     MessageStructABC,
 )
 
@@ -28,5 +30,7 @@ __all__ = [
     "IdMessageFieldStructABC",
     "OperationMessageFieldStructABC",
     "ResponseMessageFieldStructABC",
+    "MessageStructGetParserABC",
+    "MessageStructHasParserABC",
     "MessageStructABC",
 ]

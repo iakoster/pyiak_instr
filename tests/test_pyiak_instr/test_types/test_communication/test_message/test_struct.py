@@ -3,8 +3,9 @@ import unittest
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.encoders import BytesEncoder
 from src.pyiak_instr.exceptions import NotAmongTheOptions, ContentError
+from src.pyiak_instr.types.communication.message import MessageStructABC
 
-from .....utils import validate_object
+from .....utils import validate_object, get_object_attrs
 from .ti import (
     TIMessageFieldStruct,
     TISingleMessageFieldStruct,
@@ -504,7 +505,7 @@ class TestMessageStructABC(unittest.TestCase):
             is_dynamic=True,
             mtu=1500,
             name="std",
-            wo_attrs=["fields"]
+            wo_attrs=["fields", "get", "has"]
         )
 
     def test_init_exc(self) -> None:
@@ -533,5 +534,89 @@ class TestMessageStructABC(unittest.TestCase):
             self.assertEqual(
                 "MTU value does not allow you to split the message if "
                 "necessary. The minimum MTU is 5 (got 4)",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(test="not specified code"):
+            with self.assertRaises(KeyError) as exc:
+                MessageStructABC(fields={
+                    "f0": TIMessageFieldStruct(name="f0")
+                })
+            self.assertEqual(
+                "TIMessageFieldStruct not represented in codes",
+                exc.exception.args[0],
+            )
+
+    def test_has(self) -> None:
+        obj = TIMessageStruct(fields=dict(
+            f0=TIMessageFieldStruct(name="f0", stop=1),
+            f1=TISingleMessageFieldStruct(name="f1", start=1, stop=2),
+            f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
+            f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
+            f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
+            f5=TIDataMessageFieldStruct(name="f5", start=6, stop=-4),
+            f6=TIDataLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
+            f7=TIIdMessageFieldStruct(name="f7", start=-3, stop=-2),
+            f8=TIOperationMessageFieldStruct(name="f8", start=-2),
+        ))
+
+        validate_object(
+            self,
+            obj.has,
+            basic=True,
+            single=True,
+            address=True,
+            id_=True,
+            data_length=True,
+            response=False,
+            static=True,
+            crc=True,
+            operation=True,
+            data=True,
+        )
+
+        self.assertFalse(obj.has(Code.UNDEFINED))
+
+    def test_get(self) -> None:
+        obj = TIMessageStruct(fields=dict(
+            f0=TIMessageFieldStruct(name="f0", stop=1),
+            f1=TISingleMessageFieldStruct(name="f1", start=1, stop=2),
+            f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
+            f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
+            f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
+            f5=TIDataMessageFieldStruct(name="f5", start=6, stop=-4),
+            f6=TIDataLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
+            f7=TIIdMessageFieldStruct(name="f7", start=-3, stop=-2),
+            f8=TIOperationMessageFieldStruct(name="f8", start=-2, stop=-1),
+            f9=TIResponseMessageFieldStruct(name="f9", start=-1)
+        ))
+
+        ref = dict(
+            basic="f0",
+            single="f1",
+            address="f3",
+            id_="f7",
+            data_length="f6",
+            response="f9",
+            static="f2",
+            crc="f4",
+            operation="f8",
+            data="f5",
+        )
+        get = obj.get
+        for attr in get_object_attrs(get):
+            with self.subTest(field=attr):
+                self.assertEqual(ref[attr], getattr(get, attr).name)
+
+    def test_get_exc(self) -> None:
+        obj = TIMessageStruct(fields=dict(
+            f0=TIMessageFieldStruct(name="f0", stop=1),
+        ))
+
+        with self.subTest(test="invalid code"):
+            with self.assertRaises(TypeError) as exc:
+                obj.get(Code.UNDEFINED)
+            self.assertEqual(
+                "field instance with code <Code.UNDEFINED: 255> not found",
                 exc.exception.args[0],
             )

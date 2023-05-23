@@ -2,7 +2,7 @@ import unittest
 
 from src.pyiak_instr.core import Code
 
-from .....utils import validate_object
+from .....utils import validate_object, get_object_attrs
 from .ti import (
     TIMessageFieldStruct,
     TISingleMessageFieldStruct,
@@ -80,9 +80,7 @@ class TestMessageABC(unittest.TestCase):
             f9=TIResponseMessageFieldStruct(name="f9", start=-1)
         )))
 
-        validate_object(
-            self,
-            obj.get,
+        ref = dict(
             basic="f0",
             single="f1",
             address="f3",
@@ -94,26 +92,10 @@ class TestMessageABC(unittest.TestCase):
             operation="f8",
             data="f5",
         )
-
-    def test_get_exc(self) -> None:
-        obj = TIMessage(TIMessageStruct(fields=dict(
-            f0=TIMessageFieldStruct(name="f0", stop=1),
-        )))
-
-        with self.subTest(test="invalid code"):
-            with self.assertRaises(TypeError) as exc:
-                obj.get(Code.UNDEFINED)
-            self.assertEqual(
-                "undefined code: <Code.UNDEFINED: 255>", exc.exception.args[0]
-            )
-
-        with self.subTest(test="invalid field type"):
-            with self.assertRaises(TypeError) as exc:
-                _ = obj.get.id_
-            self.assertEqual(
-                "field instance with type 'TIIdMessageFieldStruct' not found",
-                exc.exception.args[0],
-            )
+        get = obj.get
+        for attr in get_object_attrs(get):
+            with self.subTest(field=attr):
+                self.assertEqual(ref[attr], getattr(get, attr).name)
 
     def test_src_dst(self) -> None:
         obj = TIMessage(TIMessageStruct(fields={

@@ -1,4 +1,5 @@
-from dataclasses import InitVar
+from dataclasses import InitVar, field as _field
+from typing import Union
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.encoders import BytesEncoder
@@ -69,21 +70,39 @@ class TIResponseMessageFieldStruct(ResponseMessageFieldStructABC):
     encoder: InitVar[type[BytesEncoder]] = BytesEncoder
 
 
+TIFieldStructUnionT = Union[
+    TIMessageFieldStruct,
+    TISingleMessageFieldStruct,
+    TIStaticMessageFieldStruct,
+    TIAddressMessageFieldStruct,
+    TICrcMessageFieldStruct,
+    TIDataMessageFieldStruct,
+    TIDataLengthMessageFieldStruct,
+    TIIdMessageFieldStruct,
+    TIOperationMessageFieldStruct,
+    TIResponseMessageFieldStruct,
+]
+
+
 @STRUCT_DATACLASS
 class TIMessageStruct(MessageStructABC):
-    ...
+
+    _field_type_codes: dict[type[TIFieldStructUnionT], Code] = _field(
+        default_factory=lambda: {
+            TIMessageFieldStruct: Code.BASIC,
+            TISingleMessageFieldStruct: Code.SINGLE,
+            TIStaticMessageFieldStruct: Code.STATIC,
+            TIAddressMessageFieldStruct: Code.ADDRESS,
+            TICrcMessageFieldStruct: Code.CRC,
+            TIDataMessageFieldStruct: Code.DATA,
+            TIDataLengthMessageFieldStruct: Code.DATA_LENGTH,
+            TIIdMessageFieldStruct: Code.ID,
+            TIOperationMessageFieldStruct: Code.OPERATION,
+            TIResponseMessageFieldStruct: Code.RESPONSE,
+        },
+        init=False,
+    )
 
 
 class TIMessage(MessageABC):
-    _field_codes = {
-        Code.BASIC: TIMessageFieldStruct,
-        Code.SINGLE: TISingleMessageFieldStruct,
-        Code.STATIC: TIStaticMessageFieldStruct,
-        Code.ADDRESS: TIAddressMessageFieldStruct,
-        Code.CRC: TICrcMessageFieldStruct,
-        Code.DATA: TIDataMessageFieldStruct,
-        Code.DATA_LENGTH: TIDataLengthMessageFieldStruct,
-        Code.ID: TIIdMessageFieldStruct,
-        Code.OPERATION: TIOperationMessageFieldStruct,
-        Code.RESPONSE: TIResponseMessageFieldStruct,
-    }
+    ...

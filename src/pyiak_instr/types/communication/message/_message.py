@@ -24,6 +24,8 @@ from ....types.store.bin import (
 from ._struct import (
     STRUCT_DATACLASS,
     MessageFieldStructABC,
+    MessageStructGetParserABC,
+    MessageStructHasParserABC,
     MessageStructABC,
 )
 
@@ -58,122 +60,6 @@ MessagePatternT = TypeVar("MessagePatternT")
 # )
 
 
-class MessageGetParserABC(Generic[FieldStructT]):
-
-    def __init__(
-            self,
-            type_codes: dict[Code, type[FieldStructT]],
-            types: dict[type[FieldStructT], str],
-    ) -> None:
-        self._codes = type_codes
-        self._types = types
-
-    @property
-    def basic(self) -> str:
-        return self(Code.BASIC)
-
-    @property
-    def single(self) -> str:
-        return self(Code.SINGLE)
-
-    @property
-    def static(self) -> str:
-        return self(Code.STATIC)
-
-    @property
-    def address(self) -> str:
-        return self(Code.ADDRESS)
-
-    @property
-    def crc(self) -> str:
-        return self(Code.CRC)
-
-    @property
-    def data(self) -> str:
-        return self(Code.DATA)
-
-    @property
-    def data_length(self) -> str:
-        return self(Code.DATA_LENGTH)
-
-    @property
-    def id_(self) -> str:
-        return self(Code.ID)
-
-    @property
-    def operation(self) -> str:
-        return self(Code.OPERATION)
-
-    @property
-    def response(self) -> str:
-        return self(Code.RESPONSE)
-
-    def __call__(self, code: Code) -> str:
-        if code not in self._codes:
-            raise TypeError(f"undefined code: {code!r}")
-        type_ = self._codes[code]
-        if type_ not in self._types:
-            raise TypeError(
-                f"field instance with type {type_.__name__!r} "
-                "not found"
-            )
-        return self._types[type_]
-
-
-class MessageHasParserABC(Generic[FieldStructT]):
-
-    def __init__(
-            self,
-            type_codes: dict[Code, type[FieldStructT]],
-            types: dict[type[FieldStructT], str],
-    ) -> None:
-        self._codes = type_codes
-        self._types = types
-
-    @property
-    def basic(self) -> bool:
-        return self(Code.BASIC)
-
-    @property
-    def single(self) -> bool:
-        return self(Code.SINGLE)
-
-    @property
-    def static(self) -> bool:
-        return self(Code.STATIC)
-
-    @property
-    def address(self) -> bool:
-        return self(Code.ADDRESS)
-
-    @property
-    def crc(self) -> bool:
-        return self(Code.CRC)
-
-    @property
-    def data(self) -> bool:
-        return self(Code.DATA)
-
-    @property
-    def data_length(self) -> bool:
-        return self(Code.DATA_LENGTH)
-
-    @property
-    def id_(self) -> bool:
-        return self(Code.ID)
-
-    @property
-    def operation(self) -> bool:
-        return self(Code.OPERATION)
-
-    @property
-    def response(self) -> bool:
-        return self(Code.RESPONSE)
-
-    def __call__(self, code: Code) -> bool:
-        return code in self._codes and self._codes[code] in self._types
-
-
 # todo: clear src and dst?
 # todo: get rx and tx class instance
 # todo: field parser
@@ -182,8 +68,6 @@ class MessageABC(
     Generic[FieldStructT, MessageStructT, MessagePatternT, AddressT],
 ):
 
-    _field_codes: dict[Code, type[FieldStructT]]
-
     def __init__(
             self,
             storage: MessageStructT,
@@ -191,12 +75,6 @@ class MessageABC(
     ):
         super().__init__(storage, pattern=pattern)
         self._src, self._dst = None, None
-
-        self._field_types: dict[type[FieldStructT], str] = {}
-        for struct in self.struct:
-            field_class = struct.__class__
-            if field_class not in self._field_types:
-                self._field_types[field_class] = struct.name
 
     def split(self) -> Generator[Self, None, None]:
         """
@@ -231,24 +109,24 @@ class MessageABC(
         self._dst = destination
 
     @property
-    def get(self) -> MessageGetParserABC[FieldStructT]:
+    def get(self) -> MessageStructGetParserABC[MessageStructT, FieldStructT]:
         """
         Returns
         -------
-        MessageGetParserABC
-            message get parser.
+        MessageStructGetParserABC
+            message struct get parser.
         """
-        return MessageGetParserABC(self._field_codes, self._field_types)
+        return self._s.get
 
     @property
-    def has(self) -> MessageHasParserABC[FieldStructT]:
+    def has(self) -> MessageStructHasParserABC[MessageStructT, FieldStructT]:
         """
         Returns
         -------
-        MessageHasParserABC
-            message has parser.
+        MessageStructHasParserABC
+            message struct has parser.
         """
-        return MessageHasParserABC(self._field_codes, self._field_types)
+        return self._s.has
 
     @property
     def src(self) -> AddressT | None:

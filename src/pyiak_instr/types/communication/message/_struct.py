@@ -6,6 +6,7 @@ from functools import wraps
 from typing import (  # pylint: disable=unused-import
     Any,
     Callable,
+    ClassVar,
     Generator,
     Generic,
     Self,
@@ -39,12 +40,15 @@ __all__ = [
     "IdMessageFieldStructABC",
     "OperationMessageFieldStructABC",
     "ResponseMessageFieldStructABC",
+    "MessageStructGetParserABC",
+    "MessageStructHasParserABC",
     "MessageStructABC",
 ]
 
 
 EncoderT: TypeAlias = Encoder[BytesDecodeT, BytesEncodeT, bytes]
 FieldStructT = TypeVar("FieldStructT", bound="MessageFieldStructABC")
+MessageStructT = TypeVar("MessageStructT", bound="MessageStructABC")
 
 
 # todo: refactor (join classes to one and use metaclass)
@@ -321,6 +325,116 @@ class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
         return self.descs_r[code]
 
 
+class MessageStructGetParserABC(Generic[MessageStructT, FieldStructT]):
+
+    def __init__(
+            self,
+            message: MessageStructT,
+            codes: dict[Code, str],
+    ) -> None:
+        self._msg = message
+        self._codes = codes
+
+    @property
+    def basic(self) -> MessageFieldStructABC:
+        return self(Code.BASIC)
+
+    @property
+    def single(self) -> SingleMessageFieldStructABC:
+        return self(Code.SINGLE)
+
+    @property
+    def static(self) -> StaticMessageFieldStructABC:
+        return self(Code.STATIC)
+
+    @property
+    def address(self) -> AddressMessageFieldStructABC:
+        return self(Code.ADDRESS)
+
+    @property
+    def crc(self) -> CrcMessageFieldStructABC:
+        return self(Code.CRC)
+
+    @property
+    def data(self) -> DataMessageFieldStructABC:
+        return self(Code.DATA)
+
+    @property
+    def data_length(self) -> DataLengthMessageFieldStructABC:
+        return self(Code.DATA_LENGTH)
+
+    @property
+    def id_(self) -> IdMessageFieldStructABC:
+        return self(Code.ID)
+
+    @property
+    def operation(self) -> OperationMessageFieldStructABC:
+        return self(Code.OPERATION)
+
+    @property
+    def response(self) -> ResponseMessageFieldStructABC:
+        return self(Code.RESPONSE)
+
+    def __call__(self, code: Code) -> FieldStructT:
+        if code not in self._codes:
+            raise TypeError(f"field instance with code {code!r} not found")
+        return self._msg[self._codes[code]]
+
+
+class MessageStructHasParserABC(Generic[MessageStructT, FieldStructT]):
+
+    def __init__(
+            self,
+            message: MessageStructT,
+            codes: dict[Code, str],
+    ) -> None:
+        self._msg = message
+        self._codes = codes
+
+    @property
+    def basic(self) -> bool:
+        return self(Code.BASIC)
+
+    @property
+    def single(self) -> bool:
+        return self(Code.SINGLE)
+
+    @property
+    def static(self) -> bool:
+        return self(Code.STATIC)
+
+    @property
+    def address(self) -> bool:
+        return self(Code.ADDRESS)
+
+    @property
+    def crc(self) -> bool:
+        return self(Code.CRC)
+
+    @property
+    def data(self) -> bool:
+        return self(Code.DATA)
+
+    @property
+    def data_length(self) -> bool:
+        return self(Code.DATA_LENGTH)
+
+    @property
+    def id_(self) -> bool:
+        return self(Code.ID)
+
+    @property
+    def operation(self) -> bool:
+        return self(Code.OPERATION)
+
+    @property
+    def response(self) -> bool:
+        return self(Code.RESPONSE)
+
+    def __call__(self, code: Code) -> bool:
+        return code in self._codes
+
+
 @STRUCT_DATACLASS
 class MessageStructABC(BytesStorageStructABC[FieldStructT]):
 
@@ -330,8 +444,28 @@ class MessageStructABC(BytesStorageStructABC[FieldStructT]):
     mtu: int = 1500
     """max size of one message part."""
 
+    _field_type_codes: dict[type[FieldStructT], Code] = _field(
+        default_factory=dict, init=False
+    )  # ClassVar
+
+    _field_types: dict[Code, str] = _field(default_factory=dict, init=False)
+
     def __post_init__(self, fields: dict[str, FieldStructT]) -> None:
         super().__post_init__(fields)
+
+        field_types = {}
+        for struct in self:
+
+            field_class = struct.__class__
+            if field_class not in self._field_type_codes:
+                raise KeyError(f"{field_class.__name__} not represented in codes")
+
+            field_code = self._field_type_codes[field_class]
+            if field_code not in field_types:
+                field_types[field_code] = struct.name
+
+        self._setattr("_field_types", field_types)
+
         if self.divisible:
             if not self.is_dynamic:
                 raise TypeError(
@@ -348,3 +482,23 @@ class MessageStructABC(BytesStorageStructABC[FieldStructT]):
                     f"necessary. The minimum MTU is {min_mtu} "
                     f"(got {self.mtu})"
                 )
+
+    @property
+    def get(self) -> MessageStructGetParserABC[Self, FieldStructT]:
+        """
+        Returns
+        -------
+        MessageStructGetParserABC
+            message get parser.
+        """
+        return MessageStructGetParserABC(self, self._field_types)
+
+    @property
+    def has(self) -> MessageStructHasParserABC[Self, FieldStructT]:
+        """
+        Returns
+        -------
+        MessageHasParserABC
+            message has parser.
+        """
+        return MessageStructHasParserABC(self, self._field_types)
