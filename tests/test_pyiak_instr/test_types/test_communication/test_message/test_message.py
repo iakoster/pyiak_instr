@@ -1,33 +1,130 @@
-# import unittest
-# from typing import Generator, Self
-#
-# from src.pyiak_instr.core import Code
-# from src.pyiak_instr.types.communication import (
-#     MessageFieldStructABC,
-#     SingleMessageFieldStructABC,
-#     StaticMessageFieldStructABC,
-#     AddressMessageFieldStructABC,
-#     CrcMessageFieldStructABC,
-#     DataMessageFieldStructABC,
-#     DataLengthMessageFieldStructABC,
-#     IdMessageFieldStructABC,
-#     OperationMessageFieldStructABC,
-#     ResponseMessageFieldStructABC,
-#     MessageStructABC,
-#     MessageABC,
-# )
-# from src.pyiak_instr.store import BytesFieldStruct
-# from src.pyiak_instr.types.store import STRUCT_DATACLASS
-# from src.pyiak_instr.types.communication import (
-#     MessageABC,
-#     MessageFieldABC,
-#     MessageFieldPatternABC,
-#     MessageGetParserABC,
-#     MessageHasParserABC,
-#     MessagePatternABC,
-# )
+import unittest
 
-from tests.utils import validate_object
+from src.pyiak_instr.core import Code
+
+from .....utils import validate_object
+from .ti import (
+    TIMessageFieldStruct,
+    TISingleMessageFieldStruct,
+    TIStaticMessageFieldStruct,
+    TIAddressMessageFieldStruct,
+    TICrcMessageFieldStruct,
+    TIDataMessageFieldStruct,
+    TIDataLengthMessageFieldStruct,
+    TIIdMessageFieldStruct,
+    TIOperationMessageFieldStruct,
+    TIResponseMessageFieldStruct,
+    TIMessageStruct,
+    TIMessage,
+)
+
+
+class TestMessageABC(unittest.TestCase):
+
+    def test_init(self) -> None:
+        validate_object(
+            self,
+            TIMessage(TIMessageStruct(fields=dict(
+                f0=TIDataLengthMessageFieldStruct(
+                    name="f0", stop=2, fmt=Code.U16
+                ),
+                f1=TIDataMessageFieldStruct(name="f1", start=2, fmt=Code.U32),
+            ))),
+            has_pattern=False,
+            src=None,
+            dst=None,
+            wo_attrs=["struct", "get", "has"],
+        )
+
+    def test_has(self) -> None:
+        obj = TIMessage(TIMessageStruct(fields=dict(
+            f0=TIMessageFieldStruct(name="f0", stop=1),
+            f1=TISingleMessageFieldStruct(name="f1", start=1, stop=2),
+            f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
+            f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
+            f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
+            f5=TIDataMessageFieldStruct(name="f5", start=6, stop=-4),
+            f6=TIDataLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
+            f7=TIIdMessageFieldStruct(name="f7", start=-3, stop=-2),
+            f8=TIOperationMessageFieldStruct(name="f8", start=-2),
+        )))
+
+        validate_object(
+            self,
+            obj.has,
+            basic=True,
+            single=True,
+            address=True,
+            id_=True,
+            data_length=True,
+            response=False,
+            static=True,
+            crc=True,
+            operation=True,
+            data=True,
+        )
+
+        self.assertFalse(obj.has(Code.UNDEFINED))
+
+    def test_get(self) -> None:
+        obj = TIMessage(TIMessageStruct(fields=dict(
+            f0=TIMessageFieldStruct(name="f0", stop=1),
+            f1=TISingleMessageFieldStruct(name="f1", start=1, stop=2),
+            f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
+            f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
+            f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
+            f5=TIDataMessageFieldStruct(name="f5", start=6, stop=-4),
+            f6=TIDataLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
+            f7=TIIdMessageFieldStruct(name="f7", start=-3, stop=-2),
+            f8=TIOperationMessageFieldStruct(name="f8", start=-2, stop=-1),
+            f9=TIResponseMessageFieldStruct(name="f9", start=-1)
+        )))
+
+        validate_object(
+            self,
+            obj.get,
+            basic="f0",
+            single="f1",
+            address="f3",
+            id_="f7",
+            data_length="f6",
+            response="f9",
+            static="f2",
+            crc="f4",
+            operation="f8",
+            data="f5",
+        )
+
+    def test_get_exc(self) -> None:
+        obj = TIMessage(TIMessageStruct(fields=dict(
+            f0=TIMessageFieldStruct(name="f0", stop=1),
+        )))
+
+        with self.subTest(test="invalid code"):
+            with self.assertRaises(TypeError) as exc:
+                obj.get(Code.UNDEFINED)
+            self.assertEqual(
+                "undefined code: <Code.UNDEFINED: 255>", exc.exception.args[0]
+            )
+
+        with self.subTest(test="invalid field type"):
+            with self.assertRaises(TypeError) as exc:
+                _ = obj.get.id_
+            self.assertEqual(
+                "field instance with type 'TIIdMessageFieldStruct' not found",
+                exc.exception.args[0],
+            )
+
+    def test_src_dst(self) -> None:
+        obj = TIMessage(TIMessageStruct(fields={
+            "f0": TIDataLengthMessageFieldStruct(name="f0"),
+        }))
+
+        self.assertTupleEqual((None, None), (obj.src, obj.dst))
+        obj.src = "123"
+        obj.dst = 456
+        self.assertTupleEqual(("123", 456), (obj.src, obj.dst))
+
 #
 #
 # @STRUCT_DATACLASS

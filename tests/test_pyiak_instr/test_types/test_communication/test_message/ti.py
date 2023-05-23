@@ -1,5 +1,6 @@
 from dataclasses import InitVar
 
+from src.pyiak_instr.core import Code
 from src.pyiak_instr.encoders import BytesEncoder
 from src.pyiak_instr.types.communication.message import (
     STRUCT_DATACLASS,
@@ -14,6 +15,7 @@ from src.pyiak_instr.types.communication.message import (
     OperationMessageFieldStructABC,
     ResponseMessageFieldStructABC,
     MessageStructABC,
+    MessageABC,
 )
 
 
@@ -70,3 +72,18 @@ class TIResponseMessageFieldStruct(ResponseMessageFieldStructABC):
 @STRUCT_DATACLASS
 class TIMessageStruct(MessageStructABC):
     ...
+
+
+class TIMessage(MessageABC):
+    _field_codes = {
+        Code.BASIC: TIMessageFieldStruct,
+        Code.SINGLE: TISingleMessageFieldStruct,
+        Code.STATIC: TIStaticMessageFieldStruct,
+        Code.ADDRESS: TIAddressMessageFieldStruct,
+        Code.CRC: TICrcMessageFieldStruct,
+        Code.DATA: TIDataMessageFieldStruct,
+        Code.DATA_LENGTH: TIDataLengthMessageFieldStruct,
+        Code.ID: TIIdMessageFieldStruct,
+        Code.OPERATION: TIOperationMessageFieldStruct,
+        Code.RESPONSE: TIResponseMessageFieldStruct,
+    }

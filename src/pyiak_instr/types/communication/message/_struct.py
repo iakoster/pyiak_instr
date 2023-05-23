@@ -11,6 +11,7 @@ from typing import (  # pylint: disable=unused-import
     Self,
     TypeAlias,
     TypeVar,
+    Union,
     cast,
 )
 

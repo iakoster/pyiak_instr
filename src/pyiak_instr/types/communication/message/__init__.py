@@ -1,3 +1,4 @@
+from ._message import MessageABC
 from ._struct import (
     STRUCT_DATACLASS,
     MessageFieldStructABC,
@@ -16,6 +17,7 @@ from ._struct import (
 
 __all__ = [
     "STRUCT_DATACLASS",
+    "MessageABC",
     "MessageFieldStructABC",
     "SingleMessageFieldStructABC",
     "StaticMessageFieldStructABC",
