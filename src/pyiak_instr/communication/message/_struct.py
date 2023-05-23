@@ -39,49 +39,12 @@ class SingleMessageFieldStruct(MessageFieldStruct):
     Represents a field of a Message with single word.
     """
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        if self.words_expected != 1:
-            raise ValueError(
-                f"{self.__class__.__name__} should expect one word"
-            )
-
-    def _modify_values(self) -> None:
-        if self.stop is None and self.bytes_expected == 0:
-            object.__setattr__(self, "bytes_expected", self.word_bytesize)
-        super()._modify_values()
-
 
 @STRUCT_DATACLASS
 class StaticMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with static single word (e.g. preamble).
     """
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        if not self.has_default:
-            raise ValueError("default value not specified")
-
-    def verify(self, content: bytes) -> bool:
-        """
-        Verify the content for compliance with the field parameters.
-
-        Also checks that `content` equal to default.
-
-        Parameters
-        ----------
-        content: bytes
-            content for validating.
-
-        Returns
-        -------
-        bool
-            True - content is correct, False - not.
-        """
-        if super().verify(content):
-            return content == self.default
-        return False
 
 
 @STRUCT_DATACLASS
@@ -161,55 +124,6 @@ class DataLengthMessageFieldStruct(SingleMessageFieldStruct):
     """
     Represents a field of a Message with data length.
     """
-
-    behaviour: Code = Code.ACTUAL  # todo: logic
-    """determines the behavior of determining the content value."""
-
-    units: Code = Code.BYTES
-    """data length units. Data can be measured in bytes or words."""
-
-    additive: int = 0
-    """additional value to the length of the data."""
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        if self.additive < 0:
-            raise ValueError("additive number must be positive integer")
-        if self.behaviour not in {Code.ACTUAL, Code.EXPECTED}:
-            raise NotAmongTheOptions("behaviour", self.behaviour)
-        if self.units not in {Code.BYTES, Code.WORDS}:
-            raise NotAmongTheOptions("units", self.units)
-
-    # todo: auto encode type
-    def calculate(self, data: bytes, fmt: Code) -> int:
-        """
-        Calculate length of `data`.
-
-        Parameters
-        ----------
-        data : bytes
-            data bytes.
-        fmt : Code
-            data fmt.
-
-        Returns
-        -------
-        int
-            `data` length.
-
-        Raises
-        ------
-        ContentError
-            if data not integer count of words.
-        """
-        if self.units is Code.WORDS:
-            bytesize = BytesEncoder.get_bytesize(fmt)
-            if len(data) % bytesize != 0:
-                raise ContentError(self, "non-integer words count in data")
-            return len(data) // bytesize
-
-        # units is a BYTES
-        return len(data)
 
 
 @STRUCT_DATACLASS

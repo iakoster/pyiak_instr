@@ -6,6 +6,8 @@ from ._pattern import (
 )
 from ._struct import (
     STRUCT_DATACLASS,
+    BytesDecodeT,
+    BytesEncodeT,
     BytesFieldStructABC,
     BytesStorageStructABC,
 )
@@ -16,6 +18,8 @@ from ._bin import (
 
 __all__ = [
     "STRUCT_DATACLASS",
+    "BytesDecodeT",
+    "BytesEncodeT",
     "BytesFieldStructABC",
     "BytesFieldStructPatternABC",
     "BytesStorageABC",

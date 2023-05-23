@@ -5,20 +5,32 @@ Communication (:mod:`pyiak_instr.types`)
 """
 # pylint: disable=duplicate-code
 from ._message import (
+    MessageFieldStructABC,
+    SingleMessageFieldStructABC,
+    StaticMessageFieldStructABC,
+    AddressMessageFieldStructABC,
+    CrcMessageFieldStructABC,
+    DataMessageFieldStructABC,
+    DataLengthMessageFieldStructABC,
+    IdMessageFieldStructABC,
+    OperationMessageFieldStructABC,
+    ResponseMessageFieldStructABC,
+    MessageStructABC,
     MessageABC,
-    MessageFieldABC,
-    MessageFieldPatternABC,
-    MessageGetParserABC,
-    MessageHasParserABC,
-    MessagePatternABC,
 )
 
 
 __all__ = [
+    "MessageFieldStructABC",
+    "SingleMessageFieldStructABC",
+    "StaticMessageFieldStructABC",
+    "AddressMessageFieldStructABC",
+    "CrcMessageFieldStructABC",
+    "DataMessageFieldStructABC",
+    "DataLengthMessageFieldStructABC",
+    "IdMessageFieldStructABC",
+    "OperationMessageFieldStructABC",
+    "ResponseMessageFieldStructABC",
+    "MessageStructABC",
     "MessageABC",
-    "MessageFieldABC",
-    "MessageFieldPatternABC",
-    "MessageGetParserABC",
-    "MessageHasParserABC",
-    "MessagePatternABC",
 ]

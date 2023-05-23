@@ -1,153 +1,355 @@
 """Private module of ``pyiak_instr.types.communication`` with types for
 communication module."""
 from abc import ABC, abstractmethod
+from dataclasses import field as _field
+from functools import wraps
 from typing import (  # pylint: disable=unused-import
     Any,
+    Callable,
     Generator,
     Generic,
     Self,
+    TypeAlias,
     TypeVar,
     cast,
 )
 
+from ...exceptions import ContentError, NotAmongTheOptions
 from ...core import Code
-from ..store import (
-    # BytesFieldABC,
-    # BytesFieldPatternABC,
-    # BytesFieldStructProtocol,
+from .._encoders import Encoder
+from ..store.bin import (
+    STRUCT_DATACLASS,
+    BytesDecodeT,
+    BytesEncodeT,
+    BytesFieldStructABC,
+    BytesFieldStructPatternABC,
     BytesStorageABC,
-    # ContinuousBytesStoragePatternABC,
+    BytesStoragePatternABC,
+    BytesStorageStructABC,
+    BytesStorageStructPatternABC,
+    ContinuousBytesStorageStructPatternABC,
 )
 
 
 __all__ = [
+    "MessageFieldStructABC",
+    "SingleMessageFieldStructABC",
+    "StaticMessageFieldStructABC",
+    "AddressMessageFieldStructABC",
+    "CrcMessageFieldStructABC",
+    "DataMessageFieldStructABC",
+    "DataLengthMessageFieldStructABC",
+    "IdMessageFieldStructABC",
+    "OperationMessageFieldStructABC",
+    "ResponseMessageFieldStructABC",
+    "MessageStructABC",
     "MessageABC",
-    "MessageFieldABC",
-    "MessageFieldPatternABC",
-    "MessageGetParserABC",
-    "MessageHasParserABC",
-    "MessagePatternABC",
 ]
 
 
 AddressT = TypeVar("AddressT")
-StructT = TypeVar("StructT") # , bound=BytesFieldStructProtocol)
-FieldT = TypeVar("FieldT", bound="MessageFieldABC[Any, Any]")
-FieldAnotherT = TypeVar("FieldAnotherT", bound="MessageFieldABC[Any, Any]")
-MessageGetParserT = TypeVar(
-    "MessageGetParserT", bound="MessageGetParserABC[Any, Any]"
-)
-MessageHasParserT = TypeVar(
-    "MessageHasParserT", bound="MessageHasParserABC[Any]"
-)
-MessageT = TypeVar(
-    "MessageT", bound="MessageABC[Any, Any, Any, Any, Any, Any]"
-)
-FieldPatternT = TypeVar("FieldPatternT", bound="MessageFieldPatternABC[Any]")
-MessagePatternT = TypeVar(
-    "MessagePatternT", bound="MessagePatternABC[Any, Any]"
-)
+EncoderT: TypeAlias = Encoder[BytesDecodeT, BytesEncodeT, bytes]
+FieldStructT = TypeVar("FieldStructT", bound="MessageFieldStructABC")
+MessageStructT = TypeVar("MessageStructT", bound="MessageStructABC")
+MessageT = TypeVar("MessageT", bound="MessageABC")
+MessagePatternT = TypeVar("MessagePatternT")
+
+# StructT = TypeVar("StructT") # , bound=BytesFieldStructProtocol)
+# FieldT = TypeVar("FieldT", bound="MessageFieldABC[Any, Any]")
+# FieldAnotherT = TypeVar("FieldAnotherT", bound="MessageFieldABC[Any, Any]")
+# MessageGetParserT = TypeVar(
+#     "MessageGetParserT", bound="MessageGetParserABC[Any, Any]"
+# )
+# MessageHasParserT = TypeVar(
+#     "MessageHasParserT", bound="MessageHasParserABC[Any]"
+# )
+# MessageT = TypeVar(
+#     "MessageT", bound="MessageABC[Any, Any, Any, Any, Any, Any]"
+# )
+# FieldPatternT = TypeVar("FieldPatternT", bound="MessageFieldPatternABC[Any]")
+# MessagePatternT = TypeVar(
+#     "MessagePatternT", bound="MessagePatternABC[Any, Any]"
+# )
 
 
-class MessageFieldABC(
-    Generic[MessageT, StructT], # BytesFieldABC[MessageT, StructT],
-):
-    """
-    Represents abstract class for message field parser.
-    """
+# todo: refactor (join classes to one and use metaclass)
+@STRUCT_DATACLASS
+class MessageFieldStructABC(BytesFieldStructABC):
+    ...
 
 
-class MessageGetParserABC(ABC, Generic[MessageT, FieldT]):
-    """
-    Abstract base class for parser to get the field from message by it type.
+@STRUCT_DATACLASS
+class SingleMessageFieldStructABC(MessageFieldStructABC):
 
-    Parameters
-    ----------
-    message: MessageT
-        message instance.
-    types: dict[type[FieldT], str]
-        dictionary of field types in the message.
-    """
-
-    def __init__(
-        self, message: MessageT, types: dict[type[FieldT], str]
+    def __post_init__(
+            self,
+            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
-        self._msg, self._types = message, types
+        super().__post_init__(encoder)
+        if self.words_expected != 1:
+            raise ValueError(
+                f"{self.__class__.__name__} should expect one word"
+            )
 
-    def __call__(self, type_: type[FieldAnotherT]) -> FieldAnotherT:
-        """Get first field with specified type."""
-        if type_ not in self._types:
-            raise TypeError(f"{type_.__name__} instance is not found")
-        return cast(
-            FieldAnotherT,
-            self._msg[self._types[type_]],  # type: ignore[index]
-        )
-
-
-class MessageHasParserABC(ABC, Generic[FieldT]):
-    """
-    Abstract base class parser to check the field class exists in the message.
-
-    Parameters
-    ----------
-    types: set[type[FieldT]]
-        set of field types in the message.
-    """
-
-    def __init__(self, types: set[type[FieldT]]) -> None:
-        self._types = types
-
-    def __call__(self, type_: type[FieldT]) -> bool:
-        """Check that message has field of specified type."""
-        return type_ in self._types
+    def _modify_values(self) -> None:
+        if self.stop is None and self.bytes_expected == 0:
+            object.__setattr__(self, "bytes_expected", self.word_bytesize)
+        super()._modify_values()
 
 
-# todo: clear src and dst?
-# todo: get rx and tx class instance
-class MessageABC(
-    # BytesStorageABC[MessagePatternT, FieldT, StructT],
-    Generic[
-        MessagePatternT,
-        FieldT,
-        StructT,
-        MessageGetParserT,
-        MessageHasParserT,
-        AddressT,
-    ],
-):
-    """
-    Abstract base class message for communication between devices.
+@STRUCT_DATACLASS
+class StaticMessageFieldStructABC(SingleMessageFieldStructABC):
 
-    Parameters
-    ----------
-    fields: dict[str, StructT]
-        fields of the storage. The kwarg Key is used as the field name.
-    name: str, default='std'
-        name of storage.
-    divisible: bool, default=False
-        shows that the message can be divided by the infinite field.
-    mtu: int, default=1500
-        max size of one message part.
-    pattern: MessagePatternT | None, default=None
-        message pattern.
-    """
-
-    _get_parser: type[MessageGetParserT]
-    _has_parser: type[MessageHasParserT]
-    _src: AddressT | None
-    _dst: AddressT | None
-
-    def __init__(
-        self,
-        fields: dict[str, StructT],
-        name: str = "std",
-        divisible: bool = False,
-        mtu: int = 1500,
-        pattern: MessagePatternT | None = None,
+    def __post_init__(
+            self,
+            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
-        # todo: change positions (fields, name)
-        super().__init__(name, fields, pattern=pattern)
-        if divisible:
+        super().__post_init__(encoder)
+        if not self.has_default:
+            raise ValueError("default value not specified")
+
+    def verify(self, content: bytes, raise_if_false: bool = False) -> bool:
+        correct = super().verify(content, raise_if_false=raise_if_false)
+        if correct:
+            correct = content == self.default
+            if not correct and raise_if_false:
+                raise ContentError(self, clarification=content.hex(" "))
+        return correct
+
+
+@STRUCT_DATACLASS
+class AddressMessageFieldStructABC(SingleMessageFieldStructABC):
+
+    behaviour: Code = Code.DMA
+
+    units: Code = Code.WORDS
+
+    def __post_init__(
+            self,
+            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+    ) -> None:
+        super().__post_init__(encoder)
+        if self.behaviour not in {Code.DMA, Code.STRONG}:
+            raise NotAmongTheOptions(
+                "behaviour", self.behaviour, {Code.DMA, Code.STRONG}
+            )
+        if self.units not in {Code.BYTES, Code.WORDS}:
+            raise NotAmongTheOptions(
+                "units", self.units, {Code.BYTES, Code.WORDS}
+            )
+
+
+@STRUCT_DATACLASS
+class CrcMessageFieldStructABC(SingleMessageFieldStructABC):
+
+    poly: int = 0x1021
+
+    init: int = 0
+
+    wo_fields: set[str] = _field(default_factory=set)
+
+    def __post_init__(
+            self,
+            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+    ) -> None:
+        super().__post_init__(encoder)
+        if self.bytes_expected != 2 or self.poly != 0x1021 or self.init != 0:
+            raise NotImplementedError(
+                "Crc algorithm not verified for other values"
+            )  # todo: implement for any crc
+
+    def calculate(self, content: bytes) -> int:
+        """
+        Calculate crc of content.
+
+        Parameters
+        ----------
+        content : bytes
+            content to calculate crc.
+
+        Returns
+        -------
+        int
+            crc value of `content`.
+        """
+
+        crc = self.init
+        for byte in content:
+            crc ^= byte << 8
+            for _ in range(8):
+                crc <<= 1
+                if crc & 0x10000:
+                    crc ^= self.poly
+                crc &= 0xFFFF
+        return crc
+
+
+@STRUCT_DATACLASS
+class DataMessageFieldStructABC(MessageFieldStructABC):
+    """Represents a field of a Message with data."""
+
+
+@STRUCT_DATACLASS
+class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
+
+    behaviour: Code = Code.ACTUAL  # todo: logic
+    """determines the behavior of determining the content value."""
+
+    units: Code = Code.BYTES
+    """data length units. Data can be measured in bytes or words."""
+
+    additive: int = 0
+    """additional value to the length of the data."""
+
+    def __post_init__(
+            self,
+            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+    ) -> None:
+        super().__post_init__(encoder)
+        if self.additive < 0:
+            raise ValueError("additive number must be positive integer")
+        if self.behaviour not in {Code.ACTUAL, Code.EXPECTED}:
+            raise NotAmongTheOptions("behaviour", self.behaviour)
+        if self.units not in {Code.BYTES, Code.WORDS}:
+            raise NotAmongTheOptions("units", self.units)
+
+    def calculate(self, data: bytes, value_size: int) -> int:
+        if self.units is Code.WORDS:
+            if len(data) % value_size != 0:
+                raise ContentError(self, "non-integer words count in data")
+            return len(data) // value_size
+
+        # units is a BYTES
+        return len(data)
+
+
+@STRUCT_DATACLASS
+class IdMessageFieldStructABC(SingleMessageFieldStructABC):
+    """Represents a field with a unique identifier of a particular message."""
+
+
+@STRUCT_DATACLASS
+class OperationMessageFieldStructABC(SingleMessageFieldStructABC):
+    descs: dict[int, Code] = _field(
+        default_factory=lambda: {0: Code.READ, 1: Code.WRITE}
+    )
+    """matching dictionary value and codes."""
+
+    descs_r: dict[Code, int] = _field(init=False)
+    """reversed `descriptions`."""
+
+    def __post_init__(
+            self,
+            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+    ) -> None:
+        super().__post_init__(encoder)
+        self._setattr("descs_r", {v: k for k, v in self.descs.items()})
+
+    def encode(
+            self, content: BytesEncodeT | Code, verify: bool = False
+    ) -> bytes:
+        if isinstance(content, Code):
+            value = self.desc_r(content)
+            if value is None:
+                raise ContentError(self, f"can't encode {repr(content)}")
+            content = value
+        return super().encode(content, verify=True)
+
+    def desc(self, value: int) -> Code:
+        # pylint: disable=unsupported-membership-test,unsubscriptable-object
+        if value not in self.descs:
+            return Code.UNDEFINED
+        return self.descs[value]
+
+    def desc_r(self, code: Code) -> int | None:
+        if code not in self.descs_r:
+            return None
+        return self.descs_r[code]
+
+    def _modify_values(self) -> None:
+        super()._modify_values()
+        self._setattr("descs_r", {v: k for k, v in self.descs.items()})
+
+
+@STRUCT_DATACLASS
+class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
+    descs: dict[int, Code] = _field(default_factory=dict)
+    """matching dictionary value and codes."""
+
+    descs_r: dict[Code, int] = _field(init=False)
+    """reversed `descriptions`."""
+
+    def __post_init__(
+            self,
+            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+    ) -> None:
+        super().__post_init__(encoder)
+        self._setattr("descs_r", {v: k for k, v in self.descs.items()})
+
+    def encode(
+            self, content: BytesEncodeT | Code, verify: bool = False
+    ) -> bytes:
+        if isinstance(content, Code):
+            value = self.desc_r(content)
+            if value is None:
+                raise ContentError(self, f"can't encode {repr(content)}")
+            content = value
+        return super().encode(content)
+
+    def desc(self, value: int) -> Code:
+        """
+        Convert value to code.
+
+        Returns `UNDEFINED` if value not represented in `descs`.
+
+        Parameters
+        ----------
+        value : int
+            value for converting.
+
+        Returns
+        -------
+        Code
+            value code.
+        """
+        # pylint: disable=unsupported-membership-test,unsubscriptable-object
+        if value not in self.descs:
+            return Code.UNDEFINED
+        return self.descs[value]
+
+    def desc_r(self, code: Code) -> int | None:
+        """
+        Convert code to value.
+
+        Returns None if `code` not represented in `descs`.
+
+        Parameters
+        ----------
+        code : Code
+            code for converting.
+
+        Returns
+        -------
+        int | None
+            code value.
+        """
+        if code not in self.descs_r:
+            return None
+        return self.descs_r[code]
+
+
+@STRUCT_DATACLASS
+class MessageStructABC(BytesStorageStructABC[FieldStructT]):
+
+    divisible: bool = False
+    """shows that the message can be divided by the infinite field."""
+
+    mtu: int = 1500
+    """max size of one message part."""
+
+    def __post_init__(self, fields: dict[str, FieldStructT]) -> None:
+        super().__post_init__(fields)
+        if self.divisible:
             if not self.is_dynamic:
                 raise TypeError(
                     f"{self.__class__.__name__} can not be divided because "
@@ -157,25 +359,59 @@ class MessageABC(
             min_mtu = (
                 self.minimum_size + self._f[self._dyn_field].word_bytesize
             )
-            if mtu < min_mtu:
+            if self.mtu < min_mtu:
                 raise ValueError(
                     "MTU value does not allow you to split the message if "
-                    f"necessary. The minimum MTU is {min_mtu} (got {mtu})"
+                    f"necessary. The minimum MTU is {min_mtu} "
+                    f"(got {self.mtu})"
                 )
 
-        self._div = divisible
-        self._mtu = mtu
 
-        self._types: dict[type[FieldT], str] = {}
+# todo: clear src and dst?
+# todo: get rx and tx class instance
+class MessageABC(
+    BytesStorageABC[FieldStructT, MessageStructT, MessagePatternT]
+):
 
-        for f_name, struct in self._f.items():
-            f_class = self._struct_field[struct.__class__]
-            if f_class not in self._types:
-                self._types[f_class] = f_name
+    _src: AddressT | None = None
+    """Source address."""
 
-        self._src, self._dst = None, None
+    _dst: AddressT | None = None
+    """Destination address."""
 
-    @abstractmethod
+    def __init__(
+            self,
+            storage: MessageStructT,
+            pattern: MessagePatternT | None = None,
+    ):
+        super().__init__(storage, pattern=pattern)
+
+        self._field_types: dict[Code, str] = {}
+        for struct in self.struct:
+            field_type = struct.field_type
+            if field_type not in self._field_types:
+                self._field_types[field_type] = struct.name
+
+    def get(self, type_: Code) -> str:
+        """
+        Returns
+        -------
+        str
+            field name with specified type.
+        """
+        if type_ not in self._field_types:
+            raise TypeError(f"field instance with type {type_!r} not found")
+        return self._field_types[type_]
+
+    def has(self, type_: Code) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has field of specified type.
+        """
+        return type_ in self._field_types
+
     def split(self) -> Generator[Self, None, None]:
         """
         Split the message into parts over an infinite field.
@@ -185,16 +421,6 @@ class MessageABC(
         Self
             message part.
         """
-
-    @property
-    def divisible(self) -> bool:
-        """
-        Returns
-        -------
-        bool
-            shows that the message can be divided by the infinite field.
-        """
-        return self._div
 
     @property
     def dst(self) -> AddressT | None:
@@ -219,36 +445,6 @@ class MessageABC(
         self._dst = destination
 
     @property
-    def get(self) -> MessageGetParserT:
-        """
-        Returns
-        -------
-        MessageGet
-            get parser instance.
-        """
-        return self._get_parser(self, self._types)
-
-    @property
-    def has(self) -> MessageHasParserT:
-        """
-        Returns
-        -------
-        MessageHas
-            get parser instance.
-        """
-        return self._has_parser(set(self._types))
-
-    @property
-    def mtu(self) -> int:
-        """
-        Returns
-        -------
-        int
-            max size of one message part.
-        """
-        return self._mtu
-
-    @property
     def src(self) -> AddressT | None:
         """
         Returns
@@ -270,60 +466,34 @@ class MessageABC(
         """
         self._src = source
 
-    @property
-    def src_dst(self) -> tuple[AddressT | None, AddressT | None]:
-        """
-        Returns
-        -------
-        tuple[AddressT | None, AddressT | None]
-            src - source address;
-            dst - destination address.
-        """
-        return self.src, self.dst
 
-    @src_dst.setter
-    def src_dst(
-        self, src_dst: tuple[AddressT | None, AddressT | None]
-    ) -> None:
-        """
-        Set source and destination addresses.
-
-        Parameters
-        ----------
-        src_dst : tuple[AddressT | None, AddressT | None]
-            src - source address;
-            dst - destination address.
-        """
-        self.src, self.dst = src_dst
-
-
-class MessageFieldPatternABC(Generic[StructT]):  # BytesFieldPatternABC[StructT]
-    """
-    Represent abstract class of pattern for message field.
-    """
-
-    @staticmethod
-    @abstractmethod
-    def get_bytesize(fmt: Code) -> int:
-        """
-        Get fmt size in bytes.
-
-        Parameters
-        ----------
-        fmt : Code
-            fmt code.
-
-        Returns
-        -------
-        int
-            fmt bytesize.
-        """
-
-
-class MessagePatternABC(
-    # ContinuousBytesStoragePatternABC[MessageT, FieldPatternT],
-    Generic[MessageT, FieldPatternT],
-):
-    """
-    Represent abstract class of pattern for message.
-    """
+# class MessageFieldPatternABC(Generic[StructT]):  # BytesFieldPatternABC[StructT]
+#     """
+#     Represent abstract class of pattern for message field.
+#     """
+#
+#     @staticmethod
+#     @abstractmethod
+#     def get_bytesize(fmt: Code) -> int:
+#         """
+#         Get fmt size in bytes.
+#
+#         Parameters
+#         ----------
+#         fmt : Code
+#             fmt code.
+#
+#         Returns
+#         -------
+#         int
+#             fmt bytesize.
+#         """
+#
+#
+# class MessagePatternABC(
+#     # ContinuousBytesStoragePatternABC[MessageT, FieldPatternT],
+#     Generic[MessageT, FieldPatternT],
+# ):
+#     """
+#     Represent abstract class of pattern for message.
+#     """
