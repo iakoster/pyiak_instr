@@ -36,6 +36,23 @@ class TestMessageABC(unittest.TestCase):
             wo_attrs=["struct", "get", "has"],
         )
 
+    def test_init_exc(self) -> None:
+        with self.assertRaises(TypeError) as exc:
+            TIMessage(TIMessageStruct(
+                fields={
+                    "f0": TIAddressMessageFieldStruct(
+                        name="f0", behaviour=Code.STRONG
+                    ),
+                    "f1": TIDataMessageFieldStruct(name="f1"),
+                },
+                divisible=True,
+            ))
+        self.assertEqual(
+            "invalid address behaviour for divisible message: "
+            "<Code.STRONG: 1540>",
+            exc.exception.args[0],
+        )
+
     def test_has(self) -> None:
         obj = TIMessage(TIMessageStruct(fields=dict(
             f0=TIMessageFieldStruct(name="f0", stop=1),
