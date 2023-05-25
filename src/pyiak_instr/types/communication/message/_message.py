@@ -3,7 +3,7 @@ communication module."""
 from abc import ABC, abstractmethod
 from dataclasses import field as _field
 from functools import wraps
-from typing import (  # pylint: disable=unused-import
+from typing import (
     Any,
     Callable,
     Generator,
@@ -41,23 +41,6 @@ MessageStructT = TypeVar(
     "MessageStructT", bound=MessageStructABC[MessageFieldStructABC]
 )
 MessagePatternT = TypeVar("MessagePatternT")
-
-# StructT = TypeVar("StructT") # , bound=BytesFieldStructProtocol)
-# FieldT = TypeVar("FieldT", bound="MessageFieldABC[Any, Any]")
-# FieldAnotherT = TypeVar("FieldAnotherT", bound="MessageFieldABC[Any, Any]")
-# MessageGetParserT = TypeVar(
-#     "MessageGetParserT", bound="MessageGetParserABC[Any, Any]"
-# )
-# MessageHasParserT = TypeVar(
-#     "MessageHasParserT", bound="MessageHasParserABC[Any]"
-# )
-# MessageT = TypeVar(
-#     "MessageT", bound="MessageABC[Any, Any, Any, Any, Any, Any]"
-# )
-# FieldPatternT = TypeVar("FieldPatternT", bound="MessageFieldPatternABC[Any]")
-# MessagePatternT = TypeVar(
-#     "MessagePatternT", bound="MessagePatternABC[Any, Any]"
-# )
 
 
 # todo: clear src and dst?
@@ -223,35 +206,3 @@ class MessageABC(
             source address.
         """
         self._src = source
-
-
-# class MessageFieldPatternABC(Generic[StructT]):  # BytesFieldPatternABC[StructT]
-#     """
-#     Represent abstract class of pattern for message field.
-#     """
-#
-#     @staticmethod
-#     @abstractmethod
-#     def get_bytesize(fmt: Code) -> int:
-#         """
-#         Get fmt size in bytes.
-#
-#         Parameters
-#         ----------
-#         fmt : Code
-#             fmt code.
-#
-#         Returns
-#         -------
-#         int
-#             fmt bytesize.
-#         """
-#
-#
-# class MessagePatternABC(
-#     # ContinuousBytesStoragePatternABC[MessageT, FieldPatternT],
-#     Generic[MessageT, FieldPatternT],
-# ):
-#     """
-#     Represent abstract class of pattern for message.
-#     """

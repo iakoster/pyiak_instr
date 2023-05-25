@@ -17,6 +17,9 @@ from src.pyiak_instr.types.communication.message import (
     ResponseMessageFieldStructABC,
     MessageStructABC,
     MessageABC,
+    MessageFieldStructPatternABC,
+    MessageStructPatternABC,
+    MessagePatternABC,
 )
 
 
@@ -105,4 +108,34 @@ class TIMessageStruct(MessageStructABC):
 
 
 class TIMessage(MessageABC):
+    ...
+
+
+class TIMessageFieldStructPattern(
+    MessageFieldStructPatternABC[TIFieldStructUnionT]
+):
+
+    _options = dict(
+        basic=TIMessageFieldStruct,
+        single=TISingleMessageFieldStruct,
+        static=TIStaticMessageFieldStruct,
+        address=TIAddressMessageFieldStruct,
+        crc=TICrcMessageFieldStruct,
+        data=TIDataMessageFieldStruct,
+        data_length=TIDataLengthMessageFieldStruct,
+        id=TIIdMessageFieldStruct,
+        operation=TIOperationMessageFieldStruct,
+        response=TIResponseMessageFieldStruct,
+    )
+
+
+class TIMessageStructPattern(
+    MessageStructPatternABC[TIMessageStruct, TIMessageFieldStructPattern]
+):
+    ...
+
+
+class TIMessagePattern(
+    MessagePatternABC[TIMessage, TIMessageStructPattern]
+):
     ...

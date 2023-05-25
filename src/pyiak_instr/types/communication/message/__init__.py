@@ -1,3 +1,8 @@
+from ._pattern import (
+    MessageFieldStructPatternABC,
+    MessageStructPatternABC,
+    MessagePatternABC,
+)
 from ._message import MessageABC
 from ._struct import (
     STRUCT_DATACLASS,
@@ -33,4 +38,7 @@ __all__ = [
     "MessageStructGetParserABC",
     "MessageStructHasParserABC",
     "MessageStructABC",
+    "MessageFieldStructPatternABC",
+    "MessageStructPatternABC",
+    "MessagePatternABC",
 ]
