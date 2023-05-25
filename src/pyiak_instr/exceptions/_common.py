@@ -1,6 +1,5 @@
 """Private module of `pyiak_instr.exceptions` with common exceptions."""
-from typing import Any
-import inspect
+from typing import Any, Iterable
 
 from ._base import PyiError
 from ..core import Code
@@ -29,13 +28,13 @@ class NotAmongTheOptions(PyiError):
         self,
         name: str,
         value: Any = None,
-        options: set[Any] | None = None,
+        options: Iterable[Any] | None = None,
     ):
         msg = f"{name} option "
         if options is None:
             msg += "not allowed"
         else:
-            msg += f"not in {options}"
+            msg += f"not in {{{', '.join(map(repr, options))}}}"
 
         if value is not None:
             msg += f", got {repr(value)}"
