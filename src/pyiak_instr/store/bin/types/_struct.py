@@ -8,8 +8,6 @@ from typing import (
     Callable,
     Generator,
     Generic,
-    Iterable,
-    Iterator,
     TypeAlias,
     TypeVar,
     overload,
@@ -20,7 +18,7 @@ import numpy.typing as npt
 
 from ....core import Code
 from ....exceptions import ContentError
-from ..._encoders import Encoder
+from ....encoders.types import Encoder
 
 
 __all__ = [

@@ -9,7 +9,7 @@ from typing import (
     cast,
 )
 
-from ....types.store.bin import (
+from ....store.bin.types import (
     BytesFieldStructPatternABC,
     BytesStorageStructPatternABC,
     BytesStoragePatternABC,

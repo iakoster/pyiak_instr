@@ -1,11 +1,11 @@
 import unittest
 from pathlib import Path
 
-from src.pyiak_instr.types import RWData
+from src.pyiak_instr.rwfile.types import RWData
 from src.pyiak_instr.exceptions import FileSuffixError, NotSupportedMethod
 
-from ..env import get_local_test_data_dir, remove_test_data_dir
-from ...utils import validate_object
+from ....utils import validate_object
+from ...env import get_local_test_data_dir, remove_test_data_dir
 
 
 TEST_DATA_DIR = get_local_test_data_dir(__name__)

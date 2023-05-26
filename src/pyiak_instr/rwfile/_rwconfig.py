@@ -10,8 +10,8 @@ from pathlib import Path
 from configparser import ConfigParser
 from typing import overload, Any
 
-from ..types import RWData
 from ..encoders import StringEncoder
+from .types import RWData
 
 
 __all__ = ["RWConfig"]

@@ -15,8 +15,8 @@ from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
 from src.pyiak_instr.rwfile import RWConfig
 from src.pyiak_instr.encoders import BytesEncoder
-from src.pyiak_instr.types import Encoder
-from src.pyiak_instr.types.store.bin import (
+from src.pyiak_instr.encoders.types import Encoder
+from src.pyiak_instr.store.bin.types import (
     STRUCT_DATACLASS,
     BytesFieldStructABC,
     BytesFieldStructPatternABC,

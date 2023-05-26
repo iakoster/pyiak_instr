@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from ..types import RWData
+from .types import RWData
 
 
 __all__ = ["RWSQLite"]

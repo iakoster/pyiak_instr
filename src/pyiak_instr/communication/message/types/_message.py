@@ -15,8 +15,8 @@ from typing import (
 )
 
 from ....core import Code
-from ....types import Encoder
-from ....types.store.bin import (
+from ....encoders.types import Encoder
+from ....store.bin.types import (
     BytesDecodeT,
     BytesEncodeT,
     BytesStorageABC,

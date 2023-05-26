@@ -11,7 +11,7 @@ from ._struct import (
     BytesFieldStructABC,
     BytesStorageStructABC,
 )
-from ._bin import (
+from src.pyiak_instr.store.bin.types._bin import (
     BytesStorageABC,
 )
 

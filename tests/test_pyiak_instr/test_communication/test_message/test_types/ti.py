@@ -3,7 +3,7 @@ from typing import Union
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.encoders import BytesEncoder
-from src.pyiak_instr.types.communication.message import (
+from src.pyiak_instr.communication.message.types import (
     STRUCT_DATACLASS,
     MessageFieldStructABC,
     SingleMessageFieldStructABC,

@@ -1,25 +1,18 @@
 """Private module of ``pyiak_instr.types.communication`` with types for
 communication module."""
-from abc import ABC, abstractmethod
 from dataclasses import field as _field
-from functools import wraps
 from typing import (  # pylint: disable=unused-import
-    Any,
     Callable,
-    ClassVar,
-    Generator,
     Generic,
     Self,
     TypeAlias,
     TypeVar,
-    Union,
-    cast,
 )
 
-from src.pyiak_instr.exceptions import ContentError, NotAmongTheOptions
-from src.pyiak_instr.core import Code
-from src.pyiak_instr.types._encoders import Encoder
-from src.pyiak_instr.types.store.bin import (
+from ....exceptions import ContentError, NotAmongTheOptions
+from ....core import Code
+from ....encoders.types import Encoder
+from ....store.bin.types import (
     STRUCT_DATACLASS,
     BytesDecodeT,
     BytesEncodeT,

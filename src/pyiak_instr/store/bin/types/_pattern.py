@@ -1,37 +1,23 @@
 from __future__ import annotations
 from pathlib import Path
 from configparser import ConfigParser
-from dataclasses import dataclass
-from abc import abstractmethod
 from typing import (
     Any,
-    Generic,
-    Iterable,
-    Iterator,
-    Protocol,
     Self,
     TypeVar,
     cast,
-    overload,
 )
 
-import numpy as np
-import numpy.typing as npt
-
-from ....core import Code
 from ....exceptions import NotConfiguredYet
-from ....typing import WithBaseStringMethods
-from ..._pattern import (
+from ....types import (
     MetaPatternABC,
     PatternABC,
     SubPatternAdditions,
     WritablePatternABC,
 )
-from ..._rwdata import RWData
+from ....rwfile.types import RWData
 from ._bin import BytesStorageABC
 from ._struct import (
-    BytesDecodeT,
-    BytesEncodeT,
     BytesFieldStructABC,
     BytesStorageStructABC,
 )

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import shutil
 import unittest
 from dataclasses import dataclass
-from typing import Any, ClassVar, Iterable, TypeAlias
 
 import numpy as np
 import numpy.typing as npt
@@ -11,16 +9,10 @@ from numpy.testing import assert_array_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
-from src.pyiak_instr.types import Encoder
-from src.pyiak_instr.types.store.bin import (
-    STRUCT_DATACLASS,
-    BytesFieldStructABC,
-    BytesStorageABC,
-    BytesStorageStructABC,
-)
+from src.pyiak_instr.encoders.types import Encoder
 
-from tests.test_pyiak_instr.env import TEST_DATA_DIR
-from tests.utils import validate_object, compare_objects
+from ....env import TEST_DATA_DIR
+from .....utils import validate_object, compare_objects
 from .ti import TIFieldStruct, TIStorageStruct, TIStorage
 
 

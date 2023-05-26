@@ -6,9 +6,9 @@ from typing import Any, Callable, Generator, Iterable, Literal, cast
 import numpy as np
 import numpy.typing as npt
 
-from ..types import Encoder
 from ..core import Code
 from ..exceptions import CodeNotAllowed
+from .types import Encoder
 
 
 __all__ = ["BytesEncoder", "StringEncoder"]

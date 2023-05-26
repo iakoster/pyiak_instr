@@ -8,8 +8,8 @@ from types import TracebackType
 from typing import Any, Optional, Self, Type, TypeVar
 
 
-from ..exceptions import FileSuffixError, NotSupportedMethod
-from ..typing import ContextManager, WithApi, WithBaseStringMethods
+from ...exceptions import FileSuffixError, NotSupportedMethod
+from ...typing import ContextManager, WithApi, WithBaseStringMethods
 
 
 __all__ = ["RWData"]
