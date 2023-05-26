@@ -1,22 +1,58 @@
 """Private module of ``pyiak_instr.types`` with pattern types."""
+from __future__ import annotations
 from pathlib import Path
+from dataclasses import dataclass, field as _field
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Self, TypeVar, cast
 
 from ..exceptions import NotConfiguredYet
-from ..utilities import split_complex_dict
 
 
 __all__ = [
     "EditablePatternABC",
     "MetaPatternABC",
     "PatternABC",
+    "SubPatternAdditions",
     "WritablePatternABC",
 ]
 
 
 OptionsT = TypeVar("OptionsT")  # Pattern target options
 PatternT = TypeVar("PatternT", bound="PatternABC[Any]")
+
+
+# todo: separate tests
+@dataclass
+class SubPatternAdditions:
+
+    additions: dict[str, dict[str, Any]] = _field(default_factory=dict)
+
+    next_additions: dict[str, SubPatternAdditions] = _field(
+        default_factory=dict
+    )
+
+    def get_additions(self, key: str) -> dict[str, Any]:
+        return self.additions.get(key, {})
+
+    def get_next_additions(self, key: str) -> SubPatternAdditions:
+        return self.next_additions.get(key, SubPatternAdditions())
+
+    def set_additions(self, **parameters: dict[str, Any]) -> Self:
+        self.additions = parameters
+        return self
+
+    def set_next_additions(
+            self, **next_additions: SubPatternAdditions
+    ) -> Self:
+        self.next_additions = next_additions
+        return self
+
+    def update_additions(self, key: str, **update: Any) -> Self:
+        if key in self.additions:
+            self.additions[key].update(update)
+        else:
+            self.additions[key] = update
+        return self
 
 
 class PatternABC(ABC, Generic[OptionsT]):
@@ -50,7 +86,10 @@ class PatternABC(ABC, Generic[OptionsT]):
         self._kw = parameters
 
     def get(
-        self, changes_allowed: bool = False, **additions: Any
+        self,
+        changes_allowed: bool = False,
+        sub_additions: SubPatternAdditions = SubPatternAdditions(),
+        **additions: Any,
     ) -> OptionsT:
         """
         Get initialized class instance with parameters from pattern and from
@@ -62,6 +101,8 @@ class PatternABC(ABC, Generic[OptionsT]):
             allows situations where keys from the pattern overlap with kwargs.
             If False, it causes an error on intersection, otherwise the
             `additions` take precedence.
+        sub_additions: SubPatternAdditions, default=SubPatternAdditions()
+            ignored. Needed for backward compatibility.
         **additions: Any
             additional initialization parameters.
 
@@ -303,7 +344,10 @@ class MetaPatternABC(  # todo: rename to antonym of sub
         return self
 
     def get(
-        self, changes_allowed: bool = False, **additions: Any
+        self,
+        changes_allowed: bool = False,
+        sub_additions: SubPatternAdditions = SubPatternAdditions(),
+        **additions: Any,
     ) -> OptionsT:
         """
         Get initialized class instance with parameters from pattern and from
@@ -315,10 +359,10 @@ class MetaPatternABC(  # todo: rename to antonym of sub
             allows situations where keys from the pattern overlap with kwargs.
             If False, it causes an error on intersection, otherwise the
             `additions` take precedence.
+        sub_additions: PatternAdditionsABC, default=PatternAdditionsABC()
+            additional initialization parameters for sub-objects.
         **additions: Any
-            additional initialization parameters. Those keys that are
-            separated by "__" will be defined as parameters for other
-            patterns target, otherwise for the storage target.
+            additional initialization parameters.
 
         Returns
         -------
@@ -332,30 +376,25 @@ class MetaPatternABC(  # todo: rename to antonym of sub
         """
         if len(self._sub_p) == 0:
             raise NotConfiguredYet(self)
-        for_subs, for_meta = split_complex_dict(
-            additions, without_sep="other"
-        )
-        # todo: check that `for_subs` intersection all `sub_p`
         return super().get(
             changes_allowed,
-            **for_meta,
-            **self._get_subs(changes_allowed, for_subs),
+            **additions,
+            **self._get_subs(changes_allowed, sub_additions),
         )
 
     def _get_subs(
-        self, ch_a: bool, for_subs: dict[str, dict[str, Any]]
-    ) -> dict[str, Any]:  # ch_a - is changes allowed
+        self, changes_allowed: bool, sub_additions: SubPatternAdditions
+    ) -> dict[str, Any]:
         """
         Get dictionary of sub-pattern objects.
 
         Parameters
         ----------
-        ch_a : bool
+        changes_allowed : bool
             if True allows situations where keys from the pattern overlap
             with kwargs.
-        for_subs : dict[str, dict[str, Any]]
-            additional kwargs for sub-pattern objects if format
-            {FIELD: {PARAMETER: VALUE}}.
+        sub_additions : SubPatternAdditions
+            additional kwargs for sub-pattern objects.
 
         Returns
         -------
@@ -364,63 +403,16 @@ class MetaPatternABC(  # todo: rename to antonym of sub
         """
         # todo: fix crutch? (changes_allowed always True for sub-patterns).
         #  if needed for editing additions for sub-patterns in meta-pattern.
-        for_subs = self._modify_all(ch_a, for_subs)
+        self._modify_sub_additions(sub_additions)
         return {
             self._sub_p_par_name: {
-                n: s.get(True, **self._modify_each(ch_a, n, for_subs[n]))
-                for n, s in self._sub_p.items()
+                n: s.get(
+                    changes_allowed=changes_allowed,
+                    sub_additions=sub_additions.get_next_additions(n),
+                    **sub_additions.get_additions(n),
+                ) for n, s in self._sub_p.items()
             }
         }
 
-    # pylint: disable=unused-argument
-    def _modify_all(
-        self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
-    ) -> dict[str, dict[str, Any]]:
-        """
-        Modify additional kwargs for sub-pattern objects.
-
-        Parameters
-        ----------
-        changes_allowed : bool
-            if True allows situations where keys from the pattern overlap
-            with kwargs.
-        for_subs : dict[str, dict[str, Any]]
-            additional kwargs for sub-pattern object if format
-            {FIELD: {PARAMETER: VALUE}}.
-
-        Returns
-        -------
-        dict[str, dict[str, Any]]
-            modified additional kwargs for sub-pattern object.
-        """
-        return {
-            k: (for_subs[k] if k in for_subs else {}) for k in self._sub_p
-        }
-
-    # pylint: disable=unused-argument
-    def _modify_each(
-        self,
-        changes_allowed: bool,
-        name: str,
-        for_sub: dict[str, Any],
-    ) -> dict[str, Any]:
-        """
-        Modify additional kwargs for one sub-pattern object.
-
-        Parameters
-        ----------
-        changes_allowed : bool
-            if True allows situations where keys from the pattern overlap
-            with kwargs.
-        name: str
-            name of field
-        for_sub : dict[str, Any]
-            additional kwargs for sub-pattern object if format
-            {PARAMETER: VALUE}.
-
-        Returns
-        -------
-        dict[str, Any]
-            modified additional kwargs for one sub-pattern object.
-        """
-        return for_sub
+    def _modify_sub_additions(self, sub_additions: SubPatternAdditions) -> None:
+        pass

@@ -9,12 +9,11 @@ class TestSplitComplexDict(unittest.TestCase):
     def test_basic_usage(self) -> None:
         self.assertDictEqual(
             {
-                "a": {"a": 1},
-                "b": {"b": {"b": {20: 10}}},
-                "d": {"d": [1, 2, 3]}
+                "a": {"b": 1, "c": {"d": {20: 10}}},
+                "b": {"c": [1, 2, 3]}
             },
             split_complex_dict(dict(
-                a__a=1, b__b__b={20: 10}, d__d=[1, 2, 3]
+                a__b=1, a__c__d={20: 10}, b__c=[1, 2, 3]
             ))[0]
         )
 

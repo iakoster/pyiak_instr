@@ -70,11 +70,11 @@ def split_complex_dict(
         while i_sub_key < len(sub_keys) - 1:
             if 0 < split_level == i_sub_key:
                 break
-            i_sub_key += 1
             sub_key = sub_keys[i_sub_key]
             if sub_key not in sub_dict:
                 sub_dict[sub_key] = {}
             sub_dict = sub_dict[sub_key]
+            i_sub_key += 1
 
         sub_dict[sep.join(sub_keys[i_sub_key:])] = value
 

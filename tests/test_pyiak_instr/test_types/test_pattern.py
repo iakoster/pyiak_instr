@@ -7,6 +7,7 @@ from ...utils import validate_object
 
 from src.pyiak_instr.exceptions import NotConfiguredYet
 from src.pyiak_instr.types import (
+    SubPatternAdditions,
     PatternABC,
     MetaPatternABC,
     EditablePatternABC,
@@ -30,7 +31,7 @@ class TIMetaPatternABC(MetaPatternABC[dict, TIPatternABC]):
 
     _options = {"basic": dict}
     _sub_p_type = TIPatternABC
-    _sub_p_par_name = "_"
+    _sub_p_par_name = "s"
 
 
 class TestPatternABC(unittest.TestCase):
@@ -184,11 +185,15 @@ class TestMetaPatternABC(unittest.TestCase):
                 a=5,
                 b=[],
                 ii=99,
-                _={"f": {"a": 33, "req": ""}}
+                s={"f": {"a": 33, "i": 12, "req": ""}}
             ),
             self._instance.configure(
                 f=TIPatternABC("basic", a=33, req=""),
-            ).get(ii=99)
+            ).get(
+                sub_additions=SubPatternAdditions(
+                    additions={"f": {"i": 12}, "s": {"a": {"a"" 22"}}},
+                ), ii=99
+            )
         )
 
     def test_get_exc(self) -> None:
@@ -198,15 +203,6 @@ class TestMetaPatternABC(unittest.TestCase):
             self.assertEqual(
                 "TIMetaPatternABC not configured yet", exc.exception.args[0]
             )
-
-    def test__modify_all(self) -> None:
-        obj = self._instance.configure(
-            f=TIPatternABC("basic", req=1), s=TIPatternABC("basic", req=1),
-        )
-        self.assertDictEqual(
-            {"f": {"a": 1}, "s": {}},
-            obj._modify_all(True, {"f": {"a": 1}})
-        )
 
     @property
     def _instance(self) -> TIMetaPatternABC:

@@ -132,10 +132,10 @@ class TIMessageFieldStructPattern(
 class TIMessageStructPattern(
     MessageStructPatternABC[TIMessageStruct, TIMessageFieldStructPattern]
 ):
-    ...
+    _options = {"basic": TIMessageStruct}
 
 
 class TIMessagePattern(
     MessagePatternABC[TIMessage, TIMessageStructPattern]
 ):
-    ...
+    _options = {"basic": TIMessage}

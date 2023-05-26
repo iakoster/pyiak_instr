@@ -8,6 +8,7 @@ from ._pattern import (
     EditablePatternABC,
     MetaPatternABC,
     PatternABC,
+    SubPatternAdditions,
     WritablePatternABC,
 )
 from ._encoders import Encoder
@@ -18,6 +19,7 @@ __all__ = [
     "Encoder",
     "MetaPatternABC",
     "PatternABC",
+    "SubPatternAdditions",
     "RWData",
     "WritablePatternABC",
 ]

@@ -19,12 +19,12 @@ import numpy as np
 import numpy.typing as npt
 
 from ....core import Code
-# from ....rwfile import RWConfig
 from ....exceptions import NotConfiguredYet
 from ....typing import WithBaseStringMethods
 from ..._pattern import (
     MetaPatternABC,
     PatternABC,
+    SubPatternAdditions,
     WritablePatternABC,
 )
 from ..._rwdata import RWData
@@ -109,15 +109,10 @@ class BytesStorageStructPatternABC(
 
     _sub_p_par_name = "fields"
 
-    def _modify_each(
-        self,
-        changes_allowed: bool,
-        name: str,
-        for_sub: dict[str, Any],
-    ) -> dict[str, Any]:
-        for_sub = super()._modify_each(changes_allowed, name, for_sub)
-        for_sub["name"] = name
-        return for_sub
+    def _modify_sub_additions(self, sub_additions: SubPatternAdditions) -> None:
+        super()._modify_sub_additions(sub_additions)
+        for name in self._sub_p:
+            sub_additions.update_additions(name, name=name)
 
 
 class ContinuousBytesStorageStructPatternABC(
@@ -130,43 +125,20 @@ class ContinuousBytesStorageStructPatternABC(
     (e.g. without gaps in content).
     """
 
-    def _modify_all(
-        self, changes_allowed: bool, for_subs: dict[str, dict[str, Any]]
-    ) -> dict[str, dict[str, Any]]:
-        """
-        Modify additional kwargs for sub-pattern objects.
-
-        Parameters
-        ----------
-        changes_allowed : bool
-            if True allows situations where keys from the pattern overlap
-            with kwargs.
-        for_subs : dict[str, dict[str, Any]]
-            additional kwargs for sub-pattern object if format
-            {FIELD: {PARAMETER: VALUE}}.
-
-        Returns
-        -------
-        dict[str, dict[str, Any]]
-            modified additional kwargs for sub-pattern object.
-        """
-        for_subs = super()._modify_all(changes_allowed, for_subs)
-        dyn_name = self._modify_before_dyn(for_subs)
+    def _modify_sub_additions(self, sub_additions: SubPatternAdditions) -> None:
+        super()._modify_sub_additions(sub_additions)
+        dyn_name = self._modify_before_dyn(sub_additions)
         if dyn_name is not None:
-            self._modify_after_dyn(dyn_name, for_subs)
-        return for_subs
+            self._modify_after_dyn(dyn_name, sub_additions)
 
-    def _modify_before_dyn(
-        self, for_subs: dict[str, dict[str, Any]]
-    ) -> str | None:
+    def _modify_before_dyn(self, sub_additions: SubPatternAdditions) -> str | None:
         """
-        Modify `for_subs` up to dynamic field.
+        Modify `sub_additions` up to dynamic field.
 
         Parameters
         ----------
-        for_subs : dict[str, dict[str, Any]]
-            additional kwargs for sub-pattern object if format
-            {FIELD: {PARAMETER: VALUE}}.
+        sub_additions : SubPatternAdditions
+            additional kwargs for sub-pattern object.
 
         Returns
         -------
@@ -174,32 +146,24 @@ class ContinuousBytesStorageStructPatternABC(
             name of the dynamic field. If None - there is no dynamic field.
         """
         start = 0
-        for (name, pattern), kw in zip(
-            self._sub_p.items(), for_subs.values()
-        ):
+        for name, pattern in self._sub_p.items():
+            sub_additions.update_additions(name, start=start)
             if pattern.is_dynamic:
-                kw.update(start=start)
                 return name
-
-            kw.update(start=start)
             start += pattern.size
-        return None
 
     def _modify_after_dyn(
-        self,
-        dyn_name: str,
-        for_subs: dict[str, dict[str, Any]],
+            self, dyn_name: str, sub_additions: SubPatternAdditions
     ) -> None:
         """
-        Modify `for_subs` from dynamic field to end.
+        Modify `sub_additions` from dynamic field to end.
 
         Parameters
         ----------
         dyn_name : str
             name of the dynamic field.
-        for_subs : dict[str, dict[str, Any]]
-            additional kwargs for sub-pattern object if format
-            {FIELD: {PARAMETER: VALUE}}.
+        sub_additions : SubPatternAdditions
+            additional kwargs for sub-pattern object.
 
         Raises
         ------
@@ -210,16 +174,18 @@ class ContinuousBytesStorageStructPatternABC(
         """
         start = 0
         for name in list(self._sub_p)[::-1]:
-            pattern, kw = self._sub_p[name], for_subs[name]
+            pattern = self._sub_p[name]
 
             if pattern.is_dynamic:
                 if name == dyn_name:
-                    kw.update(stop=start if start != 0 else None)
+                    sub_additions.update_additions(
+                        name, stop=start if start != 0 else None
+                    )
                     return
                 raise TypeError("two dynamic field not allowed")
 
             start -= pattern.size
-            kw.update(start=start)
+            sub_additions.update_additions(name, start=start)
 
         raise AssertionError("dynamic field not found")
 
@@ -325,12 +291,7 @@ class BytesStoragePatternABC(
         parameters["pattern"] = self
         return parameters
 
-    def _modify_each(
-            self,
-            changes_allowed: bool,
-            name: str,
-            for_sub: dict[str, Any],
-    ) -> dict[str, Any]:
-        for_sub = super()._modify_each(changes_allowed, name, for_sub)
-        for_sub["name"] = name
-        return for_sub
+    def _modify_sub_additions(self, sub_additions: SubPatternAdditions) -> None:
+        super()._modify_sub_additions(sub_additions)
+        for name in self._sub_p:
+            sub_additions.update_additions(name, name=name)
