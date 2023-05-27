@@ -77,8 +77,8 @@ class BytesFieldStructABC(ABC):
     _encoder: EncoderT = field_(default=None, init=False)
 
     def __post_init__(
-            self,
-            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        self,
+        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
         if self.stop == 0:
             raise ValueError("'stop' can't be equal to zero")
@@ -302,9 +302,8 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
 
             case (bytes() as content,):
                 return {
-                    f.name: f.decode(
-                        content[f.slice_], verify=True
-                    ) for f in self
+                    f.name: f.decode(content[f.slice_], verify=True)
+                    for f in self
                 }
 
             case _:
@@ -316,18 +315,24 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
 
     @overload
     def encode(
-            self, all_fields: bool = False, **fields: BytesEncodeT
+        self, all_fields: bool = False, **fields: BytesEncodeT
     ) -> dict[str, bytes]:
         ...
 
     @overload
     def encode(
-        self, *args: bytes, all_fields: bool = False, **kwargs: BytesEncodeT,
+        self,
+        *args: bytes,
+        all_fields: bool = False,
+        **kwargs: BytesEncodeT,
     ) -> dict[str, bytes]:
         ...
 
     def encode(
-        self, *args: bytes, all_fields: bool = False, **kwargs: BytesEncodeT,
+        self,
+        *args: bytes,
+        all_fields: bool = False,
+        **kwargs: BytesEncodeT,
     ) -> dict[str, bytes]:
         if len(args) != 0 and len(kwargs) != 0:
             raise TypeError("takes a bytes or fields (both given)")
@@ -338,18 +343,16 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
             case (bytes() as content,), {} if len(kwargs) == 0:
                 self._verify_bytes_content(content)
                 return {
-                    f.name: f.encode(
-                        content[f.slice_], verify=True
-                    ) for f in self
+                    f.name: f.encode(content[f.slice_], verify=True)
+                    for f in self
                 }
 
             case tuple(), dict() as fields if len(args) == 0:
                 if all_fields:
                     return self._get_all_fields(fields)
                 return {
-                    f: self[f].encode(
-                        c, verify=True
-                    ) for f, c in fields.items()
+                    f: self[f].encode(c, verify=True)
+                    for f, c in fields.items()
                 }
 
             case _:
@@ -366,7 +369,7 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
             yield field.name, field
 
     def _get_all_fields(
-            self, fields: dict[str, BytesEncodeT]
+        self, fields: dict[str, BytesEncodeT]
     ) -> dict[str, bytes]:
         """
 

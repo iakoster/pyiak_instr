@@ -1,12 +1,13 @@
 """Private module of ``pyiak_instr.types.communication`` with types for
 communication module."""
 from dataclasses import field as _field
-from typing import (  # pylint: disable=unused-import
+from typing import (
     Callable,
     Generic,
     Self,
     TypeAlias,
     TypeVar,
+    Union,
 )
 
 from ....exceptions import ContentError, NotAmongTheOptions
@@ -33,6 +34,7 @@ __all__ = [
     "IdMessageFieldStructABC",
     "OperationMessageFieldStructABC",
     "ResponseMessageFieldStructABC",
+    "MessageFieldStructABCUnionT",
     "MessageStructGetParserABC",
     "MessageStructHasParserABC",
     "MessageStructABC",
@@ -52,10 +54,9 @@ class MessageFieldStructABC(BytesFieldStructABC):
 
 @STRUCT_DATACLASS
 class SingleMessageFieldStructABC(MessageFieldStructABC):
-
     def __post_init__(
-            self,
-            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        self,
+        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
         super().__post_init__(encoder)
         if self.words_expected != 1:
@@ -71,10 +72,9 @@ class SingleMessageFieldStructABC(MessageFieldStructABC):
 
 @STRUCT_DATACLASS
 class StaticMessageFieldStructABC(SingleMessageFieldStructABC):
-
     def __post_init__(
-            self,
-            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        self,
+        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
         super().__post_init__(encoder)
         if not self.has_default:
@@ -91,14 +91,13 @@ class StaticMessageFieldStructABC(SingleMessageFieldStructABC):
 
 @STRUCT_DATACLASS
 class AddressMessageFieldStructABC(SingleMessageFieldStructABC):
-
     behaviour: Code = Code.DMA
 
     units: Code = Code.WORDS
 
     def __post_init__(
-            self,
-            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        self,
+        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
         super().__post_init__(encoder)
         if self.behaviour not in {Code.DMA, Code.STRONG}:
@@ -113,7 +112,6 @@ class AddressMessageFieldStructABC(SingleMessageFieldStructABC):
 
 @STRUCT_DATACLASS
 class CrcMessageFieldStructABC(SingleMessageFieldStructABC):
-
     poly: int = 0x1021
 
     init: int = 0
@@ -121,8 +119,8 @@ class CrcMessageFieldStructABC(SingleMessageFieldStructABC):
     wo_fields: set[str] = _field(default_factory=set)
 
     def __post_init__(
-            self,
-            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        self,
+        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
         super().__post_init__(encoder)
         if self.bytes_expected != 2 or self.poly != 0x1021 or self.init != 0:
@@ -161,8 +159,8 @@ class DataMessageFieldStructABC(MessageFieldStructABC):
     """Represents a field of a Message with data."""
 
     def __post_init__(
-            self,
-            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        self,
+        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
         super().__post_init__(encoder)
         if self.bytes_expected != 0:
@@ -171,7 +169,6 @@ class DataMessageFieldStructABC(MessageFieldStructABC):
 
 @STRUCT_DATACLASS
 class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
-
     behaviour: Code = Code.ACTUAL  # todo: logic
     """determines the behavior of determining the content value."""
 
@@ -182,8 +179,8 @@ class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
     """additional value to the length of the data."""
 
     def __post_init__(
-            self,
-            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        self,
+        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
         super().__post_init__(encoder)
         if self.additive < 0:
@@ -219,14 +216,14 @@ class OperationMessageFieldStructABC(SingleMessageFieldStructABC):
     """reversed `descriptions`."""
 
     def __post_init__(
-            self,
-            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        self,
+        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
         super().__post_init__(encoder)
         self._setattr("descs_r", {v: k for k, v in self.descs.items()})
 
     def encode(
-            self, content: BytesEncodeT | Code, verify: bool = False
+        self, content: BytesEncodeT | Code, verify: bool = False
     ) -> bytes:
         if isinstance(content, Code):
             value = self.desc_r(content)
@@ -260,14 +257,14 @@ class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
     """reversed `descriptions`."""
 
     def __post_init__(
-            self,
-            encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        self,
+        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
     ) -> None:
         super().__post_init__(encoder)
         self._setattr("descs_r", {v: k for k, v in self.descs.items()})
 
     def encode(
-            self, content: BytesEncodeT | Code, verify: bool = False
+        self, content: BytesEncodeT | Code, verify: bool = False
     ) -> bytes:
         if isinstance(content, Code):
             value = self.desc_r(content)
@@ -318,12 +315,25 @@ class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
         return self.descs_r[code]
 
 
-class MessageStructGetParserABC(Generic[MessageStructT, FieldStructT]):
+MessageFieldStructABCUnionT = Union[
+    MessageFieldStructABC,
+    SingleMessageFieldStructABC,
+    StaticMessageFieldStructABC,
+    AddressMessageFieldStructABC,
+    CrcMessageFieldStructABC,
+    DataMessageFieldStructABC,
+    DataLengthMessageFieldStructABC,
+    IdMessageFieldStructABC,
+    OperationMessageFieldStructABC,
+    ResponseMessageFieldStructABC,
+]
 
+
+class MessageStructGetParserABC(Generic[MessageStructT, FieldStructT]):
     def __init__(
-            self,
-            message: MessageStructT,
-            codes: dict[Code, str],
+        self,
+        message: MessageStructT,
+        codes: dict[Code, str],
     ) -> None:
         self._msg = message
         self._codes = codes
@@ -375,11 +385,10 @@ class MessageStructGetParserABC(Generic[MessageStructT, FieldStructT]):
 
 
 class MessageStructHasParserABC(Generic[MessageStructT, FieldStructT]):
-
     def __init__(
-            self,
-            message: MessageStructT,
-            codes: dict[Code, str],
+        self,
+        message: MessageStructT,
+        codes: dict[Code, str],
     ) -> None:
         self._msg = message
         self._codes = codes
@@ -430,7 +439,6 @@ class MessageStructHasParserABC(Generic[MessageStructT, FieldStructT]):
 
 @STRUCT_DATACLASS
 class MessageStructABC(BytesStorageStructABC[FieldStructT]):
-
     divisible: bool = False
     """shows that the message can be divided by the infinite field."""
 
@@ -448,10 +456,11 @@ class MessageStructABC(BytesStorageStructABC[FieldStructT]):
 
         field_types = {}
         for struct in self:
-
             field_class = struct.__class__
             if field_class not in self._field_type_codes:
-                raise KeyError(f"{field_class.__name__} not represented in codes")
+                raise KeyError(
+                    f"{field_class.__name__} not represented in codes"
+                )
 
             field_code = self._field_type_codes[field_class]
             if field_code not in field_types:
@@ -466,9 +475,10 @@ class MessageStructABC(BytesStorageStructABC[FieldStructT]):
                     "it does not have a dynamic field"
                 )
 
-            min_mtu = self.minimum_size + self._f[
-                self.dynamic_field_name
-            ].word_bytesize
+            min_mtu = (
+                self.minimum_size
+                + self._f[self.dynamic_field_name].word_bytesize
+            )
             if self.mtu < min_mtu:
                 raise ValueError(
                     "MTU value does not allow you to split the message if "

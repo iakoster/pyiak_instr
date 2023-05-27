@@ -83,7 +83,7 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
     ALLOWED_CODES.update(_F_LENGTHS)
 
     def __init__(
-            self, fmt: Code = Code.U8, order: Code = Code.BIG_ENDIAN
+        self, fmt: Code = Code.U8, order: Code = Code.BIG_ENDIAN
     ) -> None:
         self.verify_fmt_order(fmt, order)
         self._fmt, self._order = fmt, order
@@ -113,10 +113,10 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
 
     @staticmethod
     def _decode_int(
-            value: bytes,
-            bytesize: int,
-            byteorder: Literal["little", "big"],
-            signed: bool,
+        value: bytes,
+        bytesize: int,
+        byteorder: Literal["little", "big"],
+        signed: bool,
     ) -> DECODE_TYPE:
         encoded = np.empty(len(value) // bytesize, np.int_)
         for i in range(encoded.shape[0]):
@@ -150,10 +150,10 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
 
     @staticmethod
     def _encode_int(
-            value: ENCODE_TYPE,
-            bytesize: int,
-            byteorder: Literal["little", "big"],
-            signed: bool,
+        value: ENCODE_TYPE,
+        bytesize: int,
+        byteorder: Literal["little", "big"],
+        signed: bool,
     ) -> bytes:
         encoded = b""
         if isinstance(value, Iterable):
@@ -168,8 +168,10 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         return np.array(value, dtype=dtype).tobytes()
 
     def _get_funcs(
-            self, fmt: Code, order: Code
-    ) -> tuple[Callable[[bytes], DECODE_TYPE], Callable[[ENCODE_TYPE], bytes]]:
+        self, fmt: Code, order: Code
+    ) -> tuple[
+        Callable[[bytes], DECODE_TYPE], Callable[[ENCODE_TYPE], bytes]
+    ]:
         if fmt in self._F_LENGTHS:
             dtype = (
                 ">" if Code.BIG_ENDIAN else Code.LITTLE_ENDIAN
@@ -519,11 +521,11 @@ class StringEncoder(Encoder[Any, Any, str]):
             True - if `string` is compound, otherwise False.
         """
         return (
-                len(string) >= 6
-                and string[0] == self.SOH
-                and self.SOD in string
-                and self.EOD in string
-                and string[1:4] in self.HEADERS
+            len(string) >= 6
+            and string[0] == self.SOH
+            and self.SOD in string
+            and self.EOD in string
+            and string[1:4] in self.HEADERS
         )
 
     def _iter(self, string: str) -> Generator[str, None, None]:

@@ -42,7 +42,6 @@ MessageStructPatternT = TypeVar(
 
 
 class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
-
     @staticmethod
     @abstractmethod
     def get_fmt_bytesize(fmt: Code) -> int:
@@ -446,7 +445,6 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 class MessageStructPatternABC(
     BytesStorageStructPatternABC[MessageStructT, FieldStructPatternT]
 ):
-
     @classmethod
     def basic(
         cls,
@@ -460,7 +458,6 @@ class MessageStructPatternABC(
 class MessagePatternABC(
     BytesStoragePatternABC[MessageT, MessageStructPatternT]
 ):
-
     @classmethod
     def basic(cls, typename: str = "basic") -> Self:
         return cls(typename=typename)

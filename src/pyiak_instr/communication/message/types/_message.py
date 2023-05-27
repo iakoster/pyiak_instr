@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import field as _field
 from functools import wraps
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Generator,
@@ -29,6 +30,9 @@ from ._struct import (
     MessageStructABC,
 )
 
+if TYPE_CHECKING:
+    from ._pattern import MessagePatternABC
+
 
 __all__ = [
     "MessageABC",
@@ -40,7 +44,7 @@ FieldStructT = TypeVar("FieldStructT", bound=MessageFieldStructABC)
 MessageStructT = TypeVar(
     "MessageStructT", bound=MessageStructABC[MessageFieldStructABC]
 )
-MessagePatternT = TypeVar("MessagePatternT")
+MessagePatternT = TypeVar("MessagePatternT", bound="MessagePatternABC")
 
 
 # todo: clear src and dst?
@@ -50,11 +54,10 @@ class MessageABC(
     BytesStorageABC[FieldStructT, MessageStructT, MessagePatternT],
     Generic[FieldStructT, MessageStructT, MessagePatternT, AddressT],
 ):
-
     def __init__(
-            self,
-            storage: MessageStructT,
-            pattern: MessagePatternT | None = None,
+        self,
+        storage: MessageStructT,
+        pattern: MessagePatternT | None = None,
     ):
         super().__init__(storage, pattern=pattern)
         if self._s.divisible and self.has.address:
@@ -106,7 +109,7 @@ class MessageABC(
         address_word_step = dyn_step // dyn.word_bytesize
 
         for i, dyn_start in enumerate(
-                range(0, self.bytes_count(dyn_name), dyn_step)
+            range(0, self.bytes_count(dyn_name), dyn_step)
         ):
             part = self.__class__(self._s, self._p)  # todo: vulnerability?
 
@@ -115,9 +118,9 @@ class MessageABC(
                 name = field.name
 
                 if name == dyn_name:
-                    content += self.content(
-                        name
-                    )[dyn_start : dyn_start + dyn_step]
+                    content += self.content(name)[
+                        dyn_start : dyn_start + dyn_step
+                    ]
 
                 elif name == address_name:
                     address_field = self.get.address

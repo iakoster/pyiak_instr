@@ -24,7 +24,6 @@ PatternT = TypeVar("PatternT", bound="PatternABC[Any]")
 # todo: separate tests
 @dataclass
 class SubPatternAdditions:
-
     additions: dict[str, dict[str, Any]] = _field(default_factory=dict)
 
     next_additions: dict[str, SubPatternAdditions] = _field(
@@ -42,7 +41,7 @@ class SubPatternAdditions:
         return self
 
     def set_next_additions(
-            self, **next_additions: SubPatternAdditions
+        self, **next_additions: SubPatternAdditions
     ) -> Self:
         self.next_additions = next_additions
         return self
@@ -410,9 +409,12 @@ class MetaPatternABC(  # todo: rename to antonym of sub
                     changes_allowed=changes_allowed,
                     sub_additions=sub_additions.get_next_additions(n),
                     **sub_additions.get_additions(n),
-                ) for n, s in self._sub_p.items()
+                )
+                for n, s in self._sub_p.items()
             }
         }
 
-    def _modify_sub_additions(self, sub_additions: SubPatternAdditions) -> None:
+    def _modify_sub_additions(
+        self, sub_additions: SubPatternAdditions
+    ) -> None:
         pass

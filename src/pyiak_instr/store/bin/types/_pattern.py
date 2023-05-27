@@ -27,7 +27,7 @@ __all__ = [
     "BytesFieldStructPatternABC",
     "BytesStorageStructPatternABC",
     "BytesStoragePatternABC",
-    "ContinuousBytesStorageStructPatternABC"
+    "ContinuousBytesStorageStructPatternABC",
 ]
 
 
@@ -43,9 +43,7 @@ FieldStructPatternT = TypeVar(
 StorageStructPatternT = TypeVar(
     "StorageStructPatternT", bound="BytesStorageStructPatternABC"
 )
-StoragePatternT = TypeVar(
-    "StoragePatternT", bound="BytesStoragePatternABC"
-)
+StoragePatternT = TypeVar("StoragePatternT", bound="BytesStoragePatternABC")
 
 
 class BytesFieldStructPatternABC(PatternABC[FieldStructT]):
@@ -95,7 +93,9 @@ class BytesStorageStructPatternABC(
 
     _sub_p_par_name = "fields"
 
-    def _modify_sub_additions(self, sub_additions: SubPatternAdditions) -> None:
+    def _modify_sub_additions(
+        self, sub_additions: SubPatternAdditions
+    ) -> None:
         super()._modify_sub_additions(sub_additions)
         for name in self._sub_p:
             sub_additions.update_additions(name, name=name)
@@ -111,13 +111,17 @@ class ContinuousBytesStorageStructPatternABC(
     (e.g. without gaps in content).
     """
 
-    def _modify_sub_additions(self, sub_additions: SubPatternAdditions) -> None:
+    def _modify_sub_additions(
+        self, sub_additions: SubPatternAdditions
+    ) -> None:
         super()._modify_sub_additions(sub_additions)
         dyn_name = self._modify_before_dyn(sub_additions)
         if dyn_name is not None:
             self._modify_after_dyn(dyn_name, sub_additions)
 
-    def _modify_before_dyn(self, sub_additions: SubPatternAdditions) -> str | None:
+    def _modify_before_dyn(
+        self, sub_additions: SubPatternAdditions
+    ) -> str | None:
         """
         Modify `sub_additions` up to dynamic field.
 
@@ -139,7 +143,7 @@ class ContinuousBytesStorageStructPatternABC(
             start += pattern.size
 
     def _modify_after_dyn(
-            self, dyn_name: str, sub_additions: SubPatternAdditions
+        self, dyn_name: str, sub_additions: SubPatternAdditions
     ) -> None:
         """
         Modify `sub_additions` from dynamic field to end.
@@ -179,7 +183,6 @@ class ContinuousBytesStorageStructPatternABC(
 class BytesStoragePatternABC(
     MetaPatternABC[StorageT, StorageStructPatternT], WritablePatternABC
 ):
-
     _rwdata: type[RWData[ConfigParser]]
     _sub_p_par_name = "storage"
 
@@ -207,7 +210,7 @@ class BytesStoragePatternABC(
         if len(self._sub_p) == 0:
             raise NotConfiguredYet(self)
 
-        (name, pattern), = self._sub_p.items()
+        ((name, pattern),) = self._sub_p.items()
         pars = {
             "_": self.__init_kwargs__(),
             name: pattern.__init_kwargs__(),
@@ -259,9 +262,11 @@ class BytesStoragePatternABC(
             # todo: access to sub-pattern type in MetaPattern
             field_type = cls._sub_p_type._sub_p_type
             return cls(**cfg.get(name, "_")).configure(
-                **{name: cls._sub_p_type(**cfg.get(name, name)).configure(
-                    **{f: field_type(**cfg.get(name, f)) for f in opts}
-                )}
+                **{
+                    name: cls._sub_p_type(**cfg.get(name, name)).configure(
+                        **{f: field_type(**cfg.get(name, f)) for f in opts}
+                    )
+                }
             )
 
     def _get_parameters_dict(
@@ -271,13 +276,15 @@ class BytesStoragePatternABC(
     ) -> dict[str, Any]:
         parameters = super()._get_parameters_dict(changes_allowed, additions)
 
-        storage, = parameters[self._sub_p_par_name].values()
+        (storage,) = parameters[self._sub_p_par_name].values()
         parameters["storage"] = storage
 
         parameters["pattern"] = self
         return parameters
 
-    def _modify_sub_additions(self, sub_additions: SubPatternAdditions) -> None:
+    def _modify_sub_additions(
+        self, sub_additions: SubPatternAdditions
+    ) -> None:
         super()._modify_sub_additions(sub_additions)
         for name in self._sub_p:
             sub_additions.update_additions(name, name=name)

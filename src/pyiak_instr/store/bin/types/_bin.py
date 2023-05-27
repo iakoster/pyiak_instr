@@ -49,9 +49,9 @@ class BytesStorageABC(
     """
 
     def __init__(
-            self,
-            storage: StorageStructT,
-            pattern: StoragePatternT | None = None,
+        self,
+        storage: StorageStructT,
+        pattern: StoragePatternT | None = None,
     ) -> None:
         self._s = storage
         self._p = pattern
@@ -224,7 +224,7 @@ class BytesStorageABC(
         if self.is_empty():
             return "EMPTY"
         return ", ".join(
-           f"{n}={self.__str_field_content__(n)}" for n, _ in self._s.items()
+            f"{n}={self.__str_field_content__(n)}" for n, _ in self._s.items()
         )
 
     def __bytes__(self) -> bytes:
