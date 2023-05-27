@@ -283,23 +283,16 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
         self._modify_values()
 
     @overload
-    def decode(
-        self, name: str, content: bytes
-    ) -> BytesDecodeT:
+    def decode(self, name: str, content: bytes) -> BytesDecodeT:
         ...
 
     @overload
-    def decode(
-        self, content: bytes
-    ) -> dict[str, BytesDecodeT]:
+    def decode(self, content: bytes) -> dict[str, BytesDecodeT]:
         ...
 
     def decode(
         self, *args: str | bytes, **kwargs: Any
-    ) -> (
-        npt.NDArray[np.int_ | np.float_]
-        | dict[str, npt.NDArray[np.int_ | np.float_]]
-    ):
+    ) -> BytesDecodeT | dict[str, BytesDecodeT]:
         if len(kwargs):
             raise TypeError("takes no keyword arguments")
 

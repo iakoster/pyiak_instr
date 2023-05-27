@@ -128,6 +128,10 @@ class TIMessageFieldStructPattern(
         response=TIResponseMessageFieldStruct,
     )
 
+    @staticmethod
+    def get_fmt_bytesize(fmt: Code) -> int:
+        return BytesEncoder(fmt=fmt).value_size
+
 
 class TIMessageStructPattern(
     MessageStructPatternABC[TIMessageStruct, TIMessageFieldStructPattern]

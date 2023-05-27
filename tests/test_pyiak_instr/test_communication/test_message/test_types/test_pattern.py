@@ -34,6 +34,99 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             size=0,
         )
 
+    def test_init_specific(self) -> None:
+        cases = dict(
+            basic=dict(
+                typename="basic",
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                bytes_expected=0,
+                default=b"",
+            ),
+            single=dict(
+                typename="single",
+                bytes_expected=1,
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                default=b"",
+            ),
+            static=dict(
+                typename="static",
+                bytes_expected=1,
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                default=b"\x00",
+            ),
+            address=dict(
+                typename="address",
+                bytes_expected=1,
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                behaviour=Code.DMA,
+                units=Code.WORDS,
+                default=b"",
+            ),
+            crc=dict(
+                typename="crc",
+                bytes_expected=2,
+                fmt=Code.U16,
+                order=Code.BIG_ENDIAN,
+                poly=0x1021,
+                init=0,
+                default=b"",
+                wo_fields=set(),
+            ),
+            data=dict(
+                typename="data",
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                bytes_expected=0,
+                default=b"",
+            ),
+            data_length=dict(
+                typename="data_length",
+                bytes_expected=1,
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                behaviour=Code.ACTUAL,
+                units=Code.BYTES,
+                additive=0,
+                default=b"",
+            ),
+            id_=dict(
+                typename="id",
+                bytes_expected=1,
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                default=b"",
+            ),
+            operation=dict(
+                typename="operation",
+                bytes_expected=1,
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                descs={0: Code.READ, 1: Code.WRITE},
+                default=b"",
+            ),
+            response=dict(
+                typename="response",
+                bytes_expected=1,
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                descs={},
+                default=b"",
+            ),
+        )
+
+        for typename, ref in cases.items():
+            with self.subTest(classmethod=typename):
+                self.assertDictEqual(
+                    ref,
+                    getattr(
+                        TIMessageFieldStructPattern, typename
+                    )().__init_kwargs__(),
+                )
+
     def test_get(self) -> None:
         validate_object(
             self,
@@ -58,6 +151,103 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             wo_attrs=["encoder"],
         )
 
+    def test_get_specific(self) -> None:
+        cases = dict(
+            basic=dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                default=b"",
+                stop=None,
+            ),
+            single=dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                default=b"",
+                stop=1,
+            ),
+            static=dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                default=b"\x00",
+                stop=1,
+            ),
+            address=dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                behaviour=Code.DMA,
+                units=Code.WORDS,
+                default=b"",
+                stop=1,
+            ),
+            crc=dict(
+                fmt=Code.U16,
+                order=Code.BIG_ENDIAN,
+                poly=0x1021,
+                init=0,
+                default=b"",
+                wo_fields=set(),
+                stop=2,
+            ),
+            data=dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                stop=None,
+                default=b"",
+            ),
+            data_length=dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                behaviour=Code.ACTUAL,
+                units=Code.BYTES,
+                additive=0,
+                default=b"",
+                stop=1,
+            ),
+            id_=dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                default=b"",
+                stop=1,
+            ),
+            operation=dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                descs={0: Code.READ, 1: Code.WRITE},
+                descs_r={Code.READ: 0, Code.WRITE: 1},
+                default=b"",
+                stop=1,
+            ),
+            response=dict(
+                fmt=Code.U8,
+                order=Code.BIG_ENDIAN,
+                descs={},
+                descs_r={},
+                default=b"",
+                stop=1,
+            ),
+        )
+
+        for typename, ref in cases.items():
+            with self.subTest(classmethod=typename):
+                validate_object(
+                    self,
+                    getattr(
+                        TIMessageFieldStructPattern, typename
+                    )().get(),
+                    **ref,
+                    wo_attrs=[
+                        "bytes_expected",
+                        "encoder",
+                        "name",
+                        "start",
+                        "is_dynamic",
+                        "word_bytesize",
+                        "words_expected",
+                        "slice_",
+                        "has_default",
+                    ],
+                )
+
 
 class TestMessageStructPatternABC(unittest.TestCase):
 
@@ -73,16 +263,25 @@ class TestMessageStructPatternABC(unittest.TestCase):
             typename="basic",
         )
 
-    def test_get(self) -> None:
-        pattern = TIMessageStructPattern(
-            typename="basic", divisible=True
-        ).configure(
-            f0=TIMessageFieldStructPattern(
-                typename="static", default=b"a"
+    def test_init_specific(self) -> None:
+        self.assertDictEqual(
+            dict(
+                typename="basic",
+                mtu=1500,
+                divisible=False,
             ),
-            f1=TIMessageFieldStructPattern(typename="data"),
+            TIMessageStructPattern.basic().__init_kwargs__()
+        )
+
+    def test_get(self) -> None:
+        pattern = TIMessageStructPattern.basic(
+            divisible=True
+        ).configure(
+            f0=TIMessageFieldStructPattern.static(default=b"a"),
+            f1=TIMessageFieldStructPattern.data(),
         )
         msg = pattern.get(
+            changes_allowed=True,
             mtu=30,
             sub_additions=SubPatternAdditions().update_additions(
                 "f1", fmt=Code.U16
@@ -124,29 +323,26 @@ class TestMessagePatternABC(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIMessagePattern(typename="basic").configure(
-                s0=TIMessageStructPattern(typename="basic").configure(
-                    f0=TIMessageFieldStructPattern(
-                        typename="static", default=b"a"
-                    ),
-                    f1=TIMessageFieldStructPattern(typename="data"),
+            TIMessagePattern.basic().configure(
+                s0=TIMessageStructPattern.basic().configure(
+                    f0=TIMessageFieldStructPattern.static(default=b"a"),
+                    f1=TIMessageFieldStructPattern.data(),
                 ),
             ),
             typename="basic",
         )
 
     def test_get(self) -> None:
-        pattern = TIMessagePattern(typename="basic").configure(
-            s0=TIMessageStructPattern(
-                typename="basic", divisible=True
+        pattern = TIMessagePattern.basic().configure(
+            s0=TIMessageStructPattern.basic(
+                divisible=True
             ).configure(
-                f0=TIMessageFieldStructPattern(
-                    typename="static", default=b"a"
-                ),
-                f1=TIMessageFieldStructPattern(typename="data"),
+                f0=TIMessageFieldStructPattern.static(default=b"a"),
+                f1=TIMessageFieldStructPattern.data(),
             ),
         )
         msg = pattern.get(
+            changes_allowed=True,
             sub_additions=SubPatternAdditions().update_additions(
                 "s0", mtu=30,
             ).set_next_additions(
