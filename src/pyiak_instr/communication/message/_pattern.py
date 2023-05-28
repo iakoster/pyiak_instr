@@ -3,6 +3,7 @@ from typing import Any
 
 from ...core import Code
 from ...encoders import BytesEncoder
+from ...rwfile import RWConfig
 from .types import (
     MessageFieldStructPatternABC,
     MessagePatternABC,
@@ -77,6 +78,7 @@ class MessageStructPattern(
     Pattern of message struct.
     """
 
+    _sub_p_type = MessageFieldStructPattern
     _options = dict(basic=MessageStruct)
 
 
@@ -85,4 +87,6 @@ class MessagePattern(MessagePatternABC[Message[Any], MessageStructPattern]):
     Pattern of message.
     """
 
+    _rwdata = RWConfig
+    _sub_p_type = MessageStructPattern
     _options = dict(basic=Message)
