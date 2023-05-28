@@ -159,6 +159,7 @@ class TestMetaPatternABC(unittest.TestCase):
             self,
             self._instance,
             typename="basic",
+            sub_pattern_names=[],
         )
 
     def test_init_exc(self) -> None:
@@ -203,6 +204,24 @@ class TestMetaPatternABC(unittest.TestCase):
             self.assertEqual(
                 "TIMetaPatternABC not configured yet", exc.exception.args[0]
             )
+
+    def test_get_sub_pattern(self) -> None:
+        self.assertDictEqual(
+            dict(
+                typename="basic",
+                a=33,
+                req="",
+            ),
+            self._instance.configure(
+                f=TIPatternABC("basic", a=33, req=""),
+            ).get_sub_pattern("f").__init_kwargs__()
+        )
+
+    def test_get_sub_pattern_type(self) -> None:
+        self.assertIs(
+            TIPatternABC,
+            self._instance.get_sub_pattern_type(),
+        )
 
     @property
     def _instance(self) -> TIMetaPatternABC:

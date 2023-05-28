@@ -8,32 +8,20 @@ from typing import (
     Callable,
     Generator,
     Generic,
-    TypeAlias,
     TypeVar,
     overload,
 )
 
-import numpy as np
-import numpy.typing as npt
-
 from ....core import Code
 from ....exceptions import ContentError
-from ....encoders.types import Encoder
+from ....encoders import BytesDecodeT, BytesEncodeT, BytesEncoder
 
 
 __all__ = [
-    "BytesDecodeT",
-    "BytesEncodeT",
     "STRUCT_DATACLASS",
     "BytesFieldStructABC",
     "BytesStorageStructABC",
 ]
-
-BytesDecodeT = npt.NDArray[np.int_ | np.float_]
-BytesEncodeT = (
-    int | float | bytes | list[int | float] | npt.NDArray[np.int_ | np.float_]
-)
-EncoderT: TypeAlias = Encoder[BytesDecodeT, BytesEncodeT, bytes]
 
 
 STRUCT_DATACLASS = dataclass(frozen=True, kw_only=True)
@@ -70,15 +58,19 @@ class BytesFieldStructABC(ABC):
     default: bytes = b""  # todo: to ContentType
     """default value of the field."""
 
+    # todo: generalize encoder
+    # todo: variant with an already initialized instance
     encoder: InitVar[
-        Callable[[Code, Code], EncoderT] | type[EncoderT] | None
-    ] = None  # todo: variant with an already initialized instance
+        Callable[[Code, Code], BytesEncoder] | type[BytesEncoder]
+    ] = BytesEncoder  # type: ignore[assignment]
 
-    _encoder: EncoderT = field_(default=None, init=False)
+    _encoder: BytesEncoder = field_(init=False)
 
     def __post_init__(
         self,
-        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        encoder: Callable[[Code, Code], BytesEncoder]
+        | type[BytesEncoder]
+        | None,
     ) -> None:
         if self.stop == 0:
             raise ValueError("'stop' can't be equal to zero")
@@ -117,7 +109,7 @@ class BytesFieldStructABC(ABC):
         """
         if verify:
             self.verify(content, raise_if_false=True)
-        return self._encoder.decode(content)
+        return self._encoder.decode(content)  # pylint: disable=no-member
 
     def encode(self, content: BytesEncodeT, verify: bool = False) -> bytes:
         """
@@ -135,7 +127,7 @@ class BytesFieldStructABC(ABC):
         bytes
             encoded content.
         """
-        encoded = self._encoder.encode(content)
+        encoded = self._encoder.encode(content)  # pylint: disable=no-member
         if verify:
             self.verify(encoded, raise_if_false=True)
         return encoded
@@ -156,6 +148,11 @@ class BytesFieldStructABC(ABC):
         -------
         bool
             True - content is correct, False - is not.
+
+        Raises
+        ------
+        ContentError
+            if `raise_if_false` is True and content is not correct.
         """
         if self.is_dynamic:
             correct = len(content) % self.word_bytesize == 0
@@ -196,8 +193,19 @@ class BytesFieldStructABC(ABC):
                 "impossible to modify start, stop and bytes_expected"
             )
 
-    def _setattr(self, attr: str, value: Any) -> None:
-        object.__setattr__(self, attr, value)
+    def _setattr(self, name: str, value: Any) -> None:
+        """
+        Set dataclass attribute by `key`.
+
+        Parameters
+        ----------
+        name : str
+            attribute name.
+        value : Any
+            attribute value.
+        """
+        # todo: check that key exists
+        object.__setattr__(self, name, value)
 
     @property
     def has_default(self) -> bool:
@@ -237,7 +245,7 @@ class BytesFieldStructABC(ABC):
         int
             count of bytes in one word.
         """
-        return self._encoder.value_size
+        return self._encoder.value_size  # pylint: disable=no-member
 
     @property
     def words_expected(self) -> int:
@@ -266,6 +274,7 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
     """dictionary of fields."""
 
     dynamic_field_name: str = field_(default="", init=False)
+    """dynamic field name."""
 
     _f: dict[str, FieldStructT] = field_(default_factory=dict, init=False)
 
@@ -293,6 +302,27 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
     def decode(
         self, *args: str | bytes, **kwargs: Any
     ) -> BytesDecodeT | dict[str, BytesDecodeT]:
+        """
+        Decode bytes content.
+
+        Parameters
+        ----------
+        *args : str | bytes
+            arguments for decode method (see overload).
+        **kwargs : Any
+            keyword arguments for decode method.
+
+        Returns
+        -------
+        BytesDecodeT | dict[str, BytesDecodeT]
+            decoded content.
+
+        Raises
+        ------
+        TypeError
+            if kwargs taken;
+            if arguments is invalid.
+        """
         if len(kwargs):
             raise TypeError("takes no keyword arguments")
 
@@ -328,12 +358,35 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
     ) -> dict[str, bytes]:
         ...
 
-    def encode(
+    def encode(  # type: ignore[misc]
         self,
         *args: bytes,
         all_fields: bool = False,
         **kwargs: BytesEncodeT,
     ) -> dict[str, bytes]:
+        """
+        Encode content for storage.
+
+        Parameters
+        ----------
+        *args : bytes
+            arguments for encode method (see overload).
+        all_fields :
+            check that all fields required.
+        **kwargs : BytesEncodeT
+            fields content where key is the field name.
+
+        Returns
+        -------
+        dict[str, bytes]
+            encoded content.
+
+        Raises
+        ------
+        TypeError
+            if takes args and kwargs;
+            if no args or kwargs are taken.
+        """
         if len(args) != 0 and len(kwargs) != 0:
             raise TypeError("takes a bytes or fields (both given)")
         if len(args) == 0 and len(kwargs) == 0:
@@ -355,8 +408,7 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
                     for f, c in fields.items()
                 }
 
-            case _:
-                raise TypeError("invalid arguments")
+        raise TypeError("invalid arguments")
 
     def items(self) -> Generator[tuple[str, FieldStructT], None, None]:
         """
@@ -372,14 +424,22 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
         self, fields: dict[str, BytesEncodeT]
     ) -> dict[str, bytes]:
         """
+        Encode content for all fields.
 
         Parameters
         ----------
         fields : dict[str, BytesEncodeT]
             dictionary of fields content where key is a field name.
 
+        Returns
+        -------
+        dict[str, bytes]
+            bytes content of all fields.
+
         Raises
         ------
+        AssertionError
+            If it is not possible to set the content of the field.
         """
         self._verify_fields_list(set(fields))
         content: dict[str, bytes] = {}
@@ -404,6 +464,11 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
     def _modify_values(self) -> None:
         """
         Modify values of the struct.
+
+        Raises
+        ------
+        TypeError
+            if second dynamic field is found.
         """
         for name, struct in self.items():
             if struct.is_dynamic and self.is_dynamic:
@@ -411,16 +476,34 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
             if struct.is_dynamic:
                 self._setattr("dynamic_field_name", name)
 
-    def _setattr(self, key: str, value: Any) -> None:
-        object.__setattr__(self, key, value)
+    def _setattr(self, name: str, value: Any) -> None:
+        """
+        Set dataclass attribute by `key`.
+
+        Parameters
+        ----------
+        name : str
+            attribute name.
+        value : Any
+            attribute value.
+        """
+        # todo: check that key exists
+        object.__setattr__(self, name, value)
 
     def _verify_bytes_content(self, content: bytes) -> None:
         """
+        Check that the content is correct.
+
+        Parameters
+        ----------
+        content : bytes
+            content for verifying.
+
         Raises
         ------
         ValueError
-            if content length smaller than minimal storage length
-            (`bytes_expected`).
+            if content length smaller than minimal storage length;
+            if storage not dynamic and `content` too long.
         """
         minimum_size, content_len = self.minimum_size, len(content)
         if content_len < minimum_size:

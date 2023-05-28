@@ -24,29 +24,104 @@ PatternT = TypeVar("PatternT", bound="PatternABC[Any]")
 # todo: separate tests
 @dataclass
 class SubPatternAdditions:
+    """
+    Dataclass of additional kwargs for sub-pattern.
+    """
+
     additions: dict[str, dict[str, Any]] = _field(default_factory=dict)
+    """additional kwargs fot sub-pattern."""
 
     next_additions: dict[str, SubPatternAdditions] = _field(
         default_factory=dict
     )
+    """dataclass for next sub-pattern."""
 
     def get_additions(self, key: str) -> dict[str, Any]:
+        """
+        Get additional kwargs by `key`.
+
+        If `key` not exists - returns empty dict.
+
+        Parameters
+        ----------
+        key : str
+            additional kwargs name (usually the name of sub-pattern).
+
+        Returns
+        -------
+        dict[str, Any]
+            sub-pattern additional kwargs
+        """
         return self.additions.get(key, {})
 
     def get_next_additions(self, key: str) -> SubPatternAdditions:
+        """
+        Get additional kwargs of next sub-pattern by `key`.
+
+        Parameters
+        ----------
+        key : str
+            next sub-pattern name.
+
+        Returns
+        -------
+        SubPatternAdditions
+            next sub-pattern additions.
+        """
         return self.next_additions.get(key, SubPatternAdditions())
 
     def set_additions(self, **parameters: dict[str, Any]) -> Self:
+        """
+        Set all additional kwargs.
+
+        Parameters
+        ----------
+        **parameters : dict[str, Any]
+            additional kwargs.
+
+        Returns
+        -------
+        Self
+            self instance.
+        """
         self.additions = parameters
         return self
 
     def set_next_additions(
         self, **next_additions: SubPatternAdditions
     ) -> Self:
+        """
+        Set all sub-pattern additions.
+
+        Parameters
+        ----------
+        **next_additions : SubPatternAdditions
+            additions for sub-patterns.
+
+        Returns
+        -------
+        Self
+            self instance.
+        """
         self.next_additions = next_additions
         return self
 
     def update_additions(self, key: str, **update: Any) -> Self:
+        """
+        Update additional kwargs by `key`.
+
+        Parameters
+        ----------
+        key : str
+            additions name.
+        **update : Any
+            parameters.
+
+        Returns
+        -------
+        Self
+            self instance.
+        """
         if key in self.additions:
             self.additions[key].update(update)
         else:
@@ -110,6 +185,7 @@ class PatternABC(ABC, Generic[OptionsT]):
         OptionsT
             initialized target class.
         """
+        # pylint: disable=unused-argument
         return self._target(
             **self._get_parameters_dict(changes_allowed, additions)
         )
@@ -381,6 +457,22 @@ class MetaPatternABC(  # todo: rename to antonym of sub
             **self._get_subs(changes_allowed, sub_additions),
         )
 
+    def get_sub_pattern(self, name: str) -> PatternT:
+        """
+        Get sub-pattern by `name`.
+
+        Parameters
+        ----------
+        name : str
+            sub-pattern name.
+
+        Returns
+        -------
+        PatternT
+            sub-pattern.
+        """
+        return self._sub_p[name]
+
     def _get_subs(
         self, changes_allowed: bool, sub_additions: SubPatternAdditions
     ) -> dict[str, Any]:
@@ -417,4 +509,31 @@ class MetaPatternABC(  # todo: rename to antonym of sub
     def _modify_sub_additions(
         self, sub_additions: SubPatternAdditions
     ) -> None:
-        pass
+        """
+        Modify additions for sub-pattern.
+
+        Parameters
+        ----------
+        sub_additions : SubPatternAdditions
+            sub-pattern additions class instance.
+        """
+
+    @classmethod
+    def get_sub_pattern_type(cls) -> type[PatternT]:
+        """
+        Returns
+        -------
+        type[PatternT]
+            sub-pattern type.
+        """
+        return cls._sub_p_type
+
+    @property
+    def sub_pattern_names(self) -> list[str]:
+        """
+        Returns
+        -------
+        list[str]
+            list of sub-pattern names.
+        """
+        return list(self._sub_p)

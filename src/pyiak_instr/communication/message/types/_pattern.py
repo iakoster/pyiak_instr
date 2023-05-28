@@ -1,13 +1,9 @@
+"""Private module of ``pyiak_instr.communication.message``."""
 from abc import abstractmethod
 from typing import (
     Any,
-    Callable,
-    Generator,
-    Generic,
     Self,
-    TypeAlias,
     TypeVar,
-    cast,
 )
 
 from ....core import Code
@@ -28,20 +24,22 @@ __all__ = [
 
 
 FieldStructT = TypeVar("FieldStructT", bound=MessageFieldStructABC)
-MessageStructT = TypeVar(
-    "MessageStructT", bound=MessageStructABC[MessageFieldStructABC]
-)
-MessageT = TypeVar("MessageT", bound=MessageABC)
+MessageStructT = TypeVar("MessageStructT", bound=MessageStructABC[Any])
+MessageT = TypeVar("MessageT", bound=MessageABC[Any, Any, Any, Any])
 
 FieldStructPatternT = TypeVar(
-    "FieldStructPatternT", bound="MessageFieldStructPatternABC"
+    "FieldStructPatternT", bound="MessageFieldStructPatternABC[Any]"
 )
 MessageStructPatternT = TypeVar(
-    "MessageStructPatternT", bound="MessageStructPatternABC"
+    "MessageStructPatternT", bound="MessageStructPatternABC[Any, Any]"
 )
 
 
 class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
+    """
+    Represent base class of pattern for field struct.
+    """
+
     @staticmethod
     @abstractmethod
     def get_fmt_bytesize(fmt: Code) -> int:
@@ -73,6 +71,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
         Parameters
         ----------
+        typename : str, default='basic'
+            basic typename.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -108,6 +108,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
         Parameters
         ----------
+        typename : str, default='single'
+            single typename.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -141,6 +143,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
         Parameters
         ----------
+        typename : str, default='static'
+            static typename.
         fmt : Code, default=Code.U8
             value format.
         default : bytes, default=b'\x00'
@@ -176,6 +180,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
         Parameters
         ----------
+        typename : str, default='address'
+            address typename.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -218,6 +224,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
         Parameters
         ----------
+        typename : str, default='crc'
+            crc typename.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -263,6 +271,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
         Parameters
         ----------
+        typename : str, default='data'
+            data typename.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -301,6 +311,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
         Parameters
         ----------
+        typename : str, default='data_length'
+            data length typename.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -343,6 +355,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
         Parameters
         ----------
+        typename : str, default='id'
+            id typename.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -377,6 +391,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
         Parameters
         ----------
+        typename : str, default='operation'
+            operation typename.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -416,6 +432,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
         Parameters
         ----------
+        typename : str, default='response'
+            response typename.
         fmt : Code
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -445,6 +463,10 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 class MessageStructPatternABC(
     BytesStorageStructPatternABC[MessageStructT, FieldStructPatternT]
 ):
+    """
+    Represent base class of pattern for message struct.
+    """
+
     @classmethod
     def basic(
         cls,
@@ -452,12 +474,46 @@ class MessageStructPatternABC(
         divisible: bool = False,
         mtu: int = 1500,
     ) -> Self:
+        """
+        Get initialized pattern for basic storage struct.
+
+        Parameters
+        ----------
+        typename : str, default='basic'
+            basic typename.
+        divisible : bool, default=False
+            shows that the message can be divided by the infinite field.
+        mtu : int, default=1500
+            max size of one message part.
+
+        Returns
+        -------
+        Self
+            initialized self instance.
+        """
         return cls(typename=typename, divisible=divisible, mtu=mtu)
 
 
 class MessagePatternABC(
     BytesStoragePatternABC[MessageT, MessageStructPatternT]
 ):
+    """
+    Represent base class of pattern for message.
+    """
+
     @classmethod
     def basic(cls, typename: str = "basic") -> Self:
+        """
+        Get initialized pattern for basic message.
+
+        Parameters
+        ----------
+        typename : str, default='basic'
+            basic typename.
+
+        Returns
+        -------
+        Self
+            initialized self instance.
+        """
         return cls(typename=typename)

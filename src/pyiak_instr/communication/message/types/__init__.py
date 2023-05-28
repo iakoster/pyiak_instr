@@ -1,3 +1,9 @@
+"""
+================================================
+Types (:mod:`pyiak_instr.communication.message`)
+================================================
+"""
+# pylint: disable=duplicate-code
 from ._pattern import (
     MessageFieldStructPatternABC,
     MessageStructPatternABC,
@@ -17,8 +23,8 @@ from ._struct import (
     OperationMessageFieldStructABC,
     ResponseMessageFieldStructABC,
     MessageFieldStructABCUnionT,
-    MessageStructGetParserABC,
-    MessageStructHasParserABC,
+    MessageStructGetParser,
+    MessageStructHasParser,
     MessageStructABC,
 )
 
@@ -37,8 +43,8 @@ __all__ = [
     "IdMessageFieldStructABC",
     "OperationMessageFieldStructABC",
     "ResponseMessageFieldStructABC",
-    "MessageStructGetParserABC",
-    "MessageStructHasParserABC",
+    "MessageStructGetParser",
+    "MessageStructHasParser",
     "MessageStructABC",
     "MessageFieldStructPatternABC",
     "MessageStructPatternABC",

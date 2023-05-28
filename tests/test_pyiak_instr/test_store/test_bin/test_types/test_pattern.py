@@ -81,6 +81,7 @@ class TestBytesStorageStructPatternABC(unittest.TestCase):
             self,
             TIStorageStructPattern(typename="basic", name="test"),
             typename="basic",
+            sub_pattern_names=[],
         )
 
     def test_get(self) -> None:
@@ -130,6 +131,7 @@ class TestBytesStoragePatternABC(unittest.TestCase):
             self,
             TIStoragePattern(typename="basic", name="test"),
             typename="basic",
+            sub_pattern_names=[],
         )
 
     def test_get(self) -> None:

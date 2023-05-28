@@ -54,6 +54,7 @@ class RWConfig(RWData[ConfigParser]):
         self.close()
         self._api = self._get_api(self._fp)
 
+    # pylint: disable=arguments-differ
     def get(self, section: str, option: str, convert: bool = True) -> Any:
         """
         Get value from the configparser.
@@ -81,6 +82,7 @@ class RWConfig(RWData[ConfigParser]):
             return self._encoder.decode(value)
         return value
 
+    # pylint: disable=arguments-differ
     @overload
     def set(
         self, section: str, option: str, value: Any, convert: bool = True
@@ -98,6 +100,7 @@ class RWConfig(RWData[ConfigParser]):
             convert the `value` to str by StringEncoder.
         """
 
+    # pylint: disable=arguments-differ
     @overload
     def set(
         self, section: str, options: dict[str, Any], convert: bool = True
@@ -113,6 +116,7 @@ class RWConfig(RWData[ConfigParser]):
             convert the `value` to str by StringEncoder.
         """
 
+    # pylint: disable=arguments-differ
     @overload
     def set(
         self, sections: dict[str, dict[str, Any]], convert: bool = True

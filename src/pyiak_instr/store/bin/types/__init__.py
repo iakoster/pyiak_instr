@@ -1,3 +1,8 @@
+"""
+====================================
+Types (:mod:`pyiak_instr.store.bin`)
+====================================
+"""
 from ._pattern import (
     BytesFieldStructPatternABC,
     BytesStoragePatternABC,
@@ -6,20 +11,16 @@ from ._pattern import (
 )
 from ._struct import (
     STRUCT_DATACLASS,
-    BytesDecodeT,
-    BytesEncodeT,
     BytesFieldStructABC,
     BytesStorageStructABC,
 )
-from src.pyiak_instr.store.bin.types._bin import (
+from ._bin import (
     BytesStorageABC,
 )
 
 
 __all__ = [
     "STRUCT_DATACLASS",
-    "BytesDecodeT",
-    "BytesEncodeT",
     "BytesFieldStructABC",
     "BytesFieldStructPatternABC",
     "BytesStorageABC",

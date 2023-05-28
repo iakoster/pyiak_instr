@@ -79,9 +79,15 @@ class RWData(ContextManager, WithApi[ApiT], WithBaseStringMethods):
         """
         Get api instance.
 
+        Parameters
+        ----------
+        filepath: Path
+            path to the file.
+
         Returns
         -------
         ApiT
+            api instance.
         """
 
     def request(self, *args: Any, **kwargs: Any) -> Any:
@@ -94,11 +100,6 @@ class RWData(ContextManager, WithApi[ApiT], WithBaseStringMethods):
             positional function arguments.
         **kwargs : Any
             keyword arguments.
-
-        Returns
-        -------
-        Any
-            method result.
 
         Raises
         ------
@@ -118,11 +119,6 @@ class RWData(ContextManager, WithApi[ApiT], WithBaseStringMethods):
         **kwargs : Any
             keyword arguments.
 
-        Returns
-        -------
-        Any
-            method result.
-
         Raises
         ------
         NotSupportedMethod
@@ -140,11 +136,6 @@ class RWData(ContextManager, WithApi[ApiT], WithBaseStringMethods):
             positional function arguments.
         **kwargs : Any
             keyword arguments.
-
-        Returns
-        -------
-        Any
-            method result.
 
         Raises
         ------
@@ -164,11 +155,6 @@ class RWData(ContextManager, WithApi[ApiT], WithBaseStringMethods):
         **kwargs : Any
             keyword arguments.
 
-        Returns
-        -------
-        Any
-            method result.
-
         Raises
         ------
         NotSupportedMethod
@@ -186,11 +172,6 @@ class RWData(ContextManager, WithApi[ApiT], WithBaseStringMethods):
             positional function arguments.
         **kwargs : Any
             keyword arguments.
-
-        Returns
-        -------
-        Any
-            method result.
 
         Raises
         ------
@@ -229,6 +210,6 @@ class RWData(ContextManager, WithApi[ApiT], WithBaseStringMethods):
 
     def __new__(
         cls, filepath: Path, *args: Any, **kwargs: Any
-    ):  # todo: typing - Self[T]
+    ) -> Self:  # todo: typing - Self[T]
         check_filepath(cls, filepath)
         return super().__new__(cls)

@@ -1,7 +1,7 @@
-"""Private module of ``pyiak_instr.utilities`` with encoders"""
+"""Private module of ``pyiak_instr.encoders``"""
 import re
 import itertools
-from typing import Any, Callable, Generator, Iterable, Literal, cast
+from typing import Any, Callable, Generator, Iterable, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -11,7 +11,7 @@ from ..exceptions import CodeNotAllowed
 from .types import Encoder
 
 
-__all__ = ["BytesEncoder", "StringEncoder"]
+__all__ = ["BytesDecodeT", "BytesEncodeT", "BytesEncoder", "StringEncoder"]
 
 
 BytesDecodeT = npt.NDArray[np.int_ | np.float_]
@@ -33,9 +33,6 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
     order : Code, default=Code.BIG_ENDIAN
         bytes order.
     """
-
-    DECODE_TYPE = BytesDecodeT
-    ENCODE_TYPE = BytesEncodeT
 
     _U_LENGTHS = {
         Code.U8: 1,
@@ -90,7 +87,7 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         self._decode_func, self._encode_func = self._get_funcs(fmt, order)
 
     # todo: return np.ndarray[int | float, Any]?
-    def decode(self, value: bytes) -> DECODE_TYPE:
+    def decode(self, value: bytes) -> BytesDecodeT:
         """
         Decode bytes content to array.
 
@@ -117,7 +114,26 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         bytesize: int,
         byteorder: Literal["little", "big"],
         signed: bool,
-    ) -> DECODE_TYPE:
+    ) -> BytesDecodeT:
+        """
+        Decode bytes to integer array.
+
+        Parameters
+        ----------
+        value : bytes
+            value to decoding.
+        bytesize : int
+            value size in bytes.
+        byteorder : Literal["little", "big"]
+            order of bytes (little or big endian).
+        signed : bool
+            True - value is signed integer.
+
+        Returns
+        -------
+        BytesDecodeT
+            decoded value.
+        """
         encoded = np.empty(len(value) // bytesize, np.int_)
         for i in range(encoded.shape[0]):
             val = value[i * bytesize : (i + 1) * bytesize]
@@ -125,10 +141,25 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         return encoded
 
     @staticmethod
-    def _decode_float(value: bytes, dtype: str) -> DECODE_TYPE:
+    def _decode_float(value: bytes, dtype: str) -> BytesDecodeT:
+        """
+        Decode bytes to float array.
+
+        Parameters
+        ----------
+        value : bytes
+            value to decoding.
+        dtype : str
+            value type.
+
+        Returns
+        -------
+        BytesDecodeT
+            decoded value.
+        """
         return np.frombuffer(value, dtype=dtype)
 
-    def encode(self, value: ENCODE_TYPE) -> bytes:
+    def encode(self, value: BytesEncodeT) -> bytes:
         """
         Encode values to bytes.
 
@@ -150,31 +181,85 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
 
     @staticmethod
     def _encode_int(
-        value: ENCODE_TYPE,
+        value: BytesEncodeT,
         bytesize: int,
         byteorder: Literal["little", "big"],
         signed: bool,
     ) -> bytes:
+        """
+        Encode integer to bytes.
+
+        Parameters
+        ----------
+        value : BytesEncodeT
+            value to encoding.
+        bytesize : int
+            value size in bytes.
+        byteorder : Literal["little", "big"]
+            order of bytes (little or big endian).
+        signed : bool
+            True - value is signed integer.
+
+        Returns
+        -------
+        bytes
+            encoded value.
+        """
         encoded = b""
         if isinstance(value, Iterable):
             for val in value:
-                encoded += val.to_bytes(bytesize, byteorder, signed=signed)
+                encoded += val.to_bytes(  # type: ignore[union-attr]
+                    bytesize, byteorder, signed=signed
+                )
         else:
-            encoded += value.to_bytes(bytesize, byteorder, signed=signed)
+            encoded += value.to_bytes(  # type: ignore[union-attr]
+                bytesize, byteorder, signed=signed
+            )
         return encoded
 
     @staticmethod
-    def _encode_float(value: ENCODE_TYPE, dtype: str) -> bytes:
+    def _encode_float(value: BytesEncodeT, dtype: str) -> bytes:
+        """
+        Encode float to bytes.
+
+        Parameters
+        ----------
+        value : BytesEncodeT
+            value to encoding.
+        dtype : str
+            value type.
+
+        Returns
+        -------
+        bytes
+            encoded value.
+        """
         return np.array(value, dtype=dtype).tobytes()
 
     def _get_funcs(
         self, fmt: Code, order: Code
     ) -> tuple[
-        Callable[[bytes], DECODE_TYPE], Callable[[ENCODE_TYPE], bytes]
+        Callable[[bytes], BytesDecodeT], Callable[[BytesEncodeT], bytes]
     ]:
+        """
+        Get decode and encode functions.
+
+        Parameters
+        ----------
+        fmt : Code
+            fmt code.
+        order : Code
+            order code.
+
+        Returns
+        -------
+        tuple[Callable, Callable]
+            * decode function;
+            * encode function.
+        """
         if fmt in self._F_LENGTHS:
             dtype = (
-                ">" if Code.BIG_ENDIAN else Code.LITTLE_ENDIAN
+                ">" if order is Code.BIG_ENDIAN else "<"
             ) + self._F_DTYPES[fmt]
             return (
                 lambda v: self._decode_float(v, dtype),
@@ -182,7 +267,12 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
             )
 
         # fmt in _U_LENGTH or _I_LENGTH
-        byteorder = "big" if order is Code.BIG_ENDIAN else "little"
+        byteorder: Literal["little", "big"]
+        if order is Code.BIG_ENDIAN:
+            byteorder = "big"
+        else:
+            byteorder = "little"
+
         signed = fmt in self._I_LENGTHS
         bytesize = self._I_LENGTHS[fmt] if signed else self._U_LENGTHS[fmt]
         return (

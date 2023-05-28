@@ -1,25 +1,26 @@
-"""Private module of ``pyiak_instr.types.communication`` with types for
-communication module."""
+"""Private module of ``pyiak_instr.communication.message.types``."""
 from dataclasses import field as _field
 from typing import (
+    TYPE_CHECKING,
     Callable,
     Generic,
     Self,
-    TypeAlias,
     TypeVar,
     Union,
+    cast,
 )
 
 from ....exceptions import ContentError, NotAmongTheOptions
 from ....core import Code
-from ....encoders.types import Encoder
+from ....encoders import BytesEncoder, BytesEncodeT
 from ....store.bin.types import (
     STRUCT_DATACLASS,
-    BytesDecodeT,
-    BytesEncodeT,
     BytesFieldStructABC,
     BytesStorageStructABC,
 )
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 __all__ = [
@@ -35,28 +36,35 @@ __all__ = [
     "OperationMessageFieldStructABC",
     "ResponseMessageFieldStructABC",
     "MessageFieldStructABCUnionT",
-    "MessageStructGetParserABC",
-    "MessageStructHasParserABC",
+    "MessageStructGetParser",
+    "MessageStructHasParser",
     "MessageStructABC",
 ]
 
 
-EncoderT: TypeAlias = Encoder[BytesDecodeT, BytesEncodeT, bytes]
 FieldStructT = TypeVar("FieldStructT", bound="MessageFieldStructABC")
-MessageStructT = TypeVar("MessageStructT", bound="MessageStructABC")
+MessageStructT = TypeVar("MessageStructT", bound="MessageStructABC[Any]")
 
 
 # todo: refactor (join classes to one and use metaclass)
 @STRUCT_DATACLASS
 class MessageFieldStructABC(BytesFieldStructABC):
-    ...
+    """
+    Represents a base class for base field.
+    """
 
 
 @STRUCT_DATACLASS
 class SingleMessageFieldStructABC(MessageFieldStructABC):
+    """
+    Represents a base class for field with single word.
+    """
+
     def __post_init__(
         self,
-        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        encoder: Callable[[Code, Code], BytesEncoder]
+        | type[BytesEncoder]
+        | None,
     ) -> None:
         super().__post_init__(encoder)
         if self.words_expected != 1:
@@ -72,15 +80,41 @@ class SingleMessageFieldStructABC(MessageFieldStructABC):
 
 @STRUCT_DATACLASS
 class StaticMessageFieldStructABC(SingleMessageFieldStructABC):
+    """
+    Represents a base class for field with static single word (e.g. preamble).
+    """
+
     def __post_init__(
         self,
-        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        encoder: Callable[[Code, Code], BytesEncoder]
+        | type[BytesEncoder]
+        | None,
     ) -> None:
         super().__post_init__(encoder)
         if not self.has_default:
             raise ValueError("default value not specified")
 
     def verify(self, content: bytes, raise_if_false: bool = False) -> bool:
+        """
+        Verify that `content` is correct for the given field structure.
+
+        Parameters
+        ----------
+        content : bytes
+            content to verifying.
+        raise_if_false : bool
+            raise `ContentError` if content not correct.
+
+        Returns
+        -------
+        bool
+            True - content is correct, False - is not.
+
+        Raises
+        ------
+        ContentError
+            if `raise_if_false` is True and content is not correct.
+        """
         correct = super().verify(content, raise_if_false=raise_if_false)
         if correct:
             correct = content == self.default
@@ -91,13 +125,19 @@ class StaticMessageFieldStructABC(SingleMessageFieldStructABC):
 
 @STRUCT_DATACLASS
 class AddressMessageFieldStructABC(SingleMessageFieldStructABC):
+    """
+    Represents base class for field with address.
+    """
+
     behaviour: Code = Code.DMA
 
     units: Code = Code.WORDS
 
     def __post_init__(
         self,
-        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        encoder: Callable[[Code, Code], BytesEncoder]
+        | type[BytesEncoder]
+        | None,
     ) -> None:
         super().__post_init__(encoder)
         if self.behaviour not in {Code.DMA, Code.STRONG}:
@@ -112,6 +152,10 @@ class AddressMessageFieldStructABC(SingleMessageFieldStructABC):
 
 @STRUCT_DATACLASS
 class CrcMessageFieldStructABC(SingleMessageFieldStructABC):
+    """
+    Represents base class for field with crc.
+    """
+
     poly: int = 0x1021
 
     init: int = 0
@@ -120,7 +164,9 @@ class CrcMessageFieldStructABC(SingleMessageFieldStructABC):
 
     def __post_init__(
         self,
-        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        encoder: Callable[[Code, Code], BytesEncoder]
+        | type[BytesEncoder]
+        | None,
     ) -> None:
         super().__post_init__(encoder)
         if self.bytes_expected != 2 or self.poly != 0x1021 or self.init != 0:
@@ -160,7 +206,9 @@ class DataMessageFieldStructABC(MessageFieldStructABC):
 
     def __post_init__(
         self,
-        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        encoder: Callable[[Code, Code], BytesEncoder]
+        | type[BytesEncoder]
+        | None,
     ) -> None:
         super().__post_init__(encoder)
         if self.bytes_expected != 0:
@@ -169,6 +217,10 @@ class DataMessageFieldStructABC(MessageFieldStructABC):
 
 @STRUCT_DATACLASS
 class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
+    """
+    Represents base class for field with length of dynamic field.
+    """
+
     behaviour: Code = Code.ACTUAL  # todo: logic
     """determines the behavior of determining the content value."""
 
@@ -180,7 +232,9 @@ class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
 
     def __post_init__(
         self,
-        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        encoder: Callable[[Code, Code], BytesEncoder]
+        | type[BytesEncoder]
+        | None,
     ) -> None:
         super().__post_init__(encoder)
         if self.additive < 0:
@@ -191,6 +245,26 @@ class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
             raise NotAmongTheOptions("units", self.units)
 
     def calculate(self, data: bytes, value_size: int) -> int:
+        """
+        Calculate field value based on `data`.
+
+        Parameters
+        ----------
+        data : bytes
+            base on which the new value is calculated.
+        value_size : int
+            size of one single value.
+
+        Returns
+        -------
+        int
+            value based on `data`.
+
+        Raises
+        ------
+        ContentError
+            if data has non-integer count of words.
+        """
         if self.units is Code.WORDS:
             if len(data) % value_size != 0:
                 raise ContentError(self, "non-integer words count in data")
@@ -207,6 +281,10 @@ class IdMessageFieldStructABC(SingleMessageFieldStructABC):
 
 @STRUCT_DATACLASS
 class OperationMessageFieldStructABC(SingleMessageFieldStructABC):
+    """
+    Represents base class for field with operation.
+    """
+
     descs: dict[int, Code] = _field(
         default_factory=lambda: {0: Code.READ, 1: Code.WRITE}
     )
@@ -217,14 +295,44 @@ class OperationMessageFieldStructABC(SingleMessageFieldStructABC):
 
     def __post_init__(
         self,
-        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        encoder: Callable[[Code, Code], BytesEncoder]
+        | type[BytesEncoder]
+        | None,
     ) -> None:
         super().__post_init__(encoder)
-        self._setattr("descs_r", {v: k for k, v in self.descs.items()})
+        self._setattr(
+            "descs_r",
+            {
+                v: k
+                for k, v in self.descs.items()  # pylint: disable=no-member
+            },
+        )
 
     def encode(
         self, content: BytesEncodeT | Code, verify: bool = False
     ) -> bytes:
+        """
+        Encode content to bytes.
+
+        There is can encode Code to bytes.
+
+        Parameters
+        ----------
+        content : BytesEncodeT | Code
+            content to encoding.
+        verify : bool, default=False
+            verify content after encoding.
+
+        Returns
+        -------
+        bytes
+            encoded content.
+
+        Raises
+        ------
+        ContentError
+            if Code not represented.
+        """
         if isinstance(content, Code):
             value = self.desc_r(content)
             if value is None:
@@ -233,23 +341,58 @@ class OperationMessageFieldStructABC(SingleMessageFieldStructABC):
         return super().encode(content, verify=True)
 
     def desc(self, value: int) -> Code:
-        # pylint: disable=unsupported-membership-test,unsubscriptable-object
+        """
+        Get description code.
+
+        Parameters
+        ----------
+        value : int
+            description value.
+
+        Returns
+        -------
+        Code
+            description code. If Code.UNDEFINED - value not found.
+        """
         if value not in self.descs:
             return Code.UNDEFINED
         return self.descs[value]
 
     def desc_r(self, code: Code) -> int | None:
+        """
+        Get description value.
+
+        Parameters
+        ----------
+        code : Code
+            description code.
+
+        Returns
+        -------
+        int | None
+            description value. If None - Code not found.
+        """
         if code not in self.descs_r:
             return None
         return self.descs_r[code]
 
     def _modify_values(self) -> None:
         super()._modify_values()
-        self._setattr("descs_r", {v: k for k, v in self.descs.items()})
+        self._setattr(
+            "descs_r",
+            {
+                v: k
+                for k, v in self.descs.items()  # pylint: disable=no-member
+            },
+        )
 
 
 @STRUCT_DATACLASS
 class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
+    """
+    Represents base class for field with response.
+    """
+
     descs: dict[int, Code] = _field(default_factory=dict)
     """matching dictionary value and codes."""
 
@@ -258,14 +401,44 @@ class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
 
     def __post_init__(
         self,
-        encoder: Callable[[Code, Code], EncoderT] | type[EncoderT] | None,
+        encoder: Callable[[Code, Code], BytesEncoder]
+        | type[BytesEncoder]
+        | None,
     ) -> None:
         super().__post_init__(encoder)
-        self._setattr("descs_r", {v: k for k, v in self.descs.items()})
+        self._setattr(
+            "descs_r",
+            {
+                v: k
+                for k, v in self.descs.items()  # pylint: disable=no-member
+            },
+        )
 
     def encode(
         self, content: BytesEncodeT | Code, verify: bool = False
     ) -> bytes:
+        """
+        Encode content to bytes.
+
+        There is can encode Code to bytes.
+
+        Parameters
+        ----------
+        content : BytesEncodeT | Code
+            content to encoding.
+        verify : bool, default=False
+            verify content after encoding.
+
+        Returns
+        -------
+        bytes
+            encoded content.
+
+        Raises
+        ------
+        ContentError
+            if Code not represented.
+        """
         if isinstance(content, Code):
             value = self.desc_r(content)
             if value is None:
@@ -289,7 +462,6 @@ class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
         Code
             value code.
         """
-        # pylint: disable=unsupported-membership-test,unsubscriptable-object
         if value not in self.descs:
             return Code.UNDEFINED
         return self.descs[value]
@@ -315,7 +487,7 @@ class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
         return self.descs_r[code]
 
 
-MessageFieldStructABCUnionT = Union[
+MessageFieldStructABCUnionT = Union[  # pylint: disable=invalid-name
     MessageFieldStructABC,
     SingleMessageFieldStructABC,
     StaticMessageFieldStructABC,
@@ -329,7 +501,11 @@ MessageFieldStructABCUnionT = Union[
 ]
 
 
-class MessageStructGetParserABC(Generic[MessageStructT, FieldStructT]):
+class MessageStructGetParser(Generic[MessageStructT, FieldStructT]):
+    """
+    Represents parser to getting specified field struct.
+    """
+
     def __init__(
         self,
         message: MessageStructT,
@@ -340,51 +516,115 @@ class MessageStructGetParserABC(Generic[MessageStructT, FieldStructT]):
 
     @property
     def basic(self) -> MessageFieldStructABC:
-        return self(Code.BASIC)
+        """
+        Returns
+        -------
+        MessageFieldStructABC
+            first in message basic field struct.
+        """
+        return cast(MessageFieldStructABC, self(Code.BASIC))
 
     @property
     def single(self) -> SingleMessageFieldStructABC:
-        return self(Code.SINGLE)
+        """
+        Returns
+        -------
+        SingleMessageFieldStructABC
+            first in message single field struct.
+        """
+        return cast(SingleMessageFieldStructABC, self(Code.SINGLE))
 
     @property
     def static(self) -> StaticMessageFieldStructABC:
-        return self(Code.STATIC)
+        """
+        Returns
+        -------
+        StaticMessageFieldStructABC
+            first in message static field struct.
+        """
+        return cast(StaticMessageFieldStructABC, self(Code.STATIC))
 
     @property
     def address(self) -> AddressMessageFieldStructABC:
-        return self(Code.ADDRESS)
+        """
+        Returns
+        -------
+        AddressMessageFieldStructABC
+            first in message address field struct.
+        """
+        return cast(AddressMessageFieldStructABC, self(Code.ADDRESS))
 
     @property
     def crc(self) -> CrcMessageFieldStructABC:
-        return self(Code.CRC)
+        """
+        Returns
+        -------
+        CrcMessageFieldStructABC
+            first in message crc field struct.
+        """
+        return cast(CrcMessageFieldStructABC, self(Code.CRC))
 
     @property
     def data(self) -> DataMessageFieldStructABC:
-        return self(Code.DATA)
+        """
+        Returns
+        -------
+        DataMessageFieldStructABC
+            first in message data field struct.
+        """
+        return cast(DataMessageFieldStructABC, self(Code.DATA))
 
     @property
     def data_length(self) -> DataLengthMessageFieldStructABC:
-        return self(Code.DATA_LENGTH)
+        """
+        Returns
+        -------
+        DataLengthMessageFieldStructABC
+            first in message data length field struct.
+        """
+        return cast(DataLengthMessageFieldStructABC, self(Code.DATA_LENGTH))
 
     @property
     def id_(self) -> IdMessageFieldStructABC:
-        return self(Code.ID)
+        """
+        Returns
+        -------
+        IdMessageFieldStructABC
+            first in message id field struct.
+        """
+        return cast(IdMessageFieldStructABC, self(Code.ID))
 
     @property
     def operation(self) -> OperationMessageFieldStructABC:
-        return self(Code.OPERATION)
+        """
+        Returns
+        -------
+        OperationMessageFieldStructABC
+            first in message operation field struct.
+        """
+        return cast(OperationMessageFieldStructABC, self(Code.OPERATION))
 
     @property
     def response(self) -> ResponseMessageFieldStructABC:
-        return self(Code.RESPONSE)
+        """
+        Returns
+        -------
+        ResponseMessageFieldStructABC
+            first in message response field struct.
+        """
+        return cast(ResponseMessageFieldStructABC, self(Code.RESPONSE))
 
     def __call__(self, code: Code) -> FieldStructT:
         if code not in self._codes:
             raise TypeError(f"field instance with code {code!r} not found")
-        return self._msg[self._codes[code]]
+        return cast(FieldStructT, self._msg[self._codes[code]])
 
 
-class MessageStructHasParserABC(Generic[MessageStructT, FieldStructT]):
+class MessageStructHasParser(Generic[MessageStructT, FieldStructT]):
+    """
+    Represents parser to checking that field type exists.
+    """
+
     def __init__(
         self,
         message: MessageStructT,
@@ -395,42 +635,102 @@ class MessageStructHasParserABC(Generic[MessageStructT, FieldStructT]):
 
     @property
     def basic(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has basic field.
+        """
         return self(Code.BASIC)
 
     @property
     def single(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has single field.
+        """
         return self(Code.SINGLE)
 
     @property
     def static(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has static field.
+        """
         return self(Code.STATIC)
 
     @property
     def address(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has address field.
+        """
         return self(Code.ADDRESS)
 
     @property
     def crc(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has crc field.
+        """
         return self(Code.CRC)
 
     @property
     def data(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has data field.
+        """
         return self(Code.DATA)
 
     @property
     def data_length(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has data length field.
+        """
         return self(Code.DATA_LENGTH)
 
     @property
     def id_(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has id field.
+        """
         return self(Code.ID)
 
     @property
     def operation(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has operation field.
+        """
         return self(Code.OPERATION)
 
     @property
     def response(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - message has response field.
+        """
         return self(Code.RESPONSE)
 
     def __call__(self, code: Code) -> bool:
@@ -439,6 +739,10 @@ class MessageStructHasParserABC(Generic[MessageStructT, FieldStructT]):
 
 @STRUCT_DATACLASS
 class MessageStructABC(BytesStorageStructABC[FieldStructT]):
+    """
+    Represents base class for message structure.
+    """
+
     divisible: bool = False
     """shows that the message can be divided by the infinite field."""
 
@@ -487,21 +791,21 @@ class MessageStructABC(BytesStorageStructABC[FieldStructT]):
                 )
 
     @property
-    def get(self) -> MessageStructGetParserABC[Self, FieldStructT]:
+    def get(self) -> MessageStructGetParser[Self, FieldStructT]:
         """
         Returns
         -------
-        MessageStructGetParserABC
+        MessageStructGetParser
             message get parser.
         """
-        return MessageStructGetParserABC(self, self._field_types)
+        return MessageStructGetParser(self, self._field_types)
 
     @property
-    def has(self) -> MessageStructHasParserABC[Self, FieldStructT]:
+    def has(self) -> MessageStructHasParser[Self, FieldStructT]:
         """
         Returns
         -------
         MessageHasParserABC
             message has parser.
         """
-        return MessageStructHasParserABC(self, self._field_types)
+        return MessageStructHasParser(self, self._field_types)

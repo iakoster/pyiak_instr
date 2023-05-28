@@ -41,6 +41,7 @@ class TestMessageStructPattern(unittest.TestCase):
             self,
             obj,
             typename="basic",
+            sub_pattern_names=[],
         )
         self.assertDictEqual(
             dict(
@@ -60,6 +61,7 @@ class TestMessagePattern(unittest.TestCase):
             self,
             obj,
             typename="basic",
+            sub_pattern_names=[],
         )
         self.assertDictEqual(
             dict(typename="basic"),

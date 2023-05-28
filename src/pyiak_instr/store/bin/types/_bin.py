@@ -1,26 +1,24 @@
 """Private module of ``pyiak_instr.types.store`` with types for store
 module."""
-# pylint: disable=too-many-lines
 from typing import (
     TYPE_CHECKING,
     Generic,
     Self,
-    TypeAlias,
     TypeVar,
     cast,
     overload,
 )
 
 from ....typing import WithBaseStringMethods
-
+from ....encoders import BytesDecodeT, BytesEncodeT
 from ._struct import (
-    BytesDecodeT,
-    BytesEncodeT,
     BytesFieldStructABC,
     BytesStorageStructABC,
 )
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from ._pattern import BytesStoragePatternABC
 
 
@@ -30,7 +28,9 @@ FieldStructT = TypeVar("FieldStructT", bound=BytesFieldStructABC)
 StorageStructT = TypeVar(
     "StorageStructT", bound=BytesStorageStructABC[BytesFieldStructABC]
 )
-StoragePatternT = TypeVar("StoragePatternT", bound="BytesStoragePatternABC")
+StoragePatternT = TypeVar(
+    "StoragePatternT", bound="BytesStoragePatternABC[Any, Any]"
+)
 
 
 # todo: verify current content
@@ -65,14 +65,26 @@ class BytesStorageABC(
     def decode(self) -> dict[str, BytesDecodeT]:
         ...
 
-    def decode(self, *args: str) -> BytesDecodeT | dict[str, BytesDecodeT]:
+    def decode(  # type: ignore[misc]
+        self, *args: str
+    ) -> BytesDecodeT | dict[str, BytesDecodeT]:
         """
         Decode content.
 
         Parameters
         ----------
         *args : str
-            arguments for function
+            arguments for method.
+
+        Returns
+        -------
+        BytesDecodeT | dict[str, BytesDecodeT]
+            decoded content.
+
+        Raises
+        ------
+        TypeError
+            if arguments is invalid.
         """
         match args:
             case _ if len(args) == 0:
@@ -81,8 +93,7 @@ class BytesStorageABC(
             case (str() as name,):
                 return self._s.decode(name, self.content(name))
 
-            case _:
-                raise TypeError(f"invalid arguments")
+        raise TypeError("invalid arguments")
 
     @overload
     def encode(self, content: bytes) -> Self:
@@ -92,7 +103,24 @@ class BytesStorageABC(
     def encode(self, **fields: BytesEncodeT) -> Self:
         ...
 
-    def encode(self, *args: bytes, **kwargs: BytesEncodeT) -> Self:
+    def encode(  # type: ignore[misc]
+        self, *args: bytes, **kwargs: BytesEncodeT
+    ) -> Self:
+        """
+        Encode content.
+
+        Parameters
+        ----------
+        *args : bytes
+            arguments for method.
+        **kwargs: BytesEncodeT
+            keyword arguments for method.
+
+        Returns
+        -------
+        Self
+            self instance.
+        """
         is_empty = self.is_empty()
         encoded = self._s.encode(*args, all_fields=is_empty, **kwargs)
 
@@ -108,20 +136,53 @@ class BytesStorageABC(
 
     # kinda properties
 
-    def bytes_count(self, field: str | None = None):
+    def bytes_count(self, field: str | None = None) -> int:
+        """
+        Get bytes count of one field or all storage (if `field` is empty).
+
+        Parameters
+        ----------
+        field: str | None, default=None
+            field name.
+
+        Returns
+        -------
+        int
+            bytes count of field or storage.
+        """
         return len(self.content(field))
 
     def content(self, field: str | None = None) -> bytes:
         """
+        Get content of one field or all storage (if `field` is empty).
+
+        Parameters
+        ----------
+        field: str | None, default=None
+            field name.
+
         Returns
         -------
         bytes
-            content of the storage.
+            content of field or storage.
         """
         content = self._c if field is None else self._c[self._s[field].slice_]
         return bytes(content)
 
     def is_empty(self, field: str | None = None) -> bool:
+        """
+        Get indicator that field or all storage (if `field` is None) is empty.
+
+        Parameters
+        ----------
+        field : str | None, default=None
+            field name.
+
+        Returns
+        -------
+        bool
+            indicator that field or all storage is empty.
+        """
         return self.bytes_count(field) == 0
 
     @overload
@@ -132,7 +193,30 @@ class BytesStorageABC(
     def words_count(self, field: str) -> int:
         ...
 
-    def words_count(self, *args: str) -> int | dict[str, int]:
+    def words_count(  # type: ignore[misc]
+        self, *args: str
+    ) -> int | dict[str, int]:
+        """
+        Get count of words.
+
+        Parameters
+        ----------
+        *args : str
+            arguments for method. allowed configuration:
+                * empty - returns int;
+                * (field name,) - returns dict[str, int]
+
+        Returns
+        -------
+        int | dict[str, int]
+            int - count of words in one specific field;
+            dict[str, int] - count of words in each field.
+
+        Raises
+        ------
+        TypeError
+            if arguments is invalid.
+        """
         match args:
             case _ if len(args) == 0:
                 return {
@@ -143,8 +227,7 @@ class BytesStorageABC(
             case (str() as name,):
                 return self.bytes_count(name) // self._s[name].word_bytesize
 
-            case _:
-                raise TypeError("invalid arguments")
+        raise TypeError("invalid arguments")
 
     @property
     def has_pattern(self) -> bool:

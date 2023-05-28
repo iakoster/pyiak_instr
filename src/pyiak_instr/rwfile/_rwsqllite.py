@@ -20,7 +20,7 @@ class RWSQLite(RWData[sqlite3.Cursor]):
 
     Parameters
     ----------
-    filepath: Path | str
+    filepath: Path
         path to the database.
     autocommit: bool, default=True
         commit after any changes.
@@ -33,7 +33,7 @@ class RWSQLite(RWData[sqlite3.Cursor]):
 
     def __init__(
         self,
-        filepath: Path | str,
+        filepath: Path,
         autocommit: bool = True,
         timeout: float = 5,
     ):
@@ -90,6 +90,20 @@ class RWSQLite(RWData[sqlite3.Cursor]):
         self._con.commit()
 
     def _get_api(self, filepath: Path) -> sqlite3.Cursor:
+        """
+        Get cursor of database connection.
+
+        Parameters
+        ----------
+        filepath :
+            ignored. Needed for backward compatibility.
+
+        Returns
+        -------
+        sqlite3.Cursor
+            connection cursor.
+        """
+        # pylint: disable=unused-argument
         return self._con.cursor()
 
     @property

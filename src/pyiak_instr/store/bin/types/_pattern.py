@@ -1,3 +1,4 @@
+"""Private module of ``pyiak_instr.store.bin.types``"""
 from __future__ import annotations
 from pathlib import Path
 from configparser import ConfigParser
@@ -32,18 +33,18 @@ __all__ = [
 
 
 FieldStructT = TypeVar("FieldStructT", bound=BytesFieldStructABC)
-StorageStructT = TypeVar(
-    "StorageStructT", bound=BytesStorageStructABC[BytesFieldStructABC]
-)
-StorageT = TypeVar("StorageT", bound=BytesStorageABC)
+StorageStructT = TypeVar("StorageStructT", bound=BytesStorageStructABC[Any])
+StorageT = TypeVar("StorageT", bound=BytesStorageABC[Any, Any, Any])
 
 FieldStructPatternT = TypeVar(
-    "FieldStructPatternT", bound="BytesFieldStructPatternABC"
+    "FieldStructPatternT", bound="BytesFieldStructPatternABC[Any]"
 )
 StorageStructPatternT = TypeVar(
-    "StorageStructPatternT", bound="BytesStorageStructPatternABC"
+    "StorageStructPatternT", bound="BytesStorageStructPatternABC[Any, Any]"
 )
-StoragePatternT = TypeVar("StoragePatternT", bound="BytesStoragePatternABC")
+StoragePatternT = TypeVar(
+    "StoragePatternT", bound="BytesStoragePatternABC[Any, Any]"
+)
 
 
 class BytesFieldStructPatternABC(PatternABC[FieldStructT]):
@@ -73,8 +74,8 @@ class BytesFieldStructPatternABC(PatternABC[FieldStructT]):
         if "bytes_expected" in self._kw:
             return cast(int, self._kw["bytes_expected"])
 
-        start = self._kw["start"] if "start" in self._kw else 0
-        stop = self._kw["stop"] if "stop" in self._kw else None
+        start = cast(int, self._kw["start"]) if "start" in self._kw else 0
+        stop = cast(int, self._kw["stop"]) if "stop" in self._kw else None
 
         if stop is None:
             if start < 0:
@@ -141,6 +142,7 @@ class ContinuousBytesStorageStructPatternABC(
             if pattern.is_dynamic:
                 return name
             start += pattern.size
+        return None
 
     def _modify_after_dyn(
         self, dyn_name: str, sub_additions: SubPatternAdditions
@@ -183,10 +185,38 @@ class ContinuousBytesStorageStructPatternABC(
 class BytesStoragePatternABC(
     MetaPatternABC[StorageT, StorageStructPatternT], WritablePatternABC
 ):
+    """
+    Represent pattern for bytes storage.
+    """
+
     _rwdata: type[RWData[ConfigParser]]
     _sub_p_par_name = "storage"
 
     def configure(self, **patterns: StorageStructPatternT) -> Self:
+        """
+        Configure bytes storage pattern.
+
+        Only one pattern allowed.
+
+        Parameters
+        ----------
+        **patterns : PatternT
+            dictionary of patterns where key is a pattern name.
+
+        Returns
+        -------
+        Self
+            self instance.
+
+        Raises
+        ------
+        TypeError
+            if patterns more than one.
+
+        See Also
+        --------
+        super().configure
+        """
         if len(patterns) > 1:
             raise TypeError(
                 f"only one storage pattern allowed, got {len(patterns)}"
@@ -210,13 +240,18 @@ class BytesStoragePatternABC(
         if len(self._sub_p) == 0:
             raise NotConfiguredYet(self)
 
+        pattern: StorageStructPatternT
         ((name, pattern),) = self._sub_p.items()
         pars = {
             "_": self.__init_kwargs__(),
             name: pattern.__init_kwargs__(),
-            # todo: access to sub-patterns in MetaPattern
-            **{n: p.__init_kwargs__() for n, p in pattern._sub_p.items()},
         }
+        pars.update(
+            {
+                n: pattern.get_sub_pattern(n).__init_kwargs__()
+                for n in pattern.sub_pattern_names
+            }
+        )
 
         with self._rwdata(path) as cfg:
             if cfg.api.has_section(name):
@@ -260,7 +295,7 @@ class BytesStoragePatternABC(
             opts.pop(opts.index(name))
 
             # todo: access to sub-pattern type in MetaPattern
-            field_type = cls._sub_p_type._sub_p_type
+            field_type = cls._sub_p_type.get_sub_pattern_type()
             return cls(**cfg.get(name, "_")).configure(
                 **{
                     name: cls._sub_p_type(**cfg.get(name, name)).configure(
@@ -274,6 +309,25 @@ class BytesStoragePatternABC(
         changes_allowed: bool,
         additions: dict[str, Any],
     ) -> dict[str, Any]:
+        """
+        Add storage and pattern to parameters.
+
+        Parameters
+        ----------
+        changes_allowed : bool
+            allows situations where keys from the pattern overlap with kwargs.
+        additions : dict[str, Any]
+            additional initialization parameters.
+
+        Returns
+        -------
+        dict[str, Any]
+            joined parameters.
+
+        See Also
+        --------
+        super()._get_parameters_dict
+        """
         parameters = super()._get_parameters_dict(changes_allowed, additions)
 
         (storage,) = parameters[self._sub_p_par_name].values()

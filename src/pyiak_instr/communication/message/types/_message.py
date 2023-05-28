@@ -1,32 +1,21 @@
-"""Private module of ``pyiak_instr.types.communication`` with types for
-communication module."""
-from abc import ABC, abstractmethod
-from dataclasses import field as _field
-from functools import wraps
+"""Private module of ``pyiak_instr.communication.message``."""
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generator,
     Generic,
     Self,
-    TypeAlias,
     TypeVar,
-    cast,
 )
 
 from ....core import Code
-from ....encoders.types import Encoder
 from ....store.bin.types import (
-    BytesDecodeT,
-    BytesEncodeT,
     BytesStorageABC,
 )
 from ._struct import (
-    STRUCT_DATACLASS,
     MessageFieldStructABC,
-    MessageStructGetParserABC,
-    MessageStructHasParserABC,
+    MessageStructGetParser,
+    MessageStructHasParser,
     MessageStructABC,
 )
 
@@ -41,10 +30,10 @@ __all__ = [
 
 AddressT = TypeVar("AddressT")
 FieldStructT = TypeVar("FieldStructT", bound=MessageFieldStructABC)
-MessageStructT = TypeVar(
-    "MessageStructT", bound=MessageStructABC[MessageFieldStructABC]
+MessageStructT = TypeVar("MessageStructT", bound=MessageStructABC[Any])
+MessagePatternT = TypeVar(
+    "MessagePatternT", bound="MessagePatternABC[Any, Any]"
 )
-MessagePatternT = TypeVar("MessagePatternT", bound="MessagePatternABC")
 
 
 # todo: clear src and dst?
@@ -54,6 +43,10 @@ class MessageABC(
     BytesStorageABC[FieldStructT, MessageStructT, MessagePatternT],
     Generic[FieldStructT, MessageStructT, MessagePatternT, AddressT],
 ):
+    """
+    Represents base class for message.
+    """
+
     def __init__(
         self,
         storage: MessageStructT,
@@ -69,10 +62,14 @@ class MessageABC(
                     f"{behaviour!r}"
                 )
 
-        self._src, self._dst = None, None
+        self._src: AddressT | None = None
+        self._dst: AddressT | None = None
 
+    # todo: implement
     def autoupdate_fields(self) -> None:
-        ...
+        """
+        Update the content in all fields that support it.
+        """
 
     def split(self) -> Generator[Self, None, None]:
         """
@@ -82,6 +79,13 @@ class MessageABC(
         ------
         Self
             message part.
+
+        Raises
+        ------
+        ValueError
+            if message is empty;
+            if message is dynamic and step of dynamic field is not even.
+            if address behaviour is undefined.
         """
         if len(self) == 0:
             raise ValueError("message is empty")
@@ -108,9 +112,7 @@ class MessageABC(
             )
         address_word_step = dyn_step // dyn.word_bytesize
 
-        for i, dyn_start in enumerate(
-            range(0, self.bytes_count(dyn_name), dyn_step)
-        ):
+        for dyn_start in range(0, self.bytes_count(dyn_name), dyn_step):
             part = self.__class__(self._s, self._p)  # todo: vulnerability?
 
             content = b""
@@ -169,21 +171,21 @@ class MessageABC(
         self._dst = destination
 
     @property
-    def get(self) -> MessageStructGetParserABC[MessageStructT, FieldStructT]:
+    def get(self) -> MessageStructGetParser[MessageStructT, FieldStructT]:
         """
         Returns
         -------
-        MessageStructGetParserABC
+        MessageStructGetParser
             message struct get parser.
         """
         return self._s.get
 
     @property
-    def has(self) -> MessageStructHasParserABC[MessageStructT, FieldStructT]:
+    def has(self) -> MessageStructHasParser[MessageStructT, FieldStructT]:
         """
         Returns
         -------
-        MessageStructHasParserABC
+        MessageStructHasParser
             message struct has parser.
         """
         return self._s.has

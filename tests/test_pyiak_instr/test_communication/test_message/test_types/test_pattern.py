@@ -261,6 +261,7 @@ class TestMessageStructPatternABC(unittest.TestCase):
                 f1=TIMessageFieldStructPattern(typename="data"),
             ),
             typename="basic",
+            sub_pattern_names=["f0", "f1"],
         )
 
     def test_init_specific(self) -> None:
@@ -330,6 +331,7 @@ class TestMessagePatternABC(unittest.TestCase):
                 ),
             ),
             typename="basic",
+            sub_pattern_names=["s0"],
         )
 
     def test_get(self) -> None:

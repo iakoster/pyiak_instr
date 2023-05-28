@@ -6,19 +6,19 @@ from typing import Protocol, TypeVar, runtime_checkable
 __all__ = ["Encoder"]
 
 
-DecodeT = TypeVar("DecodeT")
-EncodeT = TypeVar("EncodeT")
+DecodeT_co = TypeVar("DecodeT_co", covariant=True)
+EncodeT_contra = TypeVar("EncodeT_contra", contravariant=True)
 TargetT = TypeVar("TargetT")
 
 
 @runtime_checkable
-class Encoder(Protocol[DecodeT, EncodeT, TargetT]):
+class Encoder(Protocol[DecodeT_co, EncodeT_contra, TargetT]):
     """
     Represents abstract base class of encoder.
     """
 
     @abstractmethod
-    def decode(self, value: TargetT) -> DecodeT:
+    def decode(self, value: TargetT) -> DecodeT_co:
         """
         Decode `value`.
 
@@ -34,7 +34,7 @@ class Encoder(Protocol[DecodeT, EncodeT, TargetT]):
         """
 
     @abstractmethod
-    def encode(self, value: EncodeT) -> TargetT:
+    def encode(self, value: EncodeT_contra) -> TargetT:
         """
         Encode `value`.
 
