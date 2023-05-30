@@ -2,6 +2,7 @@
 from dataclasses import field as _field
 from typing import (
     TYPE_CHECKING,
+    ClassVar,
     Generic,
     Self,
     TypeVar,
@@ -25,7 +26,6 @@ if TYPE_CHECKING:
 __all__ = [
     "STRUCT_DATACLASS",
     "MessageFieldStructABC",
-    "SingleMessageFieldStructABC",
     "StaticMessageFieldStructABC",
     "AddressMessageFieldStructABC",
     "CrcMessageFieldStructABC",
@@ -52,31 +52,29 @@ class MessageFieldStructABC(BytesFieldStructABC):
     Represents a base class for base field.
     """
 
+    is_single: ClassVar[bool] = False
+    "indicate that only one word expected."
 
-@STRUCT_DATACLASS
-class SingleMessageFieldStructABC(MessageFieldStructABC):
-    """
-    Represents a base class for field with single word.
-    """
+    def _modify_values(self) -> None:
+        if self.is_single and self.stop is None and self.bytes_expected == 0:
+            object.__setattr__(self, "bytes_expected", self.word_bytesize)
+        super()._modify_values()
 
     def _verify_modified_values(self) -> None:
         super()._verify_modified_values()
-        if self.words_expected != 1:
+        if self.is_single and self.words_expected != 1:
             raise ValueError(
                 f"{self.__class__.__name__} should expect one word"
             )
 
-    def _modify_values(self) -> None:
-        if self.stop is None and self.bytes_expected == 0:
-            object.__setattr__(self, "bytes_expected", self.word_bytesize)
-        super()._modify_values()
-
 
 @STRUCT_DATACLASS
-class StaticMessageFieldStructABC(SingleMessageFieldStructABC):
+class StaticMessageFieldStructABC(MessageFieldStructABC):
     """
     Represents a base class for field with static single word (e.g. preamble).
     """
+
+    is_single = True
 
     def verify(self, content: bytes, raise_if_false: bool = False) -> bool:
         """
@@ -113,10 +111,12 @@ class StaticMessageFieldStructABC(SingleMessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class AddressMessageFieldStructABC(SingleMessageFieldStructABC):
+class AddressMessageFieldStructABC(MessageFieldStructABC):
     """
     Represents base class for field with address.
     """
+
+    is_single = True
 
     behaviour: Code = Code.DMA
 
@@ -135,10 +135,12 @@ class AddressMessageFieldStructABC(SingleMessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class CrcMessageFieldStructABC(SingleMessageFieldStructABC):
+class CrcMessageFieldStructABC(MessageFieldStructABC):
     """
     Represents base class for field with crc.
     """
+
+    is_single = True
 
     poly: int = 0x1021
 
@@ -190,10 +192,12 @@ class DataMessageFieldStructABC(MessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
+class DataLengthMessageFieldStructABC(MessageFieldStructABC):
     """
     Represents base class for field with length of dynamic field.
     """
+
+    is_single = True
 
     behaviour: Code = Code.ACTUAL  # todo: logic
     """determines the behavior of determining the content value."""
@@ -243,15 +247,19 @@ class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class IdMessageFieldStructABC(SingleMessageFieldStructABC):
+class IdMessageFieldStructABC(MessageFieldStructABC):
     """Represents a field with a unique identifier of a particular message."""
+
+    is_single = True
 
 
 @STRUCT_DATACLASS
-class OperationMessageFieldStructABC(SingleMessageFieldStructABC):
+class OperationMessageFieldStructABC(MessageFieldStructABC):
     """
     Represents base class for field with operation.
     """
+
+    is_single = True
 
     descs: dict[int, Code] = _field(
         default_factory=lambda: {0: Code.READ, 1: Code.WRITE}
@@ -341,10 +349,12 @@ class OperationMessageFieldStructABC(SingleMessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
+class ResponseMessageFieldStructABC(MessageFieldStructABC):
     """
     Represents base class for field with response.
     """
+
+    is_single = True
 
     descs: dict[int, Code] = _field(default_factory=dict)
     """matching dictionary value and codes."""
@@ -437,7 +447,6 @@ class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
 
 MessageFieldStructABCUnionT = Union[  # pylint: disable=invalid-name
     MessageFieldStructABC,
-    SingleMessageFieldStructABC,
     StaticMessageFieldStructABC,
     AddressMessageFieldStructABC,
     CrcMessageFieldStructABC,
@@ -471,16 +480,6 @@ class MessageStructGetParser(Generic[MessageStructT, FieldStructT]):
             first in message basic field struct.
         """
         return cast(MessageFieldStructABC, self(Code.BASIC))
-
-    @property
-    def single(self) -> SingleMessageFieldStructABC:
-        """
-        Returns
-        -------
-        SingleMessageFieldStructABC
-            first in message single field struct.
-        """
-        return cast(SingleMessageFieldStructABC, self(Code.SINGLE))
 
     @property
     def static(self) -> StaticMessageFieldStructABC:
@@ -590,16 +589,6 @@ class MessageStructHasParser(Generic[MessageStructT, FieldStructT]):
             True - message has basic field.
         """
         return self(Code.BASIC)
-
-    @property
-    def single(self) -> bool:
-        """
-        Returns
-        -------
-        bool
-            True - message has single field.
-        """
-        return self(Code.SINGLE)
 
     @property
     def static(self) -> bool:

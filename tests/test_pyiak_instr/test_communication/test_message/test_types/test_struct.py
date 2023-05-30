@@ -8,7 +8,6 @@ from src.pyiak_instr.communication.message.types import MessageStructABC
 from .....utils import validate_object, get_object_attrs
 from .ti import (
     TIMessageFieldStruct,
-    TISingleMessageFieldStruct,
     TIStaticMessageFieldStruct,
     TIAddressMessageFieldStruct,
     TICrcMessageFieldStruct,
@@ -41,36 +40,15 @@ class TestMessageFieldStruct(unittest.TestCase):
             word_bytesize=8,
             words_expected=20,
             name="",
-            wo_attrs=["encoder"],
-        )
-
-
-class TestSingleMessageFieldStruct(unittest.TestCase):
-
-    def test_init(self) -> None:
-        validate_object(
-            self,
-            TISingleMessageFieldStruct(start=10, fmt=Code.I64),
-            bytes_expected=8,
-            default=b"",
-            fmt=Code.I64,
-            has_default=False,
-            is_dynamic=False,
-            order=Code.BIG_ENDIAN,
-            slice_=slice(10, 18),
-            start=10,
-            stop=18,
-            word_bytesize=8,
-            words_expected=1,
-            name="",
+            is_single=False,
             wo_attrs=["encoder"],
         )
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            TISingleMessageFieldStruct(start=0, fmt=Code.U8, stop=2)
+            TIAddressMessageFieldStruct(start=0, fmt=Code.U8, stop=2)
         self.assertEqual(
-            "TISingleMessageFieldStruct should expect one word",
+            "TIAddressMessageFieldStruct should expect one word",
             exc.exception.args[0],
         )
 
@@ -93,6 +71,7 @@ class TestStaticMessageFieldStruct(unittest.TestCase):
             word_bytesize=1,
             words_expected=1,
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -139,6 +118,7 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
             word_bytesize=1,
             words_expected=1,
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -185,6 +165,7 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             word_bytesize=2,
             words_expected=1,
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -242,6 +223,7 @@ class TestDataMessageFieldStruct(unittest.TestCase):
             word_bytesize=2,
             words_expected=0,
             name="",
+            is_single=False,
             wo_attrs=["encoder"],
         )
 
@@ -276,6 +258,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
             word_bytesize=2,
             words_expected=1,
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -365,6 +348,7 @@ class TestIdMessageFieldStruct(unittest.TestCase):
             word_bytesize=2,
             words_expected=1,
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -389,6 +373,7 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
             word_bytesize=2,
             words_expected=1,
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -450,6 +435,7 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
             word_bytesize=2,
             words_expected=1,
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -550,7 +536,6 @@ class TestMessageStructABC(unittest.TestCase):
     def test_has(self) -> None:
         obj = TIMessageStruct(fields=dict(
             f0=TIMessageFieldStruct(name="f0", stop=1),
-            f1=TISingleMessageFieldStruct(name="f1", start=1, stop=2),
             f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
             f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
             f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
@@ -564,7 +549,6 @@ class TestMessageStructABC(unittest.TestCase):
             self,
             obj.has,
             basic=True,
-            single=True,
             address=True,
             id_=True,
             data_length=True,
@@ -580,7 +564,6 @@ class TestMessageStructABC(unittest.TestCase):
     def test_get(self) -> None:
         obj = TIMessageStruct(fields=dict(
             f0=TIMessageFieldStruct(name="f0", stop=1),
-            f1=TISingleMessageFieldStruct(name="f1", start=1, stop=2),
             f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
             f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
             f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),

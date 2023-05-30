@@ -7,7 +7,6 @@ from ...core import Code
 from .types import (
     STRUCT_DATACLASS,
     MessageFieldStructABC,
-    SingleMessageFieldStructABC,
     StaticMessageFieldStructABC,
     AddressMessageFieldStructABC,
     CrcMessageFieldStructABC,
@@ -22,7 +21,6 @@ from .types import (
 
 __all__ = [
     "MessageFieldStruct",
-    "SingleMessageFieldStruct",
     "StaticMessageFieldStruct",
     "AddressMessageFieldStruct",
     "CrcMessageFieldStruct",
@@ -39,13 +37,6 @@ __all__ = [
 @STRUCT_DATACLASS
 class MessageFieldStruct(MessageFieldStructABC):
     """Represents a general field of a Message."""
-
-
-@STRUCT_DATACLASS
-class SingleMessageFieldStruct(SingleMessageFieldStructABC):
-    """
-    Represents a field of a Message with single word.
-    """
 
 
 @STRUCT_DATACLASS
@@ -104,7 +95,6 @@ class ResponseMessageFieldStruct(ResponseMessageFieldStructABC):
 
 MessageFieldStructUnionT = Union[  # pylint: disable=invalid-name
     MessageFieldStruct,
-    SingleMessageFieldStruct,
     StaticMessageFieldStruct,
     AddressMessageFieldStruct,
     CrcMessageFieldStruct,
@@ -125,7 +115,6 @@ class MessageStruct(MessageStructABC[MessageFieldStructUnionT]):
     _field_type_codes: dict[type[MessageFieldStructUnionT], Code] = _field(
         default_factory=lambda: {
             MessageFieldStruct: Code.BASIC,
-            SingleMessageFieldStruct: Code.SINGLE,
             StaticMessageFieldStruct: Code.STATIC,
             AddressMessageFieldStruct: Code.ADDRESS,
             CrcMessageFieldStruct: Code.CRC,

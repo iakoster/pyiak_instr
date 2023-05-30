@@ -6,7 +6,6 @@ from src.pyiak_instr.types import SubPatternAdditions
 from .....utils import validate_object, get_object_attrs
 from .ti import (
     TIMessageFieldStruct,
-    TISingleMessageFieldStruct,
     TIStaticMessageFieldStruct,
     TIAddressMessageFieldStruct,
     TICrcMessageFieldStruct,
@@ -41,13 +40,6 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 bytes_expected=0,
-                default=b"",
-            ),
-            single=dict(
-                typename="single",
-                bytes_expected=1,
-                fmt=Code.U8,
-                order=Code.BIG_ENDIAN,
                 default=b"",
             ),
             static=dict(
@@ -148,6 +140,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             fmt=Code.U16,
             is_dynamic=False,
             stop=2,
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -158,12 +151,6 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 order=Code.BIG_ENDIAN,
                 default=b"",
                 stop=None,
-            ),
-            single=dict(
-                fmt=Code.U8,
-                order=Code.BIG_ENDIAN,
-                default=b"",
-                stop=1,
             ),
             static=dict(
                 fmt=Code.U8,
@@ -245,6 +232,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                         "words_expected",
                         "slice_",
                         "has_default",
+                        "is_single",
                     ],
                 )
 
@@ -315,6 +303,7 @@ class TestMessageStructPatternABC(unittest.TestCase):
             fmt=Code.U16,
             is_dynamic=True,
             stop=None,
+            is_single=False,
             wo_attrs=["encoder"],
         )
 
@@ -388,5 +377,6 @@ class TestMessagePatternABC(unittest.TestCase):
             fmt=Code.U16,
             is_dynamic=True,
             stop=None,
+            is_single=False,
             wo_attrs=["encoder"],
         )

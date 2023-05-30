@@ -20,7 +20,6 @@ from ._struct import (
     MessageStruct,
     OperationMessageFieldStruct,
     ResponseMessageFieldStruct,
-    SingleMessageFieldStruct,
     StaticMessageFieldStruct,
 )
 from ._message import Message
@@ -42,7 +41,6 @@ class MessageFieldStructPattern(
 
     _options = dict(
         basic=MessageFieldStruct,
-        single=SingleMessageFieldStruct,
         static=StaticMessageFieldStruct,
         address=AddressMessageFieldStruct,
         crc=CrcMessageFieldStruct,

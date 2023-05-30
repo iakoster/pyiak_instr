@@ -6,7 +6,6 @@ Message (:mod:`pyiak_instr.communication`)
 # pylint: disable=duplicate-code
 from ._struct import (
     MessageFieldStruct,
-    SingleMessageFieldStruct,
     StaticMessageFieldStruct,
     AddressMessageFieldStruct,
     CrcMessageFieldStruct,
@@ -41,6 +40,5 @@ __all__ = [
     "MessageStructPattern",
     "OperationMessageFieldStruct",
     "ResponseMessageFieldStruct",
-    "SingleMessageFieldStruct",
     "StaticMessageFieldStruct",
 ]

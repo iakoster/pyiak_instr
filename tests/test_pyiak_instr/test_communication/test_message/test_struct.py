@@ -3,7 +3,6 @@ import unittest
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.communication.message import (
     MessageFieldStruct,
-    SingleMessageFieldStruct,
     StaticMessageFieldStruct,
     AddressMessageFieldStruct,
     CrcMessageFieldStruct,
@@ -36,28 +35,7 @@ class TestMessageFieldStruct(unittest.TestCase):
             word_bytesize=1,
             words_expected=0,
             name="",
-            wo_attrs=["encoder"],
-        )
-
-
-class TestSingleMessageFieldStruct(unittest.TestCase):
-
-    def test_init(self) -> None:
-        validate_object(
-            self,
-            SingleMessageFieldStruct(),
-            bytes_expected=1,
-            default=b"",
-            fmt=Code.U8,
-            has_default=False,
-            is_dynamic=False,
-            order=Code.BIG_ENDIAN,
-            slice_=slice(0, 1),
-            start=0,
-            stop=1,
-            word_bytesize=1,
-            words_expected=1,
-            name="",
+            is_single=False,
             wo_attrs=["encoder"],
         )
 
@@ -80,6 +58,7 @@ class TestStaticMessageFieldStruct(unittest.TestCase):
             word_bytesize=1,
             words_expected=1,
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -104,6 +83,7 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
             behaviour=Code.DMA,
             units=Code.WORDS,
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -129,6 +109,7 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             wo_fields=set(),
             poly=0x1021,
             init=0,
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -151,6 +132,7 @@ class TestDataMessageFieldStruct(unittest.TestCase):
             word_bytesize=1,
             words_expected=0,
             name="",
+            is_single=False,
             wo_attrs=["encoder"],
         )
 
@@ -176,6 +158,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
             additive=0,
             behaviour=Code.ACTUAL,
             units=Code.BYTES,
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -198,6 +181,7 @@ class TestIdMessageFieldStruct(unittest.TestCase):
             word_bytesize=1,
             words_expected=1,
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -222,6 +206,7 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
             descs={0: Code.READ, 1: Code.WRITE},
             descs_r={Code.READ: 0, Code.WRITE: 1},
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 
@@ -246,6 +231,7 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
             descs={},
             descs_r={},
             name="",
+            is_single=True,
             wo_attrs=["encoder"],
         )
 

@@ -13,7 +13,6 @@ from ._message import MessageABC
 from ._struct import (
     STRUCT_DATACLASS,
     MessageFieldStructABC,
-    SingleMessageFieldStructABC,
     StaticMessageFieldStructABC,
     AddressMessageFieldStructABC,
     CrcMessageFieldStructABC,
@@ -34,7 +33,6 @@ __all__ = [
     "MessageABC",
     "MessageFieldStructABC",
     "MessageFieldStructABCUnionT",
-    "SingleMessageFieldStructABC",
     "StaticMessageFieldStructABC",
     "AddressMessageFieldStructABC",
     "CrcMessageFieldStructABC",

@@ -5,7 +5,6 @@ from src.pyiak_instr.core import Code
 from .....utils import validate_object, get_object_attrs
 from .ti import (
     TIMessageFieldStruct,
-    TISingleMessageFieldStruct,
     TIStaticMessageFieldStruct,
     TIAddressMessageFieldStruct,
     TICrcMessageFieldStruct,
@@ -56,7 +55,6 @@ class TestMessageABC(unittest.TestCase):
     def test_has(self) -> None:
         obj = TIMessage(TIMessageStruct(fields=dict(
             f0=TIMessageFieldStruct(name="f0", stop=1),
-            f1=TISingleMessageFieldStruct(name="f1", start=1, stop=2),
             f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
             f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
             f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
@@ -70,7 +68,6 @@ class TestMessageABC(unittest.TestCase):
             self,
             obj.has,
             basic=True,
-            single=True,
             address=True,
             id_=True,
             data_length=True,
@@ -86,7 +83,6 @@ class TestMessageABC(unittest.TestCase):
     def test_get(self) -> None:
         obj = TIMessage(TIMessageStruct(fields=dict(
             f0=TIMessageFieldStruct(name="f0", stop=1),
-            f1=TISingleMessageFieldStruct(name="f1", start=1, stop=2),
             f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
             f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
             f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
@@ -99,7 +95,6 @@ class TestMessageABC(unittest.TestCase):
 
         ref = dict(
             basic="f0",
-            single="f1",
             address="f3",
             id_="f7",
             data_length="f6",

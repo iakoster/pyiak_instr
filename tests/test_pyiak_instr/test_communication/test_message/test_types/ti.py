@@ -6,7 +6,6 @@ from src.pyiak_instr.encoders import BytesEncoder
 from src.pyiak_instr.communication.message.types import (
     STRUCT_DATACLASS,
     MessageFieldStructABC,
-    SingleMessageFieldStructABC,
     StaticMessageFieldStructABC,
     AddressMessageFieldStructABC,
     CrcMessageFieldStructABC,
@@ -25,57 +24,51 @@ from src.pyiak_instr.communication.message.types import (
 
 @STRUCT_DATACLASS
 class TIMessageFieldStruct(MessageFieldStructABC):
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
-
-
-@STRUCT_DATACLASS
-class TISingleMessageFieldStruct(SingleMessageFieldStructABC):
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
+    ...
 
 
 @STRUCT_DATACLASS
 class TIStaticMessageFieldStruct(StaticMessageFieldStructABC):
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
+    ...
 
 
 @STRUCT_DATACLASS
 class TIAddressMessageFieldStruct(AddressMessageFieldStructABC):
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
+    ...
 
 
 @STRUCT_DATACLASS
 class TICrcMessageFieldStruct(CrcMessageFieldStructABC):
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
+    ...
 
 
 @STRUCT_DATACLASS
 class TIDataMessageFieldStruct(DataMessageFieldStructABC):
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
+    ...
 
 
 @STRUCT_DATACLASS
 class TIDataLengthMessageFieldStruct(DataLengthMessageFieldStructABC):
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
+    ...
 
 
 @STRUCT_DATACLASS
 class TIIdMessageFieldStruct(IdMessageFieldStructABC):
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
+    ...
 
 
 @STRUCT_DATACLASS
 class TIOperationMessageFieldStruct(OperationMessageFieldStructABC):
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
+    ...
 
 
 @STRUCT_DATACLASS
 class TIResponseMessageFieldStruct(ResponseMessageFieldStructABC):
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
+    ...
 
 
 TIFieldStructUnionT = Union[
     TIMessageFieldStruct,
-    TISingleMessageFieldStruct,
     TIStaticMessageFieldStruct,
     TIAddressMessageFieldStruct,
     TICrcMessageFieldStruct,
@@ -93,7 +86,6 @@ class TIMessageStruct(MessageStructABC):
     _field_type_codes: dict[type[TIFieldStructUnionT], Code] = _field(
         default_factory=lambda: {
             TIMessageFieldStruct: Code.BASIC,
-            TISingleMessageFieldStruct: Code.SINGLE,
             TIStaticMessageFieldStruct: Code.STATIC,
             TIAddressMessageFieldStruct: Code.ADDRESS,
             TICrcMessageFieldStruct: Code.CRC,
@@ -117,7 +109,6 @@ class TIMessageFieldStructPattern(
 
     _options = dict(
         basic=TIMessageFieldStruct,
-        single=TISingleMessageFieldStruct,
         static=TIStaticMessageFieldStruct,
         address=TIAddressMessageFieldStruct,
         crc=TICrcMessageFieldStruct,
