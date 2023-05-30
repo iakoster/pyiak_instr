@@ -6,7 +6,7 @@ from typing import Any, Generic, Self, TypeVar
 from ...message.types import MessagePatternABC
 
 
-__all__ = ["PatternsMap"]
+__all__ = ["PatternsMapABC"]
 
 
 MessagePatternT = TypeVar(
@@ -14,7 +14,7 @@ MessagePatternT = TypeVar(
 )
 
 
-class PatternsMap(ABC, Generic[MessagePatternT]):
+class PatternsMapABC(ABC, Generic[MessagePatternT]):
     """
     Represents base class for message patterns map.
     """

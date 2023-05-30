@@ -1,13 +1,14 @@
 from pathlib import Path
 from configparser import ConfigParser
 
-from src.pyiak_instr.communication.message import MessagePattern
-from src.pyiak_instr.communication.format_map.types import (
-    PatternsMapABC
-)
+from ..message import MessagePattern
+from .types import PatternsMapABC
 
 
-class TIPatternsMapABC(PatternsMapABC[MessagePattern]):
+__all__ = ["PatternsMap"]
+
+
+class PatternsMap(PatternsMapABC):
 
     _pattern_type = MessagePattern
 
