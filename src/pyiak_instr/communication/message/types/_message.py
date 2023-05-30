@@ -65,11 +65,30 @@ class MessageABC(
         self._src: AddressT | None = None
         self._dst: AddressT | None = None
 
-    # todo: implement
-    def autoupdate_fields(self) -> None:
+    def autoupdate_fields(self) -> Self:
         """
         Update the content in all fields that support it.
+
+        Returns
+        -------
+        Self
+            self instance
+
+        Raises
+        ------
+        ValueError
+            if message is empty.
         """
+        if self.is_empty():
+            raise ValueError("message is empty")
+
+        if self.has.data_length and self.struct.is_dynamic:
+            self._autoupdate_dynamic_length_field()
+
+        if self.has.crc:
+            self._autoupdate_crc_field()
+
+        return self
 
     def split(self) -> Generator[Self, None, None]:
         """
@@ -147,6 +166,35 @@ class MessageABC(
             part.encode(content)
             part.autoupdate_fields()
             yield part
+
+    def _autoupdate_crc_field(self) -> None:
+        """Update content of crc field."""
+        crc = self.get.crc
+        content = b""
+
+        for field in self.struct:
+            if field.name in crc.wo_fields or field is crc:
+                continue
+            content += self.content(field.name)
+
+        self._change_field_content(
+            crc.name, crc.encode(crc.calculate(content), verify=True)
+        )
+
+    def _autoupdate_dynamic_length_field(self) -> None:
+        """Update content of dynamic length field."""
+        dlen = self.get.data_length
+        if dlen.behaviour is Code.EXPECTED and self.decode(dlen.name)[0] != 0:
+            return
+
+        dyn = self.struct[self.struct.dynamic_field_name]
+        self._change_field_content(
+            dlen.name,
+            dlen.encode(
+                dlen.calculate(self.content(dyn.name), dyn.word_bytesize),
+                verify=True,
+            ),
+        )
 
     @property
     def dst(self) -> AddressT | None:

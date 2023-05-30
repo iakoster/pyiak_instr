@@ -130,7 +130,7 @@ class BytesStorageABC(
 
         else:
             for name, content in encoded.items():
-                self._c[self._s[name].slice_] = content
+                self._change_field_content(name, content)
 
         return self
 
@@ -228,6 +228,25 @@ class BytesStorageABC(
                 return self.bytes_count(name) // self._s[name].word_bytesize
 
         raise TypeError("invalid arguments")
+
+    def _change_field_content(self, name: str, content: bytes) -> None:
+        """
+        Change content of single field name.
+
+        Parameters
+        ----------
+        name : str
+            field name.
+        content : bytes
+            field content.
+
+        Raises
+        ------
+        AssertionError
+            if message has empty content.
+        """
+        assert not self.is_empty(), "message is empty"
+        self._c[self._s[name].slice_] = content
 
     @property
     def has_pattern(self) -> bool:

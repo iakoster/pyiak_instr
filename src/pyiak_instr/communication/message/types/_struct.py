@@ -191,6 +191,7 @@ class DataMessageFieldStructABC(MessageFieldStructABC):
             raise ValueError(f"{self.__class__.__name__} can only be dynamic")
 
 
+# todo: rename to DynamicLength
 @STRUCT_DATACLASS
 class DataLengthMessageFieldStructABC(MessageFieldStructABC):
     """
@@ -232,10 +233,11 @@ class DataLengthMessageFieldStructABC(MessageFieldStructABC):
         if self.units is Code.WORDS:
             if len(data) % value_size != 0:
                 raise ContentError(self, "non-integer words count in data")
-            return len(data) // value_size
+            dyn_length = len(data) // value_size
+        else:  # units is a BYTES
+            dyn_length = len(data)
 
-        # units is a BYTES
-        return len(data)
+        return dyn_length + self.additive
 
     def _verify_init_values(self) -> None:
         if self.additive < 0:
