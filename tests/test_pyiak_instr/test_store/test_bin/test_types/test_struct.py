@@ -156,13 +156,6 @@ class TestBytesFieldStructABC(unittest.TestCase):
                 exc.exception.args[0],
             )
 
-        with self.subTest(test="without encoder"):
-            with self.assertRaises(ValueError) as exc:
-                TIFieldStruct(encoder=None)
-            self.assertEqual(
-                "struct encoder not specified", exc.exception.args[0]
-            )
-
         with self.subTest(test="default changes"):
             self._instance(stop=5, default=b"aaaaa")
             self._instance(stop=4, fmt=Code.U16, default=b"aaaa")

@@ -2,7 +2,6 @@
 from dataclasses import field as _field
 from typing import (
     TYPE_CHECKING,
-    Callable,
     Generic,
     Self,
     TypeVar,
@@ -12,7 +11,7 @@ from typing import (
 
 from ....exceptions import ContentError, NotAmongTheOptions
 from ....core import Code
-from ....encoders import BytesEncoder, BytesEncodeT
+from ....encoders import BytesEncodeT
 from ....store.bin.types import (
     STRUCT_DATACLASS,
     BytesFieldStructABC,
@@ -60,13 +59,8 @@ class SingleMessageFieldStructABC(MessageFieldStructABC):
     Represents a base class for field with single word.
     """
 
-    def __post_init__(
-        self,
-        encoder: Callable[[Code, Code], BytesEncoder]
-        | type[BytesEncoder]
-        | None,
-    ) -> None:
-        super().__post_init__(encoder)
+    def _verify_modified_values(self) -> None:
+        super()._verify_modified_values()
         if self.words_expected != 1:
             raise ValueError(
                 f"{self.__class__.__name__} should expect one word"
@@ -83,16 +77,6 @@ class StaticMessageFieldStructABC(SingleMessageFieldStructABC):
     """
     Represents a base class for field with static single word (e.g. preamble).
     """
-
-    def __post_init__(
-        self,
-        encoder: Callable[[Code, Code], BytesEncoder]
-        | type[BytesEncoder]
-        | None,
-    ) -> None:
-        super().__post_init__(encoder)
-        if not self.has_default:
-            raise ValueError("default value not specified")
 
     def verify(self, content: bytes, raise_if_false: bool = False) -> bool:
         """
@@ -122,6 +106,11 @@ class StaticMessageFieldStructABC(SingleMessageFieldStructABC):
                 raise ContentError(self, clarification=content.hex(" "))
         return correct
 
+    def _verify_init_values(self) -> None:
+        super()._verify_init_values()
+        if not self.has_default:
+            raise ValueError("default value not specified")
+
 
 @STRUCT_DATACLASS
 class AddressMessageFieldStructABC(SingleMessageFieldStructABC):
@@ -133,13 +122,7 @@ class AddressMessageFieldStructABC(SingleMessageFieldStructABC):
 
     units: Code = Code.WORDS
 
-    def __post_init__(
-        self,
-        encoder: Callable[[Code, Code], BytesEncoder]
-        | type[BytesEncoder]
-        | None,
-    ) -> None:
-        super().__post_init__(encoder)
+    def _verify_init_values(self) -> None:
         if self.behaviour not in {Code.DMA, Code.STRONG}:
             raise NotAmongTheOptions(
                 "behaviour", self.behaviour, {Code.DMA, Code.STRONG}
@@ -148,6 +131,7 @@ class AddressMessageFieldStructABC(SingleMessageFieldStructABC):
             raise NotAmongTheOptions(
                 "units", self.units, {Code.BYTES, Code.WORDS}
             )
+        super()._verify_init_values()
 
 
 @STRUCT_DATACLASS
@@ -161,18 +145,6 @@ class CrcMessageFieldStructABC(SingleMessageFieldStructABC):
     init: int = 0
 
     wo_fields: set[str] = _field(default_factory=set)
-
-    def __post_init__(
-        self,
-        encoder: Callable[[Code, Code], BytesEncoder]
-        | type[BytesEncoder]
-        | None,
-    ) -> None:
-        super().__post_init__(encoder)
-        if self.bytes_expected != 2 or self.poly != 0x1021 or self.init != 0:
-            raise NotImplementedError(
-                "Crc algorithm not verified for other values"
-            )  # todo: implement for any crc
 
     def calculate(self, content: bytes) -> int:
         """
@@ -199,18 +171,20 @@ class CrcMessageFieldStructABC(SingleMessageFieldStructABC):
                 crc &= 0xFFFF
         return crc
 
+    def _verify_modified_values(self) -> None:
+        super()._verify_modified_values()
+        if self.bytes_expected != 2 or self.poly != 0x1021 or self.init != 0:
+            raise NotImplementedError(
+                "Crc algorithm not verified for other values"
+            )  # todo: implement for any crc
+
 
 @STRUCT_DATACLASS
 class DataMessageFieldStructABC(MessageFieldStructABC):
     """Represents a field of a Message with data."""
 
-    def __post_init__(
-        self,
-        encoder: Callable[[Code, Code], BytesEncoder]
-        | type[BytesEncoder]
-        | None,
-    ) -> None:
-        super().__post_init__(encoder)
+    def _verify_modified_values(self) -> None:
+        super()._verify_modified_values()
         if self.bytes_expected != 0:
             raise ValueError(f"{self.__class__.__name__} can only be dynamic")
 
@@ -229,20 +203,6 @@ class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
 
     additive: int = 0
     """additional value to the length of the data."""
-
-    def __post_init__(
-        self,
-        encoder: Callable[[Code, Code], BytesEncoder]
-        | type[BytesEncoder]
-        | None,
-    ) -> None:
-        super().__post_init__(encoder)
-        if self.additive < 0:
-            raise ValueError("additive number must be positive integer")
-        if self.behaviour not in {Code.ACTUAL, Code.EXPECTED}:
-            raise NotAmongTheOptions("behaviour", self.behaviour)
-        if self.units not in {Code.BYTES, Code.WORDS}:
-            raise NotAmongTheOptions("units", self.units)
 
     def calculate(self, data: bytes, value_size: int) -> int:
         """
@@ -273,6 +233,14 @@ class DataLengthMessageFieldStructABC(SingleMessageFieldStructABC):
         # units is a BYTES
         return len(data)
 
+    def _verify_init_values(self) -> None:
+        if self.additive < 0:
+            raise ValueError("additive number must be positive integer")
+        if self.behaviour not in {Code.ACTUAL, Code.EXPECTED}:
+            raise NotAmongTheOptions("behaviour", self.behaviour)
+        if self.units not in {Code.BYTES, Code.WORDS}:
+            raise NotAmongTheOptions("units", self.units)
+
 
 @STRUCT_DATACLASS
 class IdMessageFieldStructABC(SingleMessageFieldStructABC):
@@ -292,21 +260,6 @@ class OperationMessageFieldStructABC(SingleMessageFieldStructABC):
 
     descs_r: dict[Code, int] = _field(init=False)
     """reversed `descriptions`."""
-
-    def __post_init__(
-        self,
-        encoder: Callable[[Code, Code], BytesEncoder]
-        | type[BytesEncoder]
-        | None,
-    ) -> None:
-        super().__post_init__(encoder)
-        self._setattr(
-            "descs_r",
-            {
-                v: k
-                for k, v in self.descs.items()  # pylint: disable=no-member
-            },
-        )
 
     def encode(
         self, content: BytesEncodeT | Code, verify: bool = False
@@ -399,21 +352,6 @@ class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
     descs_r: dict[Code, int] = _field(init=False)
     """reversed `descriptions`."""
 
-    def __post_init__(
-        self,
-        encoder: Callable[[Code, Code], BytesEncoder]
-        | type[BytesEncoder]
-        | None,
-    ) -> None:
-        super().__post_init__(encoder)
-        self._setattr(
-            "descs_r",
-            {
-                v: k
-                for k, v in self.descs.items()  # pylint: disable=no-member
-            },
-        )
-
     def encode(
         self, content: BytesEncodeT | Code, verify: bool = False
     ) -> bytes:
@@ -485,6 +423,16 @@ class ResponseMessageFieldStructABC(SingleMessageFieldStructABC):
         if code not in self.descs_r:
             return None
         return self.descs_r[code]
+
+    def _modify_values(self) -> None:
+        super()._modify_values()
+        self._setattr(
+            "descs_r",
+            {
+                v: k
+                for k, v in self.descs.items()  # pylint: disable=no-member
+            },
+        )
 
 
 MessageFieldStructABCUnionT = Union[  # pylint: disable=invalid-name

@@ -61,35 +61,19 @@ class BytesFieldStructABC(ABC):
     # todo: generalize encoder
     # todo: variant with an already initialized instance
     encoder: InitVar[
-        Callable[[Code, Code], BytesEncoder] | type[BytesEncoder]
+        Callable[[Code, Code], BytesEncoder]
     ] = BytesEncoder  # type: ignore[assignment]
 
     _encoder: BytesEncoder = field_(init=False)
 
     def __post_init__(
         self,
-        encoder: Callable[[Code, Code], BytesEncoder]
-        | type[BytesEncoder]
-        | None,
+        encoder: Callable[[Code, Code], BytesEncoder],
     ) -> None:
-        if self.stop == 0:
-            raise ValueError("'stop' can't be equal to zero")
-        if self.stop is not None and self.bytes_expected > 0:
-            raise TypeError("'bytes_expected' and 'stop' setting not allowed")
-        if 0 > self.start > -self.bytes_expected:
-            raise ValueError("it will be out of bounds")
-
-        if encoder is None:
-            raise ValueError("struct encoder not specified")
         self._setattr("_encoder", encoder(self.fmt, self.order))
+        self._verify_init_values()
         self._modify_values()
-
-        if self.bytes_expected % self.word_bytesize:
-            raise ValueError(
-                "'bytes_expected' does not match an integer word count"
-            )
-        if self.has_default and not self.verify(self.default):
-            raise ValueError("default value is incorrect")
+        self._verify_modified_values()
 
     def decode(self, content: bytes, verify: bool = False) -> BytesDecodeT:
         """
@@ -206,6 +190,42 @@ class BytesFieldStructABC(ABC):
         """
         # todo: check that key exists
         object.__setattr__(self, name, value)
+
+    def _verify_init_values(self) -> None:
+        """
+        Verify values before modifying.
+
+        Raises
+        ------
+        ValueError
+            if `stop` is equal to zero;
+            if `start` is negative and more than `bytes_expected`.
+        TypeError
+            if `stop` and `bytes_expected` is specified.
+        """
+        if self.stop == 0:
+            raise ValueError("'stop' can't be equal to zero")
+        if self.stop is not None and self.bytes_expected > 0:
+            raise TypeError("'bytes_expected' and 'stop' setting not allowed")
+        if 0 > self.start > -self.bytes_expected:
+            raise ValueError("it will be out of bounds")
+
+    def _verify_modified_values(self) -> None:
+        """
+        Verify values after modifying.
+
+        Raises
+        ------
+        ValueError
+            if `bytes_expected` is not evenly divisible by `word_bytesize`;
+            if `default` is not correct for this struct.
+        """
+        if self.bytes_expected % self.word_bytesize:
+            raise ValueError(
+                "'bytes_expected' does not match an integer word count"
+            )
+        if self.has_default and not self.verify(self.default):
+            raise ValueError("default value is incorrect")
 
     @property
     def has_default(self) -> bool:
