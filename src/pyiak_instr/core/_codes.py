@@ -16,6 +16,7 @@ class Code(IntEnum):
     WAIT = auto()
     ERROR = auto()
     DEFAULT = auto()
+    ANY = auto()
     UNDEFINED = 0xFF
 
     # Type codes
@@ -80,3 +81,5 @@ class Code(IntEnum):
     ID = auto()
     OPERATION = auto()
     RESPONSE = auto()
+    READ_ONLY = auto()
+    WRITE_ONLY = auto()

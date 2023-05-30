@@ -1,3 +1,4 @@
+pandas-stubs
 nox
 black
 flake8

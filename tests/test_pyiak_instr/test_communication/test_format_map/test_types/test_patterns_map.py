@@ -9,7 +9,7 @@ from src.pyiak_instr.communication.message import (
 
 from .....utils import validate_object
 from ....env import TEST_DATA_DIR, get_local_test_data_dir
-from .ti import TIPatternsMapABC
+from .ti import TIPatternsMap
 
 
 TEST_DIR = get_local_test_data_dir(__name__)
@@ -25,13 +25,13 @@ class TestPatternsMapABC(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIPatternsMapABC(),
+            TIPatternsMap(),
             pattern_names=[],
         )
 
     def test_init_exc(self) -> None:
         with self.assertRaises(KeyError) as exc:
-            TIPatternsMapABC(
+            TIPatternsMap(
                 MessagePattern.basic().configure(
                     s0=MessageStructPattern.basic()
                 ),
@@ -87,8 +87,8 @@ class TestPatternsMapABC(unittest.TestCase):
             self.assertListEqual([name], ref[name].sub_pattern_names)
 
     @staticmethod
-    def _instance() -> TIPatternsMapABC:
-        return TIPatternsMapABC(
+    def _instance() -> TIPatternsMap:
+        return TIPatternsMap(
             MessagePattern.basic().configure(
                 s0=MessageStructPattern.basic().configure(
                     f0=MessageFieldStructPattern.static(),

@@ -1,13 +1,15 @@
 from pathlib import Path
 from configparser import ConfigParser
 
+from src.pyiak_instr.store.bin.types import STRUCT_DATACLASS
 from src.pyiak_instr.communication.message import MessagePattern
 from src.pyiak_instr.communication.format_map.types import (
-    PatternsMapABC
+    PatternsMapABC,
+    RegisterStructABC,
 )
 
 
-class TIPatternsMapABC(PatternsMapABC[MessagePattern]):
+class TIPatternsMap(PatternsMapABC[MessagePattern]):
 
     _pattern_type = MessagePattern
 
@@ -16,3 +18,8 @@ class TIPatternsMapABC(PatternsMapABC[MessagePattern]):
         parser = ConfigParser()
         parser.read(path)
         return parser.sections()
+
+
+@STRUCT_DATACLASS
+class TIRegisterStruct(RegisterStructABC):
+    ...

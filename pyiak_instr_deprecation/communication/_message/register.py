@@ -98,29 +98,11 @@ class Register(object):
     external_name: str | None
     "name of the register in external documents."
 
-    name: str
-    "the name of the register"
-
-    format_name: str
-    "the name of the message format."
-
     address: int
     "register address. Used for address field in message."
 
-    length: int
-    "register length. May used for `data_length` field in message."
-
-    register_type: str = "rw"
-    "register type. Can be one of {'rw', 'ro', 'wo'}"
-
     data__fmt: str | None = None
     "format of a data in the register."
-
-    description: str = ""
-    "register description. First sentence must be a short summary."
-
-    mf: MessageFormat | None = None
-    "message format for messages of this register."
 
     def __post_init__(self):
         if self.register_type not in {"rw", "ro", "wo"}:
@@ -316,27 +298,6 @@ class Register(object):
                 )
         return msg.set(**set_kw)
 
-    @classmethod
-    def from_series(
-            cls, series: pd.Series, mf: MessageFormat = None
-    ) -> Register:
-        """
-        Get register from pandas.Series
-
-        Parameters
-        ----------
-        series: pandas.Series
-            series with register parameters.
-        mf: MessageFormat, default=None.
-            message format for this register.
-
-        Returns
-        -------
-        Register
-            register instance.
-        """
-        return cls(**series.to_dict(), mf=mf)
-
     @staticmethod
     def _find_operation(msg: MessageType, base: str) -> str:
         """
@@ -364,37 +325,6 @@ class Register(object):
             if operation[0] == base:
                 return operation
         raise ValueError("operation starts with %r not found" % base)
-
-    @property
-    def short_description(self) -> str:
-        """
-        Returns first sentence from description.
-
-        Returns
-        -------
-        str
-            Short description.
-        """
-        return "".join(takewhile(lambda l: l != ".", self.description))
-
-    @property
-    def series(self) -> pd.Series:
-        """
-        Returns
-        -------
-        pandas.Series
-            register parameters in series.
-        """
-        return pd.Series(dict(
-            external_name=self.external_name,
-            name=self.name,
-            format_name=self.format_name,
-            address=self.address,
-            register_type=self.register_type,
-            length=self.length,
-            data__fmt=self.data__fmt,
-            description=self.description,
-        ))
 
     def __add__(self, shift: int) -> Register:
         """Shift the address by a specified number."""
