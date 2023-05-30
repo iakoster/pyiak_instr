@@ -7,8 +7,9 @@ from typing import Any, Generic, Self, TypeVar
 import pandas as pd
 
 from ....core import Code
-from ....store.bin.types import STRUCT_DATACLASS
 from ....exceptions import NotAmongTheOptions
+from ....types import SubPatternAdditions
+from ....store.bin.types import STRUCT_DATACLASS
 from ...message.types import MessagePatternABC, MessageABC
 
 
@@ -49,10 +50,69 @@ class RegisterStructABC(ABC, Generic[MessageT]):
             Code.WRITE_ONLY,
         }:
             raise NotAmongTheOptions(
-                "register_type",
+                "rw_type",
                 self.rw_type,
                 {Code.ANY, Code.READ_ONLY, Code.WRITE_ONLY},
             )
+
+    def get(
+        self,
+        changes_allowed: bool,
+        sub_additions: SubPatternAdditions = SubPatternAdditions(),
+        top_additions: dict[str, Any] | None = None,
+        fields_data: dict[str, Any] | None = None,
+        autoupdate_fields: bool = True,
+    ) -> MessageT:
+        """
+        Get message from `pattern`.
+
+        Parameters
+        ----------
+        changes_allowed : bool
+            indicates that changes pattern is allowed when cheating new
+            instance.
+        sub_additions : SubPatternAdditions, default=SubPatternAdditions()
+            additions for sub-pattern.
+        top_additions : dict[str, Any] | None, default=None
+            additions for `pattern`.
+        fields_data: dict[str, Any] | None, default=None
+            data for fields.
+        autoupdate_fields: bool, default=True
+            autoupdate field content if it is possible.
+
+        Returns
+        -------
+        MessageT
+            message instance.
+
+        Raises
+        ------
+        AttributeError
+            if pattern not specified (is None).
+        """
+        if self.pattern is None:
+            raise AttributeError("pattern not specified")
+
+        if top_additions is None:
+            top_additions = {}
+        if fields_data is None:
+            fields_data = {}
+
+        msg: MessageT = self.pattern.get(
+            changes_allowed=changes_allowed,
+            sub_additions=sub_additions,
+            **top_additions,
+        )
+
+        if msg.has.address:
+            fields_data[msg.get.address.name] = self.address
+
+        msg.encode(**fields_data)
+        if autoupdate_fields:
+            msg.autoupdate_fields()
+        # todo: check data length and register length
+
+        return msg
 
     @classmethod
     def from_series(

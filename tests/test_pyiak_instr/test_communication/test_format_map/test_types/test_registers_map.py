@@ -36,7 +36,7 @@ class TestRegisterStructABC(unittest.TestCase):
                 rw_type=Code.U8,
             )
         self.assertEqual(
-            "register_type option not in {<Code.READ_ONLY: 1552>, "
+            "rw_type option not in {<Code.READ_ONLY: 1552>, "
             "<Code.WRITE_ONLY: 1553>, <Code.ANY: 5>}, got <Code.U8: 520>",
             exc.exception.args[0],
         )
