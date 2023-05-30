@@ -117,6 +117,7 @@ class BytesFieldStructABC(ABC):
         return encoded
 
     # todo: return Code
+    # todo: clarify the error with Code
     def verify(self, content: bytes, raise_if_false: bool = False) -> bool:
         """
         Verify that `content` is correct for the given field structure.
@@ -464,6 +465,7 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
         self._verify_fields_list(set(fields))
         content: dict[str, bytes] = {}
 
+        # todo: set \x00 of hasattr 'calculate' (crc or data length)
         for name, field in self.items():
             if name in fields:
                 content[name] = field.encode(fields[name], verify=True)

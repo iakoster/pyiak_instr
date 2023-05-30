@@ -76,6 +76,7 @@ class StaticMessageFieldStructABC(MessageFieldStructABC):
 
     is_single = True
 
+    # todo: clarify the error with Code
     def verify(self, content: bytes, raise_if_false: bool = False) -> bool:
         """
         Verify that `content` is correct for the given field structure.

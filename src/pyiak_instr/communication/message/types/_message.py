@@ -143,7 +143,7 @@ class MessageABC(
                         dyn_start : dyn_start + dyn_step
                     ]
 
-                elif name == address_name:
+                elif name == address_name and dyn_start != 0:
                     address_field = self.get.address
                     address_units = address_field.units
 

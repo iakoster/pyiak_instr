@@ -94,17 +94,65 @@ class TestMessageABC(unittest.TestCase):
             ))).autoupdate_fields()
         self.assertEqual("message is empty", exc.exception.args[0])
 
+    def test_split(self) -> None:
+        # with self.subTest(test="short message"):
+        #     obj = self._instance().encode(bytes(range(9))).autoupdate_fields()
+        #     for msg in obj.split():
+        #         self.assertIs(obj, msg)
+
+        with self.subTest(test="even long message"):
+            obj = self._instance().encode(
+                f0=0x23,
+                f1=1,
+                f2=4,
+                f3=0,
+                f4=[*range(24)],
+                f5=0,
+                f6=0x33,
+                f7=0x11,
+                f8=0x32,
+            ).autoupdate_fields()
+
+            parts = [
+                bytes([35, 1, 4, 218, 41, *range(12), 12, 51, 17, 50]),
+                bytes([35, 1, 16, 173, 112, *range(12, 24), 12, 51, 17, 50]),
+            ]
+            for i, msg in enumerate(obj.split()):
+                with self.subTest(message=i):
+                    self.assertEqual(parts[i].hex(" "), msg.content().hex(" "))
+
+        with self.subTest(test="non-even long message"):
+            obj = self._instance(
+                address_units=Code.WORDS,
+                data_fmt=Code.U16,
+            ).encode(
+                f0=0,
+                f1=1,
+                f2=0,
+                f3=0,
+                f4=[*range(10)],
+                f5=0,
+                f6=0,
+                f7=0,
+                f8=0,
+            ).autoupdate_fields()
+
+            parts = [
+                bytes([0, 1, 0, 149, 6, 0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 12, 0, 0, 0]),
+                bytes([0, 1, 6, 10, 71, 0, 6, 0, 7, 0, 8, 0, 9, 8, 0, 0, 0]),
+            ]
+            for i, msg in enumerate(obj.split()):
+                with self.subTest(message=i):
+                    self.assertEqual(parts[i].hex(" "), msg.content().hex(" "))
+
+    def test_split_exc(self) -> None:
+        with self.subTest(test="empty field"):
+            with self.assertRaises(ValueError) as exc:
+                next(self._instance().split())
+            self.assertEqual("message is empty", exc.exception.args[0])
+
     def test_has(self) -> None:
-        obj = TIMessage(TIMessageStruct(fields=dict(
-            f0=TIMessageFieldStruct(name="f0", stop=1),
-            f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
-            f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
-            f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
-            f5=TIDataMessageFieldStruct(name="f5", start=6, stop=-4),
-            f6=TIDataLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
-            f7=TIIdMessageFieldStruct(name="f7", start=-3, stop=-2),
-            f8=TIOperationMessageFieldStruct(name="f8", start=-2),
-        )))
+        obj = self._instance()
 
         validate_object(
             self,
@@ -113,7 +161,7 @@ class TestMessageABC(unittest.TestCase):
             address=True,
             id_=True,
             data_length=True,
-            response=False,
+            response=True,
             static=True,
             crc=True,
             operation=True,
@@ -123,28 +171,18 @@ class TestMessageABC(unittest.TestCase):
         self.assertFalse(obj.has(Code.UNDEFINED))
 
     def test_get(self) -> None:
-        obj = TIMessage(TIMessageStruct(fields=dict(
-            f0=TIMessageFieldStruct(name="f0", stop=1),
-            f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
-            f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
-            f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
-            f5=TIDataMessageFieldStruct(name="f5", start=6, stop=-4),
-            f6=TIDataLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
-            f7=TIIdMessageFieldStruct(name="f7", start=-3, stop=-2),
-            f8=TIOperationMessageFieldStruct(name="f8", start=-2, stop=-1),
-            f9=TIResponseMessageFieldStruct(name="f9", start=-1)
-        )))
+        obj = self._instance()
 
         ref = dict(
             basic="f0",
-            address="f3",
-            id_="f7",
-            data_length="f6",
-            response="f9",
-            static="f2",
-            crc="f4",
-            operation="f8",
-            data="f5",
+            address="f2",
+            id_="f6",
+            data_length="f5",
+            response="f8",
+            static="f1",
+            crc="f3",
+            operation="f7",
+            data="f4",
         )
         get = obj.get
         for attr in get_object_attrs(get):
@@ -160,3 +198,26 @@ class TestMessageABC(unittest.TestCase):
         obj.src = "123"
         obj.dst = 456
         self.assertTupleEqual(("123", 456), (obj.src, obj.dst))
+
+    @staticmethod
+    def _instance(
+            address_units: Code = Code.BYTES,
+            data_fmt=Code.U8,
+    ) -> TIMessage:
+        return TIMessage(TIMessageStruct(
+            fields=dict(
+                f0=TIMessageFieldStruct(name="f0", stop=1),
+                f1=TIStaticMessageFieldStruct(name="f1", start=1, stop=2, default=b"\x01"),
+                f2=TIAddressMessageFieldStruct(
+                    name="f2", start=2, stop=3, units=address_units
+                ),
+                f3=TICrcMessageFieldStruct(name="f3", start=3, stop=5, fmt=Code.U16),
+                f4=TIDataMessageFieldStruct(name="f4", start=5, stop=-4, fmt=data_fmt),
+                f5=TIDataLengthMessageFieldStruct(name="f5", start=-4, stop=-3),
+                f6=TIIdMessageFieldStruct(name="f6", start=-3, stop=-2),
+                f7=TIOperationMessageFieldStruct(name="f7", start=-2, stop=-1),
+                f8=TIResponseMessageFieldStruct(name="f8", start=-1)
+            ),
+            divisible=True,
+            mtu=21,
+        ))

@@ -208,13 +208,11 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         encoded = b""
         if isinstance(value, Iterable):
             for val in value:
-                encoded += val.to_bytes(  # type: ignore[union-attr]
+                encoded += int(val).to_bytes(
                     bytesize, byteorder, signed=signed
                 )
         else:
-            encoded += value.to_bytes(  # type: ignore[union-attr]
-                bytesize, byteorder, signed=signed
-            )
+            encoded += int(value).to_bytes(bytesize, byteorder, signed=signed)
         return encoded
 
     @staticmethod
