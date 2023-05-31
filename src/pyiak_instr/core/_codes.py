@@ -77,7 +77,7 @@ class Code(IntEnum):
     ADDRESS = auto()
     CRC = auto()
     DATA = auto()
-    DATA_LENGTH = auto()
+    DYNAMIC_LENGTH = auto()
     ID = auto()
     OPERATION = auto()
     RESPONSE = auto()

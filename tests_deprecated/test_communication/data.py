@@ -19,7 +19,7 @@ from pyiak_instr_deprecation.communication import (
 SETTERS = [
     dict(
         address=FieldSetter.address(fmt=">I"),
-        data_length=FieldSetter.data_length(
+        data_length=FieldSetter.dynamic_length(
             fmt=">I", behaviour="expected2read", units=Code.WORDS
         ),
         operation=FieldSetter.operation(fmt=">I", desc_dict={"w": 0, "r": 1}),
@@ -34,7 +34,7 @@ SETTERS = [
             fmt=">B", codes={0: Code.OK}, default=0, default_code=Code.ERROR
         ),
         address=FieldSetter.address(fmt=">H"),
-        data_length=FieldSetter.data_length(fmt=">H"),
+        data_length=FieldSetter.dynamic_length(fmt=">H"),
         data=FieldSetter.data(expected=-1, fmt=">f"),
         crc=FieldSetter.crc(fmt=">H", wo_fields={"preamble"})
     ),
@@ -47,7 +47,7 @@ SETTERS = [
             default_code=Code.UNDEFINED
         ),
         address=FieldSetter.address(fmt=">H"),
-        data_length=FieldSetter.data_length(fmt=">H"),
+        data_length=FieldSetter.dynamic_length(fmt=">H"),
         data=FieldSetter.data(expected=-1, fmt=">f"),
         crc=FieldSetter.crc(fmt=">H")
     ),
@@ -60,7 +60,7 @@ SETTERS = [
             default_code=Code.ERROR
         ),
         address=FieldSetter.address(fmt="B"),
-        data_length=FieldSetter.data_length(fmt="B"),
+        data_length=FieldSetter.dynamic_length(fmt="B"),
         data=FieldSetter.data(expected=-1, fmt="B"),
         response2=FieldSetter.response(
             fmt="B",

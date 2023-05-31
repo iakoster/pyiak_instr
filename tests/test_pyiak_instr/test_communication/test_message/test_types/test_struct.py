@@ -12,7 +12,7 @@ from .ti import (
     TIAddressMessageFieldStruct,
     TICrcMessageFieldStruct,
     TIDataMessageFieldStruct,
-    TIDataLengthMessageFieldStruct,
+    TIDynamicLengthMessageFieldStruct,
     TIIdMessageFieldStruct,
     TIOperationMessageFieldStruct,
     TIResponseMessageFieldStruct,
@@ -252,7 +252,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIDataLengthMessageFieldStruct(start=0, fmt=Code.U16),
+            TIDynamicLengthMessageFieldStruct(start=0, fmt=Code.U16),
             additive=0,
             behaviour=Code.ACTUAL,
             bytes_expected=2,
@@ -277,7 +277,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
     def test_init_exc(self) -> None:
         with self.subTest(test="negative additive"):
             with self.assertRaises(ValueError) as exc:
-                TIDataLengthMessageFieldStruct(
+                TIDynamicLengthMessageFieldStruct(
                     start=0, fmt=Code.U8, additive=-1
                 )
             self.assertEqual(
@@ -287,7 +287,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
 
         with self.subTest(test="invalid behaviour"):
             with self.assertRaises(NotAmongTheOptions) as exc:
-                TIDataLengthMessageFieldStruct(
+                TIDynamicLengthMessageFieldStruct(
                     start=0, fmt=Code.U8, behaviour=Code.DMA
                 )
             self.assertEqual(
@@ -297,7 +297,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
 
         with self.subTest(test="invalid units"):
             with self.assertRaises(NotAmongTheOptions) as exc:
-                TIDataLengthMessageFieldStruct(
+                TIDynamicLengthMessageFieldStruct(
                     start=0, fmt=Code.U8, units=Code.INT
                 )
             self.assertEqual(
@@ -309,7 +309,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
         with self.subTest(test="U8 BYTES"):
             self.assertEqual(
                 20,
-                TIDataLengthMessageFieldStruct().calculate(
+                TIDynamicLengthMessageFieldStruct().calculate(
                     b"a" * 20, BytesEncoder(fmt=Code.U8).value_size,
                 ),
             )
@@ -317,7 +317,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
         with self.subTest(test="U16 BYTES"):
             self.assertEqual(
                 20,
-                TIDataLengthMessageFieldStruct(
+                TIDynamicLengthMessageFieldStruct(
                     units=Code.BYTES
                 ).calculate(b"a" * 20, BytesEncoder(fmt=Code.U16).value_size)
             )
@@ -325,18 +325,18 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
         with self.subTest(test="U32 WORDS"):
             self.assertEqual(
                 4,
-                TIDataLengthMessageFieldStruct(
+                TIDynamicLengthMessageFieldStruct(
                     units=Code.WORDS
                 ).calculate(b"a" * 16, BytesEncoder(fmt=Code.U32).value_size)
             )
 
     def test_calculate_exc(self) -> None:
         with self.assertRaises(ContentError) as exc:
-            TIDataLengthMessageFieldStruct(
+            TIDynamicLengthMessageFieldStruct(
                 units=Code.WORDS
             ).calculate(b"a" * 5, BytesEncoder(fmt=Code.U32).value_size)
         self.assertEqual(
-            "invalid content in TIDataLengthMessageFieldStruct: "
+            "invalid content in TIDynamicLengthMessageFieldStruct: "
             "non-integer words count in data",
             exc.exception.args[0],
         )
@@ -558,7 +558,7 @@ class TestMessageStructABC(unittest.TestCase):
             f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
             f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
             f5=TIDataMessageFieldStruct(name="f5", start=6, stop=-4),
-            f6=TIDataLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
+            f6=TIDynamicLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
             f7=TIIdMessageFieldStruct(name="f7", start=-3, stop=-2),
             f8=TIOperationMessageFieldStruct(name="f8", start=-2),
         ))
@@ -569,7 +569,7 @@ class TestMessageStructABC(unittest.TestCase):
             basic=True,
             address=True,
             id_=True,
-            data_length=True,
+            dynamic_length=True,
             response=False,
             static=True,
             crc=True,
@@ -586,7 +586,7 @@ class TestMessageStructABC(unittest.TestCase):
             f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
             f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
             f5=TIDataMessageFieldStruct(name="f5", start=6, stop=-4),
-            f6=TIDataLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
+            f6=TIDynamicLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
             f7=TIIdMessageFieldStruct(name="f7", start=-3, stop=-2),
             f8=TIOperationMessageFieldStruct(name="f8", start=-2, stop=-1),
             f9=TIResponseMessageFieldStruct(name="f9", start=-1)
@@ -597,7 +597,7 @@ class TestMessageStructABC(unittest.TestCase):
             single="f1",
             address="f3",
             id_="f7",
-            data_length="f6",
+            dynamic_length="f6",
             response="f9",
             static="f2",
             crc="f4",

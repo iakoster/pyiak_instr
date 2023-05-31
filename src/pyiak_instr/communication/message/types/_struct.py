@@ -30,7 +30,7 @@ __all__ = [
     "AddressMessageFieldStructABC",
     "CrcMessageFieldStructABC",
     "DataMessageFieldStructABC",
-    "DataLengthMessageFieldStructABC",
+    "DynamicLengthMessageFieldStructABC",
     "IdMessageFieldStructABC",
     "OperationMessageFieldStructABC",
     "ResponseMessageFieldStructABC",
@@ -196,7 +196,7 @@ class DataMessageFieldStructABC(MessageFieldStructABC):
 
 # todo: rename to DynamicLength
 @STRUCT_DATACLASS
-class DataLengthMessageFieldStructABC(MessageFieldStructABC):
+class DynamicLengthMessageFieldStructABC(MessageFieldStructABC):
     """
     Represents base class for field with length of dynamic field.
     """
@@ -458,7 +458,7 @@ MessageFieldStructABCUnionT = Union[  # pylint: disable=invalid-name
     AddressMessageFieldStructABC,
     CrcMessageFieldStructABC,
     DataMessageFieldStructABC,
-    DataLengthMessageFieldStructABC,
+    DynamicLengthMessageFieldStructABC,
     IdMessageFieldStructABC,
     OperationMessageFieldStructABC,
     ResponseMessageFieldStructABC,
@@ -529,14 +529,16 @@ class MessageStructGetParser(Generic[MessageStructT, FieldStructT]):
         return cast(DataMessageFieldStructABC, self(Code.DATA))
 
     @property
-    def data_length(self) -> DataLengthMessageFieldStructABC:
+    def dynamic_length(self) -> DynamicLengthMessageFieldStructABC:
         """
         Returns
         -------
-        DataLengthMessageFieldStructABC
+        DynamicLengthMessageFieldStructABC
             first in message data length field struct.
         """
-        return cast(DataLengthMessageFieldStructABC, self(Code.DATA_LENGTH))
+        return cast(
+            DynamicLengthMessageFieldStructABC, self(Code.DYNAMIC_LENGTH)
+        )
 
     @property
     def id_(self) -> IdMessageFieldStructABC:
@@ -638,14 +640,14 @@ class MessageStructHasParser(Generic[MessageStructT, FieldStructT]):
         return self(Code.DATA)
 
     @property
-    def data_length(self) -> bool:
+    def dynamic_length(self) -> bool:
         """
         Returns
         -------
         bool
             True - message has data length field.
         """
-        return self(Code.DATA_LENGTH)
+        return self(Code.DYNAMIC_LENGTH)
 
     @property
     def id_(self) -> bool:
@@ -715,6 +717,8 @@ class MessageStructABC(BytesStorageStructABC[FieldStructT]):
                 field_types[field_code] = struct.name
 
         self._setattr("_field_types", field_types)
+
+        # todo: if has dynamic length - must have dynamic field
 
         if self.divisible:
             if not self.is_dynamic:

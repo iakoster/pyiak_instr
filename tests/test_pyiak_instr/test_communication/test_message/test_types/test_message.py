@@ -9,7 +9,7 @@ from .ti import (
     TIAddressMessageFieldStruct,
     TICrcMessageFieldStruct,
     TIDataMessageFieldStruct,
-    TIDataLengthMessageFieldStruct,
+    TIDynamicLengthMessageFieldStruct,
     TIIdMessageFieldStruct,
     TIOperationMessageFieldStruct,
     TIResponseMessageFieldStruct,
@@ -24,7 +24,7 @@ class TestMessageABC(unittest.TestCase):
         validate_object(
             self,
             TIMessage(TIMessageStruct(fields=dict(
-                f0=TIDataLengthMessageFieldStruct(
+                f0=TIDynamicLengthMessageFieldStruct(
                     name="f0", stop=2, fmt=Code.U16
                 ),
                 f1=TIDataMessageFieldStruct(name="f1", start=2, fmt=Code.U32),
@@ -55,7 +55,7 @@ class TestMessageABC(unittest.TestCase):
     def test_autoupdate_fields(self) -> None:
         with self.subTest(test="basic"):
             obj = TIMessage(TIMessageStruct(fields=dict(
-                data_length=TIDataLengthMessageFieldStruct(
+                data_length=TIDynamicLengthMessageFieldStruct(
                     name="data_length", stop=2, fmt=Code.U16, additive=1
                 ),
                 data=TIDataMessageFieldStruct(
@@ -74,7 +74,7 @@ class TestMessageABC(unittest.TestCase):
 
         with self.subTest(test="dynamic length is expected"):
             obj = TIMessage(TIMessageStruct(fields=dict(
-                data_length=TIDataLengthMessageFieldStruct(
+                data_length=TIDynamicLengthMessageFieldStruct(
                     name="data_length",
                     stop=2,
                     fmt=Code.U16,
@@ -156,7 +156,7 @@ class TestMessageABC(unittest.TestCase):
             basic=True,
             address=True,
             id_=True,
-            data_length=True,
+            dynamic_length=True,
             response=True,
             static=True,
             crc=True,
@@ -173,7 +173,7 @@ class TestMessageABC(unittest.TestCase):
             basic="f0",
             address="f2",
             id_="f6",
-            data_length="f5",
+            dynamic_length="f5",
             response="f8",
             static="f1",
             crc="f3",
@@ -187,7 +187,7 @@ class TestMessageABC(unittest.TestCase):
 
     def test_src_dst(self) -> None:
         obj = TIMessage(TIMessageStruct(fields={
-            "f0": TIDataLengthMessageFieldStruct(name="f0"),
+            "f0": TIDynamicLengthMessageFieldStruct(name="f0"),
         }))
 
         self.assertTupleEqual((None, None), (obj.src, obj.dst))
@@ -209,7 +209,7 @@ class TestMessageABC(unittest.TestCase):
                 ),
                 f3=TICrcMessageFieldStruct(name="f3", start=3, stop=5, fmt=Code.U16),
                 f4=TIDataMessageFieldStruct(name="f4", start=5, stop=-4, fmt=data_fmt),
-                f5=TIDataLengthMessageFieldStruct(name="f5", start=-4, stop=-3),
+                f5=TIDynamicLengthMessageFieldStruct(name="f5", start=-4, stop=-3),
                 f6=TIIdMessageFieldStruct(name="f6", start=-3, stop=-2),
                 f7=TIOperationMessageFieldStruct(name="f7", start=-2, stop=-1),
                 f8=TIResponseMessageFieldStruct(name="f8", start=-1)

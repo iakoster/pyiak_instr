@@ -10,7 +10,7 @@ from .ti import (
     TIAddressMessageFieldStruct,
     TICrcMessageFieldStruct,
     TIDataMessageFieldStruct,
-    TIDataLengthMessageFieldStruct,
+    TIDynamicLengthMessageFieldStruct,
     TIIdMessageFieldStruct,
     TIOperationMessageFieldStruct,
     TIResponseMessageFieldStruct,

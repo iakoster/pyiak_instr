@@ -10,7 +10,7 @@ from src.pyiak_instr.communication.message.types import (
     AddressMessageFieldStructABC,
     CrcMessageFieldStructABC,
     DataMessageFieldStructABC,
-    DataLengthMessageFieldStructABC,
+    DynamicLengthMessageFieldStructABC,
     IdMessageFieldStructABC,
     OperationMessageFieldStructABC,
     ResponseMessageFieldStructABC,
@@ -48,7 +48,7 @@ class TIDataMessageFieldStruct(DataMessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class TIDataLengthMessageFieldStruct(DataLengthMessageFieldStructABC):
+class TIDynamicLengthMessageFieldStruct(DynamicLengthMessageFieldStructABC):
     ...
 
 
@@ -73,7 +73,7 @@ TIFieldStructUnionT = Union[
     TIAddressMessageFieldStruct,
     TICrcMessageFieldStruct,
     TIDataMessageFieldStruct,
-    TIDataLengthMessageFieldStruct,
+    TIDynamicLengthMessageFieldStruct,
     TIIdMessageFieldStruct,
     TIOperationMessageFieldStruct,
     TIResponseMessageFieldStruct,
@@ -90,7 +90,7 @@ class TIMessageStruct(MessageStructABC):
             TIAddressMessageFieldStruct: Code.ADDRESS,
             TICrcMessageFieldStruct: Code.CRC,
             TIDataMessageFieldStruct: Code.DATA,
-            TIDataLengthMessageFieldStruct: Code.DATA_LENGTH,
+            TIDynamicLengthMessageFieldStruct: Code.DYNAMIC_LENGTH,
             TIIdMessageFieldStruct: Code.ID,
             TIOperationMessageFieldStruct: Code.OPERATION,
             TIResponseMessageFieldStruct: Code.RESPONSE,
@@ -113,7 +113,7 @@ class TIMessageFieldStructPattern(
         address=TIAddressMessageFieldStruct,
         crc=TICrcMessageFieldStruct,
         data=TIDataMessageFieldStruct,
-        data_length=TIDataLengthMessageFieldStruct,
+        data_length=TIDynamicLengthMessageFieldStruct,
         id=TIIdMessageFieldStruct,
         operation=TIOperationMessageFieldStruct,
         response=TIResponseMessageFieldStruct,

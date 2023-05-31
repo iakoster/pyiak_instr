@@ -12,7 +12,7 @@ from .types import (
 from ._struct import (
     AddressMessageFieldStruct,
     CrcMessageFieldStruct,
-    DataLengthMessageFieldStruct,
+    DynamicLengthMessageFieldStruct,
     DataMessageFieldStruct,
     IdMessageFieldStruct,
     MessageFieldStruct,
@@ -45,7 +45,7 @@ class MessageFieldStructPattern(
         address=AddressMessageFieldStruct,
         crc=CrcMessageFieldStruct,
         data=DataMessageFieldStruct,
-        data_length=DataLengthMessageFieldStruct,
+        data_length=DynamicLengthMessageFieldStruct,
         id=IdMessageFieldStruct,
         operation=OperationMessageFieldStruct,
         response=ResponseMessageFieldStruct,

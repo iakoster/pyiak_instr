@@ -7,7 +7,7 @@ from src.pyiak_instr.communication.message import (
     AddressMessageFieldStruct,
     CrcMessageFieldStruct,
     DataMessageFieldStruct,
-    DataLengthMessageFieldStruct,
+    DynamicLengthMessageFieldStruct,
     IdMessageFieldStruct,
     OperationMessageFieldStruct,
     ResponseMessageFieldStruct,
@@ -147,12 +147,12 @@ class TestDataMessageFieldStruct(unittest.TestCase):
         )
 
 
-class TestDataLengthMessageFieldStruct(unittest.TestCase):
+class TestDynamicLengthMessageFieldStruct(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            DataLengthMessageFieldStruct(),
+            DynamicLengthMessageFieldStruct(),
             bytes_expected=1,
             default=b"",
             fmt=Code.U8,

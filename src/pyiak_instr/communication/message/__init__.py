@@ -10,7 +10,7 @@ from ._struct import (
     AddressMessageFieldStruct,
     CrcMessageFieldStruct,
     DataMessageFieldStruct,
-    DataLengthMessageFieldStruct,
+    DynamicLengthMessageFieldStruct,
     IdMessageFieldStruct,
     OperationMessageFieldStruct,
     ResponseMessageFieldStruct,
@@ -28,7 +28,7 @@ from ._pattern import (
 __all__ = [
     "AddressMessageFieldStruct",
     "CrcMessageFieldStruct",
-    "DataLengthMessageFieldStruct",
+    "DynamicLengthMessageFieldStruct",
     "DataMessageFieldStruct",
     "IdMessageFieldStruct",
     "Message",

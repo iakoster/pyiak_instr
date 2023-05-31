@@ -82,7 +82,7 @@ class MessageABC(
         if self.is_empty():
             raise ValueError("message is empty")
 
-        if self.has.data_length and self.struct.is_dynamic:
+        if self.has.dynamic_length and self.struct.is_dynamic:
             self._autoupdate_dynamic_length_field()
 
         if self.has.crc:
@@ -183,7 +183,7 @@ class MessageABC(
 
     def _autoupdate_dynamic_length_field(self) -> None:
         """Update content of dynamic length field."""
-        dlen = self.get.data_length
+        dlen = self.get.dynamic_length
         if dlen.behaviour is Code.EXPECTED and self.decode(dlen.name)[0] != 0:
             return
 

@@ -495,7 +495,7 @@ class TestFieldMessage(unittest.TestCase):
 
     def test_set_with_data_length(self) -> None:
         msg = FieldMessage().configure(
-            dlen=FieldSetter.data_length(fmt="B"),
+            dlen=FieldSetter.dynamic_length(fmt="B"),
             data=FieldSetter.data(expected=1, fmt="I"),
         ).set(data=0x12345678)
         self.assertEqual(4, msg.get.DataLengthField[0])
@@ -540,7 +540,7 @@ class TestFieldMessage(unittest.TestCase):
             ).configure(
                 preamble=FieldSetter.static(fmt="B", default=0x12),
                 address=FieldSetter.address(fmt="I"),
-                data_length=FieldSetter.data_length(fmt="B", units=units),
+                data_length=FieldSetter.dynamic_length(fmt="B", units=units),
                 test_field=FieldSetter.base(expected=1, fmt="B"),
                 operation=FieldSetter.operation(fmt="B"),
                 data=FieldSetter.data(expected=-1, fmt=">H")
@@ -627,7 +627,7 @@ class TestFieldMessage(unittest.TestCase):
             response=FieldSetter.response(fmt="B", codes=RESPONSE_CODES),
             address=FieldSetter.address(fmt="B"),
             operation=FieldSetter.operation(fmt="B"),
-            data_length=FieldSetter.data_length(fmt="B"),
+            data_length=FieldSetter.dynamic_length(fmt="B"),
             data=FieldSetter.data(expected=1, fmt="I"),
             crc=FieldSetter.crc(fmt="H"),
         ).set(
@@ -639,7 +639,7 @@ class TestFieldMessage(unittest.TestCase):
         msg2 = FieldMessage().configure(
             address=FieldSetter.address(fmt="B"),
             operation=FieldSetter.operation(fmt="B"),
-            data_length=FieldSetter.data_length(
+            data_length=FieldSetter.dynamic_length(
                 fmt="B", units=Code.WORDS
             ),
             data=FieldSetter.data(expected=-1, fmt="B")
@@ -715,7 +715,7 @@ class TestFieldMessage(unittest.TestCase):
             self.assertListEqual(ref, list(msg.data))
 
         msg = FieldMessage().configure(
-            data_length=FieldSetter.data_length(fmt="B"),
+            data_length=FieldSetter.dynamic_length(fmt="B"),
             data=FieldSetter.data(expected=-1, fmt=">H"),
         ).set(data=range(2), data_length=4)
         ref = [0, 1]
@@ -838,7 +838,7 @@ class TestStrongFieldMessage(unittest.TestCase):
             StrongFieldMessage().configure(
                 address=FieldSetter.address(fmt="b"),
                 operation=FieldSetter.operation(fmt="b"),
-                data_length=FieldSetter.data_length(fmt="b"),
+                data_length=FieldSetter.dynamic_length(fmt="b"),
                 data=FieldSetter.data(expected=-1, fmt="b"),
             ),
             mf_name="std",
@@ -864,7 +864,7 @@ class TestStrongFieldMessage(unittest.TestCase):
             StrongFieldMessage().configure(
                 address=FieldSetter.address(fmt="b"),
                 operation=FieldSetter.operation(fmt="b"),
-                data_length=FieldSetter.data_length(fmt="b"),
+                data_length=FieldSetter.dynamic_length(fmt="b"),
                 data=FieldSetter.data(expected=-1, fmt="B"),
             ).set(address=1, operation=0, data_length=2, data=[5, 212]),
             setter=MessageSetter("strong"),

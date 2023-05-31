@@ -11,7 +11,7 @@ from .types import (
     AddressMessageFieldStructABC,
     CrcMessageFieldStructABC,
     DataMessageFieldStructABC,
-    DataLengthMessageFieldStructABC,
+    DynamicLengthMessageFieldStructABC,
     IdMessageFieldStructABC,
     OperationMessageFieldStructABC,
     ResponseMessageFieldStructABC,
@@ -25,7 +25,7 @@ __all__ = [
     "AddressMessageFieldStruct",
     "CrcMessageFieldStruct",
     "DataMessageFieldStruct",
-    "DataLengthMessageFieldStruct",
+    "DynamicLengthMessageFieldStruct",
     "IdMessageFieldStruct",
     "OperationMessageFieldStruct",
     "ResponseMessageFieldStruct",
@@ -66,7 +66,7 @@ class DataMessageFieldStruct(DataMessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class DataLengthMessageFieldStruct(DataLengthMessageFieldStructABC):
+class DynamicLengthMessageFieldStruct(DynamicLengthMessageFieldStructABC):
     """
     Represents a field of a Message with data length.
     """
@@ -99,7 +99,7 @@ MessageFieldStructUnionT = Union[  # pylint: disable=invalid-name
     AddressMessageFieldStruct,
     CrcMessageFieldStruct,
     DataMessageFieldStruct,
-    DataLengthMessageFieldStruct,
+    DynamicLengthMessageFieldStruct,
     IdMessageFieldStruct,
     OperationMessageFieldStruct,
     ResponseMessageFieldStruct,
@@ -119,7 +119,7 @@ class MessageStruct(MessageStructABC[MessageFieldStructUnionT]):
             AddressMessageFieldStruct: Code.ADDRESS,
             CrcMessageFieldStruct: Code.CRC,
             DataMessageFieldStruct: Code.DATA,
-            DataLengthMessageFieldStruct: Code.DATA_LENGTH,
+            DynamicLengthMessageFieldStruct: Code.DYNAMIC_LENGTH,
             IdMessageFieldStruct: Code.ID,
             OperationMessageFieldStruct: Code.OPERATION,
             ResponseMessageFieldStruct: Code.RESPONSE,
