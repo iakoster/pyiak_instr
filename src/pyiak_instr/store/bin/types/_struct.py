@@ -58,6 +58,9 @@ class BytesFieldStructABC(ABC):
     default: bytes = b""  # todo: to ContentType
     """default value of the field."""
 
+    fill_value: bytes = b""
+    """fill value of the field (instead of default)"""
+
     # todo: generalize encoder
     # todo: variant with an already initialized instance
     encoder: InitVar[
@@ -200,14 +203,25 @@ class BytesFieldStructABC(ABC):
         ------
         ValueError
             if `stop` is equal to zero;
-            if `start` is negative and more than `bytes_expected`.
+            if `start` is negative and more than `bytes_expected`;
+            if `fill_value` more than one byte.
         TypeError
             if `stop` and `bytes_expected` is specified.
+            if `default` and `fill_value` is specified.
         """
         if self.stop == 0:
             raise ValueError("'stop' can't be equal to zero")
         if self.stop is not None and self.bytes_expected > 0:
             raise TypeError("'bytes_expected' and 'stop' setting not allowed")
+        if self.has_fill_value:
+            if self.has_default:
+                raise TypeError(
+                    "'default' and 'fill_value' setting not allowed"
+                )
+            if len(self.fill_value) > 1:
+                raise ValueError(
+                    "'fill_value' should only be equal to one byte"
+                )
         if 0 > self.start > -self.bytes_expected:
             raise ValueError("it will be out of bounds")
 
@@ -220,6 +234,8 @@ class BytesFieldStructABC(ABC):
         ValueError
             if `bytes_expected` is not evenly divisible by `word_bytesize`;
             if `default` is not correct for this struct.
+        TypeError
+            if `fill_value` specified in dynamic field.
         """
         if self.bytes_expected % self.word_bytesize:
             raise ValueError(
@@ -227,6 +243,8 @@ class BytesFieldStructABC(ABC):
             )
         if self.has_default and not self.verify(self.default):
             raise ValueError("default value is incorrect")
+        if self.has_fill_value and self.is_dynamic:
+            raise TypeError("fill value not allowed for dynamic fields")
 
     @property
     def has_default(self) -> bool:
@@ -234,9 +252,19 @@ class BytesFieldStructABC(ABC):
         Returns
         -------
         bool
-            True - default more than zero.
+            True - default length more than zero.
         """
         return len(self.default) != 0
+
+    @property
+    def has_fill_value(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True - fill value length more than zero.
+        """
+        return len(self.fill_value) != 0
 
     @property
     def is_dynamic(self) -> bool:
@@ -476,6 +504,9 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
             elif field.is_dynamic:
                 content[name] = b""
 
+            elif field.has_fill_value:
+                content[name] = field.fill_value * field.bytes_expected
+
             else:
                 raise AssertionError(
                     f"it is impossible to encode the value for {name!r}"
@@ -557,7 +588,11 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
         for name in diff.copy():
             if name in self:
                 field = self[name]
-                if field.has_default or field.is_dynamic:
+                if (
+                    field.has_fill_value
+                    or field.has_default
+                    or field.is_dynamic
+                ):
                     diff.remove(name)
 
         if len(diff) != 0:

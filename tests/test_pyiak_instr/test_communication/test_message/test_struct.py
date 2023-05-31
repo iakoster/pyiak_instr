@@ -36,6 +36,8 @@ class TestMessageFieldStruct(unittest.TestCase):
             words_expected=0,
             name="",
             is_single=False,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -59,6 +61,8 @@ class TestStaticMessageFieldStruct(unittest.TestCase):
             words_expected=1,
             name="",
             is_single=True,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -84,6 +88,8 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
             units=Code.WORDS,
             name="",
             is_single=True,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -110,6 +116,8 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             poly=0x1021,
             init=0,
             is_single=True,
+            fill_value=b"\x00",
+            has_fill_value=True,
             wo_attrs=["encoder"],
         )
 
@@ -133,6 +141,8 @@ class TestDataMessageFieldStruct(unittest.TestCase):
             words_expected=0,
             name="",
             is_single=False,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -159,6 +169,8 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
             behaviour=Code.ACTUAL,
             units=Code.BYTES,
             is_single=True,
+            fill_value=b"\x00",
+            has_fill_value=True,
             wo_attrs=["encoder"],
         )
 
@@ -182,6 +194,8 @@ class TestIdMessageFieldStruct(unittest.TestCase):
             words_expected=1,
             name="",
             is_single=True,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -207,6 +221,8 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
             descs_r={Code.READ: 0, Code.WRITE: 1},
             name="",
             is_single=True,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -232,6 +248,8 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
             descs_r={},
             name="",
             is_single=True,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 

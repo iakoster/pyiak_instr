@@ -27,6 +27,8 @@ class TestBytesFieldStructABC(unittest.TestCase):
             stop=None,
             word_bytesize=1,
             words_expected=0,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -138,6 +140,22 @@ class TestBytesFieldStructABC(unittest.TestCase):
                 exc.exception.args[0],
             )
 
+        with self.subTest(test="'default' and 'fill_value' setting"):
+            with self.assertRaises(TypeError) as exc:
+                self._instance(default=b"\x00", fill_value=b"\x00")
+            self.assertEqual(
+                "'default' and 'fill_value' setting not allowed",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(test="'fill_value' more than one"):
+            with self.assertRaises(ValueError) as exc:
+                self._instance(fill_value=b"\x00\x00")
+            self.assertEqual(
+                "'fill_value' should only be equal to one byte",
+                exc.exception.args[0]
+            )
+
         with self.subTest(
                 test="'bytes_expected' is not comparable with 'word_bytesize'"
         ):
@@ -168,6 +186,14 @@ class TestBytesFieldStructABC(unittest.TestCase):
                 exc.exception.args[0],
             )
 
+        with self.subTest(test="'fill_value' in dynamic field"):
+            with self.assertRaises(TypeError) as exc:
+                self._instance(fill_value=b"a")
+            self.assertEqual(
+                "fill value not allowed for dynamic fields",
+                exc.exception.args[0],
+            )
+
     @staticmethod
     def _instance(
             start: int = 0,
@@ -175,6 +201,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
             bytes_expected: int = 0,
             fmt: Code = Code.U8,
             default: bytes = b"",
+            fill_value: bytes = b"",
     ) -> TIFieldStruct:
         return TIFieldStruct(
             start=start,
@@ -182,6 +209,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
             bytes_expected=bytes_expected,
             fmt=fmt,
             default=default,
+            fill_value=fill_value,
         )
 
 
@@ -341,6 +369,22 @@ class TestBytesStorageStructABC(unittest.TestCase):
                 )
             )
 
+        with self.subTest(test="without fill"):
+            self.assertDictEqual(
+                dict(
+                    f0=b"\xfa",
+                    f1=b"\xff\xff",
+                    f2=b"",
+                    f3=b"\x06\x07\x08",
+                    f4=b"\x09",
+                ),
+                obj.encode(
+                    all_fields=True,
+                    f3=[6, 7, 8],
+                    f4=9
+                )
+            )
+
     def test_encode_exc(self) -> None:
         with self.subTest(test="with args and kwargs"):
             with self.assertRaises(TypeError) as exc:
@@ -390,9 +434,9 @@ class TestBytesStorageStructABC(unittest.TestCase):
 
         with self.subTest(test="without one"):
             with self.assertRaises(AttributeError) as exc:
-                obj._verify_fields_list({"f0", "f2", "f3", "f4"})
+                obj._verify_fields_list({"f0", "f1", "f2", "f3"})
             self.assertEqual(
-                "missing or extra fields were found: 'f1'",
+                "missing or extra fields were found: 'f4'",
                 exc.exception.args[0]
             )
 
@@ -442,7 +486,7 @@ class TestBytesStorageStructABC(unittest.TestCase):
                     stop=1,
                 ),
                 f1=TIFieldStruct(
-                    name="f1", start=1, bytes_expected=2
+                    name="f1", start=1, bytes_expected=2, fill_value=b"\xff"
                 ),
                 f2=TIFieldStruct(
                     name="f2", start=3, stop=-4

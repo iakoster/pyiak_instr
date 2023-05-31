@@ -66,6 +66,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 poly=0x1021,
                 init=0,
                 default=b"",
+                fill_value=b"\x00",
                 wo_fields=set(),
             ),
             data=dict(
@@ -84,6 +85,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 units=Code.BYTES,
                 additive=0,
                 default=b"",
+                fill_value=b"\x00",
             ),
             id_=dict(
                 typename="id",
@@ -123,7 +125,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
         validate_object(
             self,
             TIMessageFieldStructPattern(
-                typename="crc", default=b"aa"
+                typename="crc", default=b"aa", fill_value=b""
             ).get(fmt=Code.U16),
             has_default=True,
             default=b"aa",
@@ -141,6 +143,8 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             is_dynamic=False,
             stop=2,
             is_single=True,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -151,12 +155,14 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 order=Code.BIG_ENDIAN,
                 default=b"",
                 stop=None,
+                fill_value=b"",
             ),
             static=dict(
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 default=b"\x00",
                 stop=1,
+                fill_value=b"",
             ),
             address=dict(
                 fmt=Code.U8,
@@ -165,6 +171,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 units=Code.WORDS,
                 default=b"",
                 stop=1,
+                fill_value=b"",
             ),
             crc=dict(
                 fmt=Code.U16,
@@ -174,12 +181,14 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 default=b"",
                 wo_fields=set(),
                 stop=2,
+                fill_value=b"\x00",
             ),
             data=dict(
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 stop=None,
                 default=b"",
+                fill_value=b"",
             ),
             data_length=dict(
                 fmt=Code.U8,
@@ -189,12 +198,14 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 additive=0,
                 default=b"",
                 stop=1,
+                fill_value=b"\x00",
             ),
             id_=dict(
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 default=b"",
                 stop=1,
+                fill_value=b"",
             ),
             operation=dict(
                 fmt=Code.U8,
@@ -203,6 +214,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 descs_r={Code.READ: 0, Code.WRITE: 1},
                 default=b"",
                 stop=1,
+                fill_value=b"",
             ),
             response=dict(
                 fmt=Code.U8,
@@ -211,6 +223,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 descs_r={},
                 default=b"",
                 stop=1,
+                fill_value=b"",
             ),
         )
 
@@ -233,6 +246,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                         "slice_",
                         "has_default",
                         "is_single",
+                        "has_fill_value"
                     ],
                 )
 
@@ -304,6 +318,8 @@ class TestMessageStructPatternABC(unittest.TestCase):
             is_dynamic=True,
             stop=None,
             is_single=False,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -378,5 +394,7 @@ class TestMessagePatternABC(unittest.TestCase):
             is_dynamic=True,
             stop=None,
             is_single=False,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )

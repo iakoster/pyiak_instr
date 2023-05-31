@@ -217,6 +217,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         poly: int = 0x1021,
         init: int = 0,
         default: bytes = b"",
+        fill_value: bytes = b"\x00",
         wo_fields: set[str] | None = None,
     ) -> Self:
         """
@@ -236,6 +237,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
             init value for crc algorithm.
         default : bytes, default=b''
             default value for field.
+        fill_value : bytes, default=b''
+            fill value for field
         wo_fields : set[str] | None, default=None
             a set of field names that are not used to calculate the crc.
 
@@ -254,6 +257,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
             poly=poly,
             init=init,
             default=default,
+            fill_value=fill_value,
             wo_fields=wo_fields,
         )
 
@@ -305,6 +309,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         units: Code = Code.BYTES,
         additive: int = 0,
         default: bytes = b"",
+        fill_value: bytes = b"\x00",
     ) -> Self:
         """
         Get initialized pattern for data length field.
@@ -325,6 +330,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
             additive value for data length value.
         default : bytes, default=b''
             default value for field.
+        fill_value : bytes, default=b''
+            fill value for field
 
         Returns
         -------
@@ -340,6 +347,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
             units=units,
             additive=additive,
             default=default,
+            fill_value=fill_value,
         )
 
     @classmethod

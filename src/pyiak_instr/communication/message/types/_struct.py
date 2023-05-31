@@ -143,6 +143,8 @@ class CrcMessageFieldStructABC(MessageFieldStructABC):
 
     is_single = True
 
+    fill_value: bytes = b"\x00"
+
     poly: int = 0x1021
 
     init: int = 0
@@ -200,6 +202,8 @@ class DataLengthMessageFieldStructABC(MessageFieldStructABC):
     """
 
     is_single = True
+
+    fill_value: bytes = b"\x00"
 
     behaviour: Code = Code.ACTUAL  # todo: logic
     """determines the behavior of determining the content value."""

@@ -50,6 +50,8 @@ class TestBytesFieldStructPatternABC(unittest.TestCase):
             default=b"",
             slice_=slice(0, 4),
             fmt=Code.U16,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -115,6 +117,8 @@ class TestBytesStorageStructPatternABC(unittest.TestCase):
             default=b"",
             slice_=slice(0, 3),
             fmt=Code.U8,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 
@@ -174,6 +178,8 @@ class TestBytesStoragePatternABC(unittest.TestCase):
             default=b"",
             slice_=slice(0, 2),
             fmt=Code.U16,
+            fill_value=b"",
+            has_fill_value=False,
             wo_attrs=["encoder"],
         )
 

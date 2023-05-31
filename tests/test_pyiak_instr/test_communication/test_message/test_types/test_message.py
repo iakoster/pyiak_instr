@@ -95,19 +95,17 @@ class TestMessageABC(unittest.TestCase):
         self.assertEqual("message is empty", exc.exception.args[0])
 
     def test_split(self) -> None:
-        # with self.subTest(test="short message"):
-        #     obj = self._instance().encode(bytes(range(9))).autoupdate_fields()
-        #     for msg in obj.split():
-        #         self.assertIs(obj, msg)
+        with self.subTest(test="short message"):
+            obj = self._instance().encode(bytes(range(9))).autoupdate_fields()
+            for msg in obj.split():
+                self.assertIs(obj, msg)
 
         with self.subTest(test="even long message"):
             obj = self._instance().encode(
                 f0=0x23,
                 f1=1,
                 f2=4,
-                f3=0,
                 f4=[*range(24)],
-                f5=0,
                 f6=0x33,
                 f7=0x11,
                 f8=0x32,
@@ -129,9 +127,7 @@ class TestMessageABC(unittest.TestCase):
                 f0=0,
                 f1=1,
                 f2=0,
-                f3=0,
                 f4=[*range(10)],
-                f5=0,
                 f6=0,
                 f7=0,
                 f8=0,
