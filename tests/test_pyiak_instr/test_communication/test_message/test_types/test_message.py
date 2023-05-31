@@ -187,7 +187,7 @@ class TestMessageABC(unittest.TestCase):
 
     def test_src_dst(self) -> None:
         obj = TIMessage(TIMessageStruct(fields={
-            "f0": TIDynamicLengthMessageFieldStruct(name="f0"),
+            "f0": TIMessageFieldStruct(name="f0"),
         }))
 
         self.assertTupleEqual((None, None), (obj.src, obj.dst))

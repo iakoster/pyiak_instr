@@ -525,6 +525,16 @@ class TestMessageStructABC(unittest.TestCase):
                 exc.exception.args[0],
             )
 
+        with self.subTest(test="dynamic length field without dynamic field"):
+            with self.assertRaises(TypeError) as exc:
+                TIMessageStruct(fields=dict(
+                    f0=TIDynamicLengthMessageFieldStruct(name="f0")
+                ))
+            self.assertEqual(
+                "dynamic length field without dynamic length detected",
+                exc.exception.args[0],
+            )
+
         with self.subTest(test="small mtu"):
             with self.assertRaises(ValueError) as exc:
                 TIMessageStruct(

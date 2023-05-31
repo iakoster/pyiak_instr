@@ -718,7 +718,10 @@ class MessageStructABC(BytesStorageStructABC[FieldStructT]):
 
         self._setattr("_field_types", field_types)
 
-        # todo: if has dynamic length - must have dynamic field
+        if self.has.dynamic_length and not self.is_dynamic:
+            raise TypeError(
+                "dynamic length field without dynamic length detected"
+            )
 
         if self.divisible:
             if not self.is_dynamic:
