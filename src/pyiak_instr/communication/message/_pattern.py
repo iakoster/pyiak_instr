@@ -45,7 +45,7 @@ class MessageFieldStructPattern(
         address=AddressMessageFieldStruct,
         crc=CrcMessageFieldStruct,
         data=DataMessageFieldStruct,
-        data_length=DynamicLengthMessageFieldStruct,
+        dynamic_length=DynamicLengthMessageFieldStruct,
         id=IdMessageFieldStruct,
         operation=OperationMessageFieldStruct,
         response=ResponseMessageFieldStruct,

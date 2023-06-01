@@ -113,7 +113,7 @@ class TIMessageFieldStructPattern(
         address=TIAddressMessageFieldStruct,
         crc=TICrcMessageFieldStruct,
         data=TIDataMessageFieldStruct,
-        data_length=TIDynamicLengthMessageFieldStruct,
+        dynamic_length=TIDynamicLengthMessageFieldStruct,
         id=TIIdMessageFieldStruct,
         operation=TIOperationMessageFieldStruct,
         response=TIResponseMessageFieldStruct,

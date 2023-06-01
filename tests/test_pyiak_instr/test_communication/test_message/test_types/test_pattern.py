@@ -76,8 +76,8 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 bytes_expected=0,
                 default=b"",
             ),
-            data_length=dict(
-                typename="data_length",
+            dynamic_length=dict(
+                typename="dynamic_length",
                 bytes_expected=1,
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
@@ -190,7 +190,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 default=b"",
                 fill_value=b"",
             ),
-            data_length=dict(
+            dynamic_length=dict(
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 behaviour=Code.ACTUAL,

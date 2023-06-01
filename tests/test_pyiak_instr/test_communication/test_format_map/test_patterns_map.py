@@ -48,7 +48,7 @@ class TestPatternsMap(unittest.TestCase):
             MessagePattern.basic().configure(
                 s1=MessageStructPattern.basic().configure(
                     f0=MessageFieldStructPattern.id_(),
-                    f1=MessageFieldStructPattern.data_length(),
+                    f1=MessageFieldStructPattern.dynamic_length(),
                     f2=MessageFieldStructPattern.crc(),
                 )
             ),

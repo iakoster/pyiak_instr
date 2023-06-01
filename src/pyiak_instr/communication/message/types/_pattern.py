@@ -300,9 +300,9 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         )
 
     @classmethod
-    def data_length(
+    def dynamic_length(
         cls,
-        typename: str = "data_length",
+        typename: str = "dynamic_length",
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
         behaviour: Code = Code.ACTUAL,

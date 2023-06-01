@@ -62,7 +62,7 @@ class TestPatternsMapABC(unittest.TestCase):
             "s1 = \dct(typename,basic,divisible,False,mtu,1500)",
             "f0 = \dct(typename,id,bytes_expected,1,fmt,\cod(520),"
             r"order,\cod(1280),default,\bts())",
-            "f1 = \dct(typename,data_length,bytes_expected,1,fmt,\cod(520),"
+            "f1 = \dct(typename,dynamic_length,bytes_expected,1,fmt,\cod(520),"
             "order,\cod(1280),behaviour,\cod(1536),units,\cod(257),"
             r"additive,0,default,\bts(),fill_value,\bts(0))",
             "f2 = \dct(typename,crc,bytes_expected,2,fmt,\cod(521),"
@@ -100,7 +100,7 @@ class TestPatternsMapABC(unittest.TestCase):
             MessagePattern.basic().configure(
                 s1=MessageStructPattern.basic().configure(
                     f0=MessageFieldStructPattern.id_(),
-                    f1=MessageFieldStructPattern.data_length(),
+                    f1=MessageFieldStructPattern.dynamic_length(),
                     f2=MessageFieldStructPattern.crc(),
                 )
             ),

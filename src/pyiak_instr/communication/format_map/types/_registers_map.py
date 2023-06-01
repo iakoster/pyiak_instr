@@ -32,7 +32,7 @@ class RegisterStructABC(ABC, Generic[MessageT]):
     "register address. Used for address field in message."
 
     length: int
-    "register length."
+    "register length in bytes."
 
     rw_type: Code = Code.ANY
     "register type"

@@ -5,6 +5,11 @@ from pandas.testing import assert_series_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotAmongTheOptions
+from src.pyiak_instr.communication.message import (
+    MessagePattern,
+    MessageStructPattern,
+    MessageFieldStructPattern,
+)
 
 from .....utils import validate_object
 from .ti import TIRegisterStruct
@@ -41,6 +46,9 @@ class TestRegisterStructABC(unittest.TestCase):
             exc.exception.args[0],
         )
 
+    def test_get(self) -> None:
+        ...
+
     def test_from_series(self) -> None:
         ref = self._instance()
         self.assertEqual(ref, TIRegisterStruct.from_series(ref.series))
@@ -72,10 +80,11 @@ class TestRegisterStructABC(unittest.TestCase):
         )
 
     @staticmethod
-    def _instance() -> TIRegisterStruct:
+    def _instance(pattern: MessagePattern | None = None) -> TIRegisterStruct:
         return TIRegisterStruct(
                 name="test",
                 address=20,
                 length=42,
-                description="Short. Long."
+                description="Short. Long.",
+                pattern=pattern,
             )
