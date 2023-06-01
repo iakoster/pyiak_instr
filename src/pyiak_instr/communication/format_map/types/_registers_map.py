@@ -57,7 +57,7 @@ class RegisterStructABC(ABC, Generic[MessageT]):
 
     def get(
         self,
-        changes_allowed: bool,
+        changes_allowed: bool = True,
         sub_additions: SubPatternAdditions = SubPatternAdditions(),
         top_additions: dict[str, Any] | None = None,
         fields_data: dict[str, Any] | None = None,

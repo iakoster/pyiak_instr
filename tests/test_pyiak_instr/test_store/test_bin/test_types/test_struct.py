@@ -313,6 +313,20 @@ class TestBytesStorageStructABC(unittest.TestCase):
                 self._instance().encode(f0=0, f2=[3, 4, 5], f3=[6, 7, 8]),
             )
 
+        with self.subTest(test="with only auto fields"):
+            self.assertEqual(
+                dict(
+                    f0=b"aa",
+                    f1=b"",
+                    f2=b"dd",
+                ),
+                self._instance(
+                    f0=TIFieldStruct(name="f0", stop=2, default=b"aa"),
+                    f1=TIFieldStruct(name="f1", start=2, stop=-2),
+                    f2=TIFieldStruct(name="f2", start=-2, fill_value=b"d"),
+                ).encode(all_fields=True)
+            )
+
     def test_encode_all_fields(self) -> None:
         obj = self._instance()
         with self.subTest(test="full"):
@@ -393,11 +407,6 @@ class TestBytesStorageStructABC(unittest.TestCase):
                 "takes a bytes or fields (both given)", exc.exception.args[0]
             )
 
-        with self.subTest(test="without args and kwargs"):
-            with self.assertRaises(TypeError) as exc:
-                self._instance().encode()
-            self.assertEqual("missing arguments", exc.exception.args[0])
-
         with self.subTest(test="short content"):
             with self.assertRaises(ValueError) as exc:
                 self._instance().encode(b"aaaa")
@@ -419,7 +428,7 @@ class TestBytesStorageStructABC(unittest.TestCase):
         with self.subTest(test="two args"):
             with self.assertRaises(TypeError) as exc:
                 self._instance().encode(1, 2)
-            self.assertEqual("invalid arguments", exc.exception.args[0])
+            self.assertEqual("invalid arguments count (got 2)", exc.exception.args[0])
 
     def test_items(self) -> None:
         obj = self._instance()
