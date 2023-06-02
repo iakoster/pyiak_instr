@@ -13,14 +13,14 @@ from ....store.bin.types import STRUCT_DATACLASS
 from ...message.types import MessagePatternABC, MessageABC
 
 
-__all__ = ["RegisterStructABC"]
+__all__ = ["RegisterABC"]
 
 
 MessageT = TypeVar("MessageT", bound=MessageABC[Any, Any, Any, Any])
 
 
 @STRUCT_DATACLASS
-class RegisterStructABC(ABC, Generic[MessageT]):
+class RegisterABC(ABC, Generic[MessageT]):
     """
     Base structure for device/service register.
     """

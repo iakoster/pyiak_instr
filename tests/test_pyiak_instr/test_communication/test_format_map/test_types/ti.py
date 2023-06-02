@@ -5,7 +5,7 @@ from src.pyiak_instr.store.bin.types import STRUCT_DATACLASS
 from src.pyiak_instr.communication.message import MessagePattern
 from src.pyiak_instr.communication.format_map.types import (
     PatternsMapABC,
-    RegisterStructABC,
+    RegisterABC,
 )
 
 
@@ -21,5 +21,5 @@ class TIPatternsMap(PatternsMapABC[MessagePattern]):
 
 
 @STRUCT_DATACLASS
-class TIRegisterStruct(RegisterStructABC):
+class TIRegister(RegisterABC):
     ...

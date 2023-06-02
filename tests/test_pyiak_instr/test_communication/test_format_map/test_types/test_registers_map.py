@@ -12,10 +12,10 @@ from src.pyiak_instr.communication.message import (
 )
 
 from .....utils import validate_object
-from .ti import TIRegisterStruct
+from .ti import TIRegister
 
 
-class TestRegisterStructABC(unittest.TestCase):
+class TestRegisterABC(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
@@ -33,7 +33,7 @@ class TestRegisterStructABC(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(NotAmongTheOptions) as exc:
-            TIRegisterStruct(
+            TIRegister(
                 name="test",
                 address=20,
                 length=42,
@@ -97,15 +97,15 @@ class TestRegisterStructABC(unittest.TestCase):
 
     def test_from_series(self) -> None:
         ref = self._instance()
-        self.assertEqual(ref, TIRegisterStruct.from_series(ref.series))
+        self.assertEqual(ref, TIRegister.from_series(ref.series))
 
         self.assertEqual(
-            TIRegisterStruct(
+            TIRegister(
                 name="test",
                 address=20,
                 length=42,
             ),
-            TIRegisterStruct.from_series(pd.Series(dict(
+            TIRegister.from_series(pd.Series(dict(
                 name="test",
                 address=20,
                 length=42,
@@ -127,7 +127,7 @@ class TestRegisterStructABC(unittest.TestCase):
 
     def _instance_with_pattern(
             self, dlen_behaviour: Code = Code.EXPECTED
-    ) -> TIRegisterStruct:
+    ) -> TIRegister:
         return self._instance(MessagePattern.basic().configure(
             s0=MessageStructPattern.basic().configure(
                 f0=MessageFieldStructPattern.address(fmt=Code.U16),
@@ -140,8 +140,8 @@ class TestRegisterStructABC(unittest.TestCase):
         ))
 
     @staticmethod
-    def _instance(pattern: MessagePattern | None = None) -> TIRegisterStruct:
-        return TIRegisterStruct(
+    def _instance(pattern: MessagePattern | None = None) -> TIRegister:
+        return TIRegister(
                 name="test",
                 address=20,
                 length=42,
