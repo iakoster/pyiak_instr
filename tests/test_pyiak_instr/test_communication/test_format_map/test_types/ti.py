@@ -6,6 +6,7 @@ from src.pyiak_instr.communication.message import MessagePattern
 from src.pyiak_instr.communication.format_map.types import (
     PatternsMapABC,
     RegisterABC,
+    RegistersMapABC,
 )
 
 
@@ -23,3 +24,8 @@ class TIPatternsMap(PatternsMapABC[MessagePattern]):
 @STRUCT_DATACLASS
 class TIRegister(RegisterABC):
     ...
+
+
+class TIRegistersMapABC(RegistersMapABC[TIRegister]):
+
+    _register_type = TIRegister

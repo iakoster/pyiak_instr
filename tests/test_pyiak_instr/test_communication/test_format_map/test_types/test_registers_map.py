@@ -12,7 +12,7 @@ from src.pyiak_instr.communication.message import (
 )
 
 from .....utils import validate_object
-from .ti import TIRegister
+from .ti import TIRegister, TIRegistersMapABC
 
 
 class TestRegisterABC(unittest.TestCase):
@@ -148,3 +148,77 @@ class TestRegisterABC(unittest.TestCase):
                 description="Short. Long.",
                 pattern=pattern,
             )
+
+
+class TestRegisterMapABC(unittest.TestCase):
+
+    def test_init(self) -> None:
+        validate_object(
+            self,
+            self._instance(),
+            wo_attrs=["table"],
+        )
+
+    def test_init_exc(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            TIRegistersMapABC(
+                pd.DataFrame(
+                    columns=["name", "address", "length", "rw_type"],
+                )
+            )
+        self.assertEqual(
+            "missing columns in table: {'pattern'}", exc.exception.args[0]
+        )
+
+    def test_get_register(self) -> None:
+        self.assertEqual(
+            TIRegister(
+                name="test_0",
+                address=42,
+                length=20,
+                rw_type=Code.ANY,
+            ),
+            self._instance().get_register("test_0")
+        )
+
+    def test_get_register_exc(self) -> None:
+        instance = TIRegistersMapABC(
+                pd.DataFrame(
+                    columns=[
+                        "pattern", "name", "address", "length", "rw_type"
+                    ],
+                    data=[
+                        [None, "t", 0, 0, Code.ANY],
+                        [None, "t", 0, 0, Code.ANY],
+                    ]
+                )
+            )
+
+        with self.subTest(test="no one registers"):
+            with self.assertRaises(ValueError) as exc:
+                instance.get_register("reg")
+            self.assertEqual(
+                "register with name 'reg' not found",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(test="more than one register"):
+            with self.assertRaises(ValueError) as exc:
+                instance.get_register("t")
+            self.assertEqual(
+                "there is more than one register with the name 't'",
+                exc.exception.args[0],
+            )
+
+    @staticmethod
+    def _instance() -> TIRegistersMapABC:
+        return TIRegistersMapABC(
+            pd.DataFrame(
+                columns=["pattern", "name", "address", "length", "rw_type"],
+                data=[
+                    ["pat", "test_0", 42, 20, Code.ANY],
+                    ["pat", "test_1", 43, 22, Code.READ_ONLY],
+                    ["pat", "test_2", 44, 4, Code.WRITE_ONLY],
+                ]
+            )
+        )

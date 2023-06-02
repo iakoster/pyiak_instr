@@ -13,10 +13,13 @@ from ....store.bin.types import STRUCT_DATACLASS
 from ...message.types import MessagePatternABC, MessageABC
 
 
-__all__ = ["RegisterABC"]
+__all__ = ["RegisterABC", "RegistersMapABC"]
 
 
 MessageT = TypeVar("MessageT", bound=MessageABC[Any, Any, Any, Any])
+RegisterT = TypeVar(
+    "RegisterT", bound="RegisterABC[MessageABC[Any, Any, Any, Any]]"
+)
 
 
 @STRUCT_DATACLASS
@@ -245,9 +248,12 @@ class RegisterABC(ABC, Generic[MessageT]):
         Self
             initialized self instance.
         """
+        series_dict: dict[str, Any] = series.dropna().to_dict()
+        if "rw_type" in series_dict:
+            series_dict["rw_type"] = Code(series["rw_type"])
         return cls(
             pattern=pattern,  # type: ignore[call-arg]
-            **series.dropna().to_dict(),
+            **series_dict,
         )
 
     @property
@@ -278,3 +284,93 @@ class RegisterABC(ABC, Generic[MessageT]):
             rw_type=self.rw_type,
             description=self.description,
         )
+
+
+class RegistersMapABC(ABC, Generic[RegisterT]):
+    """
+    Base class for store registers.
+
+    Parameters
+    ----------
+    table : pd.DataFrame
+        table with data for registers.
+    """
+
+    _register_type: type[RegisterT]
+
+    _register_columns: set[str] = {"name", "address", "length", "rw_type"}
+
+    _required_columns: set[str] = {"pattern"}
+
+    def __init__(self, table: pd.DataFrame) -> None:
+        for col in self._register_columns:
+            self._required_columns.add(col)
+        self._verify_table(table)
+        self._table = table
+
+    def get_register(
+        self,
+        name: str,
+        pattern: MessagePatternABC[Any, Any] | None = None,
+    ) -> RegisterT:
+        """
+        Get register by `name`.
+
+        Parameters
+        ----------
+        name : str
+            name of the register.
+        pattern : MessagePatternABC[Any, Any] | None, default=None
+            pattern for message instance.
+
+        Returns
+        -------
+        RegisterT
+            register instance.
+
+        Raises
+        ------
+        ValueError
+            if register with `name` not found;
+            if `table` have more than one register with `name`.
+        """
+        reg_table = self._table[self._table["name"] == name]
+        if reg_table.shape[0] == 0:
+            raise ValueError(f"register with name '{name}' not found")
+        if reg_table.shape[0] > 1:
+            raise ValueError(
+                f"there is more than one register with the name '{name}'"
+            )
+
+        return self._register_type.from_series(
+            reg_table[list(self._register_columns)].iloc[0],
+            pattern=pattern,
+        )
+
+    def _verify_table(self, table: pd.DataFrame) -> None:
+        """
+        Verify table with registers data.
+
+        Parameters
+        ----------
+        table : pd.DataFrame
+            table with registers data.
+
+        Raises
+        ------
+        ValueError
+            if there is at least one required column in the table.
+        """
+        diff = self._required_columns - set(table.columns)
+        if len(diff) > 0:
+            raise ValueError(f"missing columns in table: {diff}")
+
+    @property
+    def table(self) -> pd.DataFrame:
+        """
+        Returns
+        -------
+        pd.DataFrame
+            table with registers data.
+        """
+        return self._table
