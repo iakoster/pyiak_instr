@@ -7,6 +7,9 @@ from ._patterns_map import PatternsMapABC
 from ._registers_map import RegisterABC, RegistersMapABC
 
 
+__all__ = ["FormatsMapABC"]
+
+
 MessageT = TypeVar("MessageT", bound=MessageABC[Any, Any, Any, Any])
 PatternsMapT = TypeVar("PatternsMapT", bound=PatternsMapABC[Any])
 RegistersMapT = TypeVar("RegistersMapT", bound=RegistersMapABC[Any])
@@ -58,7 +61,7 @@ class RegisterParser(ABC, Generic[MessageT]):
         return self._reg.write(self._pat, data)
 
 
-class FormatMapABC(ABC, Generic[PatternsMapT, RegistersMapT, MessageT]):
+class FormatsMapABC(ABC, Generic[PatternsMapT, RegistersMapT, MessageT]):
     """
     Represents class with patterns and registers container.
     """
@@ -104,5 +107,5 @@ class FormatMapABC(ABC, Generic[PatternsMapT, RegistersMapT, MessageT]):
             register parser.
         """
         register = self._registers.get_register(name)
-        pattern = self._patterns[register.name]
+        pattern = self._patterns[register.pattern]
         return RegisterParser(pattern, register)
