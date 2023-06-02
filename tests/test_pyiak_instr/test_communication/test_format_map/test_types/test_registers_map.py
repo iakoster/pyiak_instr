@@ -1,7 +1,7 @@
 import unittest
 
 import pandas as pd
-from pandas.testing import assert_series_equal
+from pandas.testing import assert_series_equal, assert_frame_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotAmongTheOptions
@@ -12,7 +12,7 @@ from src.pyiak_instr.communication.message import (
 )
 
 from .....utils import validate_object
-from .ti import TIRegister, TIRegistersMapABC
+from .ti import TIRegister, TIRegistersMap
 
 
 class TestRegisterABC(unittest.TestCase):
@@ -25,7 +25,7 @@ class TestRegisterABC(unittest.TestCase):
             length=42,
             name="test",
             description="Short. Long.",
-            pattern=None,
+            pattern="pat",
             rw_type=Code.ANY,
             short_description="Short",
             wo_attrs=["series"]
@@ -34,6 +34,7 @@ class TestRegisterABC(unittest.TestCase):
     def test_init_exc(self) -> None:
         with self.assertRaises(NotAmongTheOptions) as exc:
             TIRegister(
+                pattern="pat",
                 name="test",
                 address=20,
                 length=42,
@@ -47,8 +48,10 @@ class TestRegisterABC(unittest.TestCase):
         )
 
     def test_get(self) -> None:
-        msg = self._instance_with_pattern().get(
-            operation=Code.WRITE, fields_data={"f1": Code.READ}
+        msg = self._instance().get(
+            self._pattern(),
+            operation=Code.WRITE,
+            fields_data={"f1": Code.READ},
         )
 
         self.assertEqual(b"\x00\x14\x01\x00", msg.content())
@@ -57,14 +60,9 @@ class TestRegisterABC(unittest.TestCase):
         ).items():
             self.assertEqual(ref, msg.content(name))
 
-    def test_get_exc(self) -> None:
-        with self.assertRaises(AttributeError) as exc:
-            self._instance().get()
-        self.assertEqual("pattern not specified", exc.exception.args[0])
-
     def test_read(self) -> None:
         with self.subTest(test="basic"):
-            msg = self._instance_with_pattern().read()
+            msg = self._instance().read(self._pattern())
             self.assertEqual(b"\x00\x14\x00\x2a", msg.content())
             for name, ref in dict(
                     f0=b"\x00\x14", f1=b"\x00", f2=b"\x2a", f3=b""
@@ -72,9 +70,9 @@ class TestRegisterABC(unittest.TestCase):
                 self.assertEqual(ref, msg.content(name))
 
         with self.subTest(test="dynamic length is actual"):
-            msg = self._instance_with_pattern(
-                dlen_behaviour=Code.ACTUAL
-            ).read()
+            msg = self._instance().read(
+                self._pattern(dlen_behaviour=Code.ACTUAL)
+            )
             self.assertEqual(b"\x00\x14\x00\x00", msg.content())
             for name, ref in dict(
                     f0=b"\x00\x14", f1=b"\x00", f2=b"\x00", f3=b""
@@ -83,7 +81,7 @@ class TestRegisterABC(unittest.TestCase):
 
     def test_write(self) -> None:
         with self.subTest(test="basic"):
-            msg = self._instance_with_pattern().write(1)
+            msg = self._instance().write(self._pattern(), 1)
             self.assertEqual(
                 b"\x00\x14\x01\x01\x00\x00\x00\x01", msg.content()
             )
@@ -101,11 +99,13 @@ class TestRegisterABC(unittest.TestCase):
 
         self.assertEqual(
             TIRegister(
+                pattern="pat",
                 name="test",
                 address=20,
                 length=42,
             ),
             TIRegister.from_series(pd.Series(dict(
+                pattern="pat",
                 name="test",
                 address=20,
                 length=42,
@@ -117,6 +117,7 @@ class TestRegisterABC(unittest.TestCase):
         assert_series_equal(
             self._instance().series,
             pd.Series(dict(
+                pattern="pat",
                 name="test",
                 address=20,
                 length=42,
@@ -125,10 +126,11 @@ class TestRegisterABC(unittest.TestCase):
             )),
         )
 
-    def _instance_with_pattern(
-            self, dlen_behaviour: Code = Code.EXPECTED
-    ) -> TIRegister:
-        return self._instance(MessagePattern.basic().configure(
+    @staticmethod
+    def _pattern(
+            dlen_behaviour: Code = Code.EXPECTED
+    ) -> MessagePattern:
+        return MessagePattern.basic().configure(
             s0=MessageStructPattern.basic().configure(
                 f0=MessageFieldStructPattern.address(fmt=Code.U16),
                 f1=MessageFieldStructPattern.operation(),
@@ -137,16 +139,16 @@ class TestRegisterABC(unittest.TestCase):
                 ),
                 f3=MessageFieldStructPattern.data(fmt=Code.U32),
             )
-        ))
+        )
 
     @staticmethod
-    def _instance(pattern: MessagePattern | None = None) -> TIRegister:
+    def _instance() -> TIRegister:
         return TIRegister(
+                pattern="pat",
                 name="test",
                 address=20,
                 length=42,
                 description="Short. Long.",
-                pattern=pattern,
             )
 
 
@@ -161,7 +163,7 @@ class TestRegisterMapABC(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            TIRegistersMapABC(
+            TIRegistersMap(
                 pd.DataFrame(
                     columns=["name", "address", "length", "rw_type"],
                 )
@@ -173,6 +175,7 @@ class TestRegisterMapABC(unittest.TestCase):
     def test_get_register(self) -> None:
         self.assertEqual(
             TIRegister(
+                pattern="pat",
                 name="test_0",
                 address=42,
                 length=20,
@@ -182,7 +185,7 @@ class TestRegisterMapABC(unittest.TestCase):
         )
 
     def test_get_register_exc(self) -> None:
-        instance = TIRegistersMapABC(
+        instance = TIRegistersMap(
                 pd.DataFrame(
                     columns=[
                         "pattern", "name", "address", "length", "rw_type"
@@ -210,9 +213,33 @@ class TestRegisterMapABC(unittest.TestCase):
                 exc.exception.args[0],
             )
 
+    def test_from_registers(self) -> None:
+        obj = TIRegistersMap.from_registers(
+            TIRegister(pattern="pat", name="0", address=0, length=1),
+            TIRegister(pattern="pat", name="1", address=1, length=1),
+        )
+
+        assert_frame_equal(
+            pd.DataFrame(
+                columns=[
+                    "pattern",
+                    "name",
+                    "address",
+                    "length",
+                    "rw_type",
+                    "description",
+                ],
+                data=[
+                    ["pat", "0", 0, 1, Code.ANY, ""],
+                    ["pat", "1", 1, 1, 5, ""],
+                ],
+            ),
+            obj.table,
+        )
+
     @staticmethod
-    def _instance() -> TIRegistersMapABC:
-        return TIRegistersMapABC(
+    def _instance() -> TIRegistersMap:
+        return TIRegistersMap(
             pd.DataFrame(
                 columns=["pattern", "name", "address", "length", "rw_type"],
                 data=[

@@ -28,6 +28,9 @@ class RegisterABC(ABC, Generic[MessageT]):
     Base structure for device/service register.
     """
 
+    pattern: str
+    "message format name."
+
     name: str
     "the name of the register"
 
@@ -43,9 +46,6 @@ class RegisterABC(ABC, Generic[MessageT]):
     description: str = ""
     "register description. First sentence must be a short summary."
 
-    pattern: MessagePatternABC[MessageT, Any] | None = None
-    "message format for messages of this register."
-
     def __post_init__(self) -> None:
         if self.rw_type not in {
             Code.ANY,
@@ -60,6 +60,7 @@ class RegisterABC(ABC, Generic[MessageT]):
 
     def get(
         self,
+        pattern: MessagePatternABC[MessageT, Any],
         changes_allowed: bool = True,
         sub_additions: SubPatternAdditions = SubPatternAdditions(),
         top_additions: dict[str, Any] | None = None,
@@ -74,6 +75,8 @@ class RegisterABC(ABC, Generic[MessageT]):
 
         Parameters
         ----------
+        pattern : MessagePatternABC[MessageT, Any]
+            pattern for message.
         changes_allowed : bool
             indicates that changes pattern is allowed when cheating new
             instance.
@@ -103,15 +106,12 @@ class RegisterABC(ABC, Generic[MessageT]):
         AttributeError
             if pattern not specified (is None).
         """
-        if self.pattern is None:
-            raise AttributeError("pattern not specified")
-
         if top_additions is None:
             top_additions = {}
         if fields_data is None:
             fields_data = {}
 
-        msg: MessageT = self.pattern.get(
+        msg: MessageT = pattern.get(
             changes_allowed=changes_allowed,
             sub_additions=sub_additions,
             **top_additions,
@@ -138,6 +138,7 @@ class RegisterABC(ABC, Generic[MessageT]):
 
     def read(
         self,
+        pattern: MessagePatternABC[MessageT, Any],
         dynamic_length: int = 0,
         changes_allowed: bool = True,
         sub_additions: SubPatternAdditions = SubPatternAdditions(),
@@ -150,6 +151,8 @@ class RegisterABC(ABC, Generic[MessageT]):
 
         Parameters
         ----------
+        pattern : MessagePatternABC[MessageT, Any]
+            pattern for message.
         dynamic_length : int, default=0
             length of dynamic field. Works only if dynamic field and dynamic
             length field exists.
@@ -173,6 +176,7 @@ class RegisterABC(ABC, Generic[MessageT]):
         if dynamic_length <= 0:
             dynamic_length = self.length
         return self.get(
+            pattern,
             changes_allowed=changes_allowed,
             sub_additions=sub_additions,
             top_additions=top_additions,
@@ -184,6 +188,7 @@ class RegisterABC(ABC, Generic[MessageT]):
 
     def write(
         self,
+        pattern: MessagePatternABC[MessageT, Any],
         data: Any,
         changes_allowed: bool = True,
         sub_additions: SubPatternAdditions = SubPatternAdditions(),
@@ -196,6 +201,8 @@ class RegisterABC(ABC, Generic[MessageT]):
 
         Parameters
         ----------
+        pattern : MessagePatternABC[MessageT, Any]
+            pattern for message.
         data : Any, default=None
             content of dynamic field.
         changes_allowed : bool
@@ -216,6 +223,7 @@ class RegisterABC(ABC, Generic[MessageT]):
             message instance.
         """
         return self.get(
+            pattern,
             changes_allowed=changes_allowed,
             sub_additions=sub_additions,
             top_additions=top_additions,
@@ -226,11 +234,7 @@ class RegisterABC(ABC, Generic[MessageT]):
         )
 
     @classmethod
-    def from_series(
-        cls,
-        series: pd.Series[Any],
-        pattern: MessagePatternABC[MessageT, Any] | None = None,
-    ) -> Self:
+    def from_series(cls, series: pd.Series[Any]) -> Self:
         """
         Initialize class instance via pandas series.
 
@@ -240,8 +244,6 @@ class RegisterABC(ABC, Generic[MessageT]):
         ----------
         series : pd.Series[Any]
             series with data.
-        pattern : MessagePatternABC[MessageT, Any] | None, default=None
-            pattern for message.
 
         Returns
         -------
@@ -251,10 +253,7 @@ class RegisterABC(ABC, Generic[MessageT]):
         series_dict: dict[str, Any] = series.dropna().to_dict()
         if "rw_type" in series_dict:
             series_dict["rw_type"] = Code(series["rw_type"])
-        return cls(
-            pattern=pattern,  # type: ignore[call-arg]
-            **series_dict,
-        )
+        return cls(**series_dict)
 
     @property
     def series(self) -> pd.Series[Any]:
@@ -278,6 +277,7 @@ class RegisterABC(ABC, Generic[MessageT]):
 
     def __init_kwargs__(self) -> dict[str, Any]:
         return dict(
+            pattern=self.pattern,
             name=self.name,
             address=self.address,
             length=self.length,
@@ -298,9 +298,11 @@ class RegistersMapABC(ABC, Generic[RegisterT]):
 
     _register_type: type[RegisterT]
 
-    _register_columns: set[str] = {"name", "address", "length", "rw_type"}
+    _register_columns: set[str] = {
+        "pattern", "name", "address", "length", "rw_type"
+    }
 
-    _required_columns: set[str] = {"pattern"}
+    _required_columns: set[str] = set()
 
     def __init__(self, table: pd.DataFrame) -> None:
         for col in self._register_columns:
@@ -344,7 +346,6 @@ class RegistersMapABC(ABC, Generic[RegisterT]):
 
         return self._register_type.from_series(
             reg_table[list(self._register_columns)].iloc[0],
-            pattern=pattern,
         )
 
     def _verify_table(self, table: pd.DataFrame) -> None:
@@ -364,6 +365,14 @@ class RegistersMapABC(ABC, Generic[RegisterT]):
         diff = self._required_columns - set(table.columns)
         if len(diff) > 0:
             raise ValueError(f"missing columns in table: {diff}")
+
+    @classmethod
+    def from_registers(cls, *registers: RegisterT) -> Self:
+        return cls.from_series(*(r.series for r in registers))
+
+    @classmethod
+    def from_series(cls, *series: pd.Series) -> Self:
+        return cls(pd.DataFrame(data=series))
 
     @property
     def table(self) -> pd.DataFrame:

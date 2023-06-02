@@ -26,6 +26,6 @@ class TIRegister(RegisterABC):
     ...
 
 
-class TIRegistersMapABC(RegistersMapABC[TIRegister]):
+class TIRegistersMap(RegistersMapABC[TIRegister]):
 
     _register_type = TIRegister
