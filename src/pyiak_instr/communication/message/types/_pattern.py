@@ -9,8 +9,8 @@ from typing import (
 from ....core import Code
 from ....store.bin.types import (
     BytesFieldStructPatternABC,
-    BytesStorageStructPatternABC,
     BytesStoragePatternABC,
+    ContinuousBytesStorageStructPatternABC,
 )
 from ._struct import MessageFieldStructABC, MessageStructABC
 from ._message import MessageABC
@@ -469,7 +469,9 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
 
 
 class MessageStructPatternABC(
-    BytesStorageStructPatternABC[MessageStructT, FieldStructPatternT]
+    ContinuousBytesStorageStructPatternABC[
+        MessageStructT, FieldStructPatternT
+    ]
 ):
     """
     Represent base class of pattern for message struct.

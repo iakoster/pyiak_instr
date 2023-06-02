@@ -62,6 +62,9 @@ class RegisterStructABC(ABC, Generic[MessageT]):
         top_additions: dict[str, Any] | None = None,
         fields_data: dict[str, Any] | None = None,
         autoupdate_fields: bool = True,
+        operation: Code | None = None,
+        dynamic_length: int = 0,
+        data: Any = None,
     ) -> MessageT:
         """
         Get message from `pattern`.
@@ -79,6 +82,13 @@ class RegisterStructABC(ABC, Generic[MessageT]):
             data for fields.
         autoupdate_fields: bool, default=True
             autoupdate field content if it is possible.
+        operation : Code | None, default=None
+            operation code.
+        dynamic_length : int, default=0
+            length of dynamic field. Works only if dynamic field and dynamic
+            length field exists.
+        data : Any, default=None
+            content of dynamic field.
 
         Returns
         -------
@@ -107,12 +117,110 @@ class RegisterStructABC(ABC, Generic[MessageT]):
         if msg.has.address:
             fields_data[msg.get.address.name] = self.address
 
+        if msg.struct.is_dynamic:
+            if data is not None:
+                fields_data[msg.struct.dynamic_field_name] = data
+
+            if dynamic_length > 0 and msg.has.dynamic_length:
+                fields_data[msg.get.dynamic_length.name] = dynamic_length
+
+        if operation is not None and msg.has.operation:
+            fields_data[msg.get.operation.name] = operation
+
         msg.encode(**fields_data)
         if autoupdate_fields:
             msg.autoupdate_fields()
-        # todo: check data length and register length
 
         return msg
+
+    def read(
+        self,
+        dynamic_length: int = 0,
+        changes_allowed: bool = True,
+        sub_additions: SubPatternAdditions = SubPatternAdditions(),
+        top_additions: dict[str, Any] | None = None,
+        fields_data: dict[str, Any] | None = None,
+        autoupdate_fields: bool = True,
+    ) -> MessageT:
+        """
+        Get message from `pattern` with READ operation.
+
+        Parameters
+        ----------
+        dynamic_length : int, default=0
+            length of dynamic field. Works only if dynamic field and dynamic
+            length field exists.
+        changes_allowed : bool
+            indicates that changes pattern is allowed when cheating new
+            instance.
+        sub_additions : SubPatternAdditions, default=SubPatternAdditions()
+            additions for sub-pattern.
+        top_additions : dict[str, Any] | None, default=None
+            additions for `pattern`.
+        fields_data: dict[str, Any] | None, default=None
+            data for fields.
+        autoupdate_fields: bool, default=True
+            autoupdate field content if it is possible.
+
+        Returns
+        -------
+        MessageT
+            message instance.
+        """
+        if dynamic_length <= 0:
+            dynamic_length = self.length
+        return self.get(
+            changes_allowed=changes_allowed,
+            sub_additions=sub_additions,
+            top_additions=top_additions,
+            fields_data=fields_data,
+            autoupdate_fields=autoupdate_fields,
+            operation=Code.READ,
+            dynamic_length=dynamic_length,
+        )
+
+    def write(
+        self,
+        data: Any,
+        changes_allowed: bool = True,
+        sub_additions: SubPatternAdditions = SubPatternAdditions(),
+        top_additions: dict[str, Any] | None = None,
+        fields_data: dict[str, Any] | None = None,
+        autoupdate_fields: bool = True,
+    ) -> MessageT:
+        """
+        Get message from `pattern`.
+
+        Parameters
+        ----------
+        data : Any, default=None
+            content of dynamic field.
+        changes_allowed : bool
+            indicates that changes pattern is allowed when cheating new
+            instance.
+        sub_additions : SubPatternAdditions, default=SubPatternAdditions()
+            additions for sub-pattern.
+        top_additions : dict[str, Any] | None, default=None
+            additions for `pattern`.
+        fields_data: dict[str, Any] | None, default=None
+            data for fields.
+        autoupdate_fields: bool, default=True
+            autoupdate field content if it is possible.
+
+        Returns
+        -------
+        MessageT
+            message instance.
+        """
+        return self.get(
+            changes_allowed=changes_allowed,
+            sub_additions=sub_additions,
+            top_additions=top_additions,
+            fields_data=fields_data,
+            autoupdate_fields=autoupdate_fields,
+            operation=Code.WRITE,
+            data=data,
+        )
 
     @classmethod
     def from_series(

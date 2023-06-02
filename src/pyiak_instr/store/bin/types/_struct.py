@@ -442,19 +442,15 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
         if len(args) > 0:
             if len(args) != 1:
                 raise TypeError(f"invalid arguments count (got {len(args)})")
-            content, = args
+            (content,) = args
             self._verify_bytes_content(content)
             return {
-                f.name: f.encode(content[f.slice_], verify=True)
-                for f in self
+                f.name: f.encode(content[f.slice_], verify=True) for f in self
             }
 
         if all_fields:
             return self._get_all_fields(kwargs)
-        return {
-            f: self[f].encode(c, verify=True)
-            for f, c in kwargs.items()
-        }
+        return {f: self[f].encode(c, verify=True) for f, c in kwargs.items()}
 
     def items(self) -> Generator[tuple[str, FieldStructT], None, None]:
         """
