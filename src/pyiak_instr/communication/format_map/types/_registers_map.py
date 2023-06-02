@@ -299,7 +299,11 @@ class RegistersMapABC(ABC, Generic[RegisterT]):
     _register_type: type[RegisterT]
 
     _register_columns: set[str] = {
-        "pattern", "name", "address", "length", "rw_type"
+        "pattern",
+        "name",
+        "address",
+        "length",
+        "rw_type",
     }
 
     _required_columns: set[str] = set()
@@ -313,7 +317,6 @@ class RegistersMapABC(ABC, Generic[RegisterT]):
     def get_register(
         self,
         name: str,
-        pattern: MessagePatternABC[Any, Any] | None = None,
     ) -> RegisterT:
         """
         Get register by `name`.
@@ -322,8 +325,6 @@ class RegistersMapABC(ABC, Generic[RegisterT]):
         ----------
         name : str
             name of the register.
-        pattern : MessagePatternABC[Any, Any] | None, default=None
-            pattern for message instance.
 
         Returns
         -------
@@ -368,10 +369,36 @@ class RegistersMapABC(ABC, Generic[RegisterT]):
 
     @classmethod
     def from_registers(cls, *registers: RegisterT) -> Self:
+        """
+        Get class instance from registers.
+
+        Parameters
+        ----------
+        *registers : RegisterT
+            register instances.
+
+        Returns
+        -------
+        Self
+            self instance.
+        """
         return cls.from_series(*(r.series for r in registers))
 
     @classmethod
-    def from_series(cls, *series: pd.Series) -> Self:
+    def from_series(cls, *series: pd.Series[Any]) -> Self:
+        """
+        Get class instance from series.
+
+        Parameters
+        ----------
+        *series : pd.Series[Any]
+            series instances.
+
+        Returns
+        -------
+        Self
+            self instance.
+        """
         return cls(pd.DataFrame(data=series))
 
     @property
