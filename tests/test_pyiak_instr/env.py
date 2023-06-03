@@ -33,4 +33,4 @@ def get_local_test_data_dir(__name__: str) -> Path:
 
 def remove_test_data_dir() -> None:
     """Iteratively delete the test data folder with all its contents."""
-    shutil.rmtree(TEST_DATA_DIR)
+    shutil.rmtree(TEST_DATA_DIR, ignore_errors=True)

@@ -1,5 +1,8 @@
 """Private module of ``pyiak_instr.communication.format_map.types``."""
 from __future__ import annotations
+
+import sqlite3
+from pathlib import Path
 from itertools import takewhile
 from abc import ABC
 from typing import Any, Generic, Self, TypeVar
@@ -349,6 +352,20 @@ class RegistersMapABC(ABC, Generic[RegisterT]):
             reg_table[list(self._register_columns)].iloc[0],
         )
 
+    def write(self, path: Path) -> None:
+        """
+        Write registers table to `path`.
+
+        Parameters
+        ----------
+        path : Path
+            path to database.
+        """
+        with sqlite3.connect(path) as con:
+            self._table.to_sql(
+                "registers", con, index=False, if_exists="replace"
+            )
+
     def _verify_table(self, table: pd.DataFrame) -> None:
         """
         Verify table with registers data.
@@ -400,6 +417,24 @@ class RegistersMapABC(ABC, Generic[RegisterT]):
             self instance.
         """
         return cls(pd.DataFrame(data=series))
+
+    @classmethod
+    def read(cls, path: Path) -> Self:
+        """
+        Get class instance which initialized from sql database.
+
+        Parameters
+        ----------
+        path : Path
+            path to database.
+
+        Returns
+        -------
+        Self
+            initialized self instance.
+        """
+        with sqlite3.connect(path) as con:
+            return cls(pd.read_sql("SELECT * FROM registers", con))
 
     @property
     def table(self) -> pd.DataFrame:

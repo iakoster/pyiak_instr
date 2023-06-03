@@ -1,3 +1,4 @@
+import sqlite3
 import unittest
 
 import pandas as pd
@@ -12,7 +13,11 @@ from src.pyiak_instr.communication.message import (
 )
 
 from .....utils import validate_object
+from ....env import get_local_test_data_dir, remove_test_data_dir
 from .ti import TIRegister, TIRegistersMap
+
+
+TEST_DATA_DIR = get_local_test_data_dir(__name__)
 
 
 class TestRegisterABC(unittest.TestCase):
@@ -154,6 +159,14 @@ class TestRegisterABC(unittest.TestCase):
 
 class TestRegisterMapABC(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls) -> None:
+        TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        remove_test_data_dir()
+
     def test_init(self) -> None:
         validate_object(
             self,
@@ -236,6 +249,24 @@ class TestRegisterMapABC(unittest.TestCase):
             ),
             obj.table,
         )
+
+    def test_write(self) -> None:
+        path = TEST_DATA_DIR / "test_write.db"
+        obj = self._instance()
+        obj.write(path)
+
+        with sqlite3.connect(path) as con:
+            act = pd.read_sql("SELECT * FROM registers", con)
+
+        assert_frame_equal(obj.table, act)
+
+    def test_write_read(self) -> None:
+        path = TEST_DATA_DIR / "test_write_read.db"
+        ref = self._instance()
+        ref.write(path)
+
+        act = TIRegistersMap.read(path)
+        assert_frame_equal(ref.table, act.table)
 
     @staticmethod
     def _instance() -> TIRegistersMap:

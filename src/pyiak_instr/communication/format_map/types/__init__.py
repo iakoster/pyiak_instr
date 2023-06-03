@@ -8,4 +8,9 @@ from ._registers_map import RegisterABC, RegistersMapABC
 from ._format_map import FormatsMapABC
 
 
-__all__ = ["FormatsMapABC", "PatternsMapABC", "RegisterABC", "RegistersMapABC"]
+__all__ = [
+    "FormatsMapABC",
+    "PatternsMapABC",
+    "RegisterABC",
+    "RegistersMapABC",
+]
