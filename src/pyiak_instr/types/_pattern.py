@@ -137,7 +137,7 @@ class PatternABC(ABC, Generic[OptionsT]):
     ----------
     typename: str
         name of pattern target type.
-    **kwargs: Any
+    **parameters: Any
         parameters for target initialization.
     """
 

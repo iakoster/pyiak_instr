@@ -53,21 +53,21 @@ class TestPatternsMapABC(unittest.TestCase):
             "_ = \dct(typename,basic)",
             "s0 = \dct(typename,basic,divisible,False,mtu,1500)",
             "f0 = \dct(typename,static,bytes_expected,1,fmt,\cod(520),"
-            r"order,\cod(1280),default,\bts(0))",
+            r"order,\cod(1280),default,\bts(0),direction,\cod(5))",
             "f1 = \dct(typename,data,fmt,\cod(520),order,\cod(1280),"
-            r"bytes_expected,0,default,\bts())",
+            r"bytes_expected,0,default,\bts(),direction,\cod(5))",
             "",
             "[s1]",
             "_ = \dct(typename,basic)",
             "s1 = \dct(typename,basic,divisible,False,mtu,1500)",
             "f0 = \dct(typename,id,bytes_expected,1,fmt,\cod(520),"
-            r"order,\cod(1280),default,\bts())",
+            r"order,\cod(1280),default,\bts(),direction,\cod(5))",
             "f1 = \dct(typename,dynamic_length,bytes_expected,1,fmt,\cod(520),"
             "order,\cod(1280),behaviour,\cod(1536),units,\cod(257),"
-            r"additive,0,default,\bts(),fill_value,\bts(0))",
+            r"additive,0,default,\bts(),fill_value,\bts(0),direction,\cod(5))",
             "f2 = \dct(typename,crc,bytes_expected,2,fmt,\cod(521),"
             r"order,\cod(1280),poly,4129,init,0,default,\bts(),"
-            r"fill_value,\bts(0),wo_fields,\set())",
+            r"fill_value,\bts(0),wo_fields,\set(),direction,\cod(5))",
         ]
 
         with open(TEST_DIR / "test_write.ini", "r") as file:

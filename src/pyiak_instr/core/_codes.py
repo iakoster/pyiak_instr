@@ -83,3 +83,5 @@ class Code(IntEnum):
     RESPONSE = auto()
     READ_ONLY = auto()
     WRITE_ONLY = auto()
+    RX = auto()
+    TX = auto()

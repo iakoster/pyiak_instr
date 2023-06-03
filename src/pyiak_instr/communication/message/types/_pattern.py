@@ -7,6 +7,7 @@ from typing import (
 )
 
 from ....core import Code
+from ....exceptions import NotAmongTheOptions
 from ....store.bin.types import (
     BytesFieldStructPatternABC,
     BytesStoragePatternABC,
@@ -38,7 +39,28 @@ MessageStructPatternT = TypeVar(
 class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     """
     Represent base class of pattern for field struct.
+
+    Parameters
+    ----------
+    typename : str
+        name of pattern target type.
+    direction : Code, default=Code.ANY
+        the direction of the field that indicates what type of message this
+        message is for.
+    **parameters : Any
+        parameters for target initialization.
     """
+
+    def __init__(
+        self, typename: str, direction: Code = Code.ANY, **parameters: Any
+    ) -> None:
+        if direction not in {Code.ANY, Code.RX, Code.TX}:
+            raise NotAmongTheOptions(
+                "direction", direction, {Code.ANY, Code.RX, Code.TX}
+            )
+
+        self._dir = direction
+        super().__init__(typename, **parameters)
 
     @staticmethod
     @abstractmethod
@@ -61,6 +83,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     def basic(
         cls,
         typename: str = "basic",
+        direction: Code = Code.ANY,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
         bytes_expected: int = 0,
@@ -73,6 +96,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         ----------
         typename : str, default='basic'
             basic typename.
+        direction : Code, default=Code.ANY
+            field direction.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -89,6 +114,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         """
         return cls(
             typename=typename,
+            direction=direction,
             fmt=fmt,
             order=order,
             bytes_expected=bytes_expected,
@@ -99,6 +125,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     def single(
         cls,
         typename: str = "single",
+        direction: Code = Code.ANY,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
         default: bytes = b"",
@@ -110,6 +137,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         ----------
         typename : str, default='single'
             single typename.
+        direction : Code, default=Code.ANY
+            field direction.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -124,6 +153,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         """
         return cls(
             typename=typename,
+            direction=direction,
             bytes_expected=cls.get_fmt_bytesize(fmt),
             fmt=fmt,
             order=order,
@@ -134,6 +164,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     def static(
         cls,
         typename: str = "static",
+        direction: Code = Code.ANY,
         default: bytes = b"\x00",
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
@@ -145,6 +176,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         ----------
         typename : str, default='static'
             static typename.
+        direction : Code, default=Code.ANY
+            field direction.
         fmt : Code, default=Code.U8
             value format.
         default : bytes, default=b'\x00'
@@ -159,6 +192,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         """
         return cls(
             typename=typename,
+            direction=direction,
             bytes_expected=cls.get_fmt_bytesize(fmt),
             fmt=fmt,
             order=order,
@@ -169,6 +203,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     def address(
         cls,
         typename: str = "address",
+        direction: Code = Code.ANY,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
         behaviour: Code = Code.DMA,
@@ -182,6 +217,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         ----------
         typename : str, default='address'
             address typename.
+        direction : Code, default=Code.ANY
+            field direction.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -200,6 +237,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         """
         return cls(
             typename=typename,
+            direction=direction,
             bytes_expected=cls.get_fmt_bytesize(fmt),
             fmt=fmt,
             order=order,
@@ -212,6 +250,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     def crc(
         cls,
         typename: str = "crc",
+        direction: Code = Code.ANY,
         fmt: Code = Code.U16,
         order: Code = Code.BIG_ENDIAN,
         poly: int = 0x1021,
@@ -227,6 +266,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         ----------
         typename : str, default='crc'
             crc typename.
+        direction : Code, default=Code.ANY
+            field direction.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -251,6 +292,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
             wo_fields = set()
         return cls(
             typename=typename,
+            direction=direction,
             bytes_expected=cls.get_fmt_bytesize(fmt),
             fmt=fmt,
             order=order,
@@ -265,6 +307,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     def data(
         cls,
         typename: str = "data",
+        direction: Code = Code.ANY,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
         bytes_expected: int = 0,
@@ -277,6 +320,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         ----------
         typename : str, default='data'
             data typename.
+        direction : Code, default=Code.ANY
+            field direction.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -293,6 +338,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         """
         return cls(
             typename=typename,
+            direction=direction,
             fmt=fmt,
             order=order,
             bytes_expected=bytes_expected,
@@ -303,6 +349,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     def dynamic_length(
         cls,
         typename: str = "dynamic_length",
+        direction: Code = Code.ANY,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
         behaviour: Code = Code.ACTUAL,
@@ -318,6 +365,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         ----------
         typename : str, default='data_length'
             data length typename.
+        direction : Code, default=Code.ANY
+            field direction.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -340,6 +389,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         """
         return cls(
             typename=typename,
+            direction=direction,
             bytes_expected=cls.get_fmt_bytesize(fmt),
             fmt=fmt,
             order=order,
@@ -354,6 +404,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     def id_(
         cls,
         typename: str = "id",
+        direction: Code = Code.ANY,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
         default: bytes = b"",
@@ -365,6 +416,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         ----------
         typename : str, default='id'
             id typename.
+        direction : Code, default=Code.ANY
+            field direction.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -379,6 +432,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         """
         return cls(
             typename=typename,
+            direction=direction,
             bytes_expected=cls.get_fmt_bytesize(fmt),
             fmt=fmt,
             order=order,
@@ -389,6 +443,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     def operation(
         cls,
         typename: str = "operation",
+        direction: Code = Code.ANY,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
         descs: dict[int, Code] | None = None,
@@ -401,6 +456,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         ----------
         typename : str, default='operation'
             operation typename.
+        direction : Code, default=Code.ANY
+            field direction.
         fmt : Code, default=Code.U8
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -419,6 +476,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
             descs = {0: Code.READ, 1: Code.WRITE}
         return cls(
             typename=typename,
+            direction=direction,
             bytes_expected=cls.get_fmt_bytesize(fmt),
             fmt=fmt,
             order=order,
@@ -430,6 +488,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
     def response(
         cls,
         typename: str = "response",
+        direction: Code = Code.ANY,
         fmt: Code = Code.U8,
         order: Code = Code.BIG_ENDIAN,
         descs: dict[int, Code] | None = None,
@@ -442,6 +501,8 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         ----------
         typename : str, default='response'
             response typename.
+        direction : Code, default=Code.ANY
+            field direction.
         fmt : Code
             value format.
         order : Code, default=Code.BIG_ENDIAN
@@ -460,12 +521,28 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
             descs = {}
         return cls(
             typename=typename,
+            direction=direction,
             bytes_expected=cls.get_fmt_bytesize(fmt),
             fmt=fmt,
             order=order,
             descs=descs,
             default=default,
         )
+
+    @property
+    def direction(self) -> Code:
+        """
+        Returns
+        -------
+        Code
+            field direction.
+        """
+        return self._dir
+
+    def __init_kwargs__(self) -> dict[str, Any]:
+        init_kw = super().__init_kwargs__()
+        init_kw["direction"] = self._dir
+        return init_kw
 
 
 class MessageStructPatternABC(

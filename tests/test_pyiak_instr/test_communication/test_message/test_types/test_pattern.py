@@ -31,12 +31,14 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             typename="id",
             is_dynamic=True,
             size=0,
+            direction=Code.ANY,
         )
 
     def test_init_specific(self) -> None:
         cases = dict(
             basic=dict(
                 typename="basic",
+                direction=Code.ANY,
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 bytes_expected=0,
@@ -44,6 +46,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             ),
             static=dict(
                 typename="static",
+                direction=Code.ANY,
                 bytes_expected=1,
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
@@ -51,6 +54,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             ),
             address=dict(
                 typename="address",
+                direction=Code.ANY,
                 bytes_expected=1,
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
@@ -60,6 +64,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             ),
             crc=dict(
                 typename="crc",
+                direction=Code.ANY,
                 bytes_expected=2,
                 fmt=Code.U16,
                 order=Code.BIG_ENDIAN,
@@ -71,6 +76,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             ),
             data=dict(
                 typename="data",
+                direction=Code.ANY,
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 bytes_expected=0,
@@ -78,6 +84,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             ),
             dynamic_length=dict(
                 typename="dynamic_length",
+                direction=Code.ANY,
                 bytes_expected=1,
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
@@ -89,6 +96,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             ),
             id_=dict(
                 typename="id",
+                direction=Code.ANY,
                 bytes_expected=1,
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
@@ -96,6 +104,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             ),
             operation=dict(
                 typename="operation",
+                direction=Code.ANY,
                 bytes_expected=1,
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
@@ -104,6 +113,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             ),
             response=dict(
                 typename="response",
+                direction=Code.ANY,
                 bytes_expected=1,
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,

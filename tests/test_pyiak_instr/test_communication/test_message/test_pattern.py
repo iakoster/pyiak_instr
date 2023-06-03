@@ -18,6 +18,7 @@ class TestMessageFieldStructPattern(unittest.TestCase):
             self,
             pattern,
             typename="basic",
+            direction=Code.ANY,
             size=0,
             is_dynamic=True,
         )
@@ -28,6 +29,7 @@ class TestMessageFieldStructPattern(unittest.TestCase):
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 typename="basic",
+                direction=Code.ANY,
             ),
             pattern.__init_kwargs__(),
         )
