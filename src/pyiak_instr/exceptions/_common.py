@@ -31,13 +31,13 @@ class NotAmongTheOptions(PyiError):
         options: Iterable[Any] | None = None,
     ):
         msg = f"{name} option "
+        if value is not None:
+            msg += f"{repr(value)} "
+
         if options is None:
             msg += "not allowed"
         else:
             msg += f"not in {{{', '.join(map(repr, options))}}}"
-
-        if value is not None:
-            msg += f", got {repr(value)}"
 
         super().__init__(msg=msg)
 

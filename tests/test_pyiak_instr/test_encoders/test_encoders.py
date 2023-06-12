@@ -110,14 +110,14 @@ class TestBytesEncoder(unittest.TestCase):
         with self.assertRaises(CodeNotAllowed) as exc:
             BytesEncoder().verify_fmt_order(Code.NONE, Code.NONE)
         self.assertEqual(
-            "code option not allowed, got <Code.NONE: 0>",
+            "code option <Code.NONE: 0> not allowed",
             exc.exception.args[0],
         )
 
         with self.assertRaises(CodeNotAllowed) as exc:
             BytesEncoder().verify_fmt_order(Code.U8, Code.NONE)
         self.assertEqual(
-            "code option not allowed, got <Code.NONE: 0>",
+            "code option <Code.NONE: 0> not allowed",
             exc.exception.args[0],
         )
 

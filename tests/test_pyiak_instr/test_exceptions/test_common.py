@@ -16,7 +16,7 @@ class TestCodeNotAllowed(unittest.TestCase):
 
     def test_args(self) -> None:
         self.assertTupleEqual(
-            ("code option not allowed, got <Code.CODE: 258>",),
+            ("code option <Code.CODE: 258> not allowed",),
             CodeNotAllowed(Code.CODE).args,
         )
 
@@ -34,7 +34,7 @@ class TestNotAmongTheOptions(unittest.TestCase):
     def test_args(self) -> None:
         ref = dict(
             case_1=("test option not allowed",),
-            case_2=("test option not in {1, 2}, got 3",),
+            case_2=("test option 3 not in {1, 2}",),
         )
         init = dict(
             case_1=dict(

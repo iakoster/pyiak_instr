@@ -135,8 +135,8 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
                     start=0, fmt=Code.U8, behaviour=Code.EXPECTED
                 )
             self.assertEqual(
-                "behaviour option not in {<Code.DMA: 1539>, "
-                "<Code.STRONG: 1540>}, got <Code.EXPECTED: 1541>",
+                "behaviour option <Code.EXPECTED: 1541> not in "
+                "{<Code.DMA: 1539>, <Code.STRONG: 1540>}",
                 exc.exception.args[0],
             )
 
@@ -144,8 +144,8 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
             with self.assertRaises(NotAmongTheOptions) as exc:
                 TIAddressMessageFieldStruct(units=Code.NONE)
             self.assertEqual(
-                "units option not in {<Code.WORDS: 768>, "
-                "<Code.BYTES: 257>}, got <Code.NONE: 0>",
+                "units option <Code.NONE: 0> not in {<Code.WORDS: 768>, "
+                "<Code.BYTES: 257>}",
                 exc.exception.args[0]
             )
 
@@ -291,7 +291,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
                     start=0, fmt=Code.U8, behaviour=Code.DMA
                 )
             self.assertEqual(
-                "behaviour option not allowed, got <Code.DMA: 1539>",
+                "behaviour option <Code.DMA: 1539> not allowed",
                 exc.exception.args[0],
             )
 
@@ -301,7 +301,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
                     start=0, fmt=Code.U8, units=Code.INT
                 )
             self.assertEqual(
-                "units option not allowed, got <Code.INT: 261>",
+                "units option <Code.INT: 261> not allowed",
                 exc.exception.args[0],
             )
 
