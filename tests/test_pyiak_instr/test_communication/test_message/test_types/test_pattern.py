@@ -343,6 +343,33 @@ class TestMessageStructPatternABC(unittest.TestCase):
             wo_attrs=["encoder"],
         )
 
+    def test_instance_for_direction(self) -> None:
+        ref = TIMessageStructPattern.basic().configure(
+                f0=TIMessageFieldStructPattern.static(),
+                f1=TIMessageFieldStructPattern.response(direction=Code.RX),
+                f2=TIMessageFieldStructPattern.data(direction=Code.TX),
+        )
+
+        self.assertListEqual(["f0", "f1", "f2"], ref.sub_pattern_names)
+        self.assertIs(ref, ref.instance_for_direction(Code.ANY))
+        self.assertListEqual(
+            ["f0", "f1"],
+            ref.instance_for_direction(Code.RX).sub_pattern_names
+        )
+        self.assertListEqual(
+            ["f0", "f2"],
+            ref.instance_for_direction(Code.TX).sub_pattern_names
+        )
+
+    def test_instance_for_direction_exc(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            TIMessageStructPattern.basic().configure(
+                f0=TIMessageFieldStructPattern.static(),
+            ).instance_for_direction(Code.NONE)
+        self.assertEqual(
+            "invalid direction: <Code.NONE: 0>", exc.exception.args[0]
+        )
+
 
 class TestMessagePatternABC(unittest.TestCase):
 
@@ -417,4 +444,31 @@ class TestMessagePatternABC(unittest.TestCase):
             fill_value=b"",
             has_fill_value=False,
             wo_attrs=["encoder"],
+        )
+
+    def test_get_for_direction(self) -> None:
+        pattern = TIMessagePattern.basic().configure(
+            s0=TIMessageStructPattern.basic().configure(
+                f0=TIMessageFieldStructPattern.static(),
+                f1=TIMessageFieldStructPattern.response(direction=Code.RX),
+                f2=TIMessageFieldStructPattern.data(direction=Code.TX),
+            ),
+        )
+
+        act = pattern.get_for_direction(Code.ANY)
+        self.assertIs(act.pattern, pattern)
+        self.assertEqual(
+            ["f0", "f1", "f2"], [i[0] for i in act.struct.items()]
+        )
+
+        act = pattern.get_for_direction(Code.RX)
+        self.assertIs(act.pattern, pattern)
+        self.assertEqual(
+            ["f0", "f1"], [i[0] for i in act.struct.items()]
+        )
+
+        act = pattern.get_for_direction(Code.TX)
+        self.assertIs(act.pattern, pattern)
+        self.assertEqual(
+            ["f0", "f2"], [i[0] for i in act.struct.items()]
         )

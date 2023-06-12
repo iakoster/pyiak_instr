@@ -7,7 +7,8 @@ from typing import (
 )
 
 from ....core import Code
-from ....exceptions import NotAmongTheOptions
+from ....exceptions import NotAmongTheOptions, NotConfiguredYet
+from ....types import SubPatternAdditions
 from ....store.bin.types import (
     BytesFieldStructPatternABC,
     BytesStoragePatternABC,
@@ -515,6 +516,48 @@ class MessageStructPatternABC(
     Represent base class of pattern for message struct.
     """
 
+    def instance_for_direction(self, direction: Code) -> Self:
+        """
+        Get `self` instance with fields specified for one specific direction.
+
+        Parameters
+        ----------
+        direction : Code
+            fields direction.
+
+        Returns
+        -------
+        Self
+            `self` instance with fields for `direction`.
+
+        Raises
+        ------
+        NotConfiguredYet
+            if pattern without fields.
+        ValueError
+            if direction not in {ANY, RX, TX}.
+        """
+        if len(self._sub_p) == 0:
+            raise NotConfiguredYet(self)
+
+        if direction is Code.ANY:
+            return self
+
+        if direction is Code.RX:
+            not_allowed = Code.TX
+        elif direction is Code.TX:
+            not_allowed = Code.RX
+        else:
+            raise ValueError(f"invalid direction: {direction!r}")
+
+        return self.__class__(**self.__init_kwargs__()).configure(
+            **{
+                n: p
+                for n, p in self._sub_p.items()
+                if p.direction is not not_allowed
+            }
+        )
+
     @classmethod
     def basic(
         cls,
@@ -548,6 +591,48 @@ class MessagePatternABC(
     """
     Represent base class of pattern for message.
     """
+
+    def get_for_direction(
+        self,
+        direction: Code,
+        changes_allowed: bool = False,
+        sub_additions: SubPatternAdditions = SubPatternAdditions(),
+        **additions: Any,
+    ) -> MessageT:
+        """
+        Get message instance with fields for specified direction.
+
+        Parameters
+        ----------
+        direction : Code
+            direction for fields.
+        changes_allowed: bool, default=False
+            allows situations where keys from the pattern overlap with kwargs.
+            If False, it causes an error on intersection, otherwise the
+            `additions` take precedence.
+        sub_additions: PatternAdditionsABC, default=PatternAdditionsABC()
+            additional initialization parameters for sub-objects.
+        **additions: Any
+            additional initialization parameters.
+
+        Returns
+        -------
+        MessageT
+            message witch specified for direction.
+        """
+        name = list(self._sub_p)[0]
+        storage = self._sub_p[name].instance_for_direction(direction)
+        pattern = self.__class__(**self.__init_kwargs__()).configure(
+            **{name: storage}
+        )
+
+        instance = pattern.get(
+            changes_allowed=changes_allowed,
+            sub_additions=sub_additions,
+            **additions,
+        )
+        object.__setattr__(instance, "_p", self)  # todo: refactor
+        return instance
 
     @classmethod
     def basic(cls, typename: str = "basic") -> Self:
