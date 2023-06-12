@@ -2,6 +2,7 @@ import unittest
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.types import SubPatternAdditions
+from src.pyiak_instr.exceptions import NotAmongTheOptions
 
 from .....utils import validate_object, get_object_attrs
 from .ti import (
@@ -130,6 +131,15 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                         TIMessageFieldStructPattern, typename
                     )().__init_kwargs__(),
                 )
+
+    def test_init_exc(self) -> None:
+        with self.assertRaises(NotAmongTheOptions) as exc:
+            TIMessageFieldStructPattern("", direction=Code.NONE)
+        self.assertEqual(
+            "direction option not in {<Code.RX: 1554>, <Code.TX: 1555>, "
+            "<Code.ANY: 5>}, got <Code.NONE: 0>",
+            exc.exception.args[0]
+        )
 
     def test_get(self) -> None:
         validate_object(

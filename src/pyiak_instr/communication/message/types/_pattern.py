@@ -122,45 +122,6 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         )
 
     @classmethod
-    def single(
-        cls,
-        typename: str = "single",
-        direction: Code = Code.ANY,
-        fmt: Code = Code.U8,
-        order: Code = Code.BIG_ENDIAN,
-        default: bytes = b"",
-    ) -> Self:
-        """
-        Get initialized pattern for single field.
-
-        Parameters
-        ----------
-        typename : str, default='single'
-            single typename.
-        direction : Code, default=Code.ANY
-            field direction.
-        fmt : Code, default=Code.U8
-            value format.
-        order : Code, default=Code.BIG_ENDIAN
-            value byte order.
-        default : bytes, default=b''
-            default value for field.
-
-        Returns
-        -------
-        Self
-            initialized pattern.
-        """
-        return cls(
-            typename=typename,
-            direction=direction,
-            bytes_expected=cls.get_fmt_bytesize(fmt),
-            fmt=fmt,
-            order=order,
-            default=default,
-        )
-
-    @classmethod
     def static(
         cls,
         typename: str = "static",
