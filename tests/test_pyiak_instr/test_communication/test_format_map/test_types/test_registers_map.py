@@ -61,7 +61,7 @@ class TestRegisterABC(unittest.TestCase):
 
         self.assertEqual(b"\x00\x14\x01\x00", msg.content())
         for name, ref in dict(
-            f0=b"\x00\x14", f1=b"\x01", f2=b"\x00", f3=b""
+            f0=b"\x00\x14", f1=b"\x01", f3=b"\x00", f4=b""
         ).items():
             self.assertEqual(ref, msg.content(name))
 
@@ -70,7 +70,7 @@ class TestRegisterABC(unittest.TestCase):
             msg = self._instance().read(self._pattern())
             self.assertEqual(b"\x00\x14\x00\x2a", msg.content())
             for name, ref in dict(
-                    f0=b"\x00\x14", f1=b"\x00", f2=b"\x2a", f3=b""
+                    f0=b"\x00\x14", f1=b"\x00", f3=b"\x2a", f4=b""
             ).items():
                 self.assertEqual(ref, msg.content(name))
 
@@ -80,7 +80,7 @@ class TestRegisterABC(unittest.TestCase):
             )
             self.assertEqual(b"\x00\x14\x00\x00", msg.content())
             for name, ref in dict(
-                    f0=b"\x00\x14", f1=b"\x00", f2=b"\x00", f3=b""
+                    f0=b"\x00\x14", f1=b"\x00", f3=b"\x00", f4=b""
             ).items():
                 self.assertEqual(ref, msg.content(name))
 
@@ -93,8 +93,8 @@ class TestRegisterABC(unittest.TestCase):
             for name, ref in dict(
                     f0=b"\x00\x14",
                     f1=b"\x01",
-                    f2=b"\x01",
-                    f3=b"\x00\x00\x00\x01",
+                    f3=b"\x01",
+                    f4=b"\x00\x00\x00\x01",
             ).items():
                 self.assertEqual(ref, msg.content(name))
 
@@ -139,10 +139,11 @@ class TestRegisterABC(unittest.TestCase):
             s0=MessageStructPattern.basic().configure(
                 f0=MessageFieldStructPattern.address(fmt=Code.U16),
                 f1=MessageFieldStructPattern.operation(),
-                f2=MessageFieldStructPattern.dynamic_length(
+                f2=MessageFieldStructPattern.response(direction=Code.RX),
+                f3=MessageFieldStructPattern.dynamic_length(
                     units=Code.WORDS, behaviour=dlen_behaviour
                 ),
-                f3=MessageFieldStructPattern.data(fmt=Code.U32),
+                f4=MessageFieldStructPattern.data(fmt=Code.U32),
             )
         )
 

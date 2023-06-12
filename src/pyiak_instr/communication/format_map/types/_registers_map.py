@@ -114,7 +114,8 @@ class RegisterABC(ABC, Generic[MessageT]):
         if fields_data is None:
             fields_data = {}
 
-        msg: MessageT = pattern.get(
+        msg: MessageT = pattern.get_for_direction(
+            Code.TX,
             changes_allowed=changes_allowed,
             sub_additions=sub_additions,
             **top_additions,
