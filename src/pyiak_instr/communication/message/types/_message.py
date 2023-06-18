@@ -9,7 +9,7 @@ from typing import (
 )
 
 from ....core import Code
-from ....store.bin.types import (
+from ....store.bin import (
     Container as BinContainer,
 )
 from ._struct import (

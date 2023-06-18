@@ -9,7 +9,7 @@ from typing import (
 from ....core import Code
 from ....exceptions import NotAmongTheOptions, NotConfiguredYet
 from ....types import SubPatternAdditions
-from ....store.bin.types import (
+from ....store.bin import (
     FieldPattern as BinFieldPattern,
     ContinuousStructPattern as BinStructPattern,
     ContainerPattern as BinContainerPattern,

@@ -9,8 +9,8 @@ from typing import (
     overload,
 )
 
-from ....typing import WithBaseStringMethods
-from ....encoders import BytesDecodeT, BytesEncodeT
+from ...typing import WithBaseStringMethods
+from ...encoders import BytesDecodeT, BytesEncodeT
 from ._struct import (
     Field,
     Struct,

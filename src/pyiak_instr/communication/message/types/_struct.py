@@ -14,7 +14,7 @@ from typing import (
 from ....exceptions import ContentError, NotAmongTheOptions
 from ....core import Code
 from ....encoders import BytesEncodeT
-from ....store.bin.types import (
+from ....store.bin import (
     STRUCT_DATACLASS,
     Field as BinField,
     Struct as BinStruct,

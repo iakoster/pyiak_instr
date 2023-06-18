@@ -3,7 +3,7 @@ from dataclasses import InitVar
 
 from src.pyiak_instr.rwfile import RWConfig
 from src.pyiak_instr.encoders import BytesEncoder
-from src.pyiak_instr.store.bin.types import (
+from src.pyiak_instr.store.bin import (
     STRUCT_DATACLASS,
     Field,
     FieldPattern,

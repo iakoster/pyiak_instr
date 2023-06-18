@@ -12,9 +12,9 @@ from typing import (
     overload,
 )
 
-from ....core import Code
-from ....exceptions import ContentError
-from ....encoders import BytesDecodeT, BytesEncodeT, BytesEncoder
+from ...core import Code
+from ...exceptions import ContentError
+from ...encoders import BytesDecodeT, BytesEncodeT, BytesEncoder
 
 
 __all__ = [

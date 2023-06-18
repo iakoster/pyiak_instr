@@ -9,14 +9,14 @@ from typing import (
     cast,
 )
 
-from ....exceptions import NotConfiguredYet
-from ....types import (
+from ...exceptions import NotConfiguredYet
+from ...types import (
     MetaPatternABC,
     PatternABC,
     SubPatternAdditions,
     WritablePatternABC,
 )
-from ....rwfile.types import RWData
+from ...rwfile.types import RWData
 from ._container import Container
 from ._struct import (
     Field,
