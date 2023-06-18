@@ -6,10 +6,10 @@ from typing import (
     TypeVar,
 )
 
-from ....core import Code
-from ....exceptions import NotAmongTheOptions, NotConfiguredYet
-from ....types import SubPatternAdditions
-from ....store.bin import (
+from ...core import Code
+from ...exceptions import NotAmongTheOptions, NotConfiguredYet
+from ...types import SubPatternAdditions
+from ...store.bin import (
     FieldPattern as BinFieldPattern,
     ContinuousStructPattern as BinStructPattern,
     ContainerPattern as BinContainerPattern,

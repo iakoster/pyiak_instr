@@ -4,7 +4,7 @@ from typing import Union
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.encoders import BytesEncoder
-from src.pyiak_instr.communication.message.types import (
+from src.pyiak_instr.communication.message import (
     STRUCT_DATACLASS,
     Basic,
     Static,

@@ -3,10 +3,10 @@ import unittest
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.encoders import BytesEncoder
 from src.pyiak_instr.exceptions import NotAmongTheOptions, ContentError
-from src.pyiak_instr.communication.message.types import Struct
 
 from .....utils import validate_object, get_object_attrs
 
+from src.pyiak_instr.communication.message import STRUCT_DATACLASS
 from tests.pyiak_instr_ti.communication import (
     TIBasic,
     TIStatic,
@@ -19,6 +19,11 @@ from tests.pyiak_instr_ti.communication import (
     TIResponse,
     TIStruct,
 )
+
+
+@STRUCT_DATACLASS
+class TIBasicAnother(TIBasic):
+    ...
 
 
 class TestMessageFieldStruct(unittest.TestCase):
@@ -554,11 +559,11 @@ class TestMessageStructABC(unittest.TestCase):
 
         with self.subTest(test="not specified code"):
             with self.assertRaises(KeyError) as exc:
-                Struct(fields={
-                    "f0": TIBasic(name="f0")
+                TIStruct(fields={
+                    "f0": TIBasicAnother(name="f0")
                 })
             self.assertEqual(
-                "TIBasic not represented in codes",
+                "TIBasicAnother not represented in codes",
                 exc.exception.args[0],
             )
 

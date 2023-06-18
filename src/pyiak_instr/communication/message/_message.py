@@ -8,8 +8,8 @@ from typing import (
     TypeVar,
 )
 
-from ....core import Code
-from ....store.bin import (
+from ...core import Code
+from ...store.bin import (
     Container as BinContainer,
 )
 from ._struct import (
