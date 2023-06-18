@@ -7,6 +7,7 @@ from typing import (
 )
 
 from ...core import Code
+from ...encoders import BytesEncoder
 from ...exceptions import NotAmongTheOptions, NotConfiguredYet
 from ...types import Additions
 from ...store.bin import (
@@ -58,23 +59,6 @@ class FieldPattern(BinFieldPattern[FieldT]):
 
         self._dir = direction
         super().__init__(typename, **parameters)
-
-    @staticmethod
-    @abstractmethod
-    def get_fmt_bytesize(fmt: Code) -> int:
-        """
-        Get fmt size in bytes.
-
-        Parameters
-        ----------
-        fmt : Code
-            fmt code.
-
-        Returns
-        -------
-        int
-            fmt bytesize.
-        """
 
     @classmethod
     def basic(
@@ -486,6 +470,23 @@ class FieldPattern(BinFieldPattern[FieldT]):
             descs=descs,
             default=default,
         )
+
+    @staticmethod
+    def get_fmt_bytesize(fmt: Code) -> int:
+        """
+        Get fmt size in bytes.
+
+        Parameters
+        ----------
+        fmt : Code
+            fmt code.
+
+        Returns
+        -------
+        int
+            fmt bytesize.
+        """
+        return BytesEncoder(fmt=fmt).value_size
 
     @property
     def direction(self) -> Code:

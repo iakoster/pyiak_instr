@@ -317,7 +317,7 @@ class TestContinuousBytesStorageStructPatternABC(unittest.TestCase):
         compare_objects(self, ref, res)
         for ref_field, res_field in zip(ref, res):
             with self.subTest(field=ref_field.name):
-                compare_objects(self, ref_field, res_field)
+                compare_objects(self, ref_field, res_field, wo_attrs=["encoder"])
 
     def test__modify_additions(self) -> None:
 

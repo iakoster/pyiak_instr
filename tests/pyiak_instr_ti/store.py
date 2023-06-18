@@ -17,8 +17,7 @@ from src.pyiak_instr.store.bin import (
 
 @STRUCT_DATACLASS
 class TIField(Field):
-
-    encoder: InitVar[type[BytesEncoder]] = BytesEncoder
+    ...
 
 
 @STRUCT_DATACLASS
@@ -27,7 +26,7 @@ class TIStruct(Struct[TIField]):
 
 
 class TIContainer(Container[TIField, TIStruct, "ContainerPattern"]):
-    _storage_struct_type = TIStruct
+    ...
 
 
 class TIFieldPattern(FieldPattern[TIField]):
@@ -49,6 +48,5 @@ class TIContinuousStructPattern(
 
 
 class TIContainerPattern(ContainerPattern[TIContainer, TIStructPattern]):
-    _rwdata = RWConfig
     _sub_p_type = TIStructPattern
     _options = {"basic": TIContainer}
