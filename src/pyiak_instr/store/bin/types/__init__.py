@@ -4,28 +4,28 @@ Types (:mod:`pyiak_instr.store.bin`)
 ====================================
 """
 from ._pattern import (
-    BytesFieldStructPatternABC,
-    BytesStoragePatternABC,
-    BytesStorageStructPatternABC,
-    ContinuousBytesStorageStructPatternABC,
+    FieldPattern,
+    ContainerPattern,
+    StructPattern,
+    ContinuousStructPattern,
 )
 from ._struct import (
     STRUCT_DATACLASS,
-    BytesFieldStructABC,
-    BytesStorageStructABC,
+    Field,
+    Struct,
 )
-from ._bin import (
-    BytesStorageABC,
+from ._container import (
+    Container,
 )
 
 
 __all__ = [
     "STRUCT_DATACLASS",
-    "BytesFieldStructABC",
-    "BytesFieldStructPatternABC",
-    "BytesStorageABC",
-    "BytesStoragePatternABC",
-    "BytesStorageStructABC",
-    "BytesStorageStructPatternABC",
-    "ContinuousBytesStorageStructPatternABC",
+    "Field",
+    "FieldPattern",
+    "Container",
+    "ContainerPattern",
+    "Struct",
+    "StructPattern",
+    "ContinuousStructPattern",
 ]

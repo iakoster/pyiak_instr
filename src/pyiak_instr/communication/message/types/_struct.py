@@ -1,7 +1,8 @@
 """Private module of ``pyiak_instr.communication.message.types``."""
+from __future__ import annotations
 from dataclasses import field as _field
 from typing import (
-    TYPE_CHECKING,
+    Any,
     ClassVar,
     Generic,
     Self,
@@ -15,39 +16,32 @@ from ....core import Code
 from ....encoders import BytesEncodeT
 from ....store.bin.types import (
     STRUCT_DATACLASS,
-    BytesFieldStructABC,
-    BytesStorageStructABC,
+    Field as BinField,
+    Struct as BinStruct,
 )
-
-if TYPE_CHECKING:
-    from typing import Any
 
 
 __all__ = [
     "STRUCT_DATACLASS",
-    "MessageFieldStructABC",
-    "StaticMessageFieldStructABC",
-    "AddressMessageFieldStructABC",
-    "CrcMessageFieldStructABC",
-    "DataMessageFieldStructABC",
-    "DynamicLengthMessageFieldStructABC",
-    "IdMessageFieldStructABC",
-    "OperationMessageFieldStructABC",
-    "ResponseMessageFieldStructABC",
-    "MessageFieldStructABCUnionT",
-    "MessageStructGetParser",
-    "MessageStructHasParser",
-    "MessageStructABC",
+    "Basic",
+    "Static",
+    "Address",
+    "Crc",
+    "Data",
+    "DynamicLength",
+    "Id",
+    "Operation",
+    "Response",
+    "FieldUnionT",
+    "StructGetParser",
+    "StructHasParser",
+    "Struct",
 ]
-
-
-FieldStructT = TypeVar("FieldStructT", bound="MessageFieldStructABC")
-MessageStructT = TypeVar("MessageStructT", bound="MessageStructABC[Any]")
 
 
 # todo: refactor (join classes to one and use metaclass)
 @STRUCT_DATACLASS
-class MessageFieldStructABC(BytesFieldStructABC):
+class Basic(BinField):
     """
     Represents a base class for base field.
     """
@@ -68,8 +62,11 @@ class MessageFieldStructABC(BytesFieldStructABC):
             )
 
 
+BasicT = TypeVar("BasicT", bound=Basic)
+
+
 @STRUCT_DATACLASS
-class StaticMessageFieldStructABC(MessageFieldStructABC):
+class Static(Basic):
     """
     Represents a base class for field with static single word (e.g. preamble).
     """
@@ -112,7 +109,7 @@ class StaticMessageFieldStructABC(MessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class AddressMessageFieldStructABC(MessageFieldStructABC):
+class Address(Basic):
     """
     Represents base class for field with address.
     """
@@ -136,7 +133,7 @@ class AddressMessageFieldStructABC(MessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class CrcMessageFieldStructABC(MessageFieldStructABC):
+class Crc(Basic):
     """
     Represents base class for field with crc.
     """
@@ -185,7 +182,7 @@ class CrcMessageFieldStructABC(MessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class DataMessageFieldStructABC(MessageFieldStructABC):
+class Data(Basic):
     """Represents a field of a Message with data."""
 
     def _verify_modified_values(self) -> None:
@@ -196,7 +193,7 @@ class DataMessageFieldStructABC(MessageFieldStructABC):
 
 # todo: rename to DynamicLength
 @STRUCT_DATACLASS
-class DynamicLengthMessageFieldStructABC(MessageFieldStructABC):
+class DynamicLength(Basic):
     """
     Represents base class for field with length of dynamic field.
     """
@@ -254,14 +251,14 @@ class DynamicLengthMessageFieldStructABC(MessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class IdMessageFieldStructABC(MessageFieldStructABC):
+class Id(Basic):
     """Represents a field with a unique identifier of a particular message."""
 
     is_single = True
 
 
 @STRUCT_DATACLASS
-class OperationMessageFieldStructABC(MessageFieldStructABC):
+class Operation(Basic):
     """
     Represents base class for field with operation.
     """
@@ -356,7 +353,7 @@ class OperationMessageFieldStructABC(MessageFieldStructABC):
 
 
 @STRUCT_DATACLASS
-class ResponseMessageFieldStructABC(MessageFieldStructABC):
+class Response(Basic):
     """
     Represents base class for field with response.
     """
@@ -452,138 +449,218 @@ class ResponseMessageFieldStructABC(MessageFieldStructABC):
         )
 
 
-MessageFieldStructABCUnionT = Union[  # pylint: disable=invalid-name
-    MessageFieldStructABC,
-    StaticMessageFieldStructABC,
-    AddressMessageFieldStructABC,
-    CrcMessageFieldStructABC,
-    DataMessageFieldStructABC,
-    DynamicLengthMessageFieldStructABC,
-    IdMessageFieldStructABC,
-    OperationMessageFieldStructABC,
-    ResponseMessageFieldStructABC,
+FieldUnionT = Union[  # pylint: disable=invalid-name
+    Basic,
+    Static,
+    Address,
+    Crc,
+    Data,
+    DynamicLength,
+    Id,
+    Operation,
+    Response,
 ]
 
 
-class MessageStructGetParser(Generic[MessageStructT, FieldStructT]):
+@STRUCT_DATACLASS
+class Struct(BinStruct[BasicT]):
+    """
+    Represents base class for message structure.
+    """
+
+    divisible: bool = False
+    """shows that the message can be divided by the infinite field."""
+
+    mtu: int = 1500
+    """max size of one message part."""
+
+    _field_type_codes: dict[type[BasicT], Code] = _field(
+        default_factory=dict, init=False
+    )  # ClassVar
+
+    _field_types: dict[Code, str] = _field(default_factory=dict, init=False)
+
+    def __post_init__(self, fields: dict[str, BasicT]) -> None:
+        super().__post_init__(fields)
+
+        field_types = {}
+        for struct in self:
+            field_class = struct.__class__
+            if field_class not in self._field_type_codes:
+                raise KeyError(
+                    f"{field_class.__name__} not represented in codes"
+                )
+
+            field_code = self._field_type_codes[field_class]
+            if field_code not in field_types:
+                field_types[field_code] = struct.name
+
+        self._setattr("_field_types", field_types)
+
+        if self.has.dynamic_length and not self.is_dynamic:
+            raise TypeError(
+                "dynamic length field without dynamic length detected"
+            )
+
+        if self.divisible:
+            if not self.is_dynamic:
+                raise TypeError(
+                    f"{self.__class__.__name__} can not be divided because "
+                    "it does not have a dynamic field"
+                )
+
+            min_mtu = (
+                self.minimum_size
+                + self._f[self.dynamic_field_name].word_bytesize
+            )
+            if self.mtu < min_mtu:
+                raise ValueError(
+                    "MTU value does not allow you to split the message if "
+                    f"necessary. The minimum MTU is {min_mtu} "
+                    f"(got {self.mtu})"
+                )
+
+    @property
+    def get(self) -> StructGetParser[Self, BasicT]:
+        """
+        Returns
+        -------
+        StructGetParser
+            message get parser.
+        """
+        return StructGetParser(self, self._field_types)
+
+    @property
+    def has(self) -> StructHasParser[Self, BasicT]:
+        """
+        Returns
+        -------
+        MessageHasParserABC
+            message has parser.
+        """
+        return StructHasParser(self, self._field_types)
+
+
+StructT = TypeVar("StructT", bound=Struct[Any])
+
+
+class StructGetParser(Generic[StructT, BasicT]):
     """
     Represents parser to getting specified field struct.
     """
 
     def __init__(
         self,
-        message: MessageStructT,
+        message: StructT,
         codes: dict[Code, str],
     ) -> None:
         self._msg = message
         self._codes = codes
 
     @property
-    def basic(self) -> MessageFieldStructABC:
+    def basic(self) -> Basic:
         """
         Returns
         -------
-        MessageFieldStructABC
+        Basic
             first in message basic field struct.
         """
-        return cast(MessageFieldStructABC, self(Code.BASIC))
+        return cast(Basic, self(Code.BASIC))
 
     @property
-    def static(self) -> StaticMessageFieldStructABC:
+    def static(self) -> Static:
         """
         Returns
         -------
-        StaticMessageFieldStructABC
+        Static
             first in message static field struct.
         """
-        return cast(StaticMessageFieldStructABC, self(Code.STATIC))
+        return cast(Static, self(Code.STATIC))
 
     @property
-    def address(self) -> AddressMessageFieldStructABC:
+    def address(self) -> Address:
         """
         Returns
         -------
-        AddressMessageFieldStructABC
+        Address
             first in message address field struct.
         """
-        return cast(AddressMessageFieldStructABC, self(Code.ADDRESS))
+        return cast(Address, self(Code.ADDRESS))
 
     @property
-    def crc(self) -> CrcMessageFieldStructABC:
+    def crc(self) -> Crc:
         """
         Returns
         -------
-        CrcMessageFieldStructABC
+        Crc
             first in message crc field struct.
         """
-        return cast(CrcMessageFieldStructABC, self(Code.CRC))
+        return cast(Crc, self(Code.CRC))
 
     @property
-    def data(self) -> DataMessageFieldStructABC:
+    def data(self) -> Data:
         """
         Returns
         -------
-        DataMessageFieldStructABC
+        Data
             first in message data field struct.
         """
-        return cast(DataMessageFieldStructABC, self(Code.DATA))
+        return cast(Data, self(Code.DATA))
 
     @property
-    def dynamic_length(self) -> DynamicLengthMessageFieldStructABC:
+    def dynamic_length(self) -> DynamicLength:
         """
         Returns
         -------
-        DynamicLengthMessageFieldStructABC
+        DynamicLength
             first in message data length field struct.
         """
-        return cast(
-            DynamicLengthMessageFieldStructABC, self(Code.DYNAMIC_LENGTH)
-        )
+        return cast(DynamicLength, self(Code.DYNAMIC_LENGTH))
 
     @property
-    def id_(self) -> IdMessageFieldStructABC:
+    def id_(self) -> Id:
         """
         Returns
         -------
-        IdMessageFieldStructABC
+        Id
             first in message id field struct.
         """
-        return cast(IdMessageFieldStructABC, self(Code.ID))
+        return cast(Id, self(Code.ID))
 
     @property
-    def operation(self) -> OperationMessageFieldStructABC:
+    def operation(self) -> Operation:
         """
         Returns
         -------
-        OperationMessageFieldStructABC
+        Operation
             first in message operation field struct.
         """
-        return cast(OperationMessageFieldStructABC, self(Code.OPERATION))
+        return cast(Operation, self(Code.OPERATION))
 
     @property
-    def response(self) -> ResponseMessageFieldStructABC:
+    def response(self) -> Response:
         """
         Returns
         -------
-        ResponseMessageFieldStructABC
+        Response
             first in message response field struct.
         """
-        return cast(ResponseMessageFieldStructABC, self(Code.RESPONSE))
+        return cast(Response, self(Code.RESPONSE))
 
-    def __call__(self, code: Code) -> FieldStructT:
+    def __call__(self, code: Code) -> BasicT:
         if code not in self._codes:
             raise TypeError(f"field instance with code {code!r} not found")
-        return cast(FieldStructT, self._msg[self._codes[code]])
+        return cast(BasicT, self._msg[self._codes[code]])
 
 
-class MessageStructHasParser(Generic[MessageStructT, FieldStructT]):
+class StructHasParser(Generic[StructT, BasicT]):
     """
     Represents parser to checking that field type exists.
     """
 
     def __init__(
         self,
-        message: MessageStructT,
+        message: StructT,
         codes: dict[Code, str],
     ) -> None:
         self._msg = message
@@ -681,82 +758,3 @@ class MessageStructHasParser(Generic[MessageStructT, FieldStructT]):
 
     def __call__(self, code: Code) -> bool:
         return code in self._codes
-
-
-@STRUCT_DATACLASS
-class MessageStructABC(BytesStorageStructABC[FieldStructT]):
-    """
-    Represents base class for message structure.
-    """
-
-    divisible: bool = False
-    """shows that the message can be divided by the infinite field."""
-
-    mtu: int = 1500
-    """max size of one message part."""
-
-    _field_type_codes: dict[type[FieldStructT], Code] = _field(
-        default_factory=dict, init=False
-    )  # ClassVar
-
-    _field_types: dict[Code, str] = _field(default_factory=dict, init=False)
-
-    def __post_init__(self, fields: dict[str, FieldStructT]) -> None:
-        super().__post_init__(fields)
-
-        field_types = {}
-        for struct in self:
-            field_class = struct.__class__
-            if field_class not in self._field_type_codes:
-                raise KeyError(
-                    f"{field_class.__name__} not represented in codes"
-                )
-
-            field_code = self._field_type_codes[field_class]
-            if field_code not in field_types:
-                field_types[field_code] = struct.name
-
-        self._setattr("_field_types", field_types)
-
-        if self.has.dynamic_length and not self.is_dynamic:
-            raise TypeError(
-                "dynamic length field without dynamic length detected"
-            )
-
-        if self.divisible:
-            if not self.is_dynamic:
-                raise TypeError(
-                    f"{self.__class__.__name__} can not be divided because "
-                    "it does not have a dynamic field"
-                )
-
-            min_mtu = (
-                self.minimum_size
-                + self._f[self.dynamic_field_name].word_bytesize
-            )
-            if self.mtu < min_mtu:
-                raise ValueError(
-                    "MTU value does not allow you to split the message if "
-                    f"necessary. The minimum MTU is {min_mtu} "
-                    f"(got {self.mtu})"
-                )
-
-    @property
-    def get(self) -> MessageStructGetParser[Self, FieldStructT]:
-        """
-        Returns
-        -------
-        MessageStructGetParser
-            message get parser.
-        """
-        return MessageStructGetParser(self, self._field_types)
-
-    @property
-    def has(self) -> MessageStructHasParser[Self, FieldStructT]:
-        """
-        Returns
-        -------
-        MessageHasParserABC
-            message has parser.
-        """
-        return MessageStructHasParser(self, self._field_types)

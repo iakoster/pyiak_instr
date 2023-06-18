@@ -19,8 +19,8 @@ from ....encoders import BytesDecodeT, BytesEncodeT, BytesEncoder
 
 __all__ = [
     "STRUCT_DATACLASS",
-    "BytesFieldStructABC",
-    "BytesStorageStructABC",
+    "Field",
+    "Struct",
 ]
 
 
@@ -30,7 +30,7 @@ STRUCT_DATACLASS = dataclass(frozen=True, kw_only=True)
 # todo: drop to default
 # todo: shortcut decode default?
 @STRUCT_DATACLASS
-class BytesFieldStructABC(ABC):
+class Field(ABC):
     """
     Represents base class for field structure.
     """
@@ -307,11 +307,11 @@ class BytesFieldStructABC(ABC):
         return self.bytes_expected // self.word_bytesize
 
 
-FieldStructT = TypeVar("FieldStructT", bound=BytesFieldStructABC)
+FieldT = TypeVar("FieldT", bound=Field)
 
 
 @STRUCT_DATACLASS
-class BytesStorageStructABC(ABC, Generic[FieldStructT]):
+class Struct(ABC, Generic[FieldT]):
     """
     Represents base class for storage structure.
     """
@@ -319,15 +319,15 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
     name: str = "std"
     """name of storage configuration."""
 
-    fields: InitVar[dict[str, FieldStructT]] = {}  # type: ignore[assignment]
+    fields: InitVar[dict[str, FieldT]] = {}  # type: ignore[assignment]
     """dictionary of fields."""
 
     dynamic_field_name: str = field_(default="", init=False)
     """dynamic field name."""
 
-    _f: dict[str, FieldStructT] = field_(default_factory=dict, init=False)
+    _f: dict[str, FieldT] = field_(default_factory=dict, init=False)
 
-    def __post_init__(self, fields: dict[str, FieldStructT]) -> None:
+    def __post_init__(self, fields: dict[str, FieldT]) -> None:
         if len(fields) == 0:
             raise ValueError(f"{self.__class__.__name__} without fields")
         if "" in fields:
@@ -452,7 +452,7 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
             return self._get_all_fields(kwargs)
         return {f: self[f].encode(c, verify=True) for f, c in kwargs.items()}
 
-    def items(self) -> Generator[tuple[str, FieldStructT], None, None]:
+    def items(self) -> Generator[tuple[str, FieldT], None, None]:
         """
         Yields
         ------
@@ -619,11 +619,11 @@ class BytesStorageStructABC(ABC, Generic[FieldStructT]):
         """Check that field name in message."""
         return name in self._f
 
-    def __getitem__(self, name: str) -> FieldStructT:
+    def __getitem__(self, name: str) -> FieldT:
         """Get field struct."""
         return self._f[name]
 
-    def __iter__(self) -> Generator[FieldStructT, None, None]:
+    def __iter__(self) -> Generator[FieldT, None, None]:
         """Iterate by field structs."""
         for struct in self._f.values():  # pylint: disable=no-member
             yield struct

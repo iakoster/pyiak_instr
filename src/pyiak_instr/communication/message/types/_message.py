@@ -10,38 +10,36 @@ from typing import (
 
 from ....core import Code
 from ....store.bin.types import (
-    BytesStorageABC,
+    Container as BinContainer,
 )
 from ._struct import (
-    MessageFieldStructABC,
-    MessageStructGetParser,
-    MessageStructHasParser,
-    MessageStructABC,
+    Basic,
+    StructGetParser,
+    StructHasParser,
+    Struct,
 )
 
 if TYPE_CHECKING:
-    from ._pattern import MessagePatternABC
+    from ._pattern import MessagePattern
 
 
 __all__ = [
-    "MessageABC",
+    "Message",
 ]
 
 
 AddressT = TypeVar("AddressT")
-FieldStructT = TypeVar("FieldStructT", bound=MessageFieldStructABC)
-MessageStructT = TypeVar("MessageStructT", bound=MessageStructABC[Any])
-MessagePatternT = TypeVar(
-    "MessagePatternT", bound="MessagePatternABC[Any, Any]"
-)
+FieldT = TypeVar("FieldT", bound=Basic)
+StructT = TypeVar("StructT", bound=Struct[Any])
+PatternT = TypeVar("PatternT", bound="MessagePattern[Any, Any]")
 
 
 # todo: clear src and dst?
 # todo: get rx and tx class instance
 # todo: field parser
-class MessageABC(
-    BytesStorageABC[FieldStructT, MessageStructT, MessagePatternT],
-    Generic[FieldStructT, MessageStructT, MessagePatternT, AddressT],
+class Message(
+    BinContainer[FieldT, StructT, PatternT],
+    Generic[FieldT, StructT, PatternT, AddressT],
 ):
     """
     Represents base class for message.
@@ -49,8 +47,8 @@ class MessageABC(
 
     def __init__(
         self,
-        storage: MessageStructT,
-        pattern: MessagePatternT | None = None,
+        storage: StructT,
+        pattern: PatternT | None = None,
     ):
         super().__init__(storage, pattern=pattern)
         if self._s.divisible and self.has.address:
@@ -219,21 +217,21 @@ class MessageABC(
         self._dst = destination
 
     @property
-    def get(self) -> MessageStructGetParser[MessageStructT, FieldStructT]:
+    def get(self) -> StructGetParser[StructT, FieldT]:
         """
         Returns
         -------
-        MessageStructGetParser
+        StructGetParser
             message struct get parser.
         """
         return self._s.get
 
     @property
-    def has(self) -> MessageStructHasParser[MessageStructT, FieldStructT]:
+    def has(self) -> StructHasParser[StructT, FieldT]:
         """
         Returns
         -------
-        MessageStructHasParser
+        StructHasParser
             message struct has parser.
         """
         return self._s.has

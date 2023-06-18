@@ -17,37 +17,27 @@ from ....types import (
     WritablePatternABC,
 )
 from ....rwfile.types import RWData
-from ._bin import BytesStorageABC
+from ._container import Container
 from ._struct import (
-    BytesFieldStructABC,
-    BytesStorageStructABC,
+    Field,
+    Struct,
 )
 
 
 __all__ = [
-    "BytesFieldStructPatternABC",
-    "BytesStorageStructPatternABC",
-    "BytesStoragePatternABC",
-    "ContinuousBytesStorageStructPatternABC",
+    "FieldPattern",
+    "StructPattern",
+    "ContainerPattern",
+    "ContinuousStructPattern",
 ]
 
 
-FieldStructT = TypeVar("FieldStructT", bound=BytesFieldStructABC)
-StorageStructT = TypeVar("StorageStructT", bound=BytesStorageStructABC[Any])
-StorageT = TypeVar("StorageT", bound=BytesStorageABC[Any, Any, Any])
-
-FieldStructPatternT = TypeVar(
-    "FieldStructPatternT", bound="BytesFieldStructPatternABC[Any]"
-)
-StorageStructPatternT = TypeVar(
-    "StorageStructPatternT", bound="BytesStorageStructPatternABC[Any, Any]"
-)
-StoragePatternT = TypeVar(
-    "StoragePatternT", bound="BytesStoragePatternABC[Any, Any]"
-)
+FieldT = TypeVar("FieldT", bound=Field)
+StructT = TypeVar("StructT", bound=Struct[Any])
+ContainerT = TypeVar("ContainerT", bound=Container[Any, Any, Any])
 
 
-class BytesFieldStructPatternABC(PatternABC[FieldStructT]):
+class FieldPattern(PatternABC[FieldT]):
     """
     Represent abstract class of pattern for bytes struct (field).
     """
@@ -85,9 +75,10 @@ class BytesFieldStructPatternABC(PatternABC[FieldStructT]):
         return 0
 
 
-class BytesStorageStructPatternABC(
-    MetaPatternABC[StorageStructT, FieldStructPatternT]
-):
+FieldtPatternT = TypeVar("FieldtPatternT", bound=FieldPattern[Any])
+
+
+class StructPattern(MetaPatternABC[StructT, FieldtPatternT]):
     """
     Represent abstract class of pattern for bytes struct (storage).
     """
@@ -102,8 +93,11 @@ class BytesStorageStructPatternABC(
             sub_additions.update_additions(name, name=name)
 
 
-class ContinuousBytesStorageStructPatternABC(
-    BytesStorageStructPatternABC[StorageStructT, FieldStructPatternT],
+StructPatternT = TypeVar("StructPatternT", bound=StructPattern[Any, Any])
+
+
+class ContinuousStructPattern(
+    StructPattern[StructT, FieldtPatternT],
 ):
     """
     Represents methods for configure continuous storage.
@@ -182,8 +176,8 @@ class ContinuousBytesStorageStructPatternABC(
         raise AssertionError("dynamic field not found")
 
 
-class BytesStoragePatternABC(
-    MetaPatternABC[StorageT, StorageStructPatternT], WritablePatternABC
+class ContainerPattern(
+    MetaPatternABC[ContainerT, StructPatternT], WritablePatternABC
 ):
     """
     Represent pattern for bytes storage.
@@ -192,7 +186,7 @@ class BytesStoragePatternABC(
     _rwdata: type[RWData[ConfigParser]]
     _sub_p_par_name = "storage"
 
-    def configure(self, **patterns: StorageStructPatternT) -> Self:
+    def configure(self, **patterns: StructPatternT) -> Self:
         """
         Configure bytes storage pattern.
 
@@ -240,7 +234,7 @@ class BytesStoragePatternABC(
         if len(self._sub_p) == 0:
             raise NotConfiguredYet(self)
 
-        pattern: StorageStructPatternT
+        pattern: StructPatternT
         ((name, pattern),) = self._sub_p.items()
         pars = {
             "_": self.__init_kwargs__(),

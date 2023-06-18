@@ -13,7 +13,8 @@ from src.pyiak_instr.encoders.types import Encoder
 
 from ....env import TEST_DATA_DIR
 from .....utils import validate_object, compare_objects
-from .ti import TIFieldStruct, TIStorageStruct, TIStorage
+
+from tests.pyiak_instr_ti.store import TIField, TIStruct, TIContainer
 
 
 DATA_DIR = TEST_DATA_DIR / __name__.split(".")[-1]
@@ -146,32 +147,32 @@ class TestBytesStorageABC(unittest.TestCase):
         self.assertEqual(255, len(obj))
 
     def test_magic_str(self) -> None:
-        obj = TIStorage(TIStorageStruct(
+        obj = TIContainer(TIStruct(
             fields=dict(
-                f0=TIFieldStruct(
+                f0=TIField(
                     name="f0",
                     start=0,
                     default=b"\xfa",
                     stop=1,
                 ),
-                f1=TIFieldStruct(
+                f1=TIField(
                     name="f1",
                     start=1,
                     bytes_expected=2,
                     fmt=Code.U16,
                 ),
-                f2=TIFieldStruct(
+                f2=TIField(
                     name="f2",
                     start=3,
                     stop=-4,
                     fmt=Code.U40,
                 ),
-                f3=TIFieldStruct(
+                f3=TIField(
                     name="f3",
                     start=-4,
                     stop=-1,
                 ),
-                f4=TIFieldStruct(
+                f4=TIField(
                     name="f4", start=-1, stop=None
                 ),
             ),
@@ -179,53 +180,47 @@ class TestBytesStorageABC(unittest.TestCase):
         ))
 
         with self.subTest(test="empty"):
-            self.assertEqual("TIStorage(EMPTY)", str(obj))
+            self.assertEqual("TIContainer(EMPTY)", str(obj))
 
         with self.subTest(test="with one empty field"):
             self.assertEqual(
-                "TIStorage(f0=0, f1=102, f2=EMPTY, f3=3 4 5, f4=6)",
+                "TIContainer(f0=0, f1=102, f2=EMPTY, f3=3 4 5, f4=6)",
                 str(obj.encode(bytes(range(7)))),
             )
 
         with self.subTest(test="large"):
             self.assertEqual(
-                "TIStorage(f0=0, f1=102, f2=304050607 ... BCBDBEBFC0, "
+                "TIContainer(f0=0, f1=102, f2=304050607 ... BCBDBEBFC0, "
                 "f3=C1 C2 C3, f4=C4)",
                 str(obj.encode(bytes(range(197)))),
             )
 
-        obj = TIStorage(TIStorageStruct(
-            fields={"f0": TIFieldStruct(name="f0")}
+        obj = TIContainer(TIStruct(
+            fields={"f0": TIField(name="f0")}
         ))
         with self.subTest(test="infinite u8"):
             self.assertEqual(
-                "TIStorage(f0=0 1 2 3 ... 11 12 13 14)",
+                "TIContainer(f0=0 1 2 3 ... 11 12 13 14)",
                 str(obj.encode(bytes(range(21)))),
             )
 
-        obj = TIStorage(TIStorageStruct(
-            fields={"f0": TIFieldStruct(
-                name="f0", fmt=Code.U16
-            )}
+        obj = TIContainer(TIStruct(
+            fields={"f0": TIField(name="f0", fmt=Code.U16)}
         ))
         with self.subTest(test="infinite u16"):
             self.assertEqual(
-                "TIStorage(f0=1 203 405 ... 1011 1213 1415)",
+                "TIContainer(f0=1 203 405 ... 1011 1213 1415)",
                 str(obj.encode(bytes(range(22)))),
             )
 
-        obj = TIStorage(TIStorageStruct(
-            fields={"f0": TIFieldStruct(
-                name="f0", fmt=Code.U24
-            )}
-        ))
+        obj = TIContainer(TIStruct(fields={"f0": TIField(name="f0", fmt=Code.U24)}))
         with self.subTest(test="infinite u24"):
             self.assertEqual(
-                "TIStorage(f0=102 30405 ... 151617 18191A)",
+                "TIContainer(f0=102 30405 ... 151617 18191A)",
                 str(obj.encode(bytes(range(27)))),
             )
 
-    def _verify_content(self, res: TIStorage, **fields: bytes) -> None:
+    def _verify_content(self, res: TIContainer, **fields: bytes) -> None:
         content = b""
         for field, ref in fields.items():
             with self.subTest(field=field):
@@ -235,25 +230,25 @@ class TestBytesStorageABC(unittest.TestCase):
             self.assertEqual(content, res.content())
 
     @staticmethod
-    def _instance() -> TIStorage:
-        return TIStorage(TIStorageStruct(
+    def _instance() -> TIContainer:
+        return TIContainer(TIStruct(
             fields=dict(
-                f0=TIFieldStruct(
+                f0=TIField(
                     name="f0",
                     start=0,
                     default=b"\xfa",
                     stop=1,
                 ),
-                f1=TIFieldStruct(
+                f1=TIField(
                     name="f1", start=1, bytes_expected=2
                 ),
-                f2=TIFieldStruct(
+                f2=TIField(
                     name="f2", start=3, stop=-4
                 ),
-                f3=TIFieldStruct(
+                f3=TIField(
                     name="f3", start=-4, stop=-1
                 ),
-                f4=TIFieldStruct(
+                f4=TIField(
                     name="f4", start=-1, stop=None
                 ),
             ),

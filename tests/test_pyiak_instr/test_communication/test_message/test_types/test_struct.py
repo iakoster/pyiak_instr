@@ -3,20 +3,21 @@ import unittest
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.encoders import BytesEncoder
 from src.pyiak_instr.exceptions import NotAmongTheOptions, ContentError
-from src.pyiak_instr.communication.message.types import MessageStructABC
+from src.pyiak_instr.communication.message.types import Struct
 
 from .....utils import validate_object, get_object_attrs
-from .ti import (
-    TIMessageFieldStruct,
-    TIStaticMessageFieldStruct,
-    TIAddressMessageFieldStruct,
-    TICrcMessageFieldStruct,
-    TIDataMessageFieldStruct,
-    TIDynamicLengthMessageFieldStruct,
-    TIIdMessageFieldStruct,
-    TIOperationMessageFieldStruct,
-    TIResponseMessageFieldStruct,
-    TIMessageStruct,
+
+from tests.pyiak_instr_ti.communication import (
+    TIBasic,
+    TIStatic,
+    TIAddress,
+    TICrc,
+    TIData,
+    TIDynamicLength,
+    TIId,
+    TIOperation,
+    TIResponse,
+    TIStruct,
 )
 
 
@@ -25,7 +26,7 @@ class TestMessageFieldStruct(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIMessageFieldStruct(
+            TIBasic(
                 start=10, fmt=Code.I64, bytes_expected=160
             ),
             bytes_expected=160,
@@ -48,9 +49,9 @@ class TestMessageFieldStruct(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            TIAddressMessageFieldStruct(start=0, fmt=Code.U8, stop=2)
+            TIAddress(start=0, fmt=Code.U8, stop=2)
         self.assertEqual(
-            "TIAddressMessageFieldStruct should expect one word",
+            "TIAddress should expect one word",
             exc.exception.args[0],
         )
 
@@ -60,7 +61,7 @@ class TestStaticMessageFieldStruct(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIStaticMessageFieldStruct(start=0, fmt=Code.U8, default=b"\x00"),
+            TIStatic(start=0, fmt=Code.U8, default=b"\x00"),
             bytes_expected=1,
             default=b"\x00",
             fmt=Code.U8,
@@ -81,23 +82,23 @@ class TestStaticMessageFieldStruct(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            TIStaticMessageFieldStruct(start=0, fmt=Code.U8)
+            TIStatic(start=0, fmt=Code.U8)
         self.assertEqual("default value not specified", exc.exception.args[0])
 
     def test_verify(self) -> None:
         for i, (data, ref) in enumerate(((b"2", False), (b"4", True))):
             with self.subTest(test=i):
-                self.assertEqual(ref, TIStaticMessageFieldStruct(
+                self.assertEqual(ref, TIStatic(
                     start=0, fmt=Code.U8, default=b"4"
                 ).verify(data))
 
     def test_verify_exc(self) -> None:
         with self.assertRaises(ContentError) as exc:
-            TIStaticMessageFieldStruct(
+            TIStatic(
                 default=b"a"
             ).verify(b"b", raise_if_false=True)
         self.assertEqual(
-            "invalid content in TIStaticMessageFieldStruct: 62",
+            "invalid content in TIStatic: 62",
             exc.exception.args[0],
         )
 
@@ -107,7 +108,7 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIAddressMessageFieldStruct(start=0, fmt=Code.U8),
+            TIAddress(start=0, fmt=Code.U8),
             behaviour=Code.DMA,
             bytes_expected=1,
             default=b"",
@@ -131,7 +132,7 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
     def test_init_exc(self) -> None:
         with self.subTest(test="invalid behaviour"):
             with self.assertRaises(NotAmongTheOptions) as exc:
-                TIAddressMessageFieldStruct(
+                TIAddress(
                     start=0, fmt=Code.U8, behaviour=Code.EXPECTED
                 )
             self.assertEqual(
@@ -142,7 +143,7 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
 
         with self.subTest(test="invalid units"):
             with self.assertRaises(NotAmongTheOptions) as exc:
-                TIAddressMessageFieldStruct(units=Code.NONE)
+                TIAddress(units=Code.NONE)
             self.assertEqual(
                 "units option <Code.NONE: 0> not in {<Code.WORDS: 768>, "
                 "<Code.BYTES: 257>}",
@@ -155,7 +156,7 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TICrcMessageFieldStruct(start=0, fmt=Code.U16),
+            TICrc(start=0, fmt=Code.U16),
             bytes_expected=2,
             default=b"",
             fmt=Code.U16,
@@ -179,7 +180,7 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(NotImplementedError) as exc:
-            TICrcMessageFieldStruct(poly=0x1020)
+            TICrc(poly=0x1020)
         self.assertEqual(
             "Crc algorithm not verified for other values",
             exc.exception.args[0],
@@ -205,7 +206,7 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
         for name in data:
             dict_: dict = data[name].copy()
             crcs = dict_.pop("crc")
-            obj = TICrcMessageFieldStruct(start=0, **dict_)
+            obj = TICrc(start=0, **dict_)
 
             assert len(contents) == len(crcs)
             for i, (content, crc) in enumerate(zip(contents, crcs)):
@@ -218,7 +219,7 @@ class TestDataMessageFieldStruct(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIDataMessageFieldStruct(start=0, fmt=Code.U16),
+            TIData(start=0, fmt=Code.U16),
             bytes_expected=0,
             default=b"",
             fmt=Code.U16,
@@ -240,9 +241,9 @@ class TestDataMessageFieldStruct(unittest.TestCase):
     def test_init_exc(self) -> None:
         with self.subTest(test="data not dynamic"):
             with self.assertRaises(ValueError) as exc:
-                TIDataMessageFieldStruct(stop=1)
+                TIData(stop=1)
             self.assertEqual(
-                "TIDataMessageFieldStruct can only be dynamic",
+                "TIData can only be dynamic",
                 exc.exception.args[0],
             )
 
@@ -252,7 +253,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIDynamicLengthMessageFieldStruct(start=0, fmt=Code.U16),
+            TIDynamicLength(start=0, fmt=Code.U16),
             additive=0,
             behaviour=Code.ACTUAL,
             bytes_expected=2,
@@ -277,7 +278,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
     def test_init_exc(self) -> None:
         with self.subTest(test="negative additive"):
             with self.assertRaises(ValueError) as exc:
-                TIDynamicLengthMessageFieldStruct(
+                TIDynamicLength(
                     start=0, fmt=Code.U8, additive=-1
                 )
             self.assertEqual(
@@ -287,7 +288,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
 
         with self.subTest(test="invalid behaviour"):
             with self.assertRaises(NotAmongTheOptions) as exc:
-                TIDynamicLengthMessageFieldStruct(
+                TIDynamicLength(
                     start=0, fmt=Code.U8, behaviour=Code.DMA
                 )
             self.assertEqual(
@@ -297,7 +298,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
 
         with self.subTest(test="invalid units"):
             with self.assertRaises(NotAmongTheOptions) as exc:
-                TIDynamicLengthMessageFieldStruct(
+                TIDynamicLength(
                     start=0, fmt=Code.U8, units=Code.INT
                 )
             self.assertEqual(
@@ -309,7 +310,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
         with self.subTest(test="U8 BYTES"):
             self.assertEqual(
                 20,
-                TIDynamicLengthMessageFieldStruct().calculate(
+                TIDynamicLength().calculate(
                     b"a" * 20, BytesEncoder(fmt=Code.U8).value_size,
                 ),
             )
@@ -317,7 +318,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
         with self.subTest(test="U16 BYTES"):
             self.assertEqual(
                 20,
-                TIDynamicLengthMessageFieldStruct(
+                TIDynamicLength(
                     units=Code.BYTES
                 ).calculate(b"a" * 20, BytesEncoder(fmt=Code.U16).value_size)
             )
@@ -325,18 +326,18 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
         with self.subTest(test="U32 WORDS"):
             self.assertEqual(
                 4,
-                TIDynamicLengthMessageFieldStruct(
+                TIDynamicLength(
                     units=Code.WORDS
                 ).calculate(b"a" * 16, BytesEncoder(fmt=Code.U32).value_size)
             )
 
     def test_calculate_exc(self) -> None:
         with self.assertRaises(ContentError) as exc:
-            TIDynamicLengthMessageFieldStruct(
+            TIDynamicLength(
                 units=Code.WORDS
             ).calculate(b"a" * 5, BytesEncoder(fmt=Code.U32).value_size)
         self.assertEqual(
-            "invalid content in TIDynamicLengthMessageFieldStruct: "
+            "invalid content in TIDynamicLength: "
             "non-integer words count in data",
             exc.exception.args[0],
         )
@@ -347,7 +348,7 @@ class TestIdMessageFieldStruct(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIIdMessageFieldStruct(start=0, fmt=Code.U16),
+            TIId(start=0, fmt=Code.U16),
             bytes_expected=2,
             default=b"",
             fmt=Code.U16,
@@ -372,7 +373,7 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIOperationMessageFieldStruct(start=0, fmt=Code.U16),
+            TIOperation(start=0, fmt=Code.U16),
             bytes_expected=2,
             default=b"",
             descs={0: Code.READ, 1: Code.WRITE},
@@ -396,20 +397,20 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
     def test_encode(self) -> None:
         self.assertEqual(
             b"\x00",
-            TIOperationMessageFieldStruct().encode(Code.READ)
+            TIOperation().encode(Code.READ)
         )
 
     def test_encode_exc(self) -> None:
         with self.assertRaises(ContentError) as exc:
-            TIOperationMessageFieldStruct().encode(Code.UNDEFINED)
+            TIOperation().encode(Code.UNDEFINED)
         self.assertEqual(
-            "invalid content in TIOperationMessageFieldStruct: "
+            "invalid content in TIOperation: "
             "can't encode <Code.UNDEFINED: 255>",
             exc.exception.msg,
         )
 
     def test_desc(self) -> None:
-        obj = TIOperationMessageFieldStruct()
+        obj = TIOperation()
         cases = (
             (0, Code.READ),
             (1, Code.WRITE),
@@ -420,7 +421,7 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
                 self.assertEqual(ref, obj.desc(input_))
 
     def test_desc_r(self) -> None:
-        obj = TIOperationMessageFieldStruct()
+        obj = TIOperation()
         cases = (
             (Code.READ, 0),
             (Code.WRITE, 1),
@@ -436,7 +437,7 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIResponseMessageFieldStruct(start=0, fmt=Code.U16),
+            TIResponse(start=0, fmt=Code.U16),
             bytes_expected=2,
             default=b"",
             descs={},
@@ -467,7 +468,7 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
         with self.assertRaises(ContentError) as exc:
             self._instance.encode(Code.UNDEFINED)
         self.assertEqual(
-            "invalid content in TIResponseMessageFieldStruct: "
+            "invalid content in TIResponse: "
             "can't encode <Code.UNDEFINED: 255>",
             exc.exception.msg,
         )
@@ -493,8 +494,8 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
                 self.assertEqual(ref, self._instance.desc_r(input_))
 
     @property
-    def _instance(self) -> TIResponseMessageFieldStruct:
-        return TIResponseMessageFieldStruct(descs={0: Code.U8, 1: Code.WAIT})
+    def _instance(self) -> TIResponse:
+        return TIResponse(descs={0: Code.U8, 1: Code.WAIT})
 
 
 class TestMessageStructABC(unittest.TestCase):
@@ -502,7 +503,7 @@ class TestMessageStructABC(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIMessageStruct(fields={"f": TIMessageFieldStruct(name="f")}),
+            TIStruct(fields={"f": TIBasic(name="f")}),
             divisible=False,
             dynamic_field_name="f",
             minimum_size=0,
@@ -515,20 +516,20 @@ class TestMessageStructABC(unittest.TestCase):
     def test_init_exc(self) -> None:
         with self.subTest(test="divisible without dynamic"):
             with self.assertRaises(TypeError) as exc:
-                TIMessageStruct(
-                    fields={"f": TIMessageFieldStruct(name="f", stop=1)},
+                TIStruct(
+                    fields={"f": TIBasic(name="f", stop=1)},
                     divisible=True,
                 )
             self.assertEqual(
-                "TIMessageStruct can not be divided because it does not "
+                "TIStruct can not be divided because it does not "
                 "have a dynamic field",
                 exc.exception.args[0],
             )
 
         with self.subTest(test="dynamic length field without dynamic field"):
             with self.assertRaises(TypeError) as exc:
-                TIMessageStruct(fields=dict(
-                    f0=TIDynamicLengthMessageFieldStruct(name="f0")
+                TIStruct(fields=dict(
+                    f0=TIDynamicLength(name="f0")
                 ))
             self.assertEqual(
                 "dynamic length field without dynamic length detected",
@@ -537,10 +538,10 @@ class TestMessageStructABC(unittest.TestCase):
 
         with self.subTest(test="small mtu"):
             with self.assertRaises(ValueError) as exc:
-                TIMessageStruct(
+                TIStruct(
                     fields={
-                        "f0": TIMessageFieldStruct(name="f0", stop=4),
-                        "f1": TIMessageFieldStruct(name="f1", start=4),
+                        "f0": TIBasic(name="f0", stop=4),
+                        "f1": TIBasic(name="f1", start=4),
                     },
                     divisible=True,
                     mtu=4,
@@ -553,24 +554,24 @@ class TestMessageStructABC(unittest.TestCase):
 
         with self.subTest(test="not specified code"):
             with self.assertRaises(KeyError) as exc:
-                MessageStructABC(fields={
-                    "f0": TIMessageFieldStruct(name="f0")
+                Struct(fields={
+                    "f0": TIBasic(name="f0")
                 })
             self.assertEqual(
-                "TIMessageFieldStruct not represented in codes",
+                "TIBasic not represented in codes",
                 exc.exception.args[0],
             )
 
     def test_has(self) -> None:
-        obj = TIMessageStruct(fields=dict(
-            f0=TIMessageFieldStruct(name="f0", stop=1),
-            f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
-            f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
-            f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
-            f5=TIDataMessageFieldStruct(name="f5", start=6, stop=-4),
-            f6=TIDynamicLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
-            f7=TIIdMessageFieldStruct(name="f7", start=-3, stop=-2),
-            f8=TIOperationMessageFieldStruct(name="f8", start=-2),
+        obj = TIStruct(fields=dict(
+            f0=TIBasic(name="f0", stop=1),
+            f2=TIStatic(name="f2", start=2, stop=3, default=b"a"),
+            f3=TIAddress(name="f3", start=3, stop=4),
+            f4=TICrc(name="f4", start=4, stop=6, fmt=Code.U16),
+            f5=TIData(name="f5", start=6, stop=-4),
+            f6=TIDynamicLength(name="f6", start=-4, stop=-3),
+            f7=TIId(name="f7", start=-3, stop=-2),
+            f8=TIOperation(name="f8", start=-2),
         ))
 
         validate_object(
@@ -590,16 +591,16 @@ class TestMessageStructABC(unittest.TestCase):
         self.assertFalse(obj.has(Code.UNDEFINED))
 
     def test_get(self) -> None:
-        obj = TIMessageStruct(fields=dict(
-            f0=TIMessageFieldStruct(name="f0", stop=1),
-            f2=TIStaticMessageFieldStruct(name="f2", start=2, stop=3, default=b"a"),
-            f3=TIAddressMessageFieldStruct(name="f3", start=3, stop=4),
-            f4=TICrcMessageFieldStruct(name="f4", start=4, stop=6, fmt=Code.U16),
-            f5=TIDataMessageFieldStruct(name="f5", start=6, stop=-4),
-            f6=TIDynamicLengthMessageFieldStruct(name="f6", start=-4, stop=-3),
-            f7=TIIdMessageFieldStruct(name="f7", start=-3, stop=-2),
-            f8=TIOperationMessageFieldStruct(name="f8", start=-2, stop=-1),
-            f9=TIResponseMessageFieldStruct(name="f9", start=-1)
+        obj = TIStruct(fields=dict(
+            f0=TIBasic(name="f0", stop=1),
+            f2=TIStatic(name="f2", start=2, stop=3, default=b"a"),
+            f3=TIAddress(name="f3", start=3, stop=4),
+            f4=TICrc(name="f4", start=4, stop=6, fmt=Code.U16),
+            f5=TIData(name="f5", start=6, stop=-4),
+            f6=TIDynamicLength(name="f6", start=-4, stop=-3),
+            f7=TIId(name="f7", start=-3, stop=-2),
+            f8=TIOperation(name="f8", start=-2, stop=-1),
+            f9=TIResponse(name="f9", start=-1)
         ))
 
         ref = dict(
@@ -620,8 +621,8 @@ class TestMessageStructABC(unittest.TestCase):
                 self.assertEqual(ref[attr], getattr(get, attr).name)
 
     def test_get_exc(self) -> None:
-        obj = TIMessageStruct(fields=dict(
-            f0=TIMessageFieldStruct(name="f0", stop=1),
+        obj = TIStruct(fields=dict(
+            f0=TIBasic(name="f0", stop=1),
         ))
 
         with self.subTest(test="invalid code"):

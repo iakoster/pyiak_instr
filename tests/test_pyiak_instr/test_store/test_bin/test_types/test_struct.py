@@ -6,7 +6,8 @@ from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import ContentError
 
 from .....utils import validate_object
-from .ti import TIFieldStruct, TIStorageStruct
+
+from tests.pyiak_instr_ti.store import TIField, TIStruct
 
 
 class TestBytesFieldStructABC(unittest.TestCase):
@@ -46,7 +47,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
         )
         for case, ((start, stop, expected), kw) in enumerate(cases):
             with self.subTest(case=case):
-                res = TIFieldStruct(**kw)
+                res = TIField(**kw)
                 self.assertEqual(start, res.start)
                 self.assertEqual(stop, res.stop)
                 self.assertEqual(expected, res.bytes_expected)
@@ -60,7 +61,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
         with self.assertRaises(ContentError) as exc:
             self._instance(fmt=Code.U16).decode(b"\x00", verify=True)
         self.assertEqual(
-            "invalid content in TIFieldStruct: 00", exc.exception.args[0]
+            "invalid content in TIField: 00", exc.exception.args[0]
         )
 
     def test_encode(self) -> None:
@@ -72,7 +73,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
         with self.assertRaises(ContentError) as exc:
             self._instance(fmt=Code.U16).encode(b"\x01", verify=True)
         self.assertEqual(
-            "invalid content in TIFieldStruct: 01", exc.exception.args[0]
+            "invalid content in TIField: 01", exc.exception.args[0]
         )
 
     def test_verify(self) -> None:
@@ -84,7 +85,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
         with self.assertRaises(ContentError) as exc:
             obj.verify(b"\x01\x02\x03", raise_if_false=True)
         self.assertEqual(
-            "invalid content in TIFieldStruct: 01 02 03",
+            "invalid content in TIField: 01 02 03",
             exc.exception.args[0]
         )
 
@@ -202,8 +203,8 @@ class TestBytesFieldStructABC(unittest.TestCase):
             fmt: Code = Code.U8,
             default: bytes = b"",
             fill_value: bytes = b"",
-    ) -> TIFieldStruct:
-        return TIFieldStruct(
+    ) -> TIField:
+        return TIField(
             start=start,
             stop=stop,
             bytes_expected=bytes_expected,
@@ -229,31 +230,31 @@ class TestBytesStorageStructABC(unittest.TestCase):
     def test_init_exc(self) -> None:
         with self.subTest(test="without fields"):
             with self.assertRaises(ValueError) as exc:
-                TIStorageStruct()
+                TIStruct()
             self.assertEqual(
-                "TIStorageStruct without fields", exc.exception.args[0]
+                "TIStruct without fields", exc.exception.args[0]
             )
 
         with self.subTest(test="empty field name"):
             with self.assertRaises(KeyError) as exc:
-                TIStorageStruct(fields={"": TIFieldStruct()})
+                TIStruct(fields={"": TIField()})
             self.assertEqual(
                 "empty field name not allowed", exc.exception.args[0]
             )
 
         with self.subTest(test="wrong field name"):
             with self.assertRaises(KeyError) as exc:
-                TIStorageStruct(fields={"f0": TIFieldStruct()})
+                TIStruct(fields={"f0": TIField()})
             self.assertEqual(
                 "invalid struct name: 'f0' != ''", exc.exception.args[0]
             )
 
         with self.subTest(test="two dynamic"):
             with self.assertRaises(TypeError) as exc:
-                TIStorageStruct(
+                TIStruct(
                     fields={
-                        "f0": TIFieldStruct(name="f0"),
-                        "f1": TIFieldStruct(name="f1"),
+                        "f0": TIField(name="f0"),
+                        "f1": TIField(name="f1"),
                     }
                 )
             self.assertEqual(
@@ -321,9 +322,9 @@ class TestBytesStorageStructABC(unittest.TestCase):
                     f2=b"dd",
                 ),
                 self._instance(
-                    f0=TIFieldStruct(name="f0", stop=2, default=b"aa"),
-                    f1=TIFieldStruct(name="f1", start=2, stop=-2),
-                    f2=TIFieldStruct(name="f2", start=-2, fill_value=b"d"),
+                    f0=TIField(name="f0", stop=2, default=b"aa"),
+                    f1=TIField(name="f1", start=2, stop=-2),
+                    f2=TIField(name="f2", start=-2, fill_value=b"d"),
                 ).encode(all_fields=True)
             )
 
@@ -418,7 +419,7 @@ class TestBytesStorageStructABC(unittest.TestCase):
         with self.subTest(test="long content"):
             with self.assertRaises(ValueError) as exc:
                 self._instance(
-                    f0=TIFieldStruct(name="f0", stop=2)
+                    f0=TIField(name="f0", stop=2)
                 ).encode(b"aaaa")
             self.assertEqual(
                 "bytes content too long: expected 2, got 4",
@@ -434,7 +435,7 @@ class TestBytesStorageStructABC(unittest.TestCase):
         obj = self._instance()
         for ref, (res, parser) in zip(obj._f, obj.items()):
             self.assertEqual(ref, res)
-            self.assertIsInstance(parser, TIFieldStruct)
+            self.assertIsInstance(parser, TIField)
 
     def test__verify_fields_list(self) -> None:
         obj = self._instance()
@@ -484,27 +485,27 @@ class TestBytesStorageStructABC(unittest.TestCase):
 
     @staticmethod
     def _instance(
-            **fields: TIFieldStruct
-    ) -> TIStorageStruct:
+            **fields: TIField
+    ) -> TIStruct:
         if len(fields) == 0:
             fields = dict(
-                f0=TIFieldStruct(
+                f0=TIField(
                     name="f0",
                     start=0,
                     default=b"\xfa",
                     stop=1,
                 ),
-                f1=TIFieldStruct(
+                f1=TIField(
                     name="f1", start=1, bytes_expected=2, fill_value=b"\xff"
                 ),
-                f2=TIFieldStruct(
+                f2=TIField(
                     name="f2", start=3, stop=-4
                 ),
-                f3=TIFieldStruct(
+                f3=TIField(
                     name="f3", start=-4, stop=-1
                 ),
-                f4=TIFieldStruct(
+                f4=TIField(
                     name="f4", start=-1, stop=None
                 ),
             )
-        return TIStorageStruct(fields=fields)
+        return TIStruct(fields=fields)

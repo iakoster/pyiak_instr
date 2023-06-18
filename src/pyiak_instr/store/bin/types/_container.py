@@ -12,32 +12,30 @@ from typing import (
 from ....typing import WithBaseStringMethods
 from ....encoders import BytesDecodeT, BytesEncodeT
 from ._struct import (
-    BytesFieldStructABC,
-    BytesStorageStructABC,
+    Field,
+    Struct,
 )
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from ._pattern import BytesStoragePatternABC
+    from ._pattern import ContainerPattern
 
 
-__all__ = ["BytesStorageABC"]
+__all__ = ["Container"]
 
-FieldStructT = TypeVar("FieldStructT", bound=BytesFieldStructABC)
-StorageStructT = TypeVar(
-    "StorageStructT", bound=BytesStorageStructABC[BytesFieldStructABC]
-)
-StoragePatternT = TypeVar(
-    "StoragePatternT", bound="BytesStoragePatternABC[Any, Any]"
+FieldT = TypeVar("FieldT", bound=Field)
+StructT = TypeVar("StructT", bound=Struct[Field])
+ContainerPatternT = TypeVar(
+    "ContainerPatternT", bound="ContainerPattern[Any, Any]"
 )
 
 
 # todo: verify current content
 # todo: __format__
-class BytesStorageABC(
+class Container(
     WithBaseStringMethods,
-    Generic[FieldStructT, StorageStructT, StoragePatternT],
+    Generic[FieldT, StructT, ContainerPatternT],
 ):
     """
     Represents abstract class for bytes storage.
@@ -50,8 +48,8 @@ class BytesStorageABC(
 
     def __init__(
         self,
-        storage: StorageStructT,
-        pattern: StoragePatternT | None = None,
+        storage: StructT,
+        pattern: ContainerPatternT | None = None,
     ) -> None:
         self._s = storage
         self._p = pattern
@@ -259,7 +257,7 @@ class BytesStorageABC(
         return self._p is not None
 
     @property
-    def pattern(self) -> StoragePatternT:
+    def pattern(self) -> ContainerPatternT:
         """
         Returns
         -------
@@ -275,10 +273,10 @@ class BytesStorageABC(
             raise AttributeError(
                 f"'{self.__class__.__name__}' object has no parent pattern"
             )
-        return cast(StoragePatternT, self._p)
+        return cast(ContainerPatternT, self._p)
 
     @property
-    def struct(self) -> StorageStructT:
+    def struct(self) -> StructT:
         """
         Returns
         -------

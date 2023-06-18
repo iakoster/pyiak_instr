@@ -3,17 +3,17 @@ import unittest
 from src.pyiak_instr.core import Code
 
 from .....utils import validate_object, get_object_attrs
-from .ti import (
-    TIMessageFieldStruct,
-    TIStaticMessageFieldStruct,
-    TIAddressMessageFieldStruct,
-    TICrcMessageFieldStruct,
-    TIDataMessageFieldStruct,
-    TIDynamicLengthMessageFieldStruct,
-    TIIdMessageFieldStruct,
-    TIOperationMessageFieldStruct,
-    TIResponseMessageFieldStruct,
-    TIMessageStruct,
+from tests.pyiak_instr_ti.communication import (
+    TIBasic,
+    TIStatic,
+    TIAddress,
+    TICrc,
+    TIData,
+    TIDynamicLength,
+    TIId,
+    TIOperation,
+    TIResponse,
+    TIStruct,
     TIMessage,
 )
 
@@ -23,11 +23,11 @@ class TestMessageABC(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIMessage(TIMessageStruct(fields=dict(
-                f0=TIDynamicLengthMessageFieldStruct(
+            TIMessage(TIStruct(fields=dict(
+                f0=TIDynamicLength(
                     name="f0", stop=2, fmt=Code.U16
                 ),
-                f1=TIDataMessageFieldStruct(name="f1", start=2, fmt=Code.U32),
+                f1=TIData(name="f1", start=2, fmt=Code.U32),
             ))),
             has_pattern=False,
             src=None,
@@ -37,12 +37,12 @@ class TestMessageABC(unittest.TestCase):
 
     def test_init_exc(self) -> None:
         with self.assertRaises(TypeError) as exc:
-            TIMessage(TIMessageStruct(
+            TIMessage(TIStruct(
                 fields={
-                    "f0": TIAddressMessageFieldStruct(
+                    "f0": TIAddress(
                         name="f0", behaviour=Code.STRONG
                     ),
-                    "f1": TIDataMessageFieldStruct(name="f1"),
+                    "f1": TIData(name="f1"),
                 },
                 divisible=True,
             ))
@@ -54,14 +54,14 @@ class TestMessageABC(unittest.TestCase):
 
     def test_autoupdate_fields(self) -> None:
         with self.subTest(test="basic"):
-            obj = TIMessage(TIMessageStruct(fields=dict(
-                data_length=TIDynamicLengthMessageFieldStruct(
+            obj = TIMessage(TIStruct(fields=dict(
+                data_length=TIDynamicLength(
                     name="data_length", stop=2, fmt=Code.U16, additive=1
                 ),
-                data=TIDataMessageFieldStruct(
+                data=TIData(
                     name="data", start=2, stop=-2, fmt=Code.U16
                 ),
-                crc=TICrcMessageFieldStruct(
+                crc=TICrc(
                     name="crc", start=-2, fmt=Code.U16
                 ),
             )))
@@ -73,14 +73,14 @@ class TestMessageABC(unittest.TestCase):
             )
 
         with self.subTest(test="dynamic length is expected"):
-            obj = TIMessage(TIMessageStruct(fields=dict(
-                data_length=TIDynamicLengthMessageFieldStruct(
+            obj = TIMessage(TIStruct(fields=dict(
+                data_length=TIDynamicLength(
                     name="data_length",
                     stop=2,
                     fmt=Code.U16,
                     behaviour=Code.EXPECTED,
                 ),
-                data=TIDataMessageFieldStruct(
+                data=TIData(
                     name="data", start=2, fmt=Code.U16
                 ),
             ))).encode(bytes(range(6))).autoupdate_fields()
@@ -89,8 +89,8 @@ class TestMessageABC(unittest.TestCase):
 
     def test_autoupdate_fields_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            TIMessage(TIMessageStruct(fields=dict(
-                data=TIDataMessageFieldStruct(name="data"),
+            TIMessage(TIStruct(fields=dict(
+                data=TIData(name="data"),
             ))).autoupdate_fields()
         self.assertEqual("message is empty", exc.exception.args[0])
 
@@ -186,8 +186,8 @@ class TestMessageABC(unittest.TestCase):
                 self.assertEqual(ref[attr], getattr(get, attr).name)
 
     def test_src_dst(self) -> None:
-        obj = TIMessage(TIMessageStruct(fields={
-            "f0": TIMessageFieldStruct(name="f0"),
+        obj = TIMessage(TIStruct(fields={
+            "f0": TIBasic(name="f0"),
         }))
 
         self.assertTupleEqual((None, None), (obj.src, obj.dst))
@@ -200,19 +200,19 @@ class TestMessageABC(unittest.TestCase):
             address_units: Code = Code.BYTES,
             data_fmt=Code.U8,
     ) -> TIMessage:
-        return TIMessage(TIMessageStruct(
+        return TIMessage(TIStruct(
             fields=dict(
-                f0=TIMessageFieldStruct(name="f0", stop=1),
-                f1=TIStaticMessageFieldStruct(name="f1", start=1, stop=2, default=b"\x01"),
-                f2=TIAddressMessageFieldStruct(
+                f0=TIBasic(name="f0", stop=1),
+                f1=TIStatic(name="f1", start=1, stop=2, default=b"\x01"),
+                f2=TIAddress(
                     name="f2", start=2, stop=3, units=address_units
                 ),
-                f3=TICrcMessageFieldStruct(name="f3", start=3, stop=5, fmt=Code.U16),
-                f4=TIDataMessageFieldStruct(name="f4", start=5, stop=-4, fmt=data_fmt),
-                f5=TIDynamicLengthMessageFieldStruct(name="f5", start=-4, stop=-3),
-                f6=TIIdMessageFieldStruct(name="f6", start=-3, stop=-2),
-                f7=TIOperationMessageFieldStruct(name="f7", start=-2, stop=-1),
-                f8=TIResponseMessageFieldStruct(name="f8", start=-1)
+                f3=TICrc(name="f3", start=3, stop=5, fmt=Code.U16),
+                f4=TIData(name="f4", start=5, stop=-4, fmt=data_fmt),
+                f5=TIDynamicLength(name="f5", start=-4, stop=-3),
+                f6=TIId(name="f6", start=-3, stop=-2),
+                f7=TIOperation(name="f7", start=-2, stop=-1),
+                f8=TIResponse(name="f8", start=-1)
             ),
             divisible=True,
             mtu=21,

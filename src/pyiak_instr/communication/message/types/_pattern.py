@@ -10,34 +10,30 @@ from ....core import Code
 from ....exceptions import NotAmongTheOptions, NotConfiguredYet
 from ....types import SubPatternAdditions
 from ....store.bin.types import (
-    BytesFieldStructPatternABC,
-    BytesStoragePatternABC,
-    ContinuousBytesStorageStructPatternABC,
+    FieldPattern as BinFieldPattern,
+    ContinuousStructPattern as BinStructPattern,
+    ContainerPattern as BinContainerPattern,
 )
-from ._struct import MessageFieldStructABC, MessageStructABC
-from ._message import MessageABC
+from ._struct import Basic, Struct
+from ._message import Message
 
 
 __all__ = [
-    "MessageFieldStructPatternABC",
-    "MessageStructPatternABC",
-    "MessagePatternABC",
+    "FieldPattern",
+    "StructPattern",
+    "MessagePattern",
 ]
 
 
-FieldStructT = TypeVar("FieldStructT", bound=MessageFieldStructABC)
-MessageStructT = TypeVar("MessageStructT", bound=MessageStructABC[Any])
-MessageT = TypeVar("MessageT", bound=MessageABC[Any, Any, Any, Any])
+FieldT = TypeVar("FieldT", bound=Basic)
+StructT = TypeVar("StructT", bound=Struct[Any])
+MessageT = TypeVar("MessageT", bound=Message[Any, Any, Any, Any])
 
-FieldStructPatternT = TypeVar(
-    "FieldStructPatternT", bound="MessageFieldStructPatternABC[Any]"
-)
-MessageStructPatternT = TypeVar(
-    "MessageStructPatternT", bound="MessageStructPatternABC[Any, Any]"
-)
+FieldPatternT = TypeVar("FieldPatternT", bound="FieldPattern[Any]")
+StructPatternT = TypeVar("StructPatternT", bound="StructPattern[Any, Any]")
 
 
-class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
+class FieldPattern(BinFieldPattern[FieldT]):
     """
     Represent base class of pattern for field struct.
 
@@ -507,11 +503,7 @@ class MessageFieldStructPatternABC(BytesFieldStructPatternABC[FieldStructT]):
         return init_kw
 
 
-class MessageStructPatternABC(
-    ContinuousBytesStorageStructPatternABC[
-        MessageStructT, FieldStructPatternT
-    ]
-):
+class StructPattern(BinStructPattern[StructT, FieldPatternT]):
     """
     Represent base class of pattern for message struct.
     """
@@ -585,9 +577,7 @@ class MessageStructPatternABC(
         return cls(typename=typename, divisible=divisible, mtu=mtu)
 
 
-class MessagePatternABC(
-    BytesStoragePatternABC[MessageT, MessageStructPatternT]
-):
+class MessagePattern(BinContainerPattern[MessageT, StructPatternT]):
     """
     Represent base class of pattern for message.
     """

@@ -5,20 +5,9 @@ from src.pyiak_instr.types import SubPatternAdditions
 from src.pyiak_instr.exceptions import NotAmongTheOptions
 
 from .....utils import validate_object, get_object_attrs
-from .ti import (
-    TIMessageFieldStruct,
-    TIStaticMessageFieldStruct,
-    TIAddressMessageFieldStruct,
-    TICrcMessageFieldStruct,
-    TIDataMessageFieldStruct,
-    TIDynamicLengthMessageFieldStruct,
-    TIIdMessageFieldStruct,
-    TIOperationMessageFieldStruct,
-    TIResponseMessageFieldStruct,
-    TIMessageStruct,
-    TIMessage,
-    TIMessageFieldStructPattern,
-    TIMessageStructPattern,
+from tests.pyiak_instr_ti.communication import (
+    TIFieldPattern,
+    TIStructPattern,
     TIMessagePattern,
 )
 
@@ -28,7 +17,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIMessageFieldStructPattern(typename="id"),
+            TIFieldPattern(typename="id"),
             typename="id",
             is_dynamic=True,
             size=0,
@@ -128,13 +117,13 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 self.assertDictEqual(
                     ref,
                     getattr(
-                        TIMessageFieldStructPattern, typename
+                        TIFieldPattern, typename
                     )().__init_kwargs__(),
                 )
 
     def test_init_exc(self) -> None:
         with self.assertRaises(NotAmongTheOptions) as exc:
-            TIMessageFieldStructPattern("", direction=Code.NONE)
+            TIFieldPattern("", direction=Code.NONE)
         self.assertEqual(
             "direction option <Code.NONE: 0> not in {<Code.RX: 1554>, "
             "<Code.TX: 1555>, <Code.ANY: 5>}",
@@ -144,7 +133,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
     def test_get(self) -> None:
         validate_object(
             self,
-            TIMessageFieldStructPattern(
+            TIFieldPattern(
                 typename="crc", default=b"aa", fill_value=b""
             ).get(fmt=Code.U16),
             has_default=True,
@@ -252,7 +241,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 validate_object(
                     self,
                     getattr(
-                        TIMessageFieldStructPattern, typename
+                        TIFieldPattern, typename
                     )().get(),
                     **ref,
                     wo_attrs=[
@@ -276,11 +265,11 @@ class TestMessageStructPatternABC(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            TIMessageStructPattern(typename="basic").configure(
-                f0=TIMessageFieldStructPattern(
+            TIStructPattern(typename="basic").configure(
+                f0=TIFieldPattern(
                     typename="static", default=b"a"
                 ),
-                f1=TIMessageFieldStructPattern(typename="data"),
+                f1=TIFieldPattern(typename="data"),
             ),
             typename="basic",
             sub_pattern_names=["f0", "f1"],
@@ -293,15 +282,15 @@ class TestMessageStructPatternABC(unittest.TestCase):
                 mtu=1500,
                 divisible=False,
             ),
-            TIMessageStructPattern.basic().__init_kwargs__()
+            TIStructPattern.basic().__init_kwargs__()
         )
 
     def test_get(self) -> None:
-        pattern = TIMessageStructPattern.basic(
+        pattern = TIStructPattern.basic(
             divisible=True
         ).configure(
-            f0=TIMessageFieldStructPattern.static(default=b"a"),
-            f1=TIMessageFieldStructPattern.data(),
+            f0=TIFieldPattern.static(default=b"a"),
+            f1=TIFieldPattern.data(),
         )
         msg = pattern.get(
             changes_allowed=True,
@@ -344,10 +333,10 @@ class TestMessageStructPatternABC(unittest.TestCase):
         )
 
     def test_instance_for_direction(self) -> None:
-        ref = TIMessageStructPattern.basic().configure(
-                f0=TIMessageFieldStructPattern.static(),
-                f1=TIMessageFieldStructPattern.response(direction=Code.RX),
-                f2=TIMessageFieldStructPattern.data(direction=Code.TX),
+        ref = TIStructPattern.basic().configure(
+                f0=TIFieldPattern.static(),
+                f1=TIFieldPattern.response(direction=Code.RX),
+                f2=TIFieldPattern.data(direction=Code.TX),
         )
 
         self.assertListEqual(["f0", "f1", "f2"], ref.sub_pattern_names)
@@ -363,8 +352,8 @@ class TestMessageStructPatternABC(unittest.TestCase):
 
     def test_instance_for_direction_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
-            TIMessageStructPattern.basic().configure(
-                f0=TIMessageFieldStructPattern.static(),
+            TIStructPattern.basic().configure(
+                f0=TIFieldPattern.static(),
             ).instance_for_direction(Code.NONE)
         self.assertEqual(
             "invalid direction: <Code.NONE: 0>", exc.exception.args[0]
@@ -377,9 +366,9 @@ class TestMessagePatternABC(unittest.TestCase):
         validate_object(
             self,
             TIMessagePattern.basic().configure(
-                s0=TIMessageStructPattern.basic().configure(
-                    f0=TIMessageFieldStructPattern.static(default=b"a"),
-                    f1=TIMessageFieldStructPattern.data(),
+                s0=TIStructPattern.basic().configure(
+                    f0=TIFieldPattern.static(default=b"a"),
+                    f1=TIFieldPattern.data(),
                 ),
             ),
             typename="basic",
@@ -388,11 +377,11 @@ class TestMessagePatternABC(unittest.TestCase):
 
     def test_get(self) -> None:
         pattern = TIMessagePattern.basic().configure(
-            s0=TIMessageStructPattern.basic(
+            s0=TIStructPattern.basic(
                 divisible=True
             ).configure(
-                f0=TIMessageFieldStructPattern.static(default=b"a"),
-                f1=TIMessageFieldStructPattern.data(),
+                f0=TIFieldPattern.static(default=b"a"),
+                f1=TIFieldPattern.data(),
             ),
         )
         msg = pattern.get(
@@ -448,10 +437,10 @@ class TestMessagePatternABC(unittest.TestCase):
 
     def test_get_for_direction(self) -> None:
         pattern = TIMessagePattern.basic().configure(
-            s0=TIMessageStructPattern.basic().configure(
-                f0=TIMessageFieldStructPattern.static(),
-                f1=TIMessageFieldStructPattern.response(direction=Code.RX),
-                f2=TIMessageFieldStructPattern.data(direction=Code.TX),
+            s0=TIStructPattern.basic().configure(
+                f0=TIFieldPattern.static(),
+                f1=TIFieldPattern.response(direction=Code.RX),
+                f2=TIFieldPattern.data(direction=Code.TX),
             ),
         )
 
