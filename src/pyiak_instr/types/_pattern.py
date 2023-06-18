@@ -1,135 +1,99 @@
 """Private module of ``pyiak_instr.types`` with pattern types."""
 from __future__ import annotations
 from pathlib import Path
-from dataclasses import dataclass, field as _field
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Self, TypeVar, cast
+from typing import Any, Generic, Self, TypeVar
 
 from ..exceptions import NotConfiguredYet
 
 
 __all__ = [
-    "EditablePatternABC",
-    "MetaPatternABC",
-    "PatternABC",
-    "SubPatternAdditions",
-    "WritablePatternABC",
+    "Additions",
+    "EditableMixin",
+    "SurPattern",
+    "Pattern",
+    "WritableMixin",
 ]
 
 
+T = TypeVar("T")
 OptionsT = TypeVar("OptionsT")  # Pattern target options
-PatternT = TypeVar("PatternT", bound="PatternABC[Any]")
 
 
-# todo: separate tests
-@dataclass
-class SubPatternAdditions:
+# todo: tests
+class Additions:
     """
-    Dataclass of additional kwargs for sub-pattern.
+    Additional kwargs container for pattern target.
+
+    Parameters
+    ----------
+    current: dict[str, Any] | None, default=None
+        additional kwargs for pattern target.
+    lower: dict[str, Additions] | None, default=None
+        additional kwargs containers for sub-pattern target.
     """
 
-    additions: dict[str, dict[str, Any]] = _field(default_factory=dict)
-    """additional kwargs fot sub-pattern."""
+    def __init__(
+        self,
+        current: dict[str, Any] | None = None,
+        lower: dict[str, Additions] | None = None,
+    ):
+        self._curr: dict[str, Any] = {} if current is None else current
+        self._lowers: dict[str, Additions] = {} if lower is None else lower
 
-    next_additions: dict[str, SubPatternAdditions] = _field(
-        default_factory=dict
-    )
-    """dataclass for next sub-pattern."""
-
-    def get_additions(self, key: str) -> dict[str, Any]:
+    def get_joined(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         """
-        Get additional kwargs by `key`.
+        Get joined `kwargs` with current additions.
 
-        If `key` not exists - returns empty dict.
+        Takes a copy of `kwargs`. `kwargs` have a lower priority than
+        additions parameters.
 
         Parameters
         ----------
-        key : str
-            additional kwargs name (usually the name of sub-pattern).
+        kwargs : dict[str, Any]
+            original kwargs from pattern.
 
         Returns
         -------
         dict[str, Any]
-            sub-pattern additional kwargs
+            joined parameters.
         """
-        return self.additions.get(key, {})
+        parameters = kwargs.copy()
+        parameters.update(self._curr)
+        return parameters
 
-    def get_next_additions(self, key: str) -> SubPatternAdditions:
+    def lower(self, name: str) -> Additions:
         """
-        Get additional kwargs of next sub-pattern by `key`.
+        Get additional kwargs container for sub-pattern.
+
+        If container not exists - create new.
 
         Parameters
         ----------
-        key : str
-            next sub-pattern name.
+        name : str
+            sub-pattern name.
 
         Returns
         -------
-        SubPatternAdditions
-            next sub-pattern additions.
+        Additions
+            kwargs container.
         """
-        return self.next_additions.get(key, SubPatternAdditions())
+        if name not in self._lowers:
+            self._lowers[name] = Additions()
+        return self._lowers[name]
 
-    def set_additions(self, **parameters: dict[str, Any]) -> Self:
+    @property
+    def current(self) -> dict[str, Any]:
         """
-        Set all additional kwargs.
-
-        Parameters
-        ----------
-        **parameters : dict[str, Any]
-            additional kwargs.
-
         Returns
         -------
-        Self
-            self instance.
+        dict[str, Any]
+            additional kwargs for pattern target.
         """
-        self.additions = parameters
-        return self
-
-    def set_next_additions(
-        self, **next_additions: SubPatternAdditions
-    ) -> Self:
-        """
-        Set all sub-pattern additions.
-
-        Parameters
-        ----------
-        **next_additions : SubPatternAdditions
-            additions for sub-patterns.
-
-        Returns
-        -------
-        Self
-            self instance.
-        """
-        self.next_additions = next_additions
-        return self
-
-    def update_additions(self, key: str, **update: Any) -> Self:
-        """
-        Update additional kwargs by `key`.
-
-        Parameters
-        ----------
-        key : str
-            additions name.
-        **update : Any
-            parameters.
-
-        Returns
-        -------
-        Self
-            self instance.
-        """
-        if key in self.additions:
-            self.additions[key].update(update)
-        else:
-            self.additions[key] = update
-        return self
+        return self._curr
 
 
-class PatternABC(ABC, Generic[OptionsT]):
+class Pattern(ABC, Generic[OptionsT]):
     """
     Represents protocol for patterns.
 
@@ -144,26 +108,19 @@ class PatternABC(ABC, Generic[OptionsT]):
     _options: dict[str, type[OptionsT]]
     """pattern target options"""
 
-    _required_init_parameters: set[str] = set()
-
-    # todo: parameters to TypedDict
+    # todo: parameters to TypedDict (3.12: default dict[str, Any], another -
+    #  specified)
     def __init__(self, typename: str, **parameters: Any) -> None:
         if typename not in self._options:
             raise KeyError(f"'{typename}' not in {set(self._options)}")
-        if not self._required_init_parameters.issubset(parameters):
-            raise TypeError(
-                f"{self._required_init_parameters.difference(parameters)} "
-                "not represented in parameters"
-            )
 
         self._tn = typename
         self._kw = parameters
 
     def get(
-        self,
-        changes_allowed: bool = False,
-        sub_additions: SubPatternAdditions = SubPatternAdditions(),
-        **additions: Any,
+        self,  # pylint: disable=unused-argument
+        additions: Additions = Additions(),
+        **kwargs: Any,
     ) -> OptionsT:
         """
         Get initialized class instance with parameters from pattern and from
@@ -171,37 +128,24 @@ class PatternABC(ABC, Generic[OptionsT]):
 
         Parameters
         ----------
-        changes_allowed: bool, default = False
-            allows situations where keys from the pattern overlap with kwargs.
-            If False, it causes an error on intersection, otherwise the
-            `additions` take precedence.
-        sub_additions: SubPatternAdditions, default=SubPatternAdditions()
+        additions: Additions, default=Additions()
+            container with additional initialization parameters.
+        **kwargs: Any
             ignored. Needed for backward compatibility.
-        **additions: Any
-            additional initialization parameters.
 
         Returns
         -------
         OptionsT
             initialized target class.
         """
-        # pylint: disable=unused-argument
-        return self._target(
-            **self._get_parameters_dict(changes_allowed, additions)
-        )
+        return self._target(**self._get_parameters(additions))
 
-    def _get_parameters_dict(
-        self,
-        changes_allowed: bool,
-        additions: dict[str, Any],
-    ) -> dict[str, Any]:
+    def _get_parameters(self, additions: Additions) -> dict[str, Any]:
         """
         Get joined additions with pattern parameters.
 
         Parameters
         ----------
-        changes_allowed : bool
-            allows situations where keys from the pattern overlap with kwargs.
         additions : dict[str, Any]
             additional initialization parameters.
 
@@ -209,27 +153,8 @@ class PatternABC(ABC, Generic[OptionsT]):
         -------
         dict[str, Any]
             joined parameters.
-
-        Raises
-        ------
-        SyntaxError
-            if changes not allowed but parameter repeated in `additions`.
-        TypeError
-            if parameter in `additions` and pattern, but it must be to set
-            automatically.
         """
-        parameters = self._kw.copy()
-        if len(additions) != 0:
-            if not changes_allowed:
-                intersection = set(parameters).intersection(set(additions))
-                if len(intersection):
-                    raise SyntaxError(
-                        "keyword argument(s) repeated: "
-                        f"{', '.join(intersection)}"
-                    )
-
-            parameters.update(additions)
-        return parameters
+        return additions.get_joined(self._kw)
 
     @property
     def typename(self) -> str:
@@ -244,7 +169,7 @@ class PatternABC(ABC, Generic[OptionsT]):
     @property
     def _target(self) -> type[OptionsT]:
         """
-        Get target class by `type_name` or default if `type_name` not in
+        Get target class by `typename` or default if `typename` not in
         options.
 
         Returns
@@ -257,53 +182,28 @@ class PatternABC(ABC, Generic[OptionsT]):
     def __init_kwargs__(self) -> dict[str, Any]:
         return dict(typename=self._tn, **self._kw)
 
-    def __contains__(self, name: str) -> bool:
-        """Check that parameter in Pattern by name."""
-        return name in self._kw
-
-    def __eq__(self, other: object) -> bool:
-        """
-        Compare `__init_kwargs__` in two objects.
-
-        Beware: not supports numpy arrays in __init_kwargs__.
-        """
-        if hasattr(other, "__init_kwargs__"):
-            return cast(
-                bool, self.__init_kwargs__() == other.__init_kwargs__()
-            )
-        return False
-
     def __getitem__(self, name: str) -> Any:
         """Get parameter value"""
         return self._kw[name]
 
+    def __new__(cls: type[T], *args: Any, **kwargs: Any) -> T:
+        if not hasattr(cls, "_options"):
+            raise AttributeError(
+                f"'{cls.__name__}' object has no attribute '_options'"
+            )
+        return object.__new__(cls)
 
-class EditablePatternABC(ABC):
+
+PatternT = TypeVar("PatternT", bound=Pattern[Any])
+
+
+# todo: right mixin (self: Pattern)
+class EditableMixin:
     """
     Represents abstract class with methods to edit parameters.
     """
 
     _kw: dict[str, Any]
-
-    def add(self, key: str, value: Any) -> None:
-        """
-        Add new parameter to the pattern.
-
-        Parameters
-        ----------
-        key : str
-            new parameter name.
-        value : Any
-            new parameter value.
-
-        Raises
-        ------
-        KeyError
-            if parameter name is already exists.
-        """
-        if key in self._kw:
-            raise KeyError(f"parameter '{key}' in pattern already")
-        self._kw[key] = value
 
     def pop(self, key: str) -> Any:
         """
@@ -322,13 +222,12 @@ class EditablePatternABC(ABC):
         return self._kw.pop(key)
 
     def __setitem__(self, name: str, value: Any) -> None:
-        """Change value of the existed parameter."""
-        if name not in self._kw:
-            raise KeyError(f"'{name}' not in parameters")
+        """Change/add pattern to pattern."""
         self._kw[name] = value
 
 
-class WritablePatternABC(ABC):
+# todo: right mixin (self: Pattern)
+class WritableMixin(ABC):
     """
     Represents protocol for patterns which supports read/write.
     """
@@ -346,7 +245,7 @@ class WritablePatternABC(ABC):
 
     @classmethod
     @abstractmethod
-    def read(cls, path: Path, *keys: str) -> Self:
+    def read(cls, path: Path, name: str = "") -> Self:
         """
         Read init kwargs from `path` and initialize class instance.
 
@@ -354,8 +253,8 @@ class WritablePatternABC(ABC):
         ----------
         path : Path
             path to the file.
-        *keys : str
-            keys to search required pattern in file.
+        name : str, default=''
+            name to search required pattern in file.
 
         Returns
         -------
@@ -364,8 +263,8 @@ class WritablePatternABC(ABC):
         """
 
 
-class MetaPatternABC(  # todo: rename to antonym of sub
-    PatternABC[OptionsT],
+class SurPattern(
+    Pattern[OptionsT],
     Generic[OptionsT, PatternT],
 ):
     """
@@ -378,26 +277,15 @@ class MetaPatternABC(  # todo: rename to antonym of sub
     ----------
     typename: str
         name of pattern target type.
-    name: str
-        name of pattern meta-object format.
-    **kwargs: Any
+    **parameters: Any
         parameters for target initialization.
     """
 
     _sub_p_type: type[PatternT]
     """sub pattern type for initializing in class."""
 
-    _sub_p_par_name: str
-    """is the name of the parameter that names the sub-pattern in the
-    meta-object"""
-
-    def __init__(self, typename: str, **kwargs: Any):
-        if not hasattr(self, "_sub_p_par_name"):
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute "
-                "'_sub_p_par_name'"
-            )
-        super().__init__(typename, **kwargs)
+    def __init__(self, typename: str, **parameters: Any) -> None:
+        super().__init__(typename, **parameters)
         self._sub_p: dict[str, PatternT] = {}
 
     def configure(self, **patterns: PatternT) -> Self:
@@ -420,9 +308,8 @@ class MetaPatternABC(  # todo: rename to antonym of sub
 
     def get(
         self,
-        changes_allowed: bool = False,
-        sub_additions: SubPatternAdditions = SubPatternAdditions(),
-        **additions: Any,
+        additions: Additions = Additions(),
+        **kwargs: Any,
     ) -> OptionsT:
         """
         Get initialized class instance with parameters from pattern and from
@@ -430,14 +317,10 @@ class MetaPatternABC(  # todo: rename to antonym of sub
 
         Parameters
         ----------
-        changes_allowed: bool, default = False
-            allows situations where keys from the pattern overlap with kwargs.
-            If False, it causes an error on intersection, otherwise the
-            `additions` take precedence.
-        sub_additions: PatternAdditionsABC, default=PatternAdditionsABC()
-            additional initialization parameters for sub-objects.
-        **additions: Any
-            additional initialization parameters.
+        additions: Additions, default=Additions()
+            container with additional initialization parameters.
+        **kwargs: Any
+            ignored. Needed for backward compatibility.
 
         Returns
         -------
@@ -451,13 +334,10 @@ class MetaPatternABC(  # todo: rename to antonym of sub
         """
         if len(self._sub_p) == 0:
             raise NotConfiguredYet(self)
-        return super().get(
-            changes_allowed,
-            **additions,
-            **self._get_subs(changes_allowed, sub_additions),
-        )
+        self._modify_additions(additions)
+        return super().get(additions=additions, **kwargs)
 
-    def get_sub_pattern(self, name: str) -> PatternT:
+    def sub_pattern(self, name: str) -> PatternT:
         """
         Get sub-pattern by `name`.
 
@@ -473,53 +353,8 @@ class MetaPatternABC(  # todo: rename to antonym of sub
         """
         return self._sub_p[name]
 
-    def _get_subs(
-        self, changes_allowed: bool, sub_additions: SubPatternAdditions
-    ) -> dict[str, Any]:
-        """
-        Get dictionary of sub-pattern objects.
-
-        Parameters
-        ----------
-        changes_allowed : bool
-            if True allows situations where keys from the pattern overlap
-            with kwargs.
-        sub_additions : SubPatternAdditions
-            additional kwargs for sub-pattern objects.
-
-        Returns
-        -------
-        dict[str, Any]
-            dictionary of sub-pattern objects.
-        """
-        # todo: fix crutch? (changes_allowed always True for sub-patterns).
-        #  if needed for editing additions for sub-patterns in meta-pattern.
-        self._modify_sub_additions(sub_additions)
-        return {
-            self._sub_p_par_name: {
-                n: s.get(
-                    changes_allowed=changes_allowed,
-                    sub_additions=sub_additions.get_next_additions(n),
-                    **sub_additions.get_additions(n),
-                )
-                for n, s in self._sub_p.items()
-            }
-        }
-
-    def _modify_sub_additions(
-        self, sub_additions: SubPatternAdditions
-    ) -> None:
-        """
-        Modify additions for sub-pattern.
-
-        Parameters
-        ----------
-        sub_additions : SubPatternAdditions
-            sub-pattern additions class instance.
-        """
-
     @classmethod
-    def get_sub_pattern_type(cls) -> type[PatternT]:
+    def sub_pattern_type(cls) -> type[PatternT]:
         """
         Returns
         -------
@@ -527,6 +362,16 @@ class MetaPatternABC(  # todo: rename to antonym of sub
             sub-pattern type.
         """
         return cls._sub_p_type
+
+    def _modify_additions(self, additions: Additions) -> None:
+        """
+        Modify additions for target and sub-patterns.
+
+        Parameters
+        ----------
+        additions : Additions
+            additions instance.
+        """
 
     @property
     def sub_pattern_names(self) -> list[str]:
@@ -537,3 +382,12 @@ class MetaPatternABC(  # todo: rename to antonym of sub
             list of sub-pattern names.
         """
         return list(self._sub_p)
+
+    def __new__(cls: type[T], *args: Any, **kwargs: Any) -> T:
+        if not hasattr(cls, "_sub_p_type"):
+            raise AttributeError(
+                f"'{cls.__name__}' object has no attribute '_sub_p_type'"
+            )
+        return super().__new__(  # type: ignore[no-any-return, misc]
+            cls, *args, **kwargs
+        )

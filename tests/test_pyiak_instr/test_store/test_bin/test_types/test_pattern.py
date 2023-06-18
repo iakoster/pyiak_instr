@@ -4,10 +4,10 @@ from typing import Any
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
-from src.pyiak_instr.types import SubPatternAdditions
+from src.pyiak_instr.types import Additions
 
 from .....utils import compare_objects, validate_object
-from ....env import get_local_test_data_dir
+from ....env import get_local_test_data_dir, remove_test_data_dir
 
 from tests.pyiak_instr_ti.store import (
     TIField,
@@ -22,7 +22,7 @@ from tests.pyiak_instr_ti.store import (
 TEST_DATA_DIR = get_local_test_data_dir(__name__)
 
 
-class TestBytesFieldStructPatternABC(unittest.TestCase):
+class TestFieldPattern(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
@@ -30,7 +30,7 @@ class TestBytesFieldStructPatternABC(unittest.TestCase):
             TIFieldPattern(typename="basic"),
             typename="basic",
             is_dynamic=True,
-            size=0,
+            bytesize=0,
         )
 
     def test_get(self) -> None:
@@ -56,7 +56,7 @@ class TestBytesFieldStructPatternABC(unittest.TestCase):
             wo_attrs=["encoder"],
         )
 
-    def test_size(self) -> None:
+    def test_bytesize(self) -> None:
         def __pattern(**parameters: Any):
             return TIFieldPattern(typename="basic", **parameters)
 
@@ -74,10 +74,10 @@ class TestBytesFieldStructPatternABC(unittest.TestCase):
             (0, __pattern(start=4, stop=-2)),
         )):
             with self.subTest(case=i):
-                self.assertEqual(ref, obj.size)
+                self.assertEqual(ref, obj.bytesize)
 
 
-class TestBytesStorageStructPatternABC(unittest.TestCase):
+class TestStructPattern(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
@@ -128,8 +128,7 @@ class TestBytesStoragePatternABC(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        if TEST_DATA_DIR.exists():
-            shutil.rmtree(TEST_DATA_DIR)
+        remove_test_data_dir()
 
     def test_init(self) -> None:
         validate_object(
@@ -140,14 +139,17 @@ class TestBytesStoragePatternABC(unittest.TestCase):
         )
 
     def test_get(self) -> None:
+        additions = Additions(
+            lower={"test": Additions(
+                lower={"f0": Additions(current={"fmt": Code.U16})}
+            )}
+        )
         storage = TIContainerPattern(typename="basic").configure(
             test=TIStructPattern(typename="basic").configure(
                 f0=TIFieldPattern(typename="basic", bytes_expected=2)
             )
         )
-        res = storage.get(sub_additions=SubPatternAdditions().set_next_additions(
-            test=SubPatternAdditions().update_additions("f0", fmt=Code.U16)
-        ))
+        res = storage.get(additions=additions)
 
         validate_object(
             self,
@@ -254,17 +256,21 @@ class TestBytesStoragePatternABC(unittest.TestCase):
         res = TIContainerPattern.read(path, "test")
 
         self.assertIsNot(ref, res)
-        self.assertEqual(ref, res)
-        self.assertEqual(ref._sub_p, res._sub_p)
-        self.assertEqual(ref._sub_p["test"]._sub_p, res._sub_p["test"]._sub_p)
+        self.assertDictEqual(ref.__init_kwargs__(), res.__init_kwargs__())
+        self.assertEqual(
+            ref._sub_p["test"].__init_kwargs__(),
+            res._sub_p["test"].__init_kwargs__(),
+        )
+        for name in ref._sub_p["test"]._sub_p:
+            self.assertEqual(
+                ref._sub_p["test"]._sub_p[name].__init_kwargs__(),
+                res._sub_p["test"]._sub_p[name].__init_kwargs__(),
+            )
 
     def test_read_exc(self) -> None:
-        with self.assertRaises(TypeError) as exc:
-            TIContainerPattern.read(TEST_DATA_DIR, "key_1", "key_2")
-        self.assertEqual(
-            "TIContainerPattern takes only 1 argument (2 given)",
-            exc.exception.args[0],
-        )
+        with self.assertRaises(ValueError) as exc:
+            TIContainerPattern.read(TEST_DATA_DIR, "")
+        self.assertEqual("empty name not allowed", exc.exception.args[0])
 
     @staticmethod
     def _instance() -> TIContainerPattern:
@@ -313,74 +319,87 @@ class TestContinuousBytesStorageStructPatternABC(unittest.TestCase):
             with self.subTest(field=ref_field.name):
                 compare_objects(self, ref_field, res_field)
 
-    def test__modify_sub_additions(self) -> None:
+    def test__modify_additions(self) -> None:
+
+        def compare_subs(exp: dict[str, Any], act: Additions):
+            for name, kw in exp.items():
+                self.assertDictEqual(kw, act.lower(name).current)
+
         with self.subTest(test="dyn in middle"):
-            for_subs = SubPatternAdditions()
+            adds = Additions()
             TIContinuousStructPattern(
                 typename="basic", name="test"
             ).configure(
-                f0=TIFieldPattern(name="f0", typename="basic", bytes_expected=4),
-                f1=TIFieldPattern(name="f1", typename="basic", bytes_expected=2),
-                f2=TIFieldPattern(name="f2", typename="basic", bytes_expected=0),
-                f3=TIFieldPattern(name="f3", typename="basic", bytes_expected=3),
-                f4=TIFieldPattern(name="f4", typename="basic", bytes_expected=4),
-            )._modify_sub_additions(for_subs)
-            self.assertDictEqual(
-                dict(
-                    f0=dict(name="f0", start=0),
-                    f1=dict(name="f1", start=4),
-                    f2=dict(name="f2", start=6, stop=-7),
-                    f3=dict(name="f3", start=-7),
-                    f4=dict(name="f4", start=-4),
-                ), for_subs.additions
-            )
+                f0=TIFieldPattern(
+                    name="f0", typename="basic", bytes_expected=4
+                ),
+                f1=TIFieldPattern(
+                    name="f1", typename="basic", bytes_expected=2
+                ),
+                f2=TIFieldPattern(
+                    name="f2", typename="basic", bytes_expected=0
+                ),
+                f3=TIFieldPattern(
+                    name="f3", typename="basic", bytes_expected=3
+                ),
+                f4=TIFieldPattern(
+                    name="f4", typename="basic", bytes_expected=4
+                ),
+            )._modify_additions(adds)
+            compare_subs(dict(
+                f0=dict(name="f0", start=0),
+                f1=dict(name="f1", start=4),
+                f2=dict(name="f2", start=6, stop=-7),
+                f3=dict(name="f3", start=-7),
+                f4=dict(name="f4", start=-4),
+            ), adds)
 
         with self.subTest(test="last dyn"):
-            for_subs = SubPatternAdditions().update_additions("f2", req=1)
+            adds = Additions(lower={"f2": Additions(current={"req": 1})})
             TIContinuousStructPattern(
                 typename="basic", name="test"
             ).configure(
-                f0=TIFieldPattern(name="f0", typename="basic", bytes_expected=4),
-                f1=TIFieldPattern(name="f1", typename="basic", bytes_expected=2),
-                f2=TIFieldPattern(name="f2", typename="basic", bytes_expected=0),
-            )._modify_sub_additions(for_subs)
-            self.assertDictEqual(
-                dict(
-                    f0=dict(name="f0", start=0),
-                    f1=dict(name="f1", start=4),
-                    f2=dict(name="f2", start=6, stop=None, req=1),
+                f0=TIFieldPattern(
+                    name="f0", typename="basic", bytes_expected=4
                 ),
-                for_subs.additions
-            )
+                f1=TIFieldPattern(
+                    name="f1", typename="basic", bytes_expected=2
+                ),
+                f2=TIFieldPattern(
+                    name="f2", typename="basic", bytes_expected=0
+                ),
+            )._modify_additions(adds)
+            compare_subs(dict(
+                f0=dict(name="f0", start=0),
+                f1=dict(name="f1", start=4),
+                f2=dict(name="f2", start=6, stop=None, req=1),
+            ), adds)
 
         with self.subTest(test="only dyn"):
-            for_subs = SubPatternAdditions()
+            adds = Additions()
             TIContinuousStructPattern(
                 typename="basic", name="test"
             ).configure(
                 f0=TIFieldPattern(name="f0", typename="basic", bytes_expected=0),
-            )._modify_sub_additions(for_subs)
-            self.assertDictEqual(
-                dict(f0=dict(name="f0", start=0, stop=None)),
-                for_subs.additions,
-            )
+            )._modify_additions(adds)
+            compare_subs(dict(f0=dict(name="f0", start=0, stop=None)), adds)
 
         with self.subTest(test="without dyn"):
-            for_subs = SubPatternAdditions()
+            adds = Additions()
             TIContinuousStructPattern(
                 typename="basic", name="test"
             ).configure(
                 f0=TIFieldPattern(name="f0", typename="basic", bytes_expected=4),
                 f1=TIFieldPattern(name="f1", typename="basic", bytes_expected=2),
                 f2=TIFieldPattern(name="f2", typename="basic", bytes_expected=3),
-            )._modify_sub_additions(for_subs)
-            self.assertDictEqual(
+            )._modify_additions(adds)
+            compare_subs(
                 dict(
                     f0=dict(name="f0", start=0),
                     f1=dict(name="f1", start=4),
                     f2=dict(name="f2", start=6),
                 ),
-                for_subs.additions,
+                adds,
             )
 
     def test__modify_sub_additions_exc(self) -> None:
@@ -391,7 +410,7 @@ class TestContinuousBytesStorageStructPatternABC(unittest.TestCase):
                 ).configure(
                     f0=TIFieldPattern(name="f0", typename="basic", bytes_expected=0),
                     f1=TIFieldPattern(name="f1", typename="basic", bytes_expected=0),
-                )._modify_sub_additions(SubPatternAdditions())
+                )._modify_additions(Additions())
             self.assertEqual(
                 "two dynamic field not allowed", exc.exception.args[0]
             )

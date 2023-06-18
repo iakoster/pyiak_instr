@@ -7,177 +7,110 @@ from ...utils import validate_object
 
 from src.pyiak_instr.exceptions import NotConfiguredYet
 from src.pyiak_instr.types import (
-    SubPatternAdditions,
-    PatternABC,
-    MetaPatternABC,
-    EditablePatternABC,
+    Additions,
+    Pattern,
+    SurPattern,
 )
 
-
-class TIPatternABC(PatternABC[dict]):
-
-    _options = {"basic": dict}
-
-    _required_init_parameters = {"req"}
+from tests.pyiak_instr_ti.types.pattern import TIPattern, TISurPattern
 
 
-class TIEditablePatternABC(EditablePatternABC):
-
-    def __init__(self):
-        self._kw = {"a": 5, "b": [1, 2]}
-
-
-class TIMetaPatternABC(MetaPatternABC[dict, TIPatternABC]):
-
-    _options = {"basic": dict}
-    _sub_p_type = TIPatternABC
-    _sub_p_par_name = "s"
-
-
-class TestPatternABC(unittest.TestCase):
+class TestPattern(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            self._instance,
+            self._instance(),
             typename="basic",
         )
 
     def test_init_exc(self) -> None:
         with self.subTest(test="invalid typename"):
             with self.assertRaises(KeyError) as exc:
-                TIPatternABC(typename="base")
+                TIPattern(typename="base")
             self.assertEqual("'base' not in {'basic'}", exc.exception.args[0])
 
-        with self.subTest(test="without required"):
-            with self.assertRaises(TypeError) as exc:
-                TIPatternABC(typename="basic")
+        with self.subTest(test="without options"):
+            with self.assertRaises(AttributeError) as exc:
+                Pattern("basic")
             self.assertEqual(
-                "{'req'} not represented in parameters", exc.exception.args[0]
+                "'Pattern' object has no attribute '_options'",
+                exc.exception.args[0],
             )
 
     def test_get(self) -> None:
-        self.assertDictEqual(
-            {'a': 5, 'b': [], 'c': 11, "req": "rep"},
-            self._instance.get(c=11)
-        )
-
-    def test_get_changes_allowed(self) -> None:
-        self.assertDictEqual(
-            {'a': 11, 'b': [], 'c': 11, "req": "rep"},
-            self._instance.get(True, a=11, c=11)
-        )
-
-    def test_get_exc(self) -> None:
-        with self.subTest(test="repeat parameter"):
-            with self.assertRaises(SyntaxError) as exc:
-                self._instance.get(False, a=11)
-            self.assertEqual(
-                "keyword argument(s) repeated: a", exc.exception.args[0]
+        with self.subTest(test="basic"):
+            self.assertDictEqual(
+                {'a': 5, 'b': [], 'c': 11},
+                self._instance().get(self._additions(c=11))
+            )
+        with self.subTest(test="with changes"):
+            self.assertDictEqual(
+                {'a': 11, 'b': [], 'c': 11},
+                self._instance().get(self._additions(a=11, c=11))
             )
 
     def test_magic_init_kwargs(self) -> None:
         self.assertDictEqual(
-            {"typename": "basic", "a": 5, "b": [], "req": "rep"},
-            self._instance.__init_kwargs__()
+            {"typename": "basic", "a": 5, "b": []},
+            self._instance().__init_kwargs__()
         )
-
-    def test_magic_contains(self) -> None:
-        obj = self._instance
-        self.assertIn("a", obj)
-        self.assertNotIn("c", obj)
-
-    def test_magic_eq(self) -> None:
-        self.assertEqual(self._instance, self._instance)
-        self.assertNotEqual(
-            self._instance, TIPatternABC(
-                typename="basic", a=5, req="rep"
-            )
-        )
-        self.assertNotEqual(self._instance, 1)
 
     def test_magic_getitem(self) -> None:
-        self.assertEqual(5, self._instance["a"])
+        self.assertEqual(5, self._instance()["a"])
 
-    def test_magic_eq_exc(self) -> None:
-        with self.assertRaises(ValueError) as exc:
-            _ = TIPatternABC(
-                typename="basic", a=np.array([1, 2]), req="rep"
-            ) == TIPatternABC(
-                typename="basic", a=np.array([1, 2]), req="rep"
-            )
-        self.assertEqual(
-            "The truth value of an array with more than one element is "
-            "ambiguous. Use a.any() or a.all()",
-            exc.exception.args[0],
-        )
+    @staticmethod
+    def _additions(**parameters: Any) -> Additions:
+        return Additions(parameters)
 
-    @property
-    def _instance(self) -> TIPatternABC:
-        return TIPatternABC(typename="basic", req="rep", a=5, b=[])
+    @staticmethod
+    def _instance() -> TIPattern:
+        return TIPattern("basic", a=5, b=[])
 
 
-class TestEditablePatternABC(unittest.TestCase):
-
-    def test_add(self) -> None:
-        obj = self._instance
-        obj.add("c", {1, 2})
-        self.assertDictEqual(dict(a=5, b=[1, 2], c={1, 2}), obj._kw)
-
-    def test_add_exc(self) -> None:
-        with self.assertRaises(KeyError) as exc:
-            self._instance.add("a", 3)
-        self.assertEqual(
-            "parameter 'a' in pattern already",
-            exc.exception.args[0]
-        )
+class TestEditableMixin(unittest.TestCase):
 
     def test_pop(self) -> None:
-        obj = self._instance
+        obj = self._instance()
         self.assertListEqual([1, 2], obj.pop("b"))
-        self.assertDictEqual({"a": 5}, obj._kw)
+        self.assertDictEqual(
+            {"typename": "basic", "a": 5}, obj.__init_kwargs__()
+        )
 
     def test_magic_setitem(self) -> None:
-        obj = self._instance
+        obj = self._instance()
         obj["a"] = 3
         self.assertDictEqual({"a": 3, "b": [1, 2]}, obj._kw)
 
-    def test_magic_setitem_exc(self) -> None:
-        with self.assertRaises(KeyError) as exc:
-            self._instance["c"] = 0
-        self.assertEqual("'c' not in parameters", exc.exception.args[0])
-
-    @property
-    def _instance(self) -> TIEditablePatternABC:
-        return TIEditablePatternABC()
+    @staticmethod
+    def _instance() -> TIPattern:
+        return TIPattern("basic", a=5, b=[1, 2])
 
 
-class TestMetaPatternABC(unittest.TestCase):
+class TestSurPattern(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
-            self._instance,
+            self._instance(),
             typename="basic",
             sub_pattern_names=[],
         )
 
     def test_init_exc(self) -> None:
-        with self.subTest(exc="_sub_p_par_name not exists"):
+        with self.subTest(exc="_sub_p_type not exists"):
             with self.assertRaises(AttributeError) as exc:
-                MetaPatternABC("")
+                SurPattern("")
             self.assertEqual(
-                "'MetaPatternABC' object has no attribute '_sub_p_par_name'",
+                "'SurPattern' object has no attribute '_sub_p_type'",
                 exc.exception.args[0],
             )
 
     def test_configure(self) -> None:
-        obj = self._instance
-        pattern = TIPatternABC(typename="basic", a=0, req="")
-
-        self.assertDictEqual({}, obj._sub_p)
-        obj.configure(pattern=pattern)
-        self.assertDictEqual({"pattern": pattern}, obj._sub_p)
+        obj = self._instance()
+        self.assertListEqual([], obj.sub_pattern_names)
+        obj.configure(pattern=TIPattern("basic", a=0, req=""))
+        self.assertListEqual(["pattern"], obj.sub_pattern_names)
 
     def test_get(self) -> None:
         self.assertDictEqual(
@@ -186,45 +119,42 @@ class TestMetaPatternABC(unittest.TestCase):
                 a=5,
                 b=[],
                 ii=99,
-                s={"f": {"a": 33, "i": 12, "req": ""}}
             ),
-            self._instance.configure(
-                f=TIPatternABC("basic", a=33, req=""),
+            self._instance().configure(
+                f=TIPattern("basic", a=33, req=""),
             ).get(
-                sub_additions=SubPatternAdditions(
-                    additions={"f": {"i": 12}, "s": {"a": {"a"" 22"}}},
-                ), ii=99
+                additions=Additions(
+                    current={"ii": 99},
+                    lower={"f": Additions(current={"i": 12})},
+                )
             )
         )
 
     def test_get_exc(self) -> None:
         with self.subTest(exc="not configured"):
             with self.assertRaises(NotConfiguredYet) as exc:
-                self._instance.get()
+                self._instance().get()
             self.assertEqual(
-                "TIMetaPatternABC not configured yet", exc.exception.args[0]
+                "TISurPattern not configured yet", exc.exception.args[0]
             )
 
-    def test_get_sub_pattern(self) -> None:
+    def test_sub_pattern(self) -> None:
         self.assertDictEqual(
             dict(
                 typename="basic",
                 a=33,
                 req="",
             ),
-            self._instance.configure(
-                f=TIPatternABC("basic", a=33, req=""),
-            ).get_sub_pattern("f").__init_kwargs__()
+            self._instance().configure(
+                f=TIPattern("basic", a=33, req=""),
+            ).sub_pattern("f").__init_kwargs__()
         )
 
     def test_get_sub_pattern_type(self) -> None:
-        self.assertIs(
-            TIPatternABC,
-            self._instance.get_sub_pattern_type(),
-        )
+        self.assertIs(TIPattern, self._instance().sub_pattern_type())
 
-    @property
-    def _instance(self) -> TIMetaPatternABC:
-        return TIMetaPatternABC(
+    @staticmethod
+    def _instance() -> TISurPattern:
+        return TISurPattern(
             typename="basic", name="test", a=5, b=[]
         )

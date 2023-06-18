@@ -128,10 +128,12 @@ class TIFieldPattern(
 class TIStructPattern(
     StructPattern[TIStruct, TIFieldPattern]
 ):
+    _sub_p_type = TIFieldPattern
     _options = {"basic": TIStruct}
 
 
 class TIMessagePattern(
     MessagePattern[TIMessage, TIStructPattern]
 ):
+    _sub_p_type = TIStructPattern
     _options = {"basic": TIMessage}

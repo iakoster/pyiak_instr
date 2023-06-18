@@ -1,7 +1,6 @@
 """Private module of ``pyiak_instr.store.bin.types``"""
 from __future__ import annotations
 from pathlib import Path
-from configparser import ConfigParser
 from typing import (
     Any,
     Self,
@@ -11,12 +10,12 @@ from typing import (
 
 from ...exceptions import NotConfiguredYet
 from ...types import (
-    MetaPatternABC,
-    PatternABC,
-    SubPatternAdditions,
-    WritablePatternABC,
+    Additions,
+    SurPattern,
+    Pattern,
+    WritableMixin,
 )
-from ...rwfile.types import RWData
+from ...rwfile import RWConfig
 from ._container import Container
 from ._struct import (
     Field,
@@ -37,7 +36,7 @@ StructT = TypeVar("StructT", bound=Struct[Any])
 ContainerT = TypeVar("ContainerT", bound=Container[Any, Any, Any])
 
 
-class FieldPattern(PatternABC[FieldT]):
+class FieldPattern(Pattern[FieldT]):
     """
     Represent abstract class of pattern for bytes struct (field).
     """
@@ -51,10 +50,10 @@ class FieldPattern(PatternABC[FieldT]):
             True if the pattern can be interpreted as a dynamic,
             otherwise - False.
         """
-        return self.size <= 0
+        return self.bytesize <= 0
 
     @property
-    def size(self) -> int:
+    def bytesize(self) -> int:
         """
         Returns
         -------
@@ -78,19 +77,38 @@ class FieldPattern(PatternABC[FieldT]):
 FieldtPatternT = TypeVar("FieldtPatternT", bound=FieldPattern[Any])
 
 
-class StructPattern(MetaPatternABC[StructT, FieldtPatternT]):
+class StructPattern(SurPattern[StructT, FieldtPatternT]):
     """
     Represent abstract class of pattern for bytes struct (storage).
     """
 
-    _sub_p_par_name = "fields"
-
-    def _modify_sub_additions(
-        self, sub_additions: SubPatternAdditions
-    ) -> None:
-        super()._modify_sub_additions(sub_additions)
+    def _modify_additions(self, additions: Additions) -> None:
+        super()._modify_additions(additions)
         for name in self._sub_p:
-            sub_additions.update_additions(name, name=name)
+            additions.lower(name).current["name"] = name
+
+    def _get_parameters(self, additions: Additions) -> dict[str, Any]:
+        """
+        Get joined additions with pattern parameters.
+
+        Also initialize fields for struct.
+
+        Parameters
+        ----------
+        additions : dict[str, Any]
+            additional initialization parameters.
+
+        Returns
+        -------
+        dict[str, Any]
+            joined parameters.
+        """
+        parameters = super()._get_parameters(additions=additions)
+        parameters["fields"] = {
+            n: p.get(additions=additions.lower(n))
+            for n, p in self._sub_p.items()
+        }
+        return parameters
 
 
 StructPatternT = TypeVar("StructPatternT", bound=StructPattern[Any, Any])
@@ -106,23 +124,19 @@ class ContinuousStructPattern(
     (e.g. without gaps in content).
     """
 
-    def _modify_sub_additions(
-        self, sub_additions: SubPatternAdditions
-    ) -> None:
-        super()._modify_sub_additions(sub_additions)
-        dyn_name = self._modify_before_dyn(sub_additions)
+    def _modify_additions(self, additions: Additions) -> None:
+        super()._modify_additions(additions)
+        dyn_name = self._modify_before_dyn(additions)
         if dyn_name is not None:
-            self._modify_after_dyn(dyn_name, sub_additions)
+            self._modify_after_dyn(dyn_name, additions)
 
-    def _modify_before_dyn(
-        self, sub_additions: SubPatternAdditions
-    ) -> str | None:
+    def _modify_before_dyn(self, additions: Additions) -> str | None:
         """
-        Modify `sub_additions` up to dynamic field.
+        Modify `additions` up to dynamic field.
 
         Parameters
         ----------
-        sub_additions : SubPatternAdditions
+        additions : Additions
             additional kwargs for sub-pattern object.
 
         Returns
@@ -132,15 +146,13 @@ class ContinuousStructPattern(
         """
         start = 0
         for name, pattern in self._sub_p.items():
-            sub_additions.update_additions(name, start=start)
+            additions.lower(name).current.update(start=start)
             if pattern.is_dynamic:
                 return name
-            start += pattern.size
+            start += pattern.bytesize
         return None
 
-    def _modify_after_dyn(
-        self, dyn_name: str, sub_additions: SubPatternAdditions
-    ) -> None:
+    def _modify_after_dyn(self, dyn_name: str, additions: Additions) -> None:
         """
         Modify `sub_additions` from dynamic field to end.
 
@@ -148,7 +160,7 @@ class ContinuousStructPattern(
         ----------
         dyn_name : str
             name of the dynamic field.
-        sub_additions : SubPatternAdditions
+        additions : SubPatternAdditions
             additional kwargs for sub-pattern object.
 
         Raises
@@ -164,27 +176,22 @@ class ContinuousStructPattern(
 
             if pattern.is_dynamic:
                 if name == dyn_name:
-                    sub_additions.update_additions(
-                        name, stop=start if start != 0 else None
+                    additions.lower(name).current.update(
+                        stop=start if start != 0 else None
                     )
                     return
                 raise TypeError("two dynamic field not allowed")
 
-            start -= pattern.size
-            sub_additions.update_additions(name, start=start)
+            start -= pattern.bytesize
+            additions.lower(name).current.update(start=start)
 
         raise AssertionError("dynamic field not found")
 
 
-class ContainerPattern(
-    MetaPatternABC[ContainerT, StructPatternT], WritablePatternABC
-):
+class ContainerPattern(SurPattern[ContainerT, StructPatternT], WritableMixin):
     """
     Represent pattern for bytes storage.
     """
-
-    _rwdata: type[RWData[ConfigParser]]
-    _sub_p_par_name = "storage"
 
     def configure(self, **patterns: StructPatternT) -> Self:
         """
@@ -242,19 +249,19 @@ class ContainerPattern(
         }
         pars.update(
             {
-                n: pattern.get_sub_pattern(n).__init_kwargs__()
+                n: pattern.sub_pattern(n).__init_kwargs__()
                 for n in pattern.sub_pattern_names
             }
         )
 
-        with self._rwdata(path) as cfg:
+        with RWConfig(path) as cfg:
             if cfg.api.has_section(name):
                 cfg.api.remove_section(name)
             cfg.set({name: pars})
             cfg.commit()
 
     @classmethod
-    def read(cls, path: Path, *keys: str) -> Self:
+    def read(cls, path: Path, name: str = "") -> Self:
         """
         Read init kwargs from `path` and initialize class instance.
 
@@ -262,9 +269,8 @@ class ContainerPattern(
         ----------
         path : Path
             path to the file.
-        *keys : str
-            keys to search required pattern in file. Must include only one
-            argument - `name`.
+        name : str, default=''
+            name to search required pattern in file.
 
         Returns
         -------
@@ -273,43 +279,33 @@ class ContainerPattern(
 
         Raises
         ------
-        TypeError
-            if given invalid count of keys.
+        ValueError
+            if `name` is empty string.
         """
-        if len(keys) != 1:
-            raise TypeError(
-                f"{cls.__name__} takes only 1 argument "
-                f"({len(keys)} given)"
-            )
-        (name,) = keys
+        if len(name) == 0:
+            raise ValueError("empty name not allowed")
 
-        with cls._rwdata(path) as cfg:
+        with RWConfig(path) as cfg:
             opts = cfg.api.options(name)
             opts.pop(opts.index("_"))
             opts.pop(opts.index(name))
 
-            # todo: access to sub-pattern type in MetaPattern
-            field_type = cls._sub_p_type.get_sub_pattern_type()
+            field_type = cls._sub_p_type.sub_pattern_type()
+            struct_pattern = cls._sub_p_type(**cfg.get(name, name)).configure(
+                **{f: field_type(**cfg.get(name, f)) for f in opts}
+            )
             return cls(**cfg.get(name, "_")).configure(
-                **{
-                    name: cls._sub_p_type(**cfg.get(name, name)).configure(
-                        **{f: field_type(**cfg.get(name, f)) for f in opts}
-                    )
-                }
+                **{name: struct_pattern}
             )
 
-    def _get_parameters_dict(
-        self,
-        changes_allowed: bool,
-        additions: dict[str, Any],
-    ) -> dict[str, Any]:
+    def _get_parameters(self, additions: Additions) -> dict[str, Any]:
         """
-        Add storage and pattern to parameters.
+        Get joined additions with pattern parameters.
+
+        Also initialize struct object and add pattern reference to parameters.
 
         Parameters
         ----------
-        changes_allowed : bool
-            allows situations where keys from the pattern overlap with kwargs.
         additions : dict[str, Any]
             additional initialization parameters.
 
@@ -317,22 +313,17 @@ class ContainerPattern(
         -------
         dict[str, Any]
             joined parameters.
-
-        See Also
-        --------
-        super()._get_parameters_dict
         """
-        parameters = super()._get_parameters_dict(changes_allowed, additions)
+        parameters = super()._get_parameters(additions)
 
-        (storage,) = parameters[self._sub_p_par_name].values()
-        parameters["storage"] = storage
-
+        ((name, sub_pattern),) = self._sub_p.items()
+        parameters["struct"] = sub_pattern.get(
+            additions=additions.lower(name)
+        )
         parameters["pattern"] = self
         return parameters
 
-    def _modify_sub_additions(
-        self, sub_additions: SubPatternAdditions
-    ) -> None:
-        super()._modify_sub_additions(sub_additions)
+    def _modify_additions(self, additions: Additions) -> None:
+        super()._modify_additions(additions)
         for name in self._sub_p:
-            sub_additions.update_additions(name, name=name)
+            additions.lower(name).current["name"] = name

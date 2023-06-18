@@ -47,10 +47,10 @@ class Message(
 
     def __init__(
         self,
-        storage: StructT,
+        struct: StructT,
         pattern: PatternT | None = None,
     ):
-        super().__init__(storage, pattern=pattern)
+        super().__init__(struct, pattern=pattern)
         if self._s.divisible and self.has.address:
             behaviour = self.get.address.behaviour
 

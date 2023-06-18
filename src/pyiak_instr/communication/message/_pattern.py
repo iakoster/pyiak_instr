@@ -8,7 +8,7 @@ from typing import (
 
 from ...core import Code
 from ...exceptions import NotAmongTheOptions, NotConfiguredYet
-from ...types import SubPatternAdditions
+from ...types import Additions
 from ...store.bin import (
     FieldPattern as BinFieldPattern,
     ContinuousStructPattern as BinStructPattern,
@@ -498,8 +498,11 @@ class FieldPattern(BinFieldPattern[FieldT]):
         return self._dir
 
     def __init_kwargs__(self) -> dict[str, Any]:
-        init_kw = super().__init_kwargs__()
-        init_kw["direction"] = self._dir
+        init_kw = dict(
+            typename="",
+            direction=self._dir,
+        )
+        init_kw.update(super().__init_kwargs__())
         return init_kw
 
 
@@ -585,9 +588,7 @@ class MessagePattern(BinContainerPattern[MessageT, StructPatternT]):
     def get_for_direction(
         self,
         direction: Code,
-        changes_allowed: bool = False,
-        sub_additions: SubPatternAdditions = SubPatternAdditions(),
-        **additions: Any,
+        additions: Additions = Additions(),
     ) -> MessageT:
         """
         Get message instance with fields for specified direction.
@@ -596,13 +597,7 @@ class MessagePattern(BinContainerPattern[MessageT, StructPatternT]):
         ----------
         direction : Code
             direction for fields.
-        changes_allowed: bool, default=False
-            allows situations where keys from the pattern overlap with kwargs.
-            If False, it causes an error on intersection, otherwise the
-            `additions` take precedence.
-        sub_additions: PatternAdditionsABC, default=PatternAdditionsABC()
-            additional initialization parameters for sub-objects.
-        **additions: Any
+        additions: Additions, default=Additions()
             additional initialization parameters.
 
         Returns
@@ -610,17 +605,13 @@ class MessagePattern(BinContainerPattern[MessageT, StructPatternT]):
         MessageT
             message witch specified for direction.
         """
-        name = list(self._sub_p)[0]
+        (name,) = self._sub_p.keys()
         storage = self._sub_p[name].instance_for_direction(direction)
         pattern = self.__class__(**self.__init_kwargs__()).configure(
             **{name: storage}
         )
 
-        instance = pattern.get(
-            changes_allowed=changes_allowed,
-            sub_additions=sub_additions,
-            **additions,
-        )
+        instance = pattern.get(additions=additions)
         object.__setattr__(instance, "_p", self)  # todo: refactor
         return instance
 

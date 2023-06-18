@@ -42,16 +42,16 @@ class Container(
 
     Parameters
     ----------
-    storage : StorageStructT
-        storage struct instance.
+    struct : StructT
+        struct instance.
     """
 
     def __init__(
         self,
-        storage: StructT,
+        struct: StructT,
         pattern: ContainerPatternT | None = None,
     ) -> None:
-        self._s = storage
+        self._s = struct
         self._p = pattern
         self._c = bytearray()
 

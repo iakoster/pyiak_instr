@@ -1,7 +1,7 @@
 import unittest
 
 from src.pyiak_instr.core import Code
-from src.pyiak_instr.types import SubPatternAdditions
+from src.pyiak_instr.types import Additions
 from src.pyiak_instr.exceptions import NotAmongTheOptions
 
 from .....utils import validate_object, get_object_attrs
@@ -20,7 +20,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             TIFieldPattern(typename="id"),
             typename="id",
             is_dynamic=True,
-            size=0,
+            bytesize=0,
             direction=Code.ANY,
         )
 
@@ -135,7 +135,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             self,
             TIFieldPattern(
                 typename="crc", default=b"aa", fill_value=b""
-            ).get(fmt=Code.U16),
+            ).get(Additions(current=dict(fmt=Code.U16))),
             has_default=True,
             default=b"aa",
             word_bytesize=2,
@@ -294,9 +294,9 @@ class TestMessageStructPatternABC(unittest.TestCase):
         )
         msg = pattern.get(
             changes_allowed=True,
-            mtu=30,
-            sub_additions=SubPatternAdditions().update_additions(
-                "f1", fmt=Code.U16
+            additions=Additions(
+                current={"mtu": 30},
+                lower={"f1": Additions(current={"fmt": Code.U16})}
             ),
         )
 
@@ -386,13 +386,12 @@ class TestMessagePatternABC(unittest.TestCase):
         )
         msg = pattern.get(
             changes_allowed=True,
-            sub_additions=SubPatternAdditions().update_additions(
-                "s0", mtu=30,
-            ).set_next_additions(
-                s0=SubPatternAdditions().update_additions(
-                    "f1", fmt=Code.U16
-                )
-            ),
+            additions=Additions(
+                lower={"s0": Additions(
+                    current={"mtu": 30},
+                    lower={"f1": Additions(current={"fmt": Code.U16})},
+                )}
+            )
         )
 
         validate_object(
