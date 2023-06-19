@@ -9,7 +9,7 @@ from src.pyiak_instr.exceptions import NotAmongTheOptions
 from src.pyiak_instr.communication.format import RegisterMap
 
 
-from ....utils import validate_object
+from ....utils import validate_object, compare_objects
 from ...env import get_local_test_data_dir, remove_test_data_dir
 from tests.pyiak_instr_ti.communication.message import (
     TIMessagePattern,
@@ -22,7 +22,7 @@ from tests.pyiak_instr_ti.communication.format import TIRegister, TIRegisterMap
 TEST_DATA_DIR = get_local_test_data_dir(__name__)
 
 
-class TestRegisterABC(unittest.TestCase):
+class TestRegister(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
@@ -35,7 +35,7 @@ class TestRegisterABC(unittest.TestCase):
             pattern="pat",
             rw_type=Code.ANY,
             short_description="Short",
-            wo_attrs=["series"]
+            wo_attrs=["additions", "series"]
         )
 
     def test_init_exc(self) -> None:
@@ -103,22 +103,27 @@ class TestRegisterABC(unittest.TestCase):
 
     def test_from_series(self) -> None:
         ref = self._instance()
-        self.assertEqual(ref, TIRegister.from_series(ref.series))
 
-        self.assertEqual(
-            TIRegister(
-                pattern="pat",
-                name="test",
-                address=20,
-                length=42,
-            ),
+        validate_object(
+            self,
             TIRegister.from_series(pd.Series(dict(
                 pattern="pat",
                 name="test",
                 address=20,
                 length=42,
-                description=None
+                description=None,
+                message="\dct()",
+                struct="\dct()",
+                fields="\dct()",
             ))),
+            length=42,
+            address=20,
+            name="test",
+            pattern="pat",
+            description="",
+            rw_type=Code.ANY,
+            short_description="",
+            wo_attrs=["additions", "series"],
         )
 
     def test_series(self) -> None:
@@ -130,7 +135,13 @@ class TestRegisterABC(unittest.TestCase):
                 address=20,
                 length=42,
                 rw_type=Code.ANY,
-                description="Short. Long."
+                description="Short. Long.",
+                message="\dct()",
+                struct="\dct(s0,\dct(name,s0))",
+                fields=(
+                    "\dct(f0,\dct(name,f0,start,0),f1,\dct(name,f1,start,2),"
+                    "f3,\dct(name,f3,start,3),f4,\dct(name,f4,start,4,stop,None))"
+                ),
             )),
         )
 
@@ -161,7 +172,7 @@ class TestRegisterABC(unittest.TestCase):
             )
 
 
-class TestRegisterMapABC(unittest.TestCase):
+class TestRegisterMap(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -183,7 +194,16 @@ class TestRegisterMapABC(unittest.TestCase):
             with self.assertRaises(ValueError) as exc:
                 TIRegisterMap(
                     pd.DataFrame(
-                        columns=["name", "address", "length", "rw_type"],
+                        columns=[
+                            "name",
+                            "address",
+                            "length",
+                            "rw_type",
+                            "description",
+                            "message",
+                            "struct",
+                            "fields",
+                        ],
                     )
                 )
             self.assertEqual(
@@ -199,7 +219,8 @@ class TestRegisterMapABC(unittest.TestCase):
             )
 
     def test_get_register(self) -> None:
-        self.assertEqual(
+        compare_objects(
+            self,
             TIRegister(
                 pattern="pat",
                 name="test_0",
@@ -207,18 +228,27 @@ class TestRegisterMapABC(unittest.TestCase):
                 length=20,
                 rw_type=Code.ANY,
             ),
-            self._instance().get_register("test_0")
+            self._instance().get_register("test_0"),
+            wo_attrs=["additions", "series"],
         )
 
     def test_get_register_exc(self) -> None:
         instance = TIRegisterMap(
                 pd.DataFrame(
                     columns=[
-                        "pattern", "name", "address", "length", "rw_type"
+                        "pattern",
+                        "name",
+                        "address",
+                        "length",
+                        "rw_type",
+                        "description",
+                        "message",
+                        "struct",
+                        "fields",
                     ],
                     data=[
-                        [None, "t", 0, 0, Code.ANY],
-                        [None, "t", 0, 0, Code.ANY],
+                        [None, "t", 0, 0, Code.ANY, "", "\dct()", "\dct()", "\dct()"],
+                        [None, "t", 0, 0, Code.ANY, "", "\dct()", "\dct()", "\dct()"],
                     ]
                 )
             )
@@ -254,10 +284,37 @@ class TestRegisterMapABC(unittest.TestCase):
                     "length",
                     "rw_type",
                     "description",
+                    "message",
+                    "struct",
+                    "fields",
                 ],
                 data=[
-                    ["pat", "0", 0, 1, Code.ANY, ""],
-                    ["pat", "1", 1, 1, 5, ""],
+                    [
+                        "pat",
+                        "0",
+                        0,
+                        1,
+                        Code.ANY,
+                        "",
+                        "\dct()",
+                        "\dct(s0,\dct(name,s0))",
+                        "\dct(f0,\dct(name,f0,start,0),f1,"
+                        "\dct(name,f1,start,2),f3,\dct(name,f3,start,3),"
+                        "f4,\dct(name,f4,start,4,stop,None))",
+                    ],
+                    [
+                        "pat",
+                        "1",
+                        1,
+                        1,
+                        5,
+                        "",
+                        "\dct()",
+                        "\dct(s0,\dct(name,s0))",
+                        "\dct(f0,\dct(name,f0,start,0),f1,"
+                        "\dct(name,f1,start,2),f3,\dct(name,f3,start,3),"
+                        "f4,\dct(name,f4,start,4,stop,None))",
+                    ],
                 ],
             ),
             obj.table,
@@ -285,11 +342,21 @@ class TestRegisterMapABC(unittest.TestCase):
     def _instance() -> TIRegisterMap:
         return TIRegisterMap(
             pd.DataFrame(
-                columns=["pattern", "name", "address", "length", "rw_type"],
+                columns=[
+                    "pattern",
+                    "name",
+                    "address",
+                    "length",
+                    "rw_type",
+                    "description",
+                    "message",
+                    "struct",
+                    "fields",
+                ],
                 data=[
-                    ["pat", "test_0", 42, 20, Code.ANY],
-                    ["pat", "test_1", 43, 22, Code.READ_ONLY],
-                    ["pat", "test_2", 44, 4, Code.WRITE_ONLY],
+                    ["pat", "test_0", 42, 20, Code.ANY, "", "\dct()", "\dct()", "\dct()"],
+                    ["pat", "test_1", 43, 22, Code.READ_ONLY, "", "\dct()", "\dct()", "\dct()"],
+                    ["pat", "test_2", 44, 4, Code.WRITE_ONLY, "", "\dct()", "\dct()", "\dct()"],
                 ]
             )
         )

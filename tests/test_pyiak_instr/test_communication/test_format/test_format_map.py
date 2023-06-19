@@ -63,10 +63,13 @@ class TestFormatsMap(unittest.TestCase):
                         "address",
                         "length",
                         "rw_type",
-                        "descriptions",
+                        "description",
+                        "message",
+                        "struct",
+                        "fields",
                     ],
                     data=[
-                        ["s1", "test", 22, 33, Code.ANY, ""],
+                        ["s1", "test", 22, 33, Code.ANY, "", "\dct()", "\dct()", "\dct()"],
                     ]
                 )
             )

@@ -12,6 +12,7 @@ from ...core import Code
 from ...exceptions import NotAmongTheOptions
 from ...types import Additions
 from ...store.bin import STRUCT_DATACLASS
+from ...encoders import StringEncoder
 from ..message import MessagePattern, Message
 
 
@@ -40,7 +41,10 @@ class Register(Generic[MessageT]):
     "register length in bytes."
 
     rw_type: Code = Code.ANY
-    "register type"
+    "register type."
+
+    additions: Additions = Additions()
+    "additional kwargs for message."
 
     description: str = ""
     "register description. First sentence must be a short summary."
@@ -60,7 +64,6 @@ class Register(Generic[MessageT]):
     def get(
         self,
         pattern: MessagePattern[MessageT, Any],
-        additions: Additions = Additions(),
         fields_data: dict[str, Any] | None = None,
         operation: Code | None = None,
         dynamic_length: int = 0,
@@ -73,8 +76,6 @@ class Register(Generic[MessageT]):
         ----------
         pattern : MessagePattern[MessageT, Any]
             pattern for message.
-        additions : Additions, default=Additions()
-            additions for `pattern`.
         fields_data: dict[str, Any] | None, default=None
             data for fields.
         operation : Code | None, default=None
@@ -99,7 +100,7 @@ class Register(Generic[MessageT]):
             fields_data = {}
 
         msg: MessageT = pattern.get_for_direction(
-            Code.TX, additions=additions
+            Code.TX, additions=self.additions
         )
 
         if msg.has.address:
@@ -123,7 +124,6 @@ class Register(Generic[MessageT]):
         self,
         pattern: MessagePattern[MessageT, Any],
         dynamic_length: int = 0,
-        additions: Additions = Additions(),
         fields_data: dict[str, Any] | None = None,
     ) -> MessageT:
         """
@@ -136,8 +136,6 @@ class Register(Generic[MessageT]):
         dynamic_length : int, default=0
             length of dynamic field. Works only if dynamic field and dynamic
             length field exists.
-        additions : dict[str, Any] | None, default=None
-            additions for `pattern`.
         fields_data: dict[str, Any] | None, default=None
             data for fields.
 
@@ -151,7 +149,6 @@ class Register(Generic[MessageT]):
 
         return self.get(
             pattern,
-            additions=additions,
             fields_data=fields_data,
             operation=Code.READ,
             dynamic_length=dynamic_length,
@@ -161,7 +158,6 @@ class Register(Generic[MessageT]):
         self,
         pattern: MessagePattern[MessageT, Any],
         data: Any,
-        additions: Additions = Additions(),
         fields_data: dict[str, Any] | None = None,
     ) -> MessageT:
         """
@@ -173,8 +169,6 @@ class Register(Generic[MessageT]):
             pattern for message.
         data : Any
             content of dynamic field.
-        additions : Additions, default=Additions()
-            additions for `pattern`.
         fields_data: dict[str, Any] | None, default=None
             data for fields.
 
@@ -185,7 +179,6 @@ class Register(Generic[MessageT]):
         """
         return self.get(
             pattern,
-            additions=additions,
             fields_data=fields_data,
             operation=Code.WRITE,
             data=data,
@@ -211,6 +204,22 @@ class Register(Generic[MessageT]):
         series_dict: dict[str, Any] = series.dropna().to_dict()
         if "rw_type" in series_dict:
             series_dict["rw_type"] = Code(series["rw_type"])
+
+        encoder = StringEncoder()
+        additions = Additions(
+            current=encoder.decode(series_dict.pop("message"))
+        )
+        s_dict = encoder.decode(series_dict.pop("struct"))
+        f_dict = encoder.decode(series_dict.pop("fields"))
+        for s_name, s_value in s_dict.items():
+            s_adds = additions.lower(s_name)
+            s_adds.current = s_value
+
+            for f_name, f_value in f_dict.items():
+                f_adds = additions.lower(f_name)
+                f_adds.current = f_value
+
+        series_dict["additions"] = additions
         return cls(**series_dict)
 
     @property
@@ -221,7 +230,20 @@ class Register(Generic[MessageT]):
         pd.Series[Any]
             series with data from dataclass.
         """
-        return pd.Series(self.__init_kwargs__())
+        encoder = StringEncoder()
+        init_kw = self.__init_kwargs__()
+
+        struct, fields = {}, {}
+        for s_name, s_adds in self.additions.lowers.items():
+            struct[s_name] = s_adds.current
+            for f_name, f_adds in s_adds.lowers.items():
+                fields[f_name] = f_adds.current
+
+        init_kw["message"] = encoder.encode(self.additions.current)
+        init_kw["struct"] = encoder.encode(struct)
+        init_kw["fields"] = encoder.encode(fields)
+
+        return pd.Series(init_kw)
 
     @property
     def short_description(self) -> str:
@@ -266,6 +288,10 @@ class RegisterMap(Generic[RegisterT]):
         "address",
         "length",
         "rw_type",
+        "description",
+        "message",
+        "struct",
+        "fields",
     }
 
     def __init__(self, table: pd.DataFrame) -> None:
@@ -332,7 +358,17 @@ class RegisterMap(Generic[RegisterT]):
         ValueError
             if there is at least one required column in the table.
         """
-        required_columns = {"pattern", "name", "address", "length", "rw_type"}
+        required_columns = {
+            "pattern",
+            "name",
+            "address",
+            "length",
+            "rw_type",
+            "description",
+            "message",
+            "struct",
+            "fields",
+        }
         diff = required_columns - set(table.columns)
         if len(diff) > 0:
             raise ValueError(f"missing columns in table: {diff}")

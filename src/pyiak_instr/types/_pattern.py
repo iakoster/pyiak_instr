@@ -38,8 +38,8 @@ class Additions:
         current: dict[str, Any] | None = None,
         lower: dict[str, Additions] | None = None,
     ):
-        self._curr: dict[str, Any] = {} if current is None else current
-        self._lowers: dict[str, Additions] = {} if lower is None else lower
+        self.current: dict[str, Any] = {} if current is None else current
+        self.lowers: dict[str, Additions] = {} if lower is None else lower
 
     def get_joined(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         """
@@ -59,7 +59,7 @@ class Additions:
             joined parameters.
         """
         parameters = kwargs.copy()
-        parameters.update(self._curr)
+        parameters.update(self.current)
         return parameters
 
     def lower(self, name: str) -> Additions:
@@ -78,19 +78,19 @@ class Additions:
         Additions
             kwargs container.
         """
-        if name not in self._lowers:
-            self._lowers[name] = Additions()
-        return self._lowers[name]
+        if name not in self.lowers:
+            self.lowers[name] = Additions()
+        return self.lowers[name]
 
     @property
-    def current(self) -> dict[str, Any]:
+    def lower_names(self) -> list[str]:
         """
         Returns
         -------
-        dict[str, Any]
-            additional kwargs for pattern target.
+        list[str]
+            names of lowers.
         """
-        return self._curr
+        return list(self.lowers)
 
 
 class Pattern(ABC, Generic[OptionsT]):
