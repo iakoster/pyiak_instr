@@ -12,10 +12,6 @@
 # )
 #
 #
-# class TIPatternsMap(PatternsMapABC[MessagePattern]):
-#
-#     _pattern_type = MessagePattern
-#
 #
 # @STRUCT_DATACLASS
 # class TIRegister(RegisterABC):

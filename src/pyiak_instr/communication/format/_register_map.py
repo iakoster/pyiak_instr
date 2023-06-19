@@ -1,4 +1,4 @@
-"""Private module of ``pyiak_instr.communication.format_map.types``."""
+"""Private module of ``pyiak_instr.communication.format``."""
 from __future__ import annotations
 
 import sqlite3
