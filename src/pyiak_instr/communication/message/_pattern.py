@@ -1,5 +1,4 @@
 """Private module of ``pyiak_instr.communication.message``."""
-from abc import abstractmethod
 from typing import (
     Any,
     Self,

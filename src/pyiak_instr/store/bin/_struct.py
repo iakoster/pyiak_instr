@@ -5,7 +5,6 @@ from dataclasses import InitVar, dataclass, field as field_
 from abc import ABC
 from typing import (
     Any,
-    Callable,
     Generator,
     Generic,
     TypeVar,

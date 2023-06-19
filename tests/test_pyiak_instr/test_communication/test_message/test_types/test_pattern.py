@@ -5,7 +5,7 @@ from src.pyiak_instr.types import Additions
 from src.pyiak_instr.exceptions import NotAmongTheOptions
 
 from .....utils import validate_object, get_object_attrs
-from tests.pyiak_instr_ti.communication import (
+from tests.pyiak_instr_ti.communication.message import (
     TIFieldPattern,
     TIStructPattern,
     TIMessagePattern,
