@@ -54,12 +54,6 @@ class Connection(object):
         self._tx_to = dt.timedelta(seconds=15)
         self._rx_to = dt.timedelta(seconds=5)
 
-    def close(self) -> None:
-        """
-        Close the connection (hapi).
-        """
-        raise NotImplementedError()
-
     def receive(self) -> tuple[bytes, Any]:
         """
         Receive message from hapi.
@@ -68,24 +62,6 @@ class Connection(object):
         -------
         tuple[bytes, Any]
             received message and the address where the message came from.
-        """
-        raise NotImplementedError()
-
-    def setup(self, *args: Any, **kwargs: Any) -> Connection:
-        """
-        Setup hapi.
-
-        Parameters
-        ----------
-        args: Any
-            some arguments for setup.
-        kwargs: Any
-            some keyword arguments for setup.
-
-        Returns
-        -------
-        Connection
-            self instance.
         """
         raise NotImplementedError()
 
@@ -170,36 +146,6 @@ class Connection(object):
         self._post_send_process(message, answer)
 
         return answer
-
-    def set_timeouts(
-            self,
-            transmit_timeout: int | float | dt.timedelta = 15,
-            receive_timeout: int | float | dt.timedelta = 5,
-    ) -> None:
-        """
-        Set timeouts for waiting for a reply and sending a message.
-
-        If the input value is of integer type, the timeout will be
-        in seconds, and if it is of float type - in milliseconds.
-
-        Parameters
-        ----------
-        transmit_timeout: int | float | datetime.timedelta, default=15
-            the time for which the message transmission will be attempted
-            until a response is received.
-        receive_timeout: int | float | datetime.timedelta, default=15
-            the time in which you expect to receive an answer.
-        """
-
-        def get_timedelta(value: dt.timedelta | int | float) -> dt.timedelta:
-            if isinstance(value, int):
-                value = dt.timedelta(seconds=value)
-            elif isinstance(value, float):
-                value = dt.timedelta(milliseconds=int(value * 1000))
-            return value
-
-        self._tx_to = get_timedelta(transmit_timeout)
-        self._rx_to = get_timedelta(receive_timeout)
 
     def _log_info(self, entry: str) -> None:  # todo: tests for correct entries
         """
@@ -395,43 +341,3 @@ class Connection(object):
             return ref_code
         else:
             return Code.OK
-
-    @property
-    def address(self) -> Any:
-        """
-        Returns
-        -------
-        Any
-            connection address.
-        """
-        return self._addr
-
-    @property
-    def hapi(self) -> Any:
-        """
-        Returns
-        -------
-        Any
-            high-level API (e.g. socket)
-        """
-        return self._hapi
-
-    @property
-    def receive_timeout(self) -> dt.timedelta:
-        """
-        Returns
-        -------
-        datetime.timedelta
-            receive timeout.
-        """
-        return self._rx_to
-
-    @property
-    def transmit_timeout(self) -> dt.timedelta:
-        """
-        Returns
-        -------
-        datetime.timedelta
-            transmit timeout.
-        """
-        return self._tx_to
