@@ -85,3 +85,4 @@ class Code(IntEnum):
     WRITE_ONLY = auto()
     RX = auto()
     TX = auto()
+    SELF = auto()
