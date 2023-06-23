@@ -16,6 +16,7 @@ ApiT = TypeVar("ApiT")
 AddressT = TypeVar("AddressT")
 
 
+# todo: protocol
 class EmptyLogger:
     """
     Empty logger instance.
@@ -54,7 +55,7 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
         address: AddressT,
         logger: Code | logging.Logger = Code.NONE,
     ) -> None:
-        super().__init__(api=api)
+        WithApi.__init__(self, api=api)
 
         if isinstance(logger, logging.Logger):
             self._logger = logger
@@ -71,6 +72,36 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
     @abstractmethod
     def close(self) -> None:
         """Close the connection (api)"""
+
+    @abstractmethod
+    def direct_receive(self) -> tuple[bytes, AddressT]:
+        """
+        Receive message from Api.
+
+        Returns
+        -------
+        tuple[bytes, AddressT]
+            - received message;
+            - source address of received message.
+
+        Raises
+        ------
+        TimeoutError
+            when the message waiting time expires.
+        """
+
+    @abstractmethod
+    def direct_transmit(
+        self, message: Message[BasicT, StructT, PatternT, AddressT]
+    ) -> None:
+        """
+        Transmit `message` to Api.
+
+        Parameters
+        ----------
+        message : Message[BasicT, StructT, PatternT, AddressT]
+            message to transmit.
+        """
 
     @abstractmethod
     def setup(self, *args: Any, **kwargs: Any) -> Self:
@@ -90,6 +121,69 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
             self instance.
         """
 
+    def receive(
+        self, empty: Message[BasicT, StructT, PatternT, AddressT]
+    ) -> None:
+        """
+        Receive message and fill `empty`.
+
+        Parameters
+        ----------
+        empty : Message[BasicT, StructT, PatternT, AddressT]
+            empty message for filling.
+        """
+        answer, address = self.direct_receive()
+        empty.encode(answer)
+        empty.src = address
+        empty.dst = self._addr
+        self._logger.info(str(empty))
+
+    def transmit(
+        self, message: Message[BasicT, StructT, PatternT, AddressT]
+    ) -> None:
+        """
+        Transmit message and log it.
+
+        Parameters
+        ----------
+        message : Message[BasicT, StructT, PatternT, AddressT]
+            message to transmit.
+        """
+        self.direct_transmit(message)
+        self._logger.info(str(message))
+
+    def transimt_receive(
+        self, message: Message[BasicT, StructT, PatternT, AddressT]
+    ) -> list[Message[BasicT, StructT, PatternT, AddressT]]:
+        """
+        Send message and receive all answers (one to one tx message).
+
+        Parameters
+        ----------
+        message : MessageT
+            message to transmit.
+
+        Returns
+        -------
+        MessageT
+            joined received message.
+
+        Raises
+        ------
+        ValueError
+            if `message` source is not equal to connection address.
+        """
+        if message.src is None:
+            message.src = self._addr
+
+        elif message.src != self._addr:
+            raise ValueError(
+                "addresses in message and connection is not equal: "
+                f"{message.src} != {self._addr}"
+            )
+
+        return [self._transmit_receive(msg) for msg in message.split()]
+
     def transmit_receive_joined(
         self, message: Message[BasicT, StructT, PatternT, AddressT]
     ) -> Message[BasicT, StructT, PatternT, AddressT]:
@@ -106,7 +200,7 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
         MessageT
             joined received message.
         """
-        return message
+        return self.transimt_receive(message)[0]  # todo: method
 
     def set_timeouts(
         self,
@@ -136,6 +230,56 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
         self._tx_to = tx_timeout
         self._rx_to = rx_timeout
         return self
+
+    def _transmit_receive(
+        self, msg: Message[BasicT, StructT, PatternT, AddressT]
+    ) -> Message[BasicT, StructT, PatternT, AddressT]:
+        """
+        Transmit message and receive answer.
+
+        Parameters
+        ----------
+        msg : Message[BasicT, StructT, PatternT, AddressT]
+            message to transmit.
+
+        Returns
+        -------
+        Message[BasicT, StructT, PatternT, AddressT]
+            received message.
+
+        Raises
+        ------
+        ConnectionError
+            if the timeout (transmit timeout) is reached.
+        """
+
+        transmit_start = dt.datetime.now()
+
+        while (dt.datetime.now() - transmit_start) < self._tx_to:
+            self.transmit(msg)
+            receive_start = dt.datetime.now()
+
+            while (dt.datetime.now() - receive_start) < self._rx_to:
+                try:
+                    ans = msg.pattern.get_for_direction(Code.RX)
+                    self.receive(ans)
+
+                except TimeoutError:
+                    break
+
+                else:
+                    if msg.dst != ans.src:
+                        # pylint: disable=logging-fstring-interpolation
+                        self._logger.info(
+                            f"message received from {ans.src}, but expected "
+                            f"from {msg.dst}"
+                        )
+                        continue
+
+                    # validate message content
+                    return ans  # type: ignore[no-any-return]
+
+        raise ConnectionError(f"no answer received within {self._tx_to}")
 
     @property
     def address(self) -> AddressT:
