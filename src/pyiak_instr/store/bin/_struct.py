@@ -111,9 +111,28 @@ class Field(ABC):
             self.verify(encoded, raise_if_false=True)
         return encoded
 
-    # todo: return Code
+    def extract(self, content: bytes) -> bytes:
+        """
+        Extract field content from `content` by field slice.
+
+        Parameters
+        ----------
+        content : bytes
+            content.
+
+        Returns
+        -------
+        bytes
+            field content.
+        """
+        return content[self.slice_]
+
     # todo: clarify the error with Code
-    def verify(self, content: bytes, raise_if_false: bool = False) -> bool:
+    def verify(
+            self,
+            content: bytes,
+            raise_if_false: bool = False,
+    ) -> Code:
         """
         Verify that `content` is correct for the given field structure.
 
@@ -121,13 +140,13 @@ class Field(ABC):
         ----------
         content : bytes
             content to verifying.
-        raise_if_false : bool
+        raise_if_false : bool, default=False
             raise `ContentError` if content not correct.
 
         Returns
         -------
-        bool
-            True - content is correct, False - is not.
+        Code
+            OK - content is correct, other - is not.
 
         Raises
         ------
@@ -135,13 +154,16 @@ class Field(ABC):
             if `raise_if_false` is True and content is not correct.
         """
         if self.is_dynamic:
-            correct = len(content) % self.word_bytesize == 0
+            if len(content) % self.word_bytesize != 0:
+                if raise_if_false:
+                    raise ContentError(self, clarification=repr(Code.INVALID_LENGTH))
+                return Code.INVALID_LENGTH
         else:
-            correct = len(content) == self.bytes_expected
-
-        if raise_if_false and not correct:
-            raise ContentError(self, clarification=content.hex(" "))
-        return correct
+            if len(content) != self.bytes_expected:
+                if raise_if_false:
+                    raise ContentError(self, clarification=repr(Code.INVALID_LENGTH))
+                return Code.INVALID_LENGTH
+        return Code.OK
 
     def _modify_values(self) -> None:
         """
@@ -233,7 +255,7 @@ class Field(ABC):
             raise ValueError(
                 "'bytes_expected' does not match an integer word count"
             )
-        if self.has_default and not self.verify(self.default):
+        if self.has_default and self.verify(self.default) is not Code.OK:
             raise ValueError("default value is incorrect")
         if self.has_fill_value and self.is_dynamic:
             raise TypeError("fill value not allowed for dynamic fields")
@@ -331,6 +353,34 @@ class Struct(ABC, Generic[FieldT]):
 
         self._setattr("_f", fields)
         self._modify_values()
+
+    # todo: tests
+    def change(
+            self,
+            content: bytearray,
+            name: str,
+            field_content: bytes,
+            verify: bool = True,
+    ) -> None:
+        """
+        Change field content in `content`.
+
+        Parameters
+        ----------
+        content : bytearray
+            full content.
+        name : str
+            field name.
+        field_content : bytes
+            new field content.
+        verify : bool, default=True
+            verify `content` and `field_content`.
+        """
+        field = self._f[name]
+        if verify:
+            self.verify(content, raise_if_false=True)
+            field.verify(field_content, raise_if_false=True)
+        content[field.slice_] = field_content
 
     @overload
     def decode(self, name: str, content: bytes) -> BytesDecodeT:
@@ -435,14 +485,61 @@ class Struct(ABC, Generic[FieldT]):
             if len(args) != 1:
                 raise TypeError(f"invalid arguments count (got {len(args)})")
             (content,) = args
-            self._verify_bytes_content(content)
+            self.verify(content, raise_if_false=True)
             return {
-                f.name: f.encode(content[f.slice_], verify=True) for f in self
+                f.name: f.encode(f.extract(content)) for f in self
             }
 
         if all_fields:
             return self._get_all_fields(kwargs)
         return {f: self[f].encode(c, verify=True) for f, c in kwargs.items()}
+
+    @overload
+    def extract(self, content: bytes, verify: bool = True) -> dict[str, bytes]:
+        ...
+
+    @overload
+    def extract(self, content: bytes, name: str, verify: bool = True) -> bytes:
+        ...
+
+    @overload
+    def extract(self, content: bytes, *names: str, verify: bool = True) -> dict[str, bytes]:
+        ...
+
+    # todo: tests
+    def extract(self, content: bytes, *names: str, verify: bool = True) -> bytes | dict[str, bytes]:
+        """
+        Extract all, one or specified fields content from `content`.
+
+        Parameters
+        ----------
+        content : bytes
+            content from which the fields will be extracted.
+        *names : str
+            field names.
+        verify : bool, default=False
+            varify `content` before extracting.
+
+        Returns
+        -------
+        bytes | dict[str, bytes]
+            - bytes
+            if `names` length is equal to one - content of one field.
+
+            - dict[str, bytes]
+            if `names` length is equal to zero - content if all fields;
+            if `names` length more than one - content of `names` fields.
+        """
+        if verify:
+            self.verify(content, raise_if_false=True)
+
+        if len(names) == 0:
+            return {n: f.extract(content) for n, f in self.items()}
+
+        if len(names) == 1:
+            return self._f[names[0]].extract(content)
+
+        return {n: self._f[n].extract(content) for n in names}
 
     def items(self) -> Generator[tuple[str, FieldT], None, None]:
         """
@@ -453,6 +550,69 @@ class Struct(ABC, Generic[FieldT]):
         """
         for field in self:
             yield field.name, field
+
+    def verify(
+            self,
+            content: bytes,
+            raise_if_false: bool = False,
+            verify_fields: bool = False,
+    ) -> Code:
+        """
+        Check that the content is correct.
+
+        Parameters
+        ----------
+        content : bytes
+            content for verifying.
+        raise_if_false : bool, default=False
+            raise `ContentError` if content not correct.
+        verify_fields : bool, default=False
+            True - verify fields content.
+
+        Returns
+        -------
+        Code
+            OK - content is correct, other - is not.
+
+        Raises
+        ------
+        ContentError
+            if content length smaller than minimal storage length;
+            if storage not dynamic and `content` too long.
+        """
+        minimum_size, content_len = self.minimum_size, len(content)
+        if content_len < minimum_size:
+            if raise_if_false:
+                raise ContentError(
+                    self,
+                    clarification=(
+                        f"{Code.INVALID_LENGTH!r} - expected at least "
+                        f"{minimum_size}, got {content_len}"
+                    )
+                )
+            return Code.INVALID_LENGTH
+
+        if not self.is_dynamic and content_len > minimum_size:
+            if raise_if_false:
+                raise ContentError(
+                    self,
+                    clarification=(
+                        f"{Code.INVALID_LENGTH!r} - expected "
+                        f"{minimum_size}, got {content_len}"
+                    )
+                )
+            return Code.INVALID_LENGTH
+
+        # todo: tests
+        if verify_fields:
+            for field in self:
+                code = field.verify(
+                    field.extract(content), raise_if_false=raise_if_false
+                )
+                if code is not Code.OK:
+                    return code
+
+        return Code.OK
 
     def _get_all_fields(
         self, fields: dict[str, BytesEncodeT]
@@ -478,7 +638,6 @@ class Struct(ABC, Generic[FieldT]):
         self._verify_fields_list(set(fields))
         content: dict[str, bytes] = {}
 
-        # todo: set \x00 of hasattr 'calculate' (crc or data length)
         for name, field in self.items():
             if name in fields:
                 content[name] = field.encode(fields[name], verify=True)
@@ -527,33 +686,6 @@ class Struct(ABC, Generic[FieldT]):
         """
         # todo: check that key exists
         object.__setattr__(self, name, value)
-
-    def _verify_bytes_content(self, content: bytes) -> None:
-        """
-        Check that the content is correct.
-
-        Parameters
-        ----------
-        content : bytes
-            content for verifying.
-
-        Raises
-        ------
-        ValueError
-            if content length smaller than minimal storage length;
-            if storage not dynamic and `content` too long.
-        """
-        minimum_size, content_len = self.minimum_size, len(content)
-        if content_len < minimum_size:
-            raise ValueError(
-                "bytes content too short: expected at least "
-                f"{minimum_size}, got {content_len}"
-            )
-        if not self.is_dynamic and content_len > minimum_size:
-            raise ValueError(
-                "bytes content too long: expected "
-                f"{minimum_size}, got {content_len}"
-            )
 
     def _verify_fields_list(self, fields: set[str]) -> None:
         """

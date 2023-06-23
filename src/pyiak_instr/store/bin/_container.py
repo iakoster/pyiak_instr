@@ -9,6 +9,7 @@ from typing import (
     overload,
 )
 
+from ...core import Code
 from ...typing import WithBaseStringMethods
 from ...encoders import BytesDecodeT, BytesEncodeT
 from ._struct import (
@@ -128,9 +129,25 @@ class Container(
 
         else:
             for name, content in encoded.items():
-                self._change_field_content(name, content)
+                self._s.change(self._c, name, content, verify=True)
 
         return self
+
+    def verify(self, raise_if_false: bool = False) -> Code:
+        """
+        Verify container content.
+
+        Parameters
+        ----------
+        raise_if_false : bool, default=False
+            raise `ContentError` if content not correct.
+
+        Returns
+        -------
+        Code
+            OK - content is correct, other - is not.
+        """
+        return self._s.verify(self._c, raise_if_false=raise_if_false)
 
     # kinda properties
 
@@ -164,6 +181,8 @@ class Container(
         bytes
             content of field or storage.
         """
+        if field is None:
+            return bytes(self._c)
         content = self._c if field is None else self._c[self._s[field].slice_]
         return bytes(content)
 
@@ -226,25 +245,6 @@ class Container(
                 return self.bytes_count(name) // self._s[name].word_bytesize
 
         raise TypeError("invalid arguments")
-
-    def _change_field_content(self, name: str, content: bytes) -> None:
-        """
-        Change content of single field name.
-
-        Parameters
-        ----------
-        name : str
-            field name.
-        content : bytes
-            field content.
-
-        Raises
-        ------
-        AssertionError
-            if message has empty content.
-        """
-        assert not self.is_empty(), "message is empty"
-        self._c[self._s[name].slice_] = content
 
     @property
     def has_pattern(self) -> bool:

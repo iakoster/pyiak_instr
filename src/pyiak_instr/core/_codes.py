@@ -59,6 +59,10 @@ class Code(IntEnum):
 
     # Additional errors
     INVALID_ID = 0x400
+    INVALID_SIZE = auto()
+    INVALID_LENGTH = auto()
+    INVALID_VALUE = auto()
+    INVALID_CONTENT = auto()
 
     # Additional codes
     BIG_ENDIAN = 0x500

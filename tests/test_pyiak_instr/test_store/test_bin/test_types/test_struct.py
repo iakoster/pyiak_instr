@@ -10,7 +10,7 @@ from .....utils import validate_object
 from tests.pyiak_instr_ti.store import TIField, TIStruct
 
 
-class TestBytesFieldStructABC(unittest.TestCase):
+class TestField(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
@@ -61,7 +61,8 @@ class TestBytesFieldStructABC(unittest.TestCase):
         with self.assertRaises(ContentError) as exc:
             self._instance(fmt=Code.U16).decode(b"\x00", verify=True)
         self.assertEqual(
-            "invalid content in TIField: 00", exc.exception.args[0]
+            "invalid content in TIField: <Code.INVALID_LENGTH: 1026>",
+            exc.exception.args[0],
         )
 
     def test_encode(self) -> None:
@@ -73,29 +74,35 @@ class TestBytesFieldStructABC(unittest.TestCase):
         with self.assertRaises(ContentError) as exc:
             self._instance(fmt=Code.U16).encode(b"\x01", verify=True)
         self.assertEqual(
-            "invalid content in TIField: 01", exc.exception.args[0]
+            "invalid content in TIField: <Code.INVALID_LENGTH: 1026>",
+            exc.exception.args[0],
         )
+
+    def test_extract(self) -> None:
+        field = self._instance(start=2, stop=3)
+        self.assertEqual(b"\x02", field.extract(bytes(range(10))))
+        self.assertEqual(b"", field.extract(b""))
 
     def test_verify(self) -> None:
         obj = self._instance(fmt=Code.U16)
-        self.assertTrue(obj.verify(b"\x01\x02"))
-        self.assertFalse(obj.verify(b"\x01\x02\x03"))
+        self.assertIs(Code.OK, obj.verify(b"\x01\x02"))
+        self.assertIs(Code.INVALID_LENGTH, obj.verify(b"\x01\x02\x03"))
 
-        self.assertTrue(obj.verify(b"\x01\x02", raise_if_false=True))
+        self.assertIs(Code.OK, obj.verify(b"\x01\x02", raise_if_false=True))
         with self.assertRaises(ContentError) as exc:
             obj.verify(b"\x01\x02\x03", raise_if_false=True)
         self.assertEqual(
-            "invalid content in TIField: 01 02 03",
+            "invalid content in TIField: <Code.INVALID_LENGTH: 1026>",
             exc.exception.args[0]
         )
 
         obj = self._instance(stop=4, fmt=Code.U16)
-        self.assertTrue(obj.verify(b"\xff" * 4))
-        self.assertFalse(obj.verify(b"\x01\x02\x03"))
+        self.assertIs(Code.OK, obj.verify(b"\xff" * 4))
+        self.assertIs(Code.INVALID_LENGTH, obj.verify(b"\x01\x02\x03"))
 
         obj = self._instance(start=-1)
         self.assertEqual(1, obj.bytes_expected)
-        self.assertFalse(obj.verify(b"ff"))
+        self.assertIs(Code.INVALID_LENGTH, obj.verify(b"ff"))
 
     def test_magic_post_init(self) -> None:
 
@@ -214,7 +221,7 @@ class TestBytesFieldStructABC(unittest.TestCase):
         )
 
 
-class TestBytesStorageStructABC(unittest.TestCase):
+class TestStruct(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
@@ -409,20 +416,22 @@ class TestBytesStorageStructABC(unittest.TestCase):
             )
 
         with self.subTest(test="short content"):
-            with self.assertRaises(ValueError) as exc:
+            with self.assertRaises(ContentError) as exc:
                 self._instance().encode(b"aaaa")
             self.assertEqual(
-                "bytes content too short: expected at least 7, got 4",
+                "invalid content in TIStruct: <Code.INVALID_LENGTH: 1026> "
+                "- expected at least 7, got 4",
                 exc.exception.args[0],
             )
 
         with self.subTest(test="long content"):
-            with self.assertRaises(ValueError) as exc:
+            with self.assertRaises(ContentError) as exc:
                 self._instance(
                     f0=TIField(name="f0", stop=2)
                 ).encode(b"aaaa")
             self.assertEqual(
-                "bytes content too long: expected 2, got 4",
+                "invalid content in TIStruct: <Code.INVALID_LENGTH: 1026> "
+                "- expected 2, got 4",
                 exc.exception.args[0],
             )
 

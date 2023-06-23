@@ -73,8 +73,7 @@ class Static(Basic):
 
     is_single = True
 
-    # todo: clarify the error with Code
-    def verify(self, content: bytes, raise_if_false: bool = False) -> bool:
+    def verify(self, content: bytes, raise_if_false: bool = False) -> Code:
         """
         Verify that `content` is correct for the given field structure.
 
@@ -82,25 +81,29 @@ class Static(Basic):
         ----------
         content : bytes
             content to verifying.
-        raise_if_false : bool
+        raise_if_false : bool, default=False
             raise `ContentError` if content not correct.
 
         Returns
         -------
-        bool
-            True - content is correct, False - is not.
+        Code
+            OK - content is correct, other - is not.
 
         Raises
         ------
         ContentError
             if `raise_if_false` is True and content is not correct.
         """
-        correct = super().verify(content, raise_if_false=raise_if_false)
-        if correct:
-            correct = content == self.default
-            if not correct and raise_if_false:
-                raise ContentError(self, clarification=content.hex(" "))
-        return correct
+        code = super().verify(content, raise_if_false=raise_if_false)
+        if code is Code.OK and content != self.default:
+            if raise_if_false:
+                raise ContentError(
+                    self, clarification=(
+                        f"{Code.INVALID_CONTENT!r} - '{content.hex(' ')}'"
+                    )
+                )
+            return Code.INVALID_CONTENT
+        return Code.OK
 
     def _verify_init_values(self) -> None:
         super()._verify_init_values()

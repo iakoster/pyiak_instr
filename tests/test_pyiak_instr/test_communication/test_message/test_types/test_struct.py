@@ -91,9 +91,11 @@ class TestStaticMessageFieldStruct(unittest.TestCase):
         self.assertEqual("default value not specified", exc.exception.args[0])
 
     def test_verify(self) -> None:
-        for i, (data, ref) in enumerate(((b"2", False), (b"4", True))):
+        for i, (data, ref) in enumerate(
+                ((b"2", Code.INVALID_CONTENT), (b"4", Code.OK))
+        ):
             with self.subTest(test=i):
-                self.assertEqual(ref, TIStatic(
+                self.assertIs(ref, TIStatic(
                     start=0, fmt=Code.U8, default=b"4"
                 ).verify(data))
 
@@ -103,7 +105,7 @@ class TestStaticMessageFieldStruct(unittest.TestCase):
                 default=b"a"
             ).verify(b"b", raise_if_false=True)
         self.assertEqual(
-            "invalid content in TIStatic: 62",
+            "invalid content in TIStatic: <Code.INVALID_CONTENT: 1028> - '62'",
             exc.exception.args[0],
         )
 

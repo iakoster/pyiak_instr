@@ -175,8 +175,8 @@ class Message(
                 continue
             content += self.content(field.name)
 
-        self._change_field_content(
-            crc.name, crc.encode(crc.calculate(content), verify=True)
+        self._s.change(
+            self._c, crc.name, crc.encode(crc.calculate(content)), verify=True
         )
 
     def _autoupdate_dynamic_length_field(self) -> None:
@@ -186,12 +186,13 @@ class Message(
             return
 
         dyn = self.struct[self.struct.dynamic_field_name]
-        self._change_field_content(
+        self._s.change(
+            self._c,
             dlen.name,
             dlen.encode(
-                dlen.calculate(self.content(dyn.name), dyn.word_bytesize),
-                verify=True,
+                dlen.calculate(self.content(dyn.name), dyn.word_bytesize)
             ),
+            verify=True,
         )
 
     @property
