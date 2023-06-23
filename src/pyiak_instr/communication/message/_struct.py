@@ -98,9 +98,10 @@ class Static(Basic):
         if code is Code.OK and content != self.default:
             if raise_if_false:
                 raise ContentError(
-                    self, clarification=(
+                    self,
+                    clarification=(
                         f"{Code.INVALID_CONTENT!r} - '{content.hex(' ')}'"
-                    )
+                    ),
                 )
             return Code.INVALID_CONTENT
         return Code.OK

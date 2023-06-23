@@ -191,6 +191,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 wo_fields=set(),
                 stop=2,
                 fill_value=b"\x00",
+                fill_content=b"\x00\x00",
             ),
             data=dict(
                 fmt=Code.U8,
@@ -208,6 +209,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 default=b"",
                 stop=1,
                 fill_value=b"\x00",
+                fill_content=b"\x00",
             ),
             id_=dict(
                 fmt=Code.U8,

@@ -181,6 +181,7 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             name="",
             is_single=True,
             fill_value=b"\x00",
+            fill_content=b"\x00\x00",
             has_fill_value=True,
             wo_attrs=["encoder"],
         )
@@ -278,6 +279,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
             name="",
             is_single=True,
             fill_value=b"\x00",
+            fill_content=b"\x00\x00",
             has_fill_value=True,
             wo_attrs=["encoder"],
         )

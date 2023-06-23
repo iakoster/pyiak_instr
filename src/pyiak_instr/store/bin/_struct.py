@@ -129,9 +129,9 @@ class Field(ABC):
 
     # todo: clarify the error with Code
     def verify(
-            self,
-            content: bytes,
-            raise_if_false: bool = False,
+        self,
+        content: bytes,
+        raise_if_false: bool = False,
     ) -> Code:
         """
         Verify that `content` is correct for the given field structure.
@@ -156,12 +156,16 @@ class Field(ABC):
         if self.is_dynamic:
             if len(content) % self.word_bytesize != 0:
                 if raise_if_false:
-                    raise ContentError(self, clarification=repr(Code.INVALID_LENGTH))
+                    raise ContentError(
+                        self, clarification=repr(Code.INVALID_LENGTH)
+                    )
                 return Code.INVALID_LENGTH
         else:
             if len(content) != self.bytes_expected:
                 if raise_if_false:
-                    raise ContentError(self, clarification=repr(Code.INVALID_LENGTH))
+                    raise ContentError(
+                        self, clarification=repr(Code.INVALID_LENGTH)
+                    )
                 return Code.INVALID_LENGTH
         return Code.OK
 
@@ -261,6 +265,26 @@ class Field(ABC):
             raise TypeError("fill value not allowed for dynamic fields")
 
     @property
+    def fill_content(self) -> bytes:
+        """
+        Returns
+        -------
+        bytes
+            fill content.
+
+        Raises
+        ------
+        AttributeError
+            if `fill_value` is empty.
+        """
+        if not self.has_fill_value:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute "
+                "'fill_content'"
+            )
+        return self.fill_value * self.bytes_expected
+
+    @property
     def has_default(self) -> bool:
         """
         Returns
@@ -356,11 +380,11 @@ class Struct(ABC, Generic[FieldT]):
 
     # todo: tests
     def change(
-            self,
-            content: bytearray,
-            name: str,
-            field_content: bytes,
-            verify: bool = True,
+        self,
+        content: bytearray,
+        name: str,
+        field_content: bytes,
+        verify: bool = True,
     ) -> None:
         """
         Change field content in `content`.
@@ -486,28 +510,34 @@ class Struct(ABC, Generic[FieldT]):
                 raise TypeError(f"invalid arguments count (got {len(args)})")
             (content,) = args
             self.verify(content, raise_if_false=True)
-            return {
-                f.name: f.encode(f.extract(content)) for f in self
-            }
+            return {f.name: f.encode(f.extract(content)) for f in self}
 
         if all_fields:
             return self._get_all_fields(kwargs)
         return {f: self[f].encode(c, verify=True) for f, c in kwargs.items()}
 
     @overload
-    def extract(self, content: bytes, verify: bool = True) -> dict[str, bytes]:
+    def extract(
+        self, content: bytes, verify: bool = True
+    ) -> dict[str, bytes]:
         ...
 
     @overload
-    def extract(self, content: bytes, name: str, verify: bool = True) -> bytes:
+    def extract(  # type: ignore[misc]
+        self, content: bytes, name: str, verify: bool = True
+    ) -> bytes:
         ...
 
     @overload
-    def extract(self, content: bytes, *names: str, verify: bool = True) -> dict[str, bytes]:
+    def extract(
+        self, content: bytes, *names: str, verify: bool = True
+    ) -> dict[str, bytes]:
         ...
 
     # todo: tests
-    def extract(self, content: bytes, *names: str, verify: bool = True) -> bytes | dict[str, bytes]:
+    def extract(  # type: ignore[misc]
+        self, content: bytes, *names: str, verify: bool = True
+    ) -> bytes | dict[str, bytes]:
         """
         Extract all, one or specified fields content from `content`.
 
@@ -552,10 +582,10 @@ class Struct(ABC, Generic[FieldT]):
             yield field.name, field
 
     def verify(
-            self,
-            content: bytes,
-            raise_if_false: bool = False,
-            verify_fields: bool = False,
+        self,
+        content: bytes,
+        raise_if_false: bool = False,
+        verify_fields: bool = False,
     ) -> Code:
         """
         Check that the content is correct.
@@ -588,7 +618,7 @@ class Struct(ABC, Generic[FieldT]):
                     clarification=(
                         f"{Code.INVALID_LENGTH!r} - expected at least "
                         f"{minimum_size}, got {content_len}"
-                    )
+                    ),
                 )
             return Code.INVALID_LENGTH
 
@@ -599,7 +629,7 @@ class Struct(ABC, Generic[FieldT]):
                     clarification=(
                         f"{Code.INVALID_LENGTH!r} - expected "
                         f"{minimum_size}, got {content_len}"
-                    )
+                    ),
                 )
             return Code.INVALID_LENGTH
 
@@ -649,7 +679,7 @@ class Struct(ABC, Generic[FieldT]):
                 content[name] = b""
 
             elif field.has_fill_value:
-                content[name] = field.fill_value * field.bytes_expected
+                content[name] = field.fill_content
 
             else:
                 raise AssertionError(
