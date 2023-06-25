@@ -64,9 +64,9 @@ class TestFormatsMap(unittest.TestCase):
                         "length",
                         "rw_type",
                         "description",
-                        "message",
-                        "struct",
-                        "fields",
+                        "message_kw",
+                        "struct_kw",
+                        "fields_kw",
                     ],
                     data=[
                         ["s1", "test", 22, 33, Code.ANY, "", "\dct()", "\dct()", "\dct()"],

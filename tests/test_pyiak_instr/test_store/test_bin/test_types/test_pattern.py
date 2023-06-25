@@ -31,6 +31,7 @@ class TestFieldPattern(unittest.TestCase):
             typename="basic",
             is_dynamic=True,
             bytesize=0,
+            wo_attrs=["additions"],
         )
 
     def test_get(self) -> None:
@@ -85,6 +86,7 @@ class TestStructPattern(unittest.TestCase):
             TIStructPattern(typename="basic", name="test"),
             typename="basic",
             sub_pattern_names=[],
+            wo_attrs=["additions"],
         )
 
     def test_get(self) -> None:
@@ -136,6 +138,7 @@ class TestBytesStoragePatternABC(unittest.TestCase):
             TIContainerPattern(typename="basic", name="test"),
             typename="basic",
             sub_pattern_names=[],
+            wo_attrs=["additions"],
         )
 
     def test_get(self) -> None:

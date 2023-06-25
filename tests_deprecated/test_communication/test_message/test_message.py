@@ -916,7 +916,7 @@ class TestMessageSetter(unittest.TestCase):
                 if msg_type == "base":
                     continue
                 self.assertIsInstance(
-                    MessageSetter(msg_type).message, msg_class
+                    MessageSetter(msg_type).message_kw, msg_class
                 )
 
     def test_message_class(self) -> None:

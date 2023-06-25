@@ -22,6 +22,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             is_dynamic=True,
             bytesize=0,
             direction=Code.ANY,
+            wo_attrs=["additions"],
         )
 
     def test_init_specific(self) -> None:
@@ -275,6 +276,7 @@ class TestMessageStructPatternABC(unittest.TestCase):
             ),
             typename="basic",
             sub_pattern_names=["f0", "f1"],
+            wo_attrs=["additions"],
         )
 
     def test_init_specific(self) -> None:
@@ -375,6 +377,7 @@ class TestMessagePatternABC(unittest.TestCase):
             ),
             typename="basic",
             sub_pattern_names=["s0"],
+            wo_attrs=["additions"],
         )
 
     def test_get(self) -> None:

@@ -43,11 +43,17 @@ class Register(Generic[MessageT]):
     rw_type: Code = Code.ANY
     "register type."
 
-    additions: Additions = Additions()
-    "additional kwargs for message."
-
     description: str = ""
     "register description. First sentence must be a short summary."
+
+    message_kw: str = "\dct()"
+    "message additions."
+
+    struct_kw: str = "\dct()"
+    "struct additions."
+
+    fields_kw: str = "\dct()"
+    "fields additions."
 
     def __post_init__(self) -> None:
         if self.rw_type not in {
@@ -99,8 +105,10 @@ class Register(Generic[MessageT]):
         if fields_data is None:
             fields_data = {}
 
+        additions = self.get_additions(pattern.sub_pattern_names[0])
+        pattern.set_additions(additions)
         msg: MessageT = pattern.get_for_direction(
-            Code.TX, additions=self.additions
+            Code.TX, additions=additions
         )
 
         if msg.has.address:
@@ -119,6 +127,20 @@ class Register(Generic[MessageT]):
         msg.autoupdate_fields()
 
         return msg
+
+    # todo: tests
+    def get_additions(self, struct_name: str) -> Additions:
+        encoder = StringEncoder()
+        return Additions(
+            current=encoder.decode(self.message_kw),
+            lower={struct_name: Additions(
+                current=encoder.decode(self.struct_kw),
+                lower={
+                    n: Additions(current=kw)
+                    for n, kw in encoder.decode(self.fields_kw).items()
+                }
+            )}
+        )
 
     def read(
         self,
@@ -204,22 +226,6 @@ class Register(Generic[MessageT]):
         series_dict: dict[str, Any] = series.dropna().to_dict()
         if "rw_type" in series_dict:
             series_dict["rw_type"] = Code(series["rw_type"])
-
-        encoder = StringEncoder()
-        additions = Additions(
-            current=encoder.decode(series_dict.pop("message"))
-        )
-        s_dict = encoder.decode(series_dict.pop("struct"))
-        f_dict = encoder.decode(series_dict.pop("fields"))
-        for s_name, s_value in s_dict.items():
-            s_adds = additions.lower(s_name)
-            s_adds.current = s_value
-
-            for f_name, f_value in f_dict.items():
-                f_adds = additions.lower(f_name)
-                f_adds.current = f_value
-
-        series_dict["additions"] = additions
         return cls(**series_dict)
 
     @property
@@ -230,20 +236,7 @@ class Register(Generic[MessageT]):
         pd.Series[Any]
             series with data from dataclass.
         """
-        encoder = StringEncoder()
-        init_kw = self.__init_kwargs__()
-
-        struct, fields = {}, {}
-        for s_name, s_adds in self.additions.lowers.items():
-            struct[s_name] = s_adds.current
-            for f_name, f_adds in s_adds.lowers.items():
-                fields[f_name] = f_adds.current
-
-        init_kw["message"] = encoder.encode(self.additions.current)
-        init_kw["struct"] = encoder.encode(struct)
-        init_kw["fields"] = encoder.encode(fields)
-
-        return pd.Series(init_kw)
+        return pd.Series(self.__init_kwargs__())
 
     @property
     def short_description(self) -> str:
@@ -263,6 +256,9 @@ class Register(Generic[MessageT]):
             length=self.length,
             rw_type=self.rw_type,
             description=self.description,
+            message_kw=self.message_kw,
+            struct_kw=self.struct_kw,
+            fields_kw=self.fields_kw,
         )
 
 
@@ -289,9 +285,9 @@ class RegisterMap(Generic[RegisterT]):
         "length",
         "rw_type",
         "description",
-        "message",
-        "struct",
-        "fields",
+        "message_kw",
+        "struct_kw",
+        "fields_kw",
     }
 
     def __init__(self, table: pd.DataFrame) -> None:
@@ -365,9 +361,9 @@ class RegisterMap(Generic[RegisterT]):
             "length",
             "rw_type",
             "description",
-            "message",
-            "struct",
-            "fields",
+            "message_kw",
+            "struct_kw",
+            "fields_kw",
         }
         diff = required_columns - set(table.columns)
         if len(diff) > 0:

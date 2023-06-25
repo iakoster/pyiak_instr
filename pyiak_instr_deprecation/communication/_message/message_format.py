@@ -305,7 +305,7 @@ class MessageFormat(object):
         if len(update):
             for setter_name, fields in update.items():
                 setters[setter_name].kwargs.update(fields)
-        return self._msg_set.message.configure(**setters)
+        return self._msg_set.message_kw.configure(**setters)
 
     @classmethod
     def read(cls, config: Path, mf_name: str) -> MessageFormat:

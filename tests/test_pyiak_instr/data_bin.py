@@ -58,7 +58,7 @@ def get_cbs_example() -> ContinuousBytesStorage:
             )
         )
     )
-    object.__setattr__(cbs["f2"].struct, "stop", -3)
+    object.__setattr__(cbs["f2"].struct_kw, "stop", -3)
     return cbs
 
 
@@ -97,7 +97,7 @@ def get_cbs_first_infinite() -> ContinuousBytesStorage:
             ),
         )
     )
-    object.__setattr__(cbs["f0"].struct, "stop", -4)
+    object.__setattr__(cbs["f0"].struct_kw, "stop", -4)
     return cbs
 
 
@@ -123,7 +123,7 @@ def get_cbs_middle_infinite() -> ContinuousBytesStorage:
             ),
         )
     )
-    object.__setattr__(cbs["f1"].struct, "stop", -2)
+    object.__setattr__(cbs["f1"].struct_kw, "stop", -2)
     return cbs
 
 

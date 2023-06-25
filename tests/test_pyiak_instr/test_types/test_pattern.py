@@ -22,6 +22,7 @@ class TestPattern(unittest.TestCase):
             self,
             self._instance(),
             typename="basic",
+            wo_attrs=["additions"],
         )
 
     def test_init_exc(self) -> None:
@@ -95,6 +96,7 @@ class TestSurPattern(unittest.TestCase):
             self._instance(),
             typename="basic",
             sub_pattern_names=[],
+            wo_attrs=["additions"],
         )
 
     def test_init_exc(self) -> None:

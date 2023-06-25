@@ -93,6 +93,7 @@ class Additions:
         return list(self.lowers)
 
 
+# todo: .apply_additions method (change parameters with additions)
 class Pattern(ABC, Generic[OptionsT]):
     """
     Represents protocol for patterns.
@@ -114,12 +115,13 @@ class Pattern(ABC, Generic[OptionsT]):
         if typename not in self._options:
             raise KeyError(f"'{typename}' not in {set(self._options)}")
 
+        self._add = Additions()
         self._tn = typename
         self._kw = parameters
 
     def get(
         self,  # pylint: disable=unused-argument
-        additions: Additions = Additions(),
+        additions: Additions | None = None,
         **kwargs: Any,
     ) -> OptionsT:
         """
@@ -128,7 +130,7 @@ class Pattern(ABC, Generic[OptionsT]):
 
         Parameters
         ----------
-        additions: Additions, default=Additions()
+        additions: Additions | None, default=None
             container with additional initialization parameters.
         **kwargs: Any
             ignored. Needed for backward compatibility.
@@ -138,7 +140,27 @@ class Pattern(ABC, Generic[OptionsT]):
         OptionsT
             initialized target class.
         """
+        if additions is None:
+            additions = self._add
         return self._target(**self._get_parameters(additions))
+
+    # todo: tests
+    def set_additions(self, additions: Additions) -> Self:
+        """
+        Set new additions for target.
+
+        Parameters
+        ----------
+        additions : Additions
+            new additions.
+
+        Returns
+        -------
+        Self
+            self instance.
+        """
+        self._add = additions
+        return self
 
     def _get_parameters(self, additions: Additions) -> dict[str, Any]:
         """
@@ -155,6 +177,16 @@ class Pattern(ABC, Generic[OptionsT]):
             joined parameters.
         """
         return additions.get_joined(self._kw)
+
+    @property
+    def additions(self) -> Additions:
+        """
+        Returns
+        -------
+        Additions
+            default additions for target.
+        """
+        return self._add
 
     @property
     def typename(self) -> str:

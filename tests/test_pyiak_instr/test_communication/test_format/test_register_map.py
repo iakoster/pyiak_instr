@@ -35,7 +35,10 @@ class TestRegister(unittest.TestCase):
             pattern="pat",
             rw_type=Code.ANY,
             short_description="Short",
-            wo_attrs=["additions", "series"]
+            message_kw="\dct()",
+            struct_kw="\dct()",
+            fields_kw="\dct()",
+            wo_attrs=["series"]
         )
 
     def test_init_exc(self) -> None:
@@ -67,6 +70,21 @@ class TestRegister(unittest.TestCase):
             f0=b"\x00\x14", f1=b"\x01", f3=b"\x00", f4=b""
         ).items():
             self.assertEqual(ref, msg.content(name))
+
+    def test_get_additions(self) -> None:
+        adds = TIRegister(
+            pattern="",
+            name="",
+            address=0,
+            length=1,
+            message_kw="\dct(a,10)",
+            struct_kw="\dct(b,20)",
+            fields_kw="\dct(a,\dct(c,30))",
+        ).get_additions("s0")
+
+        self.assertDictEqual({"a": 10}, adds.current)
+        self.assertDictEqual({"b": 20}, adds.lower("s0").current)
+        self.assertDictEqual({"c": 30}, adds.lower("s0").lower("a").current)
 
     def test_read(self) -> None:
         with self.subTest(test="basic"):
@@ -112,9 +130,9 @@ class TestRegister(unittest.TestCase):
                 address=20,
                 length=42,
                 description=None,
-                message="\dct()",
-                struct="\dct()",
-                fields="\dct()",
+                message_kw="\dct()",
+                struct_kw="\dct()",
+                fields_kw="\dct()",
             ))),
             length=42,
             address=20,
@@ -123,7 +141,10 @@ class TestRegister(unittest.TestCase):
             description="",
             rw_type=Code.ANY,
             short_description="",
-            wo_attrs=["additions", "series"],
+            wo_attrs=["series"],
+            message_kw="\dct()",
+            struct_kw="\dct()",
+            fields_kw="\dct()",
         )
 
     def test_series(self) -> None:
@@ -136,12 +157,9 @@ class TestRegister(unittest.TestCase):
                 length=42,
                 rw_type=Code.ANY,
                 description="Short. Long.",
-                message="\dct()",
-                struct="\dct(s0,\dct(name,s0))",
-                fields=(
-                    "\dct(f0,\dct(name,f0,start,0),f1,\dct(name,f1,start,2),"
-                    "f3,\dct(name,f3,start,3),f4,\dct(name,f4,start,4,stop,None))"
-                ),
+                message_kw="\dct()",
+                struct_kw="\dct()",
+                fields_kw="\dct()",
             )),
         )
 
@@ -200,9 +218,9 @@ class TestRegisterMap(unittest.TestCase):
                             "length",
                             "rw_type",
                             "description",
-                            "message",
-                            "struct",
-                            "fields",
+                            "message_kw",
+                            "struct_kw",
+                            "fields_kw",
                         ],
                     )
                 )
@@ -242,9 +260,9 @@ class TestRegisterMap(unittest.TestCase):
                         "length",
                         "rw_type",
                         "description",
-                        "message",
-                        "struct",
-                        "fields",
+                        "message_kw",
+                        "struct_kw",
+                        "fields_kw",
                     ],
                     data=[
                         [None, "t", 0, 0, Code.ANY, "", "\dct()", "\dct()", "\dct()"],
@@ -284,9 +302,9 @@ class TestRegisterMap(unittest.TestCase):
                     "length",
                     "rw_type",
                     "description",
-                    "message",
-                    "struct",
-                    "fields",
+                    "message_kw",
+                    "struct_kw",
+                    "fields_kw",
                 ],
                 data=[
                     [
@@ -297,10 +315,8 @@ class TestRegisterMap(unittest.TestCase):
                         Code.ANY,
                         "",
                         "\dct()",
-                        "\dct(s0,\dct(name,s0))",
-                        "\dct(f0,\dct(name,f0,start,0),f1,"
-                        "\dct(name,f1,start,2),f3,\dct(name,f3,start,3),"
-                        "f4,\dct(name,f4,start,4,stop,None))",
+                        "\dct()",
+                        "\dct()",
                     ],
                     [
                         "pat",
@@ -310,10 +326,8 @@ class TestRegisterMap(unittest.TestCase):
                         5,
                         "",
                         "\dct()",
-                        "\dct(s0,\dct(name,s0))",
-                        "\dct(f0,\dct(name,f0,start,0),f1,"
-                        "\dct(name,f1,start,2),f3,\dct(name,f3,start,3),"
-                        "f4,\dct(name,f4,start,4,stop,None))",
+                        "\dct()",
+                        "\dct()",
                     ],
                 ],
             ),
@@ -349,9 +363,9 @@ class TestRegisterMap(unittest.TestCase):
                     "length",
                     "rw_type",
                     "description",
-                    "message",
-                    "struct",
-                    "fields",
+                    "message_kw",
+                    "struct_kw",
+                    "fields_kw",
                 ],
                 data=[
                     ["pat", "test_0", 42, 20, Code.ANY, "", "\dct()", "\dct()", "\dct()"],
