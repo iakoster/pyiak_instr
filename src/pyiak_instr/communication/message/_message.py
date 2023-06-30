@@ -63,6 +63,33 @@ class Message(
         self._src: AddressT | None = None
         self._dst: AddressT | None = None
 
+    def append_dynamic(self, message: Self) -> None:
+        """
+        Append bytes from dynamic field of `message`.
+
+        Parameters
+        ----------
+        message : Self
+            another message.
+
+        Raises
+        ------
+        ValueError
+            if `self` or `message` is not dynamic.
+        """
+        if not self.struct.is_dynamic or not message.struct.is_dynamic:
+            raise ValueError("allowed only for fields with dynamic fields")
+        if self.is_empty():
+            self.encode(message.content())
+        dyn_name = message.struct.dynamic_field_name
+        self.encode(
+            **{
+                dyn_name: self.content(self.struct.dynamic_field_name)
+                + message.content(dyn_name)
+            }
+        )
+        self.autoupdate_fields()
+
     def autoupdate_fields(self) -> Self:
         """
         Update the content in all fields that support it.

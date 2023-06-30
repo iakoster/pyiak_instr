@@ -52,6 +52,29 @@ class TestMessageABC(unittest.TestCase):
             exc.exception.args[0],
         )
 
+    def test_append_dynamic(self) -> None:
+        msg = TIMessage(TIStruct(
+            fields={
+                "f0": TIAddress(name="f0", fmt=Code.U16),
+                "f1": TIDynamicLength(name="f1", start=2, fmt=Code.U16),
+                "f2": TIData(name="f2", start=4),
+            },
+            divisible=True,
+        ))
+        msg.encode(f0=10, f2=[2, 4, 5]).autoupdate_fields()
+
+        other = TIMessage(TIStruct(
+            fields={"f2": TIData(name="f2", start=0)},
+            divisible=True,
+        ))
+        other.encode(f2=[0, 1, 3])
+
+        msg.append_dynamic(other)
+
+        self.assertEqual(
+            b"\x00\x0A\x00\x06\x02\x04\x05\x00\x01\x03", msg.content()
+        )
+
     def test_autoupdate_fields(self) -> None:
         with self.subTest(test="basic"):
             obj = TIMessage(TIStruct(fields=dict(
