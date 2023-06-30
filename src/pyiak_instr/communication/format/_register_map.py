@@ -46,13 +46,13 @@ class Register(Generic[MessageT]):
     description: str = ""
     "register description. First sentence must be a short summary."
 
-    message_kw: str = "\dct()"
+    message_kw: str = r"\dct()"
     "message additions."
 
-    struct_kw: str = "\dct()"
+    struct_kw: str = r"\dct()"
     "struct additions."
 
-    fields_kw: str = "\dct()"
+    fields_kw: str = r"\dct()"
     "fields additions."
 
     def __post_init__(self) -> None:
@@ -130,16 +130,31 @@ class Register(Generic[MessageT]):
 
     # todo: tests
     def get_additions(self, struct_name: str) -> Additions:
+        """
+        Get Additions instance.
+
+        Parameters
+        ----------
+        struct_name : str
+            struct name.
+
+        Returns
+        -------
+        Additions
+            additions instance.
+        """
         encoder = StringEncoder()
         return Additions(
             current=encoder.decode(self.message_kw),
-            lower={struct_name: Additions(
-                current=encoder.decode(self.struct_kw),
-                lower={
-                    n: Additions(current=kw)
-                    for n, kw in encoder.decode(self.fields_kw).items()
-                }
-            )}
+            lower={
+                struct_name: Additions(
+                    current=encoder.decode(self.struct_kw),
+                    lower={
+                        n: Additions(current=kw)
+                        for n, kw in encoder.decode(self.fields_kw).items()
+                    },
+                )
+            },
         )
 
     def read(

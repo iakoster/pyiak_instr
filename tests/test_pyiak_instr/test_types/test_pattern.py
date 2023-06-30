@@ -128,6 +128,7 @@ class TestSurPattern(unittest.TestCase):
                 a=5,
                 b=[],
                 ii=99,
+                subs={"f": {"a": 33, "i": 12, "req": ""}}
             ),
             self._instance().configure(
                 f=TIPattern("basic", a=33, req=""),

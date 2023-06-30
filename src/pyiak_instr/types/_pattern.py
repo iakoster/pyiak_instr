@@ -351,7 +351,7 @@ class SurPattern(
 
     def get(
         self,
-        additions: Additions = Additions(),
+        additions: Additions | None = None,
         **kwargs: Any,
     ) -> OptionsT:
         """
@@ -377,6 +377,8 @@ class SurPattern(
         """
         if len(self._sub_p) == 0:
             raise NotConfiguredYet(self)
+        if additions is None:
+            additions = self._add
         self._modify_additions(additions)
         return super().get(additions=additions, **kwargs)
 
@@ -389,8 +391,10 @@ class SurPattern(
         Self
             copied self instance.
         """
-        return super().copy().configure(
-            **{n: p.copy() for n, p in self._sub_p.items()}
+        return (
+            super()  # pylint: disable=no-member
+            .copy()
+            .configure(**{n: p.copy() for n, p in self._sub_p.items()})
         )
 
     def sub_pattern(self, name: str) -> PatternT:
