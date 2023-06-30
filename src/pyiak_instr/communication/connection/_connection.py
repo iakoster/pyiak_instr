@@ -149,6 +149,8 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
         message : Message[BasicT, StructT, PatternT, AddressT]
             message to transmit.
         """
+        if message.src is None:
+            message.src = self._addr
         self.direct_transmit(message)
         self._logger.info(str(message))
 
@@ -173,10 +175,7 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
         ValueError
             if `message` source is not equal to connection address.
         """
-        if message.src is None:
-            message.src = self._addr
-
-        elif message.src != self._addr:
+        if message.src is not None and message.src != self._addr:
             raise ValueError(
                 "addresses in message and connection is not equal: "
                 f"{message.src} != {self._addr}"
@@ -200,7 +199,11 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
         MessageT
             joined received message.
         """
-        return self.transimt_receive(message)[0]  # todo: method
+        iter_ = iter(self.transimt_receive(message))
+        answer = next(iter_)
+        for other in iter_:
+            answer.append_dynamic(other)
+        return answer
 
     def set_timeouts(
         self,
@@ -269,17 +272,60 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
 
                 else:
                     if msg.dst != ans.src:
-                        # pylint: disable=logging-fstring-interpolation
                         self._logger.info(
-                            f"message received from {ans.src}, but expected "
-                            f"from {msg.dst}"
+                            "message received from %r, but expected from %r",
+                            ans.src,
+                            msg.dst,
                         )
                         continue
 
-                    # validate message content
-                    return ans  # type: ignore[no-any-return]
+                    verify_result = self._verify_answer(msg, ans)
+                    if verify_result is Code.OK:
+                        return ans  # type: ignore[no-any-return]
+                    if verify_result is Code.WAIT:
+                        receive_start = dt.datetime.now()
 
         raise ConnectionError(f"no answer received within {self._tx_to}")
+
+    def _verify_answer(
+        self,
+        tx_: Message[BasicT, StructT, PatternT, AddressT],
+        rx_: Message[BasicT, StructT, PatternT, AddressT],
+    ) -> Code:
+        """
+        Verify answer.
+
+        Parameters
+        ----------
+        tx_ : Message
+            transmitted message.
+        rx_ : Message
+            received message.
+
+        Returns
+        -------
+        Code
+            result code.
+        """
+        if rx_.has.response:
+            f_response = rx_.get.response
+            response = f_response.desc(rx_.decode(f_response.name)[0])
+            if response is not Code.OK:
+                self._logger.info("answer with response: %r", response)
+                return response
+
+        if tx_.has.id_ and rx_.has.id_:
+            tx_id = tx_.decode(tx_.get.id_.name)[0]
+            rx_id = rx_.decode(rx_.get.id_.name)[0]
+
+            if tx_id != rx_id:
+                self._logger.info("different id (tx/rx): %s/%s", tx_id, rx_id)
+                return Code.INVALID_ID
+
+        verify_result = rx_.verify()
+        if verify_result is not Code.OK:
+            self._logger.info("verify result: %r", verify_result)
+        return verify_result
 
     @property
     def address(self) -> AddressT:

@@ -190,6 +190,8 @@ class Message(
 
             part.encode(content)
             part.autoupdate_fields()
+            part.src = self.src
+            part.dst = self.dst
             yield part
 
     def _autoupdate_crc_field(self) -> None:
@@ -285,3 +287,7 @@ class Message(
             source address.
         """
         self._src = source
+
+    # todo: tests
+    def __str__(self) -> str:
+        return super().__str__() + f", src={self._src}, dst={self._dst}"
