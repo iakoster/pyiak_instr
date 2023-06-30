@@ -6,8 +6,8 @@ from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
 from src.pyiak_instr.types import Additions
 
-from .....utils import compare_objects, validate_object
-from ....env import get_local_test_data_dir, remove_test_data_dir
+from tests.utils import compare_objects, validate_object
+from tests.test_pyiak_instr.env import get_local_test_data_dir, remove_test_data_dir
 
 from tests.pyiak_instr_ti.store import (
     TIField,

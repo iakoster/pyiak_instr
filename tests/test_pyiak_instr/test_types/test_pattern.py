@@ -51,6 +51,13 @@ class TestPattern(unittest.TestCase):
                 self._instance().get(self._additions(a=11, c=11))
             )
 
+    def test_copy(self) -> None:
+        exp = self._instance()
+        act = exp.copy()
+
+        self.assertIsNot(exp, act)
+        self.assertDictEqual(exp.get(), act.get())
+
     def test_magic_init_kwargs(self) -> None:
         self.assertDictEqual(
             {"typename": "basic", "a": 5, "b": []},
@@ -139,6 +146,16 @@ class TestSurPattern(unittest.TestCase):
             self.assertEqual(
                 "TISurPattern not configured yet", exc.exception.args[0]
             )
+
+    def test_copy(self) -> None:
+        exp = self._instance().configure(
+            a=TIPattern(typename="basic", name="a", c=32)
+        )
+        act = exp.copy()
+
+        self.assertIsNot(exp, act)
+        self.assertIsNot(exp.sub_pattern("a"), act.sub_pattern("a"))
+        self.assertDictEqual(exp.get(), act.get())
 
     def test_sub_pattern(self) -> None:
         self.assertDictEqual(

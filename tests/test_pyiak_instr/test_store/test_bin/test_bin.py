@@ -11,8 +11,8 @@ from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
 from src.pyiak_instr.encoders.types import Encoder
 
-from ....env import TEST_DATA_DIR
-from .....utils import validate_object, compare_objects
+from tests.test_pyiak_instr.env import TEST_DATA_DIR
+from tests.utils import validate_object, compare_objects
 
 from tests.pyiak_instr_ti.store import TIField, TIStruct, TIContainer
 

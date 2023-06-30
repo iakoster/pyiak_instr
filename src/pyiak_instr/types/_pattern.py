@@ -162,6 +162,17 @@ class Pattern(ABC, Generic[OptionsT]):
         self._add = additions
         return self
 
+    def copy(self) -> Self:
+        """
+        Get not deep copy of pattern.
+
+        Returns
+        -------
+        Self
+            copied self instance.
+        """
+        return self.__class__(**self.__init_kwargs__())
+
     def _get_parameters(self, additions: Additions) -> dict[str, Any]:
         """
         Get joined additions with pattern parameters.
@@ -368,6 +379,19 @@ class SurPattern(
             raise NotConfiguredYet(self)
         self._modify_additions(additions)
         return super().get(additions=additions, **kwargs)
+
+    def copy(self) -> Self:
+        """
+        Get not deep copy of pattern.
+
+        Returns
+        -------
+        Self
+            copied self instance.
+        """
+        return super().copy().configure(
+            **{n: p.copy() for n, p in self._sub_p.items()}
+        )
 
     def sub_pattern(self, name: str) -> PatternT:
         """
