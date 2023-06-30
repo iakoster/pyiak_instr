@@ -93,7 +93,6 @@ class Additions:
         return list(self.lowers)
 
 
-# todo: .apply_additions method (change parameters with additions)
 class Pattern(ABC, Generic[OptionsT]):
     """
     Represents protocol for patterns.
@@ -140,9 +139,9 @@ class Pattern(ABC, Generic[OptionsT]):
         OptionsT
             initialized target class.
         """
-        if additions is None:
-            additions = self._add
-        return self._target(**self._get_parameters(additions))
+        return self._target(
+            **self._get_parameters(self._modify_additions(additions))
+        )
 
     # todo: tests
     def set_additions(self, additions: Additions) -> Self:
@@ -188,6 +187,26 @@ class Pattern(ABC, Generic[OptionsT]):
             joined parameters.
         """
         return additions.get_joined(self._kw)
+
+    def _modify_additions(
+        self, additions: Additions | None = None
+    ) -> Additions:
+        """
+        Modify additions for target and sub-patterns.
+
+        Parameters
+        ----------
+        additions : Additions | None, default=None
+            additions instance. If None - Additions from class will be used.
+
+        Returns
+        -------
+        Additions
+            additions instance.
+        """
+        if additions is None:
+            return self._add
+        return additions
 
     @property
     def additions(self) -> Additions:
@@ -241,6 +260,7 @@ PatternT = TypeVar("PatternT", bound=Pattern[Any])
 
 
 # todo: right mixin (self: Pattern)
+# todo: .apply_additions method (change parameters with additions)
 class EditableMixin:
     """
     Represents abstract class with methods to edit parameters.
@@ -360,7 +380,7 @@ class SurPattern(
 
         Parameters
         ----------
-        additions: Additions, default=Additions()
+        additions: Additions | None, default=None
             container with additional initialization parameters.
         **kwargs: Any
             ignored. Needed for backward compatibility.
@@ -377,10 +397,9 @@ class SurPattern(
         """
         if len(self._sub_p) == 0:
             raise NotConfiguredYet(self)
-        if additions is None:
-            additions = self._add
-        self._modify_additions(additions)
-        return super().get(additions=additions, **kwargs)
+        return super().get(
+            additions=self._modify_additions(additions), **kwargs
+        )
 
     def copy(self) -> Self:
         """
@@ -422,16 +441,6 @@ class SurPattern(
             sub-pattern type.
         """
         return cls._sub_p_type
-
-    def _modify_additions(self, additions: Additions) -> None:
-        """
-        Modify additions for target and sub-patterns.
-
-        Parameters
-        ----------
-        additions : Additions
-            additions instance.
-        """
 
     @property
     def sub_pattern_names(self) -> list[str]:

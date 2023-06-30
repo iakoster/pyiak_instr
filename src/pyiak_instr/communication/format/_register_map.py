@@ -106,10 +106,10 @@ class Register(Generic[MessageT]):
             fields_data = {}
 
         additions = self.get_additions(pattern.sub_pattern_names[0])
-        pattern.set_additions(additions)
         msg: MessageT = pattern.get_for_direction(
             Code.TX, additions=additions
         )
+        msg.pattern.set_additions(additions)
 
         if msg.has.address:
             fields_data[msg.get.address.name] = self.address

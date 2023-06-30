@@ -82,10 +82,26 @@ class StructPattern(SurPattern[StructT, FieldtPatternT]):
     Represent abstract class of pattern for bytes struct (storage).
     """
 
-    def _modify_additions(self, additions: Additions) -> None:
-        super()._modify_additions(additions)
+    def _modify_additions(
+        self, additions: Additions | None = None
+    ) -> Additions:
+        """
+        Modify additions for target and sub-patterns.
+
+        Parameters
+        ----------
+        additions : Additions | None, default=None
+            additions instance. If None - Additions from class will be used.
+
+        Returns
+        -------
+        Additions
+            additions instance.
+        """
+        add = super()._modify_additions(additions)
         for name in self._sub_p:
-            additions.lower(name).current["name"] = name
+            add.lower(name).current["name"] = name
+        return add
 
     def _get_parameters(self, additions: Additions) -> dict[str, Any]:
         """
@@ -124,11 +140,27 @@ class ContinuousStructPattern(
     (e.g. without gaps in content).
     """
 
-    def _modify_additions(self, additions: Additions) -> None:
-        super()._modify_additions(additions)
-        dyn_name = self._modify_before_dyn(additions)
+    def _modify_additions(
+        self, additions: Additions | None = None
+    ) -> Additions:
+        """
+        Modify additions for target and sub-patterns.
+
+        Parameters
+        ----------
+        additions : Additions | None, default=None
+            additions instance. If None - Additions from class will be used.
+
+        Returns
+        -------
+        Additions
+            additions instance.
+        """
+        add = super()._modify_additions(additions)
+        dyn_name = self._modify_before_dyn(add)
         if dyn_name is not None:
-            self._modify_after_dyn(dyn_name, additions)
+            self._modify_after_dyn(dyn_name, add)
+        return add
 
     def _modify_before_dyn(self, additions: Additions) -> str | None:
         """
@@ -320,10 +352,26 @@ class ContainerPattern(SurPattern[ContainerT, StructPatternT], WritableMixin):
         parameters["struct"] = sub_pattern.get(
             additions=additions.lower(name)
         )
-        parameters["pattern"] = self
+        parameters["pattern"] = self.copy()
         return parameters
 
-    def _modify_additions(self, additions: Additions) -> None:
-        super()._modify_additions(additions)
+    def _modify_additions(
+        self, additions: Additions | None = None
+    ) -> Additions:
+        """
+        Modify additions for target and sub-patterns.
+
+        Parameters
+        ----------
+        additions : Additions | None, default=None
+            additions instance. If None - Additions from class will be used.
+
+        Returns
+        -------
+        Additions
+            additions instance.
+        """
+        add = super()._modify_additions(additions)
         for name in self._sub_p:
-            additions.lower(name).current["name"] = name
+            add.lower(name).current["name"] = name
+        return add

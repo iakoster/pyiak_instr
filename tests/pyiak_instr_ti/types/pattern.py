@@ -16,7 +16,9 @@ class TISurPattern(SurPattern[dict, TIPattern]):
     _options = {"basic": dict}
     _sub_p_type = TIPattern
 
-    def _modify_additions(self, additions: Additions) -> None:
-        additions.current["subs"] = {
-            n: p.get(additions.lower(n)) for n, p in self._sub_p.items()
+    def _modify_additions(self, additions: Additions | None = None) -> Additions:
+        add = super()._modify_additions(additions)
+        add.current["subs"] = {
+            n: p.get(add.lower(n)) for n, p in self._sub_p.items()
         }
+        return add
