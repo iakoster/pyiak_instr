@@ -69,7 +69,7 @@ class BytesIntEncoder(Encoder[IntDecodeT, IntEncodeT, bytes]):
             "big" if order is Code.BIG_ENDIAN else "little"
         )
         self._signed = fmt in self._I
-        self._size = self._I[fmt] if self._signed else self._U[fmt]
+        self._vs = self._I[fmt] if self._signed else self._U[fmt]
 
     def decode(self, data: bytes) -> IntDecodeT:
         """
@@ -85,12 +85,14 @@ class BytesIntEncoder(Encoder[IntDecodeT, IntEncodeT, bytes]):
         IntDecodeT
             decoded data.
         """
-        bytesize = self.value_size
-        encoded = np.empty(len(data) // bytesize, np.int_)
-        for i in range(encoded.shape[0]):
-            val = data[i * bytesize : (i + 1) * bytesize]
-            encoded[i] = int.from_bytes(val, self._order, signed=self._signed)
-        return encoded
+        return np.fromiter(
+            (
+                int.from_bytes(
+                    data[i : i + self._vs], self._order, signed=self._signed
+                ) for i in range(0, len(data), self._vs)
+            ),
+            dtype=np.int_,
+        )
 
     def encode(self, data: IntEncodeT) -> bytes:
         """
@@ -106,18 +108,12 @@ class BytesIntEncoder(Encoder[IntDecodeT, IntEncodeT, bytes]):
         bytes
             encoded data.
         """
-        if isinstance(data, Iterable):
-            size = self.value_size
-            return b"".join(
-                map(
-                    lambda v: int(v).to_bytes(
-                        size, self._order, signed=self._signed
-                    ),
-                    data,
-                )
-            )
-        return int(data).to_bytes(
-            self.value_size, self._order, signed=self._signed
+        if not isinstance(data, Iterable):
+            data = [data]
+        return b"".join(
+            int(v).to_bytes(
+                self._vs, self._order, signed=self._signed
+            ) for v in data
         )
 
     @property
@@ -128,7 +124,7 @@ class BytesIntEncoder(Encoder[IntDecodeT, IntEncodeT, bytes]):
         int
             single value bytesize.
         """
-        return self._size
+        return self._vs
 
 
 FloatDecodeT = npt.NDArray[np.float_]
@@ -163,7 +159,7 @@ class BytesFloatEncoder(Encoder[FloatDecodeT, FloatEncodeT, bytes]):
         if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
             raise NotAmongTheOptions("order", value=order)
 
-        self._size = calcsize(self._F[fmt])
+        self._vs = calcsize(self._F[fmt])
         self._dtype = (">" if order is Code.BIG_ENDIAN else "<") + self._F[
             fmt
         ]
@@ -208,7 +204,7 @@ class BytesFloatEncoder(Encoder[FloatDecodeT, FloatEncodeT, bytes]):
         int
             single value bytesize.
         """
-        return self._size
+        return self._vs
 
 
 class BytesEncoder(Encoder[Any, Any, bytes]):
