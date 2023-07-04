@@ -170,6 +170,11 @@ class TestBytesEncoder(unittest.TestCase):
                     decoded, BytesEncoder(*args).decode(encoded),
                 )
 
+        with self.subTest(test="bytes"):
+            self.assertEqual(
+                b"a", BytesEncoder(fmt=Code.U32).encode(b"a"),
+            )
+
     def test_encode(self) -> None:
         for name, (decoded, encoded, *args) in chain(FOR_INT.items(), FOR_FLOAT.items()):
             with self.subTest(test=name):

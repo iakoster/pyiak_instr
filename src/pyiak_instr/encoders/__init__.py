@@ -3,7 +3,8 @@
 Encoders (:mod:`pyiak_instr`)
 =============================
 """
-from ._encoders import BytesDecodeT, BytesEncodeT, BytesEncoder, StringEncoder
+from .bin import BytesEncoder
+from ._encoders import StringEncoder
 
 
-__all__ = ["BytesDecodeT", "BytesEncodeT", "BytesEncoder", "StringEncoder"]
+__all__ = ["BytesEncoder", "StringEncoder"]

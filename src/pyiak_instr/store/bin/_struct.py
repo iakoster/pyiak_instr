@@ -13,7 +13,7 @@ from typing import (
 
 from ...core import Code
 from ...exceptions import ContentError
-from ...encoders import BytesDecodeT, BytesEncodeT, BytesEncoder
+from ...encoders.bin import BytesDecodeT, BytesEncodeT, BytesEncoder
 
 
 __all__ = [

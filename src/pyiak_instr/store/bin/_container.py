@@ -11,7 +11,7 @@ from typing import (
 
 from ...core import Code
 from ...typing import WithBaseStringMethods
-from ...encoders import BytesDecodeT, BytesEncodeT
+from ...encoders.bin import BytesDecodeT, BytesEncodeT
 from ._struct import (
     Field,
     Struct,

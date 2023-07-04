@@ -1,6 +1,6 @@
 """Private module of ``pyiak_instr.encoders.bin``."""
 from struct import calcsize
-from typing import Iterable, Literal
+from typing import Any, Iterable, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -10,7 +10,13 @@ from ...exceptions import NotAmongTheOptions
 from ..types import Encoder
 
 
-__all__ = ["BytesEncoder", "BytesIntEncoder", "BytesFloatEncoder"]
+__all__ = [
+    "BytesEncoder",
+    "BytesDecodeT",
+    "BytesEncodeT",
+    "BytesIntEncoder",
+    "BytesFloatEncoder",
+]
 
 
 IntDecodeT = npt.NDArray[np.int_]
@@ -207,9 +213,11 @@ class BytesFloatEncoder(Encoder[FloatDecodeT, FloatEncodeT, bytes]):
         return self._size
 
 
-class BytesEncoder(
-    Encoder[IntDecodeT | FloatDecodeT, IntEncodeT | FloatEncodeT, bytes]
-):
+BytesDecodeT = IntDecodeT | FloatDecodeT
+BytesEncodeT = IntEncodeT | FloatEncodeT | bytes
+
+
+class BytesEncoder(Encoder[Any, Any, bytes]):
     """
     Encoder/Decoder to/from bytes.
 
@@ -234,7 +242,7 @@ class BytesEncoder(
         else:
             raise ValueError(f"invalid fmt: {fmt!r}")
 
-    def decode(self, data: bytes) -> IntDecodeT | FloatDecodeT:
+    def decode(self, data: bytes) -> BytesDecodeT:
         """
         Decode `data` from bytes.
 
@@ -245,18 +253,18 @@ class BytesEncoder(
 
         Returns
         -------
-        IntDecodeT | FloatDecodeT
+        BytesDecodeT
             decoded data.
         """
         return self._encoder.decode(data)
 
-    def encode(self, data: IntEncodeT | FloatEncodeT) -> bytes:
+    def encode(self, data: BytesEncodeT) -> bytes:
         """
         Encode `data` to bytes.
 
         Parameters
         ----------
-        data : IntEncodeT | FloatEncodeT
+        data : BytesEncodeT
             data to encoding.
 
         Returns
@@ -264,6 +272,8 @@ class BytesEncoder(
         bytes
             encoded data.
         """
+        if isinstance(data, bytes):
+            return data
         return self._encoder.encode(data)  # type: ignore[arg-type]
 
     @property

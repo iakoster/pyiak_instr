@@ -3,7 +3,20 @@
 Bin (:mod:`pyiak_instr.encoders`)
 =================================
 """
-from ._base import BytesEncoder, BytesIntEncoder, BytesFloatEncoder
+# pylint: disable=duplicate-code
+from ._base import (
+    BytesEncoder,
+    BytesDecodeT,
+    BytesEncodeT,
+    BytesIntEncoder,
+    BytesFloatEncoder,
+)
 
 
-__all__ = ["BytesEncoder", "BytesIntEncoder", "BytesFloatEncoder"]
+__all__ = [
+    "BytesEncoder",
+    "BytesDecodeT",
+    "BytesEncodeT",
+    "BytesIntEncoder",
+    "BytesFloatEncoder",
+]
