@@ -18,35 +18,35 @@ class Encoder(Protocol[DecodeT_co, EncodeT_contra, TargetT]):
     """
 
     @abstractmethod
-    def decode(self, value: TargetT) -> DecodeT_co:
+    def decode(self, data: TargetT) -> DecodeT_co:
         """
-        Decode `value`.
+        Decode `data` to specified type.
 
         Parameters
         ----------
-        value : TargetT
-            value to decoding.
+        data : TargetT
+            data to decoding.
 
         Returns
         -------
-        DecodeT
-            decoded value.
+        DecodeT_co
+            decoded data.
         """
 
     @abstractmethod
-    def encode(self, value: EncodeT_contra) -> TargetT:
+    def encode(self, data: EncodeT_contra) -> TargetT:
         """
-        Encode `value`.
+        Encode `data` to target type.
 
         Parameters
         ----------
-        value : EncodeT
+        data : EncodeT_contra
             value to encoding.
 
         Returns
         -------
         TargetT
-            encoded value.
+            encoded data.
         """
 
     @property
@@ -57,4 +57,4 @@ class Encoder(Protocol[DecodeT_co, EncodeT_contra, TargetT]):
         int
             single value size in encoded view.
         """
-        return -1
+        return 0

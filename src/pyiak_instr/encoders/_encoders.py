@@ -87,13 +87,13 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         self._decode_func, self._encode_func = self._get_funcs(fmt, order)
 
     # todo: return np.ndarray[int | float, Any]?
-    def decode(self, value: bytes) -> BytesDecodeT:
+    def decode(self, data: bytes) -> BytesDecodeT:
         """
         Decode bytes content to array.
 
         Parameters
         ----------
-        value : bytes
+        data : bytes
             content to decoding.
 
         Returns
@@ -106,7 +106,7 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         CodeNotAllowed
             if `fmt` or `order` not in list of existed formats.
         """
-        return self._decode_func(value)
+        return self._decode_func(data)
 
     @staticmethod
     def _decode_int(
@@ -159,7 +159,7 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         """
         return np.frombuffer(value, dtype=dtype)
 
-    def encode(self, value: BytesEncodeT) -> bytes:
+    def encode(self, data: BytesEncodeT) -> bytes:
         """
         Encode values to bytes.
 
@@ -167,7 +167,7 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
 
         Parameters
         ----------
-        value : EncodeT
+        data : EncodeT
             values to encoding.
 
         Returns
@@ -175,9 +175,9 @@ class BytesEncoder(Encoder[BytesDecodeT, BytesEncodeT, bytes]):
         bytes
             encoded values.
         """
-        if isinstance(value, bytes):
-            return value
-        return self._encode_func(value)
+        if isinstance(data, bytes):
+            return data
+        return self._encode_func(data)
 
     @staticmethod
     def _encode_int(
@@ -413,7 +413,7 @@ class StringEncoder(Encoder[Any, Any, str]):
     }
     "Dictionary of decoders"
 
-    def decode(self, value: str) -> Any:
+    def decode(self, data: str) -> Any:
         """
         Decode value from `string`.
 
@@ -421,7 +421,7 @@ class StringEncoder(Encoder[Any, Any, str]):
 
         Parameters
         ----------
-        value: str
+        data: str
             value encoded in the string.
 
         Returns
@@ -429,24 +429,24 @@ class StringEncoder(Encoder[Any, Any, str]):
         Any
             decoded value.
         """
-        if self._is_compound_string(value):
-            code, value = self._read(value)
+        if self._is_compound_string(data):
+            code, data = self._read(data)
             if code is Code.STRING:
-                return value
+                return data
             if code is Code.CODE:
-                return Code(int(value))
+                return Code(int(data))
             return self._DECODERS[code](
-                map(self._decode_value, self._iter(value))
+                map(self._decode_value, self._iter(data))
             )
-        return self._decode_value(value)
+        return self._decode_value(data)
 
-    def encode(self, value: Any) -> str:
+    def encode(self, data: Any) -> str:
         """
         Encode value to the string.
 
         Parameters
         ----------
-        value: Any
+        data: Any
             value for encoding.
 
         Returns
@@ -454,20 +454,20 @@ class StringEncoder(Encoder[Any, Any, str]):
         str
             encoded value.
         """
-        if isinstance(value, str):
+        if isinstance(data, str):
             # todo: optimize - check only SOH and numbers
-            if value == self._decode_value(value):
-                return value
-            return self._decorate(Code.STRING, value)
+            if data == self._decode_value(data):
+                return data
+            return self._decorate(Code.STRING, data)
 
-        if type(value) not in self._COMPLEX_TYPES:
-            return self._encode_value(value)
+        if type(data) not in self._COMPLEX_TYPES:
+            return self._encode_value(data)
 
-        code = self._COMPLEX_TYPES[type(value)]
+        code = self._COMPLEX_TYPES[type(data)]
         if code is Code.DICT:
-            value = itertools.chain.from_iterable(value.items())
+            data = itertools.chain.from_iterable(data.items())
         return self._decorate(
-            code, self.DELIMITER.join(map(self._encode_value, value))
+            code, self.DELIMITER.join(map(self._encode_value, data))
         )
 
     def _decode_value(self, value: str) -> Any:

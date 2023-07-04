@@ -126,7 +126,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
         with self.assertRaises(NotAmongTheOptions) as exc:
             TIFieldPattern("", direction=Code.NONE)
         self.assertEqual(
-            "direction option <Code.NONE: 0> not in {<Code.RX: 1554>, "
+            "'direction' option <Code.NONE: 0> not in {<Code.RX: 1554>, "
             "<Code.TX: 1555>, <Code.ANY: 5>}",
             exc.exception.args[0]
         )

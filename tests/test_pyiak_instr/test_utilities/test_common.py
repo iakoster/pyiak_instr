@@ -55,5 +55,5 @@ class TestSplitComplexDict(unittest.TestCase):
         with self.assertRaises(NotAmongTheOptions) as exc:
             split_complex_dict({"a": 20}, without_sep="test")
         self.assertIn(
-            "without_sep option 'test' not in", exc.exception.args[0]
+            "'without_sep' option 'test' not in", exc.exception.args[0]
         )

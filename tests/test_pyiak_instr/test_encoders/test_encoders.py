@@ -110,14 +110,14 @@ class TestBytesEncoder(unittest.TestCase):
         with self.assertRaises(CodeNotAllowed) as exc:
             BytesEncoder().verify_fmt_order(Code.NONE, Code.NONE)
         self.assertEqual(
-            "code option <Code.NONE: 0> not allowed",
+            "'code' option <Code.NONE: 0> not allowed",
             exc.exception.args[0],
         )
 
         with self.assertRaises(CodeNotAllowed) as exc:
             BytesEncoder().verify_fmt_order(Code.U8, Code.NONE)
         self.assertEqual(
-            "code option <Code.NONE: 0> not allowed",
+            "'code' option <Code.NONE: 0> not allowed",
             exc.exception.args[0],
         )
 
@@ -208,7 +208,7 @@ class TestStringEncoder(unittest.TestCase):
         validate_object(
             self,
             StringEncoder(),
-            value_size=-1
+            value_size=0,
         )
 
     def test_decode(self) -> None:

@@ -30,9 +30,9 @@ class NotAmongTheOptions(PyiError):
         value: Any = None,
         options: Iterable[Any] | None = None,
     ):
-        msg = f"{name} option "
+        msg = f"'{name}' option "
         if value is not None:
-            msg += f"{repr(value)} "
+            msg += f"{value!r} "
 
         if options is None:
             msg += "not allowed"
