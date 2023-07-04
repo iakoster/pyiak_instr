@@ -12,8 +12,6 @@ from ..types import Encoder
 
 __all__ = [
     "BytesEncoder",
-    "BytesDecodeT",
-    "BytesEncodeT",
     "BytesIntEncoder",
     "BytesFloatEncoder",
 ]
@@ -213,10 +211,6 @@ class BytesFloatEncoder(Encoder[FloatDecodeT, FloatEncodeT, bytes]):
         return self._size
 
 
-BytesDecodeT = IntDecodeT | FloatDecodeT
-BytesEncodeT = IntEncodeT | FloatEncodeT | bytes
-
-
 class BytesEncoder(Encoder[Any, Any, bytes]):
     """
     Encoder/Decoder to/from bytes.
@@ -242,7 +236,7 @@ class BytesEncoder(Encoder[Any, Any, bytes]):
         else:
             raise ValueError(f"invalid fmt: {fmt!r}")
 
-    def decode(self, data: bytes) -> BytesDecodeT:
+    def decode(self, data: bytes) -> Any:
         """
         Decode `data` from bytes.
 
@@ -253,18 +247,18 @@ class BytesEncoder(Encoder[Any, Any, bytes]):
 
         Returns
         -------
-        BytesDecodeT
+        Any
             decoded data.
         """
         return self._encoder.decode(data)
 
-    def encode(self, data: BytesEncodeT) -> bytes:
+    def encode(self, data: Any) -> bytes:
         """
         Encode `data` to bytes.
 
         Parameters
         ----------
-        data : BytesEncodeT
+        data : Any
             data to encoding.
 
         Returns
@@ -274,7 +268,7 @@ class BytesEncoder(Encoder[Any, Any, bytes]):
         """
         if isinstance(data, bytes):
             return data
-        return self._encoder.encode(data)  # type: ignore[arg-type]
+        return self._encoder.encode(data)
 
     @property
     def value_size(self) -> int:

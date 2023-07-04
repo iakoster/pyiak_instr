@@ -13,7 +13,7 @@ from typing import (
 
 from ...core import Code
 from ...exceptions import ContentError
-from ...encoders.bin import BytesDecodeT, BytesEncodeT, BytesEncoder
+from ...encoders.bin import BytesEncoder
 
 
 __all__ = [
@@ -70,7 +70,7 @@ class Field(ABC):
         self._modify_values()
         self._verify_modified_values()
 
-    def decode(self, content: bytes, verify: bool = False) -> BytesDecodeT:
+    def decode(self, content: bytes, verify: bool = False) -> Any:
         """
         Decode content from bytes with parameters from struct.
 
@@ -83,20 +83,20 @@ class Field(ABC):
 
         Returns
         -------
-        BytesDecodeT
+        Any
             decoded content.
         """
         if verify:
             self.verify(content, raise_if_false=True)
         return self.encoder.decode(content)  # pylint: disable=no-member
 
-    def encode(self, content: BytesEncodeT, verify: bool = False) -> bytes:
+    def encode(self, content: Any, verify: bool = False) -> bytes:
         """
         Encode content to bytes with parameters from struct.
 
         Parameters
         ----------
-        content : BytesEncodeT
+        content : Any
             content for encoding.
         verify : bool, default=False
             verify content after encoding.
@@ -407,16 +407,16 @@ class Struct(ABC, Generic[FieldT]):
         content[field.slice_] = field_content
 
     @overload
-    def decode(self, name: str, content: bytes) -> BytesDecodeT:
+    def decode(self, name: str, content: bytes) -> Any:
         ...
 
     @overload
-    def decode(self, content: bytes) -> dict[str, BytesDecodeT]:
+    def decode(self, content: bytes) -> dict[str, Any]:
         ...
 
     def decode(
         self, *args: str | bytes, **kwargs: Any
-    ) -> BytesDecodeT | dict[str, BytesDecodeT]:
+    ) -> Any | dict[str, Any]:
         """
         Decode bytes content.
 
@@ -429,7 +429,7 @@ class Struct(ABC, Generic[FieldT]):
 
         Returns
         -------
-        BytesDecodeT | dict[str, BytesDecodeT]
+        Any | dict[str, Any]
             decoded content.
 
         Raises
@@ -460,7 +460,7 @@ class Struct(ABC, Generic[FieldT]):
 
     @overload
     def encode(
-        self, all_fields: bool = False, **fields: BytesEncodeT
+        self, all_fields: bool = False, **fields: Any
     ) -> dict[str, bytes]:
         ...
 
@@ -469,7 +469,7 @@ class Struct(ABC, Generic[FieldT]):
         self,
         *args: bytes,
         all_fields: bool = False,
-        **kwargs: BytesEncodeT,
+        **kwargs: Any,
     ) -> dict[str, bytes]:
         ...
 
@@ -477,7 +477,7 @@ class Struct(ABC, Generic[FieldT]):
         self,
         *args: bytes,
         all_fields: bool = False,
-        **kwargs: BytesEncodeT,
+        **kwargs: Any,
     ) -> dict[str, bytes]:
         """
         Encode content for storage.
@@ -488,7 +488,7 @@ class Struct(ABC, Generic[FieldT]):
             arguments for encode method (see overload).
         all_fields :
             check that all fields required.
-        **kwargs : BytesEncodeT
+        **kwargs : Any
             fields content where key is the field name.
 
         Returns
@@ -644,15 +644,13 @@ class Struct(ABC, Generic[FieldT]):
 
         return Code.OK
 
-    def _get_all_fields(
-        self, fields: dict[str, BytesEncodeT]
-    ) -> dict[str, bytes]:
+    def _get_all_fields(self, fields: dict[str, Any]) -> dict[str, bytes]:
         """
         Encode content for all fields.
 
         Parameters
         ----------
-        fields : dict[str, BytesEncodeT]
+        fields : dict[str, Any]
             dictionary of fields content where key is a field name.
 
         Returns

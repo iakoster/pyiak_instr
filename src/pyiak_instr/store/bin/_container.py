@@ -2,6 +2,7 @@
 module."""
 from typing import (
     TYPE_CHECKING,
+    Any,
     Generic,
     Self,
     TypeVar,
@@ -11,15 +12,12 @@ from typing import (
 
 from ...core import Code
 from ...typing import WithBaseStringMethods
-from ...encoders.bin import BytesDecodeT, BytesEncodeT
 from ._struct import (
     Field,
     Struct,
 )
 
 if TYPE_CHECKING:
-    from typing import Any
-
     from ._pattern import ContainerPattern
 
 
@@ -57,16 +55,16 @@ class Container(
         self._c = bytearray()
 
     @overload
-    def decode(self, field: str) -> BytesDecodeT:
+    def decode(self, field: str) -> Any:
         ...
 
     @overload
-    def decode(self) -> dict[str, BytesDecodeT]:
+    def decode(self) -> dict[str, Any]:
         ...
 
     def decode(  # type: ignore[misc]
         self, *args: str
-    ) -> BytesDecodeT | dict[str, BytesDecodeT]:
+    ) -> Any | dict[str, Any]:
         """
         Decode content.
 
@@ -77,7 +75,7 @@ class Container(
 
         Returns
         -------
-        BytesDecodeT | dict[str, BytesDecodeT]
+        Any | dict[str, Any]
             decoded content.
 
         Raises
@@ -99,12 +97,10 @@ class Container(
         ...
 
     @overload
-    def encode(self, **fields: BytesEncodeT) -> Self:
+    def encode(self, **fields: Any) -> Self:
         ...
 
-    def encode(  # type: ignore[misc]
-        self, *args: bytes, **kwargs: BytesEncodeT
-    ) -> Self:
+    def encode(self, *args: bytes, **kwargs: Any) -> Self:
         """
         Encode content.
 
@@ -112,7 +108,7 @@ class Container(
         ----------
         *args : bytes
             arguments for method.
-        **kwargs: BytesEncodeT
+        **kwargs: Any
             keyword arguments for method.
 
         Returns

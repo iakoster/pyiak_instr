@@ -13,7 +13,6 @@ from typing import (
 
 from ...exceptions import ContentError, NotAmongTheOptions
 from ...core import Code
-from ...encoders.bin import BytesEncodeT
 from ...store.bin import (
     STRUCT_DATACLASS,
     Field as BinField,
@@ -277,9 +276,7 @@ class Operation(Basic):
     descs_r: dict[Code, int] = _field(init=False)
     """reversed `descriptions`."""
 
-    def encode(
-        self, content: BytesEncodeT | Code, verify: bool = False
-    ) -> bytes:
+    def encode(self, content: Any, verify: bool = False) -> bytes:
         """
         Encode content to bytes.
 
@@ -287,7 +284,7 @@ class Operation(Basic):
 
         Parameters
         ----------
-        content : BytesEncodeT | Code
+        content : Any
             content to encoding.
         verify : bool, default=False
             verify content after encoding.
@@ -370,9 +367,7 @@ class Response(Basic):
     descs_r: dict[Code, int] = _field(init=False)
     """reversed `descriptions`."""
 
-    def encode(
-        self, content: BytesEncodeT | Code, verify: bool = False
-    ) -> bytes:
+    def encode(self, content: Any, verify: bool = False) -> bytes:
         """
         Encode content to bytes.
 
@@ -380,7 +375,7 @@ class Response(Basic):
 
         Parameters
         ----------
-        content : BytesEncodeT | Code
+        content : Any
             content to encoding.
         verify : bool, default=False
             verify content after encoding.
