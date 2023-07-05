@@ -89,7 +89,8 @@ class BytesIntEncoder(Encoder[IntDecodeT, IntEncodeT, bytes]):
             (
                 int.from_bytes(
                     data[i : i + self._vs], self._order, signed=self._signed
-                ) for i in range(0, len(data), self._vs)
+                )
+                for i in range(0, len(data), self._vs)
             ),
             dtype=np.int_,
         )
@@ -108,12 +109,11 @@ class BytesIntEncoder(Encoder[IntDecodeT, IntEncodeT, bytes]):
         bytes
             encoded data.
         """
-        if not isinstance(data, Iterable):
+        if not isinstance(data, Iterable | np.ndarray):
             data = [data]
         return b"".join(
-            int(v).to_bytes(
-                self._vs, self._order, signed=self._signed
-            ) for v in data
+            int(v).to_bytes(self._vs, self._order, signed=self._signed)
+            for v in data
         )
 
     @property

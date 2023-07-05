@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-from pyiak_instr_deprecation import __version__
+from src.pyiak_instr import __version__
 
 with open('requirements.txt') as f:
     required = f.read().splitlines()
