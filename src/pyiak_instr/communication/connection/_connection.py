@@ -356,3 +356,6 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
             timeout to transmit message.
         """
         return self._tx_to
+
+    def __del__(self) -> None:
+        self.close()
