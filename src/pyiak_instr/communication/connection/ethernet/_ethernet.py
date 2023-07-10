@@ -7,7 +7,7 @@ import psutil  # todo: optional import
 import numpy as np
 
 
-__all__ = ["IPv4"]
+__all__ = ["IPV4_PATTERN", "IPv4Address", "IPv4"]
 
 
 IPv4Address = namedtuple("IPv4Address", ["ip", "port"])
