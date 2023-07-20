@@ -1,6 +1,6 @@
 """Private module of ``pyiak_instr.encoders.bin``."""
 from struct import calcsize
-from typing import Any, Iterable, Literal
+from typing import Any, Iterable, Literal, TypeAlias, TypeVar
 
 import numpy as np
 import numpy.typing as npt
@@ -17,11 +17,16 @@ __all__ = [
 ]
 
 
+DecodeT_co = TypeVar("DecodeT_co", covariant=True)
+EncodeT_contra = TypeVar("EncodeT_contra", contravariant=True)
+BytesEncoderTA: TypeAlias = Encoder[DecodeT_co, EncodeT_contra, bytes]
+
+
 IntDecodeT = npt.NDArray[np.int_]
 IntEncodeT = int | list[int] | npt.NDArray[np.int_]
 
 
-class BytesIntEncoder(Encoder[IntDecodeT, IntEncodeT, bytes]):
+class BytesIntEncoder(BytesEncoderTA[IntDecodeT, IntEncodeT]):
     """
     Encoder/Decoder for integer or iterable of integers.
 
@@ -131,7 +136,7 @@ FloatDecodeT = npt.NDArray[np.float_]
 FloatEncodeT = float | list[float] | npt.NDArray[np.float_]
 
 
-class BytesFloatEncoder(Encoder[FloatDecodeT, FloatEncodeT, bytes]):
+class BytesFloatEncoder(BytesEncoderTA[FloatDecodeT, FloatEncodeT]):
     """
     Encoder/Decoder for float or iterable of floats.
 
@@ -207,7 +212,7 @@ class BytesFloatEncoder(Encoder[FloatDecodeT, FloatEncodeT, bytes]):
         return self._vs
 
 
-class BytesEncoder(Encoder[Any, Any, bytes]):
+class BytesEncoder(BytesEncoderTA[Any, Any]):
     """
     Encoder/Decoder to/from bytes.
 
