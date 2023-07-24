@@ -19,7 +19,9 @@ __all__ = [
 
 DecodeT_co = TypeVar("DecodeT_co", covariant=True)
 EncodeT_contra = TypeVar("EncodeT_contra", contravariant=True)
-BytesEncoderTA: TypeAlias = Encoder[DecodeT_co, EncodeT_contra, bytes]
+BytesEncoderTA: TypeAlias = Encoder[  # pylint: disable=invalid-name
+    DecodeT_co, EncodeT_contra, bytes
+]
 
 
 IntDecodeT = npt.NDArray[np.int_]

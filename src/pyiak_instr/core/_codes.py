@@ -90,3 +90,4 @@ class Code(IntEnum):
     RX = auto()
     TX = auto()
     SELF = auto()
+    AGAIN = auto()

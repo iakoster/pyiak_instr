@@ -254,6 +254,8 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
         ------
         ConnectionError
             if the timeout (transmit timeout) is reached.
+        ValueError
+            if unknown behaviour code detected.
         """
 
         transmit_start = dt.datetime.now()
@@ -284,6 +286,12 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
                         return ans  # type: ignore[no-any-return]
                     if verify_result is Code.WAIT:
                         receive_start = dt.datetime.now()
+                    elif verify_result is Code.AGAIN:
+                        break  # todo: tests
+                    else:
+                        raise ValueError(  # todo: tests
+                            f"unknown behaviour from code {verify_result!r}"
+                        )
 
         raise ConnectionError(f"no answer received within {self._tx_to}")
 
@@ -307,25 +315,49 @@ class Connection(WithApi[ApiT], Generic[ApiT, AddressT]):
         Code
             result code.
         """
+        result = Code.OK
         if rx_.has.response:
             f_response = rx_.get.response
             response = f_response.desc(rx_.decode(f_response.name)[0])
             if response is not Code.OK:
                 self._logger.info("answer with response: %r", response)
-                return response
+                result = response
 
-        if tx_.has.id_ and rx_.has.id_:
+        if result is Code.OK and tx_.has.id_ and rx_.has.id_:
             tx_id = tx_.decode(tx_.get.id_.name)[0]
             rx_id = rx_.decode(rx_.get.id_.name)[0]
 
             if tx_id != rx_id:
                 self._logger.info("different id (tx/rx): %s/%s", tx_id, rx_id)
-                return Code.INVALID_ID
+                result = Code.INVALID_ID
 
-        verify_result = rx_.verify()
-        if verify_result is not Code.OK:
-            self._logger.info("verify result: %r", verify_result)
-        return verify_result
+        if result is Code.OK:
+            verify_result = rx_.verify()
+            if verify_result is not Code.OK:
+                self._logger.info("verify result: %r", verify_result)
+                result = verify_result
+
+        return self._process_verify_result(result)
+
+    def _process_verify_result(self, result: Code) -> Code:
+        """
+        Process verify result to behaviour code.
+
+        Parameters
+        ----------
+        result: Code
+            verify result.
+
+        Returns
+        -------
+        Code
+            behaviour code.
+        """
+        if result is Code.INVALID_ID:
+            result = Code.WAIT
+        elif result not in {Code.WAIT, Code.OK}:
+            result = Code.AGAIN
+        return result
 
     @property
     def address(self) -> AddressT:
