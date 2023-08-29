@@ -30,7 +30,7 @@ class TestField(unittest.TestCase):
             words_expected=0,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["encoder", "decoder"],
         )
 
     def test_init_start_stop(self) -> None:

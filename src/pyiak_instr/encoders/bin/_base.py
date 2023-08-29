@@ -1,36 +1,130 @@
 """Private module of ``pyiak_instr.encoders.bin``."""
 from struct import calcsize
-from typing import Any, Iterable, Literal, TypeAlias, TypeVar
+from abc import ABC
+from typing import Any, ClassVar, Iterable, Literal, TypeVar
 
 import numpy as np
 import numpy.typing as npt
 
 from ...core import Code
 from ...exceptions import NotAmongTheOptions
-from ..types import Encoder
+from ..types import Decoder, Encoder
 
 
 __all__ = [
+    "BytesDecoder",
     "BytesEncoder",
+    "BytesIntDecoder",
     "BytesIntEncoder",
+    "BytesFloatDecoder",
     "BytesFloatEncoder",
+    "get_bytes_transformers",
 ]
 
 
-DecodeT_co = TypeVar("DecodeT_co", covariant=True)
-EncodeT_contra = TypeVar("EncodeT_contra", contravariant=True)
-BytesEncoderTA: TypeAlias = Encoder[  # pylint: disable=invalid-name
-    DecodeT_co, EncodeT_contra, bytes
-]
+DecodeT = TypeVar("DecodeT")
+EncodeT = TypeVar("EncodeT")
 
 
 IntDecodeT = npt.NDArray[np.int_]
-IntEncodeT = int | list[int] | npt.NDArray[np.int_]
+IntEncodeT = bytes | int | list[int] | npt.NDArray[np.int_]
+
+_U = {
+    Code.U8: 1,
+    Code.U16: 2,
+    Code.U24: 3,
+    Code.U32: 4,
+    Code.U40: 5,
+    Code.U48: 6,
+    Code.U56: 7,
+    Code.U64: 8,
+}
+
+_I = {
+    Code.I8: 1,
+    Code.I16: 2,
+    Code.I24: 3,
+    Code.I32: 4,
+    Code.I40: 5,
+    Code.I48: 6,
+    Code.I56: 7,
+    Code.I64: 8,
+}
 
 
-class BytesIntEncoder(BytesEncoderTA[IntDecodeT, IntEncodeT]):
+FloatDecodeT = npt.NDArray[np.float_]
+FloatEncodeT = bytes | float | list[float] | npt.NDArray[np.float_]
+
+_F = {
+    Code.F16: "e",
+    Code.F32: "f",
+    Code.F64: "d",
+}
+
+
+class BytesDecoder(ABC, Decoder[DecodeT, bytes]):
     """
-    Encoder/Decoder for integer or iterable of integers.
+    A base class for a byte decoder.
+    """
+
+    _vs: int
+
+    @property
+    def fmt_bytesize(self) -> int:
+        """
+        Returns
+        -------
+        int
+            single value size in encoded view.
+        """
+        return self._vs
+
+
+class BytesEncoder(ABC, Encoder[EncodeT, bytes]):
+    """
+    A base class for a byte encoder.
+    """
+
+    _vs: int
+
+    @property
+    def word_bytesize(self) -> int:
+        """
+        Returns
+        -------
+        int
+            single value size in encoded view.
+        """
+        return self._vs
+
+
+class BytesTransformerMixin:
+    """
+    Base mixin for bytes transformers (decoder/encoder).
+
+    Parameters
+    ----------
+    fmt : Code
+        format of single value.
+    order : Code, default=BIG_ENDIAN
+        byteorder.
+    """
+
+    ALLOWED: ClassVar[set[Code]]
+
+    def __init__(self, fmt: Code, order: Code = Code.BIG_ENDIAN) -> None:
+        if fmt not in self.ALLOWED:
+            raise NotAmongTheOptions("fmt", value=fmt)
+        if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
+            raise NotAmongTheOptions("order", value=order)
+
+        self._fmt, self._order = fmt, order
+        self._vs = 1
+
+
+class BytesIntTransformerMixin(BytesTransformerMixin):
+    """
+    Mixin for int-bytes transformers (decoder/encoder).
 
     Parameters
     ----------
@@ -40,43 +134,23 @@ class BytesIntEncoder(BytesEncoderTA[IntDecodeT, IntEncodeT]):
         byteorder.
     """
 
-    _U = {
-        Code.U8: 1,
-        Code.U16: 2,
-        Code.U24: 3,
-        Code.U32: 4,
-        Code.U40: 5,
-        Code.U48: 6,
-        Code.U56: 7,
-        Code.U64: 8,
-    }
-
-    _I = {
-        Code.I8: 1,
-        Code.I16: 2,
-        Code.I24: 3,
-        Code.I32: 4,
-        Code.I40: 5,
-        Code.I48: 6,
-        Code.I56: 7,
-        Code.I64: 8,
-    }
-
     ALLOWED = set(_U).union(set(_I))
 
     def __init__(
         self, fmt: Code = Code.U8, order: Code = Code.BIG_ENDIAN
     ) -> None:
-        if fmt not in self.ALLOWED:
-            raise NotAmongTheOptions("fmt", value=fmt)
-        if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
-            raise NotAmongTheOptions("order", value=order)
-
-        self._order: Literal["little", "big"] = (
+        super().__init__(fmt, order=order)
+        self._str_order: Literal["little", "big"] = (
             "big" if order is Code.BIG_ENDIAN else "little"
         )
-        self._signed = fmt in self._I
-        self._vs = self._I[fmt] if self._signed else self._U[fmt]
+        self._signed = fmt in _I
+        self._vs = _I[fmt] if self._signed else _U[fmt]
+
+
+class BytesIntDecoder(BytesDecoder[IntDecodeT], BytesIntTransformerMixin):
+    """
+    Decoder for integer or iterable of integers.
+    """
 
     def decode(self, data: bytes) -> IntDecodeT:
         """
@@ -95,12 +169,20 @@ class BytesIntEncoder(BytesEncoderTA[IntDecodeT, IntEncodeT]):
         return np.fromiter(
             (
                 int.from_bytes(
-                    data[i : i + self._vs], self._order, signed=self._signed
+                    data[i : i + self._vs],
+                    self._str_order,
+                    signed=self._signed,
                 )
                 for i in range(0, len(data), self._vs)
             ),
             dtype=np.int_,
         )
+
+
+class BytesIntEncoder(BytesEncoder[IntEncodeT], BytesIntTransformerMixin):
+    """
+    Encoder for integer or iterable of integers.
+    """
 
     def encode(self, data: IntEncodeT) -> bytes:
         """
@@ -116,31 +198,19 @@ class BytesIntEncoder(BytesEncoderTA[IntDecodeT, IntEncodeT]):
         bytes
             encoded data.
         """
+        if isinstance(data, bytes):
+            return data
         if not isinstance(data, Iterable | np.ndarray):
             data = [data]
         return b"".join(
-            int(v).to_bytes(self._vs, self._order, signed=self._signed)
+            int(v).to_bytes(self._vs, self._str_order, signed=self._signed)
             for v in data
         )
 
-    @property
-    def value_size(self) -> int:
-        """
-        Returns
-        -------
-        int
-            single value bytesize.
-        """
-        return self._vs
 
-
-FloatDecodeT = npt.NDArray[np.float_]
-FloatEncodeT = float | list[float] | npt.NDArray[np.float_]
-
-
-class BytesFloatEncoder(BytesEncoderTA[FloatDecodeT, FloatEncodeT]):
+class BytesFloatTransformerMixin(BytesTransformerMixin):
     """
-    Encoder/Decoder for float or iterable of floats.
+    Mixin for float-bytes transformers (decoder/encoder).
 
     Parameters
     ----------
@@ -150,26 +220,22 @@ class BytesFloatEncoder(BytesEncoderTA[FloatDecodeT, FloatEncodeT]):
         byteorder.
     """
 
-    _F = {
-        Code.F16: "e",
-        Code.F32: "f",
-        Code.F64: "d",
-    }
-
     ALLOWED = set(_F)
 
     def __init__(
         self, fmt: Code = Code.F32, order: Code = Code.BIG_ENDIAN
     ) -> None:
-        if fmt not in self.ALLOWED:
-            raise NotAmongTheOptions("fmt", value=fmt)
-        if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
-            raise NotAmongTheOptions("order", value=order)
+        super().__init__(fmt, order=order)
+        self._vs = calcsize(_F[fmt])
+        self._dtype = (">" if order is Code.BIG_ENDIAN else "<") + _F[fmt]
 
-        self._vs = calcsize(self._F[fmt])
-        self._dtype = (">" if order is Code.BIG_ENDIAN else "<") + self._F[
-            fmt
-        ]
+
+class BytesFloatDecoder(
+    BytesDecoder[FloatDecodeT], BytesFloatTransformerMixin
+):
+    """
+    Decoder for float or iterable of floats.
+    """
 
     def decode(self, data: bytes) -> FloatDecodeT:
         """
@@ -187,6 +253,14 @@ class BytesFloatEncoder(BytesEncoderTA[FloatDecodeT, FloatEncodeT]):
         """
         return np.frombuffer(data, dtype=self._dtype)
 
+
+class BytesFloatEncoder(
+    BytesEncoder[FloatEncodeT], BytesFloatTransformerMixin
+):
+    """
+    Encoder for float or iterable of floats.
+    """
+
     def encode(self, data: FloatEncodeT) -> bytes:
         """
         Encode `data` to bytes.
@@ -201,84 +275,45 @@ class BytesFloatEncoder(BytesEncoderTA[FloatDecodeT, FloatEncodeT]):
         bytes
             encoded data.
         """
+        if isinstance(data, bytes):
+            return data
         return np.array(data, dtype=self._dtype).tobytes()
 
-    @property
-    def value_size(self) -> int:
-        """
-        Returns
-        -------
-        int
-            single value bytesize.
-        """
-        return self._vs
 
-
-class BytesEncoder(BytesEncoderTA[Any, Any]):
+def get_bytes_transformers(
+    fmt: Code, order: Code = Code.BIG_ENDIAN
+) -> tuple[BytesDecoder[Any], BytesEncoder[Any]]:
     """
-    Encoder/Decoder to/from bytes.
+    Get transformers to encoding to/decoding from bytes.
 
     Parameters
     ----------
-    fmt : Code, default=U8
+    fmt : Code
         format of single value.
     order : Code, default=BIG_ENDIAN
         byteorder.
+
+    Returns
+    -------
+    tuple[BytesDecoder[Any], BytesEncoder[Any]]
+        specified encoder and decoder.
+
+    Raises
+    ------
+    ValueError
+        if there is no transformer for specified `fmt`.
     """
 
-    def __init__(
-        self, fmt: Code = Code.U8, order: Code = Code.BIG_ENDIAN
-    ) -> None:
-        self._encoder: BytesIntEncoder | BytesFloatEncoder
-        if fmt in BytesIntEncoder.ALLOWED:
-            self._encoder = BytesIntEncoder(fmt, order)
+    if fmt in BytesIntTransformerMixin.ALLOWED:
+        return (
+            BytesIntDecoder(fmt=fmt, order=order),
+            BytesIntEncoder(fmt=fmt, order=order),
+        )
 
-        elif fmt in BytesFloatEncoder.ALLOWED:
-            self._encoder = BytesFloatEncoder(fmt, order)
+    if fmt in BytesFloatTransformerMixin.ALLOWED:
+        return (
+            BytesFloatDecoder(fmt=fmt, order=order),
+            BytesFloatEncoder(fmt=fmt, order=order),
+        )
 
-        else:
-            raise ValueError(f"invalid fmt: {fmt!r}")
-
-    def decode(self, data: bytes) -> Any:
-        """
-        Decode `data` from bytes.
-
-        Parameters
-        ----------
-        data : bytes
-            data for decoding.
-
-        Returns
-        -------
-        Any
-            decoded data.
-        """
-        return self._encoder.decode(data)
-
-    def encode(self, data: Any) -> bytes:
-        """
-        Encode `data` to bytes.
-
-        Parameters
-        ----------
-        data : Any
-            data to encoding.
-
-        Returns
-        -------
-        bytes
-            encoded data.
-        """
-        if isinstance(data, bytes):
-            return data
-        return self._encoder.encode(data)
-
-    @property
-    def value_size(self) -> int:
-        """
-        Returns
-        -------
-        int
-            single value bytesize.
-        """
-        return self._encoder.value_size
+    raise ValueError(f"unsupported format: {fmt!r}")

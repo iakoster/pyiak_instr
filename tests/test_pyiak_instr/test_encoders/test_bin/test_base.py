@@ -6,7 +6,13 @@ from numpy.testing import assert_array_almost_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotAmongTheOptions
-from src.pyiak_instr.encoders.bin import BytesEncoder, BytesIntEncoder, BytesFloatEncoder
+from src.pyiak_instr.encoders.bin import (
+    BytesIntDecoder,
+    BytesIntEncoder,
+    BytesFloatDecoder,
+    BytesFloatEncoder,
+    get_bytes_transformers,
+)
 
 from tests.utils import validate_object
 
@@ -64,13 +70,13 @@ FOR_FLOAT = dict(
 )
 
 
-class TestBytesIntEncoder(unittest.TestCase):
+class TestBytesIntTransformers(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
             BytesIntEncoder(Code.U16),
-            value_size=2,
+            word_bytesize=2,
         )
 
     def test_init_exc(self) -> None:
@@ -94,7 +100,7 @@ class TestBytesIntEncoder(unittest.TestCase):
         for name, (decoded, encoded, *args) in FOR_INT.items():
             with self.subTest(test=name):
                 assert_array_almost_equal(
-                    decoded, BytesIntEncoder(*args).decode(encoded),
+                    decoded, BytesIntDecoder(*args).decode(encoded),
                 )
 
     def test_encode(self) -> None:
@@ -105,13 +111,13 @@ class TestBytesIntEncoder(unittest.TestCase):
                 )
 
 
-class TestBytesFloatEncoder(unittest.TestCase):
+class TestBytesFloatTransformers(unittest.TestCase):
 
     def test_init(self) -> None:
         validate_object(
             self,
             BytesFloatEncoder(),
-            value_size=4,
+            word_bytesize=4,
         )
 
     def test_init_exc(self) -> None:
@@ -135,7 +141,7 @@ class TestBytesFloatEncoder(unittest.TestCase):
         for name, (decoded, encoded, *args) in FOR_FLOAT.items():
             with self.subTest(test=name):
                 assert_array_almost_equal(
-                    decoded, BytesFloatEncoder(*args).decode(encoded),
+                    decoded, BytesFloatDecoder(*args).decode(encoded),
                 )
 
     def test_encode(self) -> None:
@@ -146,38 +152,21 @@ class TestBytesFloatEncoder(unittest.TestCase):
                 )
 
 
-class TestBytesEncoder(unittest.TestCase):
+class TestGetBytesTransformers(unittest.TestCase):
 
-    def test_init(self) -> None:
-        validate_object(
-            self,
-            BytesEncoder(),
-            value_size=1,
+    def test_basic_usage(self) -> None:
+        for fmt, (ref_dec, ref_enc) in {
+            Code.U8: (BytesIntDecoder, BytesIntEncoder),
+            Code.F16: (BytesFloatDecoder, BytesFloatEncoder),
+        }.items():
+            with self.subTest(fmt=fmt):
+                act_dec, act_enc = get_bytes_transformers(fmt)
+                self.assertIsInstance(act_dec, ref_dec)
+                self.assertIsInstance(act_enc, ref_enc)
+
+    def test_exc(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            get_bytes_transformers(Code.NONE)
+        self.assertEqual(
+            "unsupported format: <Code.NONE: 0>", exc.exception.args[0]
         )
-
-    def test_init_exc(self) -> None:
-        with self.subTest(test="invalid fmt"):
-            with self.assertRaises(ValueError) as exc:
-                BytesEncoder(Code.STRING)
-            self.assertEqual(
-                "invalid fmt: <Code.STRING: 264>", exc.exception.args[0],
-            )
-
-    def test_decode(self) -> None:
-        for name, (decoded, encoded, *args) in chain(FOR_INT.items(), FOR_FLOAT.items()):
-            with self.subTest(test=name):
-                assert_array_almost_equal(
-                    decoded, BytesEncoder(*args).decode(encoded),
-                )
-
-        with self.subTest(test="bytes"):
-            self.assertEqual(
-                b"a", BytesEncoder(fmt=Code.U32).encode(b"a"),
-            )
-
-    def test_encode(self) -> None:
-        for name, (decoded, encoded, *args) in chain(FOR_INT.items(), FOR_FLOAT.items()):
-            with self.subTest(test=name):
-                self.assertEqual(
-                    encoded, BytesEncoder(*args).encode(decoded),
-                )

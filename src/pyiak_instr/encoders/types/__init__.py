@@ -3,7 +3,7 @@
 Types (:mod:`pyiak_instr.encoders`)
 ===================================
 """
-from ._encoders import Encoder
+from ._encoders import Decoder, Encoder
 
 
-__all__ = ["Encoder"]
+__all__ = ["Decoder", "Encoder"]
