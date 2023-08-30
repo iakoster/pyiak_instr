@@ -6,7 +6,7 @@ from typing import (
 )
 
 from ...core import Code
-from ...encoders import get_bytes_transformers
+from ...encoders import BytesEncoder
 from ...exceptions import NotAmongTheOptions, NotConfiguredYet
 from ...types import Additions
 from ...store.bin import (
@@ -485,7 +485,7 @@ class FieldPattern(BinFieldPattern[FieldT]):
         int
             fmt bytesize.
         """
-        return get_bytes_transformers(fmt)[0].fmt_bytesize
+        return BytesEncoder(fmt=fmt).value_size
 
     @property
     def direction(self) -> Code:

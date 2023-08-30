@@ -6,7 +6,7 @@ from numpy.testing import assert_array_almost_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import CodeNotAllowed
-from src.pyiak_instr.encoders import StringEncoder
+from src.pyiak_instr.encoders import BytesEncoder, StringEncoder
 
 from tests.utils import validate_object
 
@@ -78,6 +78,7 @@ class TestStringEncoder(unittest.TestCase):
         validate_object(
             self,
             StringEncoder(),
+            value_size=0,
         )
 
     def test_decode(self) -> None:

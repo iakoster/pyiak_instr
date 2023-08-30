@@ -6,14 +6,14 @@ from typing import Any, Callable, Generator
 import numpy as np
 
 from ..core import Code
-from .types import Decoder, Encoder
+from .types import Encoder
 
 
 __all__ = ["StringEncoder"]
 
 
 # todo: parameters (e.g. \npa[shape=\tpl(2,1),dtype=uint8](1,2))
-class StringEncoder(Decoder[Any, str], Encoder[Any, str]):
+class StringEncoder(Encoder[Any, Any, str]):
     """
     Represent class for encoding/decoding python values to/from string.
     """

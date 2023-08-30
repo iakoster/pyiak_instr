@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import InitVar
 
 from src.pyiak_instr.rwfile import RWConfig
+from src.pyiak_instr.encoders.bin import BytesEncoder
 from src.pyiak_instr.store.bin import (
     STRUCT_DATACLASS,
     Field,

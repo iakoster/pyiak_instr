@@ -1,23 +1,24 @@
-"""Private module of ``pyiak_instr.types``."""
+"""Private module of ``pyiak_instr.types`` with encoder type."""
 from abc import abstractmethod
-from typing import Generic, TypeVar
+from typing import Protocol, TypeVar, runtime_checkable
 
 
-__all__ = ["Decoder", "Encoder"]
+__all__ = ["Encoder"]
 
 
-DecodeT = TypeVar("DecodeT")
-EncodeT = TypeVar("EncodeT")
+DecodeT_co = TypeVar("DecodeT_co", covariant=True)
+EncodeT_contra = TypeVar("EncodeT_contra", contravariant=True)
 TargetT = TypeVar("TargetT")
 
 
-class Decoder(Generic[DecodeT, TargetT]):
+@runtime_checkable
+class Encoder(Protocol[DecodeT_co, EncodeT_contra, TargetT]):
     """
-    Represents abstract base class of decoder.
+    Represents abstract base class of encoder.
     """
 
     @abstractmethod
-    def decode(self, data: TargetT) -> DecodeT:
+    def decode(self, data: TargetT) -> DecodeT_co:
         """
         Decode `data` to specified type.
 
@@ -32,14 +33,8 @@ class Decoder(Generic[DecodeT, TargetT]):
             decoded data.
         """
 
-
-class Encoder(Generic[EncodeT, TargetT]):
-    """
-    Represents abstract base class of encoder.
-    """
-
     @abstractmethod
-    def encode(self, data: EncodeT) -> TargetT:
+    def encode(self, data: EncodeT_contra) -> TargetT:
         """
         Encode `data` to target type.
 
@@ -53,3 +48,13 @@ class Encoder(Generic[EncodeT, TargetT]):
         TargetT
             encoded data.
         """
+
+    @property
+    def value_size(self) -> int:
+        """
+        Returns
+        -------
+        int
+            single value size in encoded view.
+        """
+        return 0

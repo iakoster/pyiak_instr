@@ -155,7 +155,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             is_single=True,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder", "decoder"],
+            wo_attrs=["encoder"],
         )
 
     def test_get_specific(self) -> None:
@@ -249,7 +249,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                     **ref,
                     wo_attrs=[
                         "bytes_expected",
-                        "encoder", "decoder",
+                        "encoder",
                         "name",
                         "start",
                         "is_dynamic",
@@ -333,7 +333,7 @@ class TestMessageStructPatternABC(unittest.TestCase):
             is_single=False,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder", "decoder"],
+            wo_attrs=["encoder"],
         )
 
     def test_instance_for_direction(self) -> None:
@@ -436,7 +436,7 @@ class TestMessagePatternABC(unittest.TestCase):
             is_single=False,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder", "decoder"],
+            wo_attrs=["encoder"],
         )
 
     def test_get_for_direction(self) -> None:

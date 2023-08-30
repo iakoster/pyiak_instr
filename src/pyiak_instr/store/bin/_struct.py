@@ -13,7 +13,7 @@ from typing import (
 
 from ...core import Code
 from ...exceptions import ContentError
-from ...encoders.bin import BytesDecoder, BytesEncoder, get_bytes_transformers
+from ...encoders.bin import BytesEncoder
 
 
 __all__ = [
@@ -62,13 +62,10 @@ class Field(ABC):
 
     # todo: generalize encoder
     # todo: variant with an already initialized instance
-    encoder: BytesEncoder[Any] = field_(init=False)
-    decoder: BytesDecoder[Any] = field_(init=False)
+    encoder: BytesEncoder = field_(init=False)
 
     def __post_init__(self) -> None:
-        decoder, encoder = get_bytes_transformers(self.fmt, self.order)
-        self._setattr("encoder", encoder)
-        self._setattr("decoder", decoder)
+        self._setattr("encoder", BytesEncoder(self.fmt, self.order))
         self._verify_init_values()
         self._modify_values()
         self._verify_modified_values()
@@ -91,7 +88,7 @@ class Field(ABC):
         """
         if verify:
             self.verify(content, raise_if_false=True)
-        return self.decoder.decode(content)  # pylint: disable=no-member
+        return self.encoder.decode(content)  # pylint: disable=no-member
 
     def encode(self, content: Any, verify: bool = False) -> bytes:
         """
@@ -335,7 +332,7 @@ class Field(ABC):
         int
             count of bytes in one word.
         """
-        return self.encoder.word_bytesize  # pylint: disable=no-member
+        return self.encoder.value_size  # pylint: disable=no-member
 
     @property
     def words_expected(self) -> int:
