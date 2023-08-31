@@ -11,6 +11,7 @@ from src.pyiak_instr.codecs.bin import (
     BytesIntCodec,
     BytesFloatCodec,
     BytesHexCodec,
+    BytesStringCodec,
 )
 
 from tests.utils import validate_object
@@ -84,6 +85,22 @@ FOR_HEX = dict(
         "0a3b8aa2300123",
         b"\x0a\x3b\x8a\xa2\x30\x01\x23",
         Code.HEX,
+    ),
+)
+
+
+FOR_STRING = dict(
+    empty=(
+        "",
+        b"",
+        Code.STRING,
+        "utf-8",
+    ),
+    some_ascii=(
+        "lol_kek",
+        b"lol_kek",
+        Code.STRING,
+        "ascii",
     ),
 )
 
@@ -194,6 +211,30 @@ class TestBytesHexCodec(unittest.TestCase):
                 )
 
 
+class TestBytesStringCodec(unittest.TestCase):
+
+    def test_init(self) -> None:
+        validate_object(
+            self,
+            BytesHexCodec(),
+            fmt_bytesize=1,
+        )
+
+    def test_decode(self) -> None:
+        for name, (decoded, encoded, *args) in FOR_STRING.items():
+            with self.subTest(test=name):
+                self.assertEqual(
+                    decoded, BytesStringCodec(*args).decode(encoded)
+                )
+
+    def test_encode(self) -> None:
+        for name, (decoded, encoded, *args) in FOR_STRING.items():
+            with self.subTest(test=name):
+                self.assertEqual(
+                    encoded, BytesStringCodec(*args).encode(decoded),
+                )
+
+
 class TestGetBytesCodec(unittest.TestCase):
 
     def test_basic(self) -> None:
@@ -201,6 +242,8 @@ class TestGetBytesCodec(unittest.TestCase):
             Code.U8: BytesIntCodec,
             Code.I32: BytesIntCodec,
             Code.F16: BytesFloatCodec,
+            Code.HEX: BytesHexCodec,
+            Code.STRING: BytesStringCodec,
         }.items():
             with self.subTest(fmt=repr(fmt)):
                 self.assertIsInstance(get_bytes_codec(fmt), ref_codec)

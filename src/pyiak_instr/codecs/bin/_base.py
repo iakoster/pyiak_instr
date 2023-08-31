@@ -23,6 +23,7 @@ __all__ = [
     "BytesIntCodec",
     "BytesFloatCodec",
     "BytesHexCodec",
+    "BytesStringCodec",
     "get_bytes_codec",
 ]
 
@@ -300,21 +301,86 @@ class BytesHexCodec(BytesCodec[HexDecodeT, HexEncodeT]):
         return bytes.fromhex(data)
 
 
+StringDecodeT = str
+StringEncodeT = bytes | str
+
+
+class BytesStringCodec(BytesCodec[StringDecodeT, StringEncodeT]):
+    """
+    Codec for string.
+
+    Parameters
+    ----------
+    fmt : Code, default=STRING
+        format of single value.
+    encoding : str, default='ascii'
+        string encoding.
+    """
+
+    ALLOWED = {Code.STRING}
+
+    def __init__(
+        self, fmt: Code = Code.STRING, encoding: str = "ascii"
+    ) -> None:
+        super().__init__(fmt)
+        self._encoding = encoding
+
+    def decode(self, data: bytes) -> StringDecodeT:
+        """
+        Decode `data` from bytes.
+
+        Parameters
+        ----------
+        data : bytes
+            data for decoding.
+
+        Returns
+        -------
+        StringDecodeT
+            decoded data.
+        """
+        return data.decode(encoding=self._encoding)
+
+    def encode(self, data: StringEncodeT) -> bytes:
+        """
+        Encode `data` to bytes.
+
+        Parameters
+        ----------
+        data : StringEncodeT
+            data to encoding.
+
+        Returns
+        -------
+        bytes
+            encoded data.
+        """
+        if isinstance(data, bytes):
+            return data
+        return data.encode(encoding=self._encoding)
+
+
 def get_bytes_codec(
-    fmt: Code, order: Code = Code.BIG_ENDIAN
+    fmt: Code,
+    order: Code = Code.BIG_ENDIAN,
+    encoding: str = "ascii",
 ) -> BytesCodec[Any, Any]:
     """
     Get codec to encoding to/decoding from bytes.
 
     Parameters
     ----------
-    fmt: Code
+    fmt : Code
         format of single value.
-    order: Code, default=BIG_ENDIAN
+    order : Code, default=BIG_ENDIAN
         byteorder. Used for:
 
             * BytesIntCodec;
             * BytesFloatCodec.
+    encoding : str, default='ascii'
+        encoding for strings. Used for:
+
+            * BytesStringCodec
 
     Returns
     -------
@@ -334,5 +400,8 @@ def get_bytes_codec(
 
     if fmt in BytesHexCodec.ALLOWED:
         return BytesHexCodec(fmt=fmt)
+
+    if fmt in BytesStringCodec.ALLOWED:
+        return BytesStringCodec(fmt=fmt, encoding=encoding)
 
     raise ValueError(f"unsupported format: {fmt!r}")
