@@ -22,6 +22,7 @@ __all__ = [
     "BytesCodec",
     "BytesIntCodec",
     "BytesFloatCodec",
+    "BytesHexCodec",
     "get_bytes_codec",
 ]
 
@@ -42,18 +43,14 @@ class BytesCodec(
     ----------
     fmt : Code
         format of single value.
-    order : Code, default=BIG_ENDIAN
-        byteorder.
     """
 
     ALLOWED: ClassVar[set[Code]]
 
-    def __init__(self, fmt: Code, order: Code = Code.BIG_ENDIAN) -> None:
+    def __init__(self, fmt: Code) -> None:
         if fmt not in self.ALLOWED:
             raise NotAmongTheOptions("fmt", value=fmt)
-        if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
-            raise NotAmongTheOptions("order", value=order)
-        self._fmt, self._order = fmt, order
+        self._fmt = fmt
         self._fmt_size = 1
 
     @property
@@ -68,12 +65,12 @@ class BytesCodec(
 
 
 IntDecodeT = npt.NDArray[np.int_]
-IntEncodeT = int | list[int] | npt.NDArray[np.int_]
+IntEncodeT = bytes | int | list[int] | npt.NDArray[np.int_]
 
 
 class BytesIntCodec(BytesCodec[IntDecodeT, IntEncodeT]):
     """
-    Encoder/Decoder for integer or iterable of integers.
+    Codec for integer or iterable of integers.
 
     Parameters
     ----------
@@ -110,7 +107,12 @@ class BytesIntCodec(BytesCodec[IntDecodeT, IntEncodeT]):
     def __init__(
         self, fmt: Code = Code.U8, order: Code = Code.BIG_ENDIAN
     ) -> None:
-        super().__init__(fmt, order=order)
+        super().__init__(fmt)
+
+        if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
+            raise NotAmongTheOptions("order", value=order)
+        self._order = order
+
         self._str_order: Literal["little", "big"] = (
             "big" if order is Code.BIG_ENDIAN else "little"
         )
@@ -170,12 +172,12 @@ class BytesIntCodec(BytesCodec[IntDecodeT, IntEncodeT]):
 
 
 FloatDecodeT = npt.NDArray[np.float_]
-FloatEncodeT = float | list[float] | npt.NDArray[np.float_]
+FloatEncodeT = bytes | float | list[float] | npt.NDArray[np.float_]
 
 
 class BytesFloatCodec(BytesCodec[FloatDecodeT, FloatEncodeT]):
     """
-    Encoder/Decoder for float or iterable of floats.
+    Codec for float or iterable of floats.
 
     Parameters
     ----------
@@ -196,7 +198,12 @@ class BytesFloatCodec(BytesCodec[FloatDecodeT, FloatEncodeT]):
     def __init__(
         self, fmt: Code = Code.F32, order: Code = Code.BIG_ENDIAN
     ) -> None:
-        super().__init__(fmt, order=order)
+        super().__init__(fmt)
+
+        if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
+            raise NotAmongTheOptions("order", value=order)
+        self._order = order
+
         str_fmt = self._F[fmt]
         self._fmt_size = calcsize(str_fmt)
         self._dtype = (">" if order is Code.BIG_ENDIAN else "<") + str_fmt
@@ -236,6 +243,63 @@ class BytesFloatCodec(BytesCodec[FloatDecodeT, FloatEncodeT]):
         return np.array(data, dtype=self._dtype).tobytes()
 
 
+HexDecodeT = str
+HexEncodeT = bytes | str
+
+
+class BytesHexCodec(BytesCodec[HexDecodeT, HexEncodeT]):
+    """
+    Codec for hex string.
+
+    It is the responsibility of the user to ensure that the input data is
+    correct (e.g., insignificant zeros).
+
+    Parameters
+    ----------
+    fmt : Code, default=HEX
+        format of single value.
+    """
+
+    ALLOWED = {Code.HEX}
+
+    def __init__(self, fmt: Code = Code.HEX) -> None:
+        super().__init__(fmt=fmt)
+
+    def decode(self, data: bytes) -> HexDecodeT:
+        """
+        Decode `data` from bytes.
+
+        Parameters
+        ----------
+        data : bytes
+            data for decoding.
+
+        Returns
+        -------
+        HexDecodeT
+            decoded data.
+        """
+        return data.hex()
+
+    def encode(self, data: HexEncodeT) -> bytes:
+        """
+        Encode `data` to bytes.
+
+        Parameters
+        ----------
+        data : HexEncodeT
+            data to encoding.
+
+        Returns
+        -------
+        bytes
+            encoded data.
+        """
+        if isinstance(data, bytes):
+            return data
+        return bytes.fromhex(data)
+
+
 def get_bytes_codec(
     fmt: Code, order: Code = Code.BIG_ENDIAN
 ) -> BytesCodec[Any, Any]:
@@ -247,7 +311,10 @@ def get_bytes_codec(
     fmt: Code
         format of single value.
     order: Code, default=BIG_ENDIAN
-        byteorder.
+        byteorder. Used for:
+
+            * BytesIntCodec;
+            * BytesFloatCodec.
 
     Returns
     -------
@@ -264,5 +331,8 @@ def get_bytes_codec(
 
     if fmt in BytesFloatCodec.ALLOWED:
         return BytesFloatCodec(fmt=fmt, order=order)
+
+    if fmt in BytesHexCodec.ALLOWED:
+        return BytesHexCodec(fmt=fmt)
 
     raise ValueError(f"unsupported format: {fmt!r}")

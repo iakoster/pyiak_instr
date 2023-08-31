@@ -6,7 +6,12 @@ from numpy.testing import assert_array_almost_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotAmongTheOptions
-from src.pyiak_instr.codecs.bin import get_bytes_codec, BytesIntCodec, BytesFloatCodec
+from src.pyiak_instr.codecs.bin import (
+    get_bytes_codec,
+    BytesIntCodec,
+    BytesFloatCodec,
+    BytesHexCodec,
+)
 
 from tests.utils import validate_object
 
@@ -60,6 +65,25 @@ FOR_FLOAT = dict(
         b"\x40\x09\x21\xFB\x54\x44\x2D\x18",
         Code.F64,
         Code.BIG_ENDIAN,
+    ),
+)
+
+
+FOR_HEX = dict(
+    hex_empty=(
+        "",
+        b"",
+        Code.HEX,
+    ),
+    hex_0=(
+        "13",
+        b"\x13",
+        Code.HEX
+    ),
+    hex_1=(
+        "0a3b8aa2300123",
+        b"\x0a\x3b\x8a\xa2\x30\x01\x23",
+        Code.HEX,
     ),
 )
 
@@ -143,6 +167,30 @@ class TestBytesFloatEncoder(unittest.TestCase):
             with self.subTest(test=name):
                 self.assertEqual(
                     encoded, BytesFloatCodec(*args).encode(decoded),
+                )
+
+
+class TestBytesHexCodec(unittest.TestCase):
+
+    def test_init(self) -> None:
+        validate_object(
+            self,
+            BytesHexCodec(),
+            fmt_bytesize=1,
+        )
+
+    def test_decode(self) -> None:
+        for name, (decoded, encoded, *args) in FOR_HEX.items():
+            with self.subTest(test=name):
+                self.assertEqual(
+                    decoded, BytesHexCodec(*args).decode(encoded)
+                )
+
+    def test_encode(self) -> None:
+        for name, (decoded, encoded, *args) in FOR_HEX.items():
+            with self.subTest(test=name):
+                self.assertEqual(
+                    encoded, BytesHexCodec(*args).encode(decoded),
                 )
 
 

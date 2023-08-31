@@ -91,3 +91,4 @@ class Code(IntEnum):
     TX = auto()
     SELF = auto()
     AGAIN = auto()
+    HEX = auto()
