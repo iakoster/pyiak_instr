@@ -9,7 +9,7 @@ from numpy.testing import assert_array_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotConfiguredYet
-from src.pyiak_instr.encoders.types import Encoder
+from src.pyiak_instr.codecs.types import Codec
 
 from tests.test_pyiak_instr.env import TEST_DATA_DIR
 from tests.utils import validate_object, compare_objects

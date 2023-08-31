@@ -6,7 +6,7 @@ from numpy.testing import assert_array_almost_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import CodeNotAllowed
-from src.pyiak_instr.encoders import BytesEncoder, StringEncoder
+from src.pyiak_instr.codecs import StringCodec
 
 from tests.utils import validate_object
 
@@ -77,8 +77,7 @@ class TestStringEncoder(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            StringEncoder(),
-            value_size=0,
+            StringCodec(),
         )
 
     def test_decode(self) -> None:
@@ -86,7 +85,7 @@ class TestStringEncoder(unittest.TestCase):
                 self.DATA.items(), self.DATA_CHAIN.items()
         ):
             with self.subTest(name=name, ref=ref):
-                res = StringEncoder().decode(src)
+                res = StringCodec().decode(src)
 
                 if name in ("ch3",):
                     self.assertEqual(str(res), str(ref))
@@ -97,7 +96,7 @@ class TestStringEncoder(unittest.TestCase):
 
     def test_decode_single(self) -> None:
         self.assertEqual(
-            [1, 2, (3,)], StringEncoder().decode(r"\lst(1,2,\tpl(3))")
+            [1, 2, (3,)], StringCodec().decode(r"\lst(1,2,\tpl(3))")
         )
 
     def test_encode(self):
@@ -106,26 +105,26 @@ class TestStringEncoder(unittest.TestCase):
                 self.DATA.items(), self.DATA_CHAIN.items()
         ):
             with self.subTest(name=name, ref=ref):
-                self.assertEqual(ref, StringEncoder().encode(src))
+                self.assertEqual(ref, StringCodec().encode(src))
 
     def test_encode_single(self) -> None:
         self.assertEqual(
-            r"\lst(1,2,\tpl(3))", StringEncoder().encode([1, 2, (3,)])
+            r"\lst(1,2,\tpl(3))", StringCodec().encode([1, 2, (3,)])
         )
 
     def test_encode_invalid(self) -> None:
         self.assertEqual(
-            "\\tpl\t1,2,3", StringEncoder().encode("\\tpl\t1,2,3")
+            "\\tpl\t1,2,3", StringCodec().encode("\\tpl\t1,2,3")
         )
 
     def test_encode_code_support(self) -> None:
         self.assertEqual(
-            "\cod(1)", StringEncoder().encode(Code.OK)
+            "\cod(1)", StringCodec().encode(Code.OK)
         )
 
     def test_decorate(self) -> None:
         self.assertEqual(
-            "\\dct(1,2,3,4)", StringEncoder()._decorate(Code.DICT, "1,2,3,4")
+            "\\dct(1,2,3,4)", StringCodec()._decorate(Code.DICT, "1,2,3,4")
         )
 
     def test_determine_type(self) -> None:
@@ -142,11 +141,11 @@ class TestStringEncoder(unittest.TestCase):
             ("text", Code.STRING),
         ):
             with self.subTest(string=string, ref=repr(ref)):
-                res = StringEncoder()._determine_type(string)
+                res = StringCodec()._determine_type(string)
                 self.assertEqual(ref, res)
 
     def test_get_data_border(self) -> None:
-        func = StringEncoder()._get_data_border
+        func = StringCodec()._get_data_border
         self.assertTupleEqual((4, 8), func("\\tpl(1,2)"))
         self.assertTupleEqual((4, 8), func("\\lst(1,2),3,4)"))
 
@@ -157,23 +156,23 @@ class TestStringEncoder(unittest.TestCase):
         ):
             with self.subTest(string=string, msg=msg):
                 with self.assertRaises(ValueError) as exc:
-                    StringEncoder()._get_data_border(string)
+                    StringCodec()._get_data_border(string)
                 self.assertEqual(msg, exc.exception.args[0])
 
     def test_iter(self) -> None:
         self.assertListEqual(
             ["1", "2", "\\tpl(3,4)", "gg"],
-            [*StringEncoder()._iter("1,2,\\tpl(3,4),gg")]
+            [*StringCodec()._iter("1,2,\\tpl(3,4),gg")]
         )
 
     def test_read(self) -> None:
         self.assertTupleEqual(
-            (Code.TUPLE, "1,2"), StringEncoder()._read("\\tpl(1,2)")
+            (Code.TUPLE, "1,2"), StringCodec()._read("\\tpl(1,2)")
         )
 
     def test_split(self) -> None:
         for string, ref in (
             (r"\lol(1,2,3)", ("lol", "1,2,3")),
         ):
-            self.assertTupleEqual(ref, StringEncoder()._split(string))
+            self.assertTupleEqual(ref, StringCodec()._split(string))
 

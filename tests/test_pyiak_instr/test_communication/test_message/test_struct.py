@@ -1,7 +1,7 @@
 import unittest
 
 from src.pyiak_instr.core import Code
-from src.pyiak_instr.encoders import BytesEncoder
+from src.pyiak_instr.codecs import get_bytes_codec
 from src.pyiak_instr.exceptions import NotAmongTheOptions, ContentError
 
 from tests.utils import validate_object, get_object_attrs
@@ -49,7 +49,7 @@ class TestMessageFieldStruct(unittest.TestCase):
             is_single=False,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
     def test_init_exc(self) -> None:
@@ -82,7 +82,7 @@ class TestStaticMessageFieldStruct(unittest.TestCase):
             is_single=True,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
     def test_init_exc(self) -> None:
@@ -133,7 +133,7 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
             is_single=True,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
     def test_init_exc(self) -> None:
@@ -183,7 +183,7 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             fill_value=b"\x00",
             fill_content=b"\x00\x00",
             has_fill_value=True,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
     def test_init_exc(self) -> None:
@@ -243,7 +243,7 @@ class TestDataMessageFieldStruct(unittest.TestCase):
             is_single=False,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
     def test_init_exc(self) -> None:
@@ -281,7 +281,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
             fill_value=b"\x00",
             fill_content=b"\x00\x00",
             has_fill_value=True,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
     def test_init_exc(self) -> None:
@@ -320,7 +320,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
             self.assertEqual(
                 20,
                 TIDynamicLength().calculate(
-                    b"a" * 20, BytesEncoder(fmt=Code.U8).value_size,
+                    b"a" * 20, get_bytes_codec(fmt=Code.U8).fmt_bytesize,
                 ),
             )
 
@@ -329,7 +329,7 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
                 20,
                 TIDynamicLength(
                     units=Code.BYTES
-                ).calculate(b"a" * 20, BytesEncoder(fmt=Code.U16).value_size)
+                ).calculate(b"a" * 20, get_bytes_codec(fmt=Code.U16).fmt_bytesize)
             )
 
         with self.subTest(test="U32 WORDS"):
@@ -337,14 +337,14 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
                 4,
                 TIDynamicLength(
                     units=Code.WORDS
-                ).calculate(b"a" * 16, BytesEncoder(fmt=Code.U32).value_size)
+                ).calculate(b"a" * 16, get_bytes_codec(fmt=Code.U32).fmt_bytesize)
             )
 
     def test_calculate_exc(self) -> None:
         with self.assertRaises(ContentError) as exc:
             TIDynamicLength(
                 units=Code.WORDS
-            ).calculate(b"a" * 5, BytesEncoder(fmt=Code.U32).value_size)
+            ).calculate(b"a" * 5, get_bytes_codec(fmt=Code.U32).fmt_bytesize)
         self.assertEqual(
             "invalid content in TIDynamicLength: "
             "non-integer words count in data",
@@ -373,7 +373,7 @@ class TestIdMessageFieldStruct(unittest.TestCase):
             is_single=True,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
 
@@ -400,7 +400,7 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
             is_single=True,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
     def test_encode(self) -> None:
@@ -464,7 +464,7 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
             is_single=True,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
     def test_encode(self) -> None:

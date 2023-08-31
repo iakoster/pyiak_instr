@@ -13,7 +13,7 @@ from typing import (
 
 from ...core import Code
 from ...exceptions import ContentError
-from ...encoders.bin import BytesEncoder
+from ...codecs.bin import BytesCodec, get_bytes_codec
 
 
 __all__ = [
@@ -62,10 +62,10 @@ class Field(ABC):
 
     # todo: generalize encoder
     # todo: variant with an already initialized instance
-    encoder: BytesEncoder = field_(init=False)
+    codec: BytesCodec[Any, Any] = field_(init=False)
 
     def __post_init__(self) -> None:
-        self._setattr("encoder", BytesEncoder(self.fmt, self.order))
+        self._setattr("codec", get_bytes_codec(self.fmt, self.order))
         self._verify_init_values()
         self._modify_values()
         self._verify_modified_values()
@@ -88,7 +88,7 @@ class Field(ABC):
         """
         if verify:
             self.verify(content, raise_if_false=True)
-        return self.encoder.decode(content)  # pylint: disable=no-member
+        return self.codec.decode(content)  # pylint: disable=no-member
 
     def encode(self, content: Any, verify: bool = False) -> bytes:
         """
@@ -106,7 +106,7 @@ class Field(ABC):
         bytes
             encoded content.
         """
-        encoded = self.encoder.encode(content)  # pylint: disable=no-member
+        encoded = self.codec.encode(content)  # pylint: disable=no-member
         if verify:
             self.verify(encoded, raise_if_false=True)
         return encoded
@@ -332,7 +332,7 @@ class Field(ABC):
         int
             count of bytes in one word.
         """
-        return self.encoder.value_size  # pylint: disable=no-member
+        return self.codec.fmt_bytesize  # pylint: disable=no-member
 
     @property
     def words_expected(self) -> int:

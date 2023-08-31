@@ -3,7 +3,7 @@ from abc import abstractmethod
 from typing import Protocol, TypeVar, runtime_checkable
 
 
-__all__ = ["Encoder"]
+__all__ = ["Codec"]
 
 
 DecodeT_co = TypeVar("DecodeT_co", covariant=True)
@@ -12,7 +12,7 @@ TargetT = TypeVar("TargetT")
 
 
 @runtime_checkable
-class Encoder(Protocol[DecodeT_co, EncodeT_contra, TargetT]):
+class Codec(Protocol[DecodeT_co, EncodeT_contra, TargetT]):
     """
     Represents abstract base class of encoder.
     """
@@ -48,13 +48,3 @@ class Encoder(Protocol[DecodeT_co, EncodeT_contra, TargetT]):
         TargetT
             encoded data.
         """
-
-    @property
-    def value_size(self) -> int:
-        """
-        Returns
-        -------
-        int
-            single value size in encoded view.
-        """
-        return 0

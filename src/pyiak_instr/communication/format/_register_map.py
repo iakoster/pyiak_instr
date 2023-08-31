@@ -12,7 +12,7 @@ from ...core import Code
 from ...exceptions import NotAmongTheOptions
 from ...types import Additions
 from ...store.bin import STRUCT_DATACLASS
-from ...encoders import StringEncoder
+from ...codecs import StringCodec
 from ..message import MessagePattern, Message
 
 
@@ -143,7 +143,7 @@ class Register(Generic[MessageT]):
         Additions
             additions instance.
         """
-        encoder = StringEncoder()
+        encoder = StringCodec()
         return Additions(
             current=encoder.decode(self.message_kw),
             lower={

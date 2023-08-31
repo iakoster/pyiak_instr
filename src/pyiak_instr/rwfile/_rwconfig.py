@@ -10,7 +10,7 @@ from pathlib import Path
 from configparser import ConfigParser
 from typing import overload, Any
 
-from ..encoders import StringEncoder
+from ..codecs import StringCodec
 from .types import RWData
 
 
@@ -33,7 +33,7 @@ class RWConfig(RWData[ConfigParser]):
 
     def __init__(self, filepath: Path):
         super().__init__(filepath)
-        self._encoder = StringEncoder()
+        self._encoder = StringCodec()
 
     def close(self) -> None:
         pass

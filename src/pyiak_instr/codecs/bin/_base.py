@@ -1,34 +1,77 @@
-"""Private module of ``pyiak_instr.encoders.bin``."""
+"""Private module of ``pyiak_instr.codecs.bin``."""
 from struct import calcsize
-from typing import Any, Iterable, Literal, TypeAlias, TypeVar
+from abc import ABC
+from typing import (
+    Any,
+    ClassVar,
+    Generic,
+    Iterable,
+    Literal,
+    TypeVar,
+)
 
 import numpy as np
 import numpy.typing as npt
 
 from ...core import Code
 from ...exceptions import NotAmongTheOptions
-from ..types import Encoder
+from ..types import Codec
 
 
 __all__ = [
-    "BytesEncoder",
-    "BytesIntEncoder",
-    "BytesFloatEncoder",
+    "BytesCodec",
+    "BytesIntCodec",
+    "BytesFloatCodec",
+    "get_bytes_codec",
 ]
 
 
 DecodeT_co = TypeVar("DecodeT_co", covariant=True)
 EncodeT_contra = TypeVar("EncodeT_contra", contravariant=True)
-BytesEncoderTA: TypeAlias = Encoder[  # pylint: disable=invalid-name
-    DecodeT_co, EncodeT_contra, bytes
-]
+
+
+class BytesCodec(
+    ABC,
+    Codec[DecodeT_co, EncodeT_contra, bytes],
+    Generic[DecodeT_co, EncodeT_contra],
+):
+    """
+    Base class of codec to encoding/decoding bytes.
+
+    Parameters
+    ----------
+    fmt : Code
+        format of single value.
+    order : Code, default=BIG_ENDIAN
+        byteorder.
+    """
+
+    ALLOWED: ClassVar[set[Code]]
+
+    def __init__(self, fmt: Code, order: Code = Code.BIG_ENDIAN) -> None:
+        if fmt not in self.ALLOWED:
+            raise NotAmongTheOptions("fmt", value=fmt)
+        if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
+            raise NotAmongTheOptions("order", value=order)
+        self._fmt, self._order = fmt, order
+        self._fmt_size = 1
+
+    @property
+    def fmt_bytesize(self) -> int:
+        """
+        Returns
+        -------
+        int
+            single value bytesize.
+        """
+        return self._fmt_size
 
 
 IntDecodeT = npt.NDArray[np.int_]
 IntEncodeT = int | list[int] | npt.NDArray[np.int_]
 
 
-class BytesIntEncoder(BytesEncoderTA[IntDecodeT, IntEncodeT]):
+class BytesIntCodec(BytesCodec[IntDecodeT, IntEncodeT]):
     """
     Encoder/Decoder for integer or iterable of integers.
 
@@ -67,16 +110,12 @@ class BytesIntEncoder(BytesEncoderTA[IntDecodeT, IntEncodeT]):
     def __init__(
         self, fmt: Code = Code.U8, order: Code = Code.BIG_ENDIAN
     ) -> None:
-        if fmt not in self.ALLOWED:
-            raise NotAmongTheOptions("fmt", value=fmt)
-        if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
-            raise NotAmongTheOptions("order", value=order)
-
-        self._order: Literal["little", "big"] = (
+        super().__init__(fmt, order=order)
+        self._str_order: Literal["little", "big"] = (
             "big" if order is Code.BIG_ENDIAN else "little"
         )
         self._signed = fmt in self._I
-        self._vs = self._I[fmt] if self._signed else self._U[fmt]
+        self._fmt_size = self._I[fmt] if self._signed else self._U[fmt]
 
     def decode(self, data: bytes) -> IntDecodeT:
         """
@@ -95,9 +134,11 @@ class BytesIntEncoder(BytesEncoderTA[IntDecodeT, IntEncodeT]):
         return np.fromiter(
             (
                 int.from_bytes(
-                    data[i : i + self._vs], self._order, signed=self._signed
+                    data[i : i + self._fmt_size],
+                    self._str_order,
+                    signed=self._signed,
                 )
-                for i in range(0, len(data), self._vs)
+                for i in range(0, len(data), self._fmt_size)
             ),
             dtype=np.int_,
         )
@@ -116,29 +157,23 @@ class BytesIntEncoder(BytesEncoderTA[IntDecodeT, IntEncodeT]):
         bytes
             encoded data.
         """
+        if isinstance(data, bytes):
+            return data
         if not isinstance(data, Iterable | np.ndarray):
             data = [data]
         return b"".join(
-            int(v).to_bytes(self._vs, self._order, signed=self._signed)
+            int(v).to_bytes(
+                self._fmt_size, self._str_order, signed=self._signed
+            )
             for v in data
         )
-
-    @property
-    def value_size(self) -> int:
-        """
-        Returns
-        -------
-        int
-            single value bytesize.
-        """
-        return self._vs
 
 
 FloatDecodeT = npt.NDArray[np.float_]
 FloatEncodeT = float | list[float] | npt.NDArray[np.float_]
 
 
-class BytesFloatEncoder(BytesEncoderTA[FloatDecodeT, FloatEncodeT]):
+class BytesFloatCodec(BytesCodec[FloatDecodeT, FloatEncodeT]):
     """
     Encoder/Decoder for float or iterable of floats.
 
@@ -161,15 +196,10 @@ class BytesFloatEncoder(BytesEncoderTA[FloatDecodeT, FloatEncodeT]):
     def __init__(
         self, fmt: Code = Code.F32, order: Code = Code.BIG_ENDIAN
     ) -> None:
-        if fmt not in self.ALLOWED:
-            raise NotAmongTheOptions("fmt", value=fmt)
-        if order not in {Code.BIG_ENDIAN, Code.LITTLE_ENDIAN}:
-            raise NotAmongTheOptions("order", value=order)
-
-        self._vs = calcsize(self._F[fmt])
-        self._dtype = (">" if order is Code.BIG_ENDIAN else "<") + self._F[
-            fmt
-        ]
+        super().__init__(fmt, order=order)
+        str_fmt = self._F[fmt]
+        self._fmt_size = calcsize(str_fmt)
+        self._dtype = (">" if order is Code.BIG_ENDIAN else "<") + str_fmt
 
     def decode(self, data: bytes) -> FloatDecodeT:
         """
@@ -201,84 +231,38 @@ class BytesFloatEncoder(BytesEncoderTA[FloatDecodeT, FloatEncodeT]):
         bytes
             encoded data.
         """
+        if isinstance(data, bytes):
+            return data
         return np.array(data, dtype=self._dtype).tobytes()
 
-    @property
-    def value_size(self) -> int:
-        """
-        Returns
-        -------
-        int
-            single value bytesize.
-        """
-        return self._vs
 
-
-class BytesEncoder(BytesEncoderTA[Any, Any]):
+def get_bytes_codec(
+    fmt: Code, order: Code = Code.BIG_ENDIAN
+) -> BytesCodec[Any, Any]:
     """
-    Encoder/Decoder to/from bytes.
+    Get codec to encoding to/decoding from bytes.
 
     Parameters
     ----------
-    fmt : Code, default=U8
+    fmt: Code
         format of single value.
-    order : Code, default=BIG_ENDIAN
+    order: Code, default=BIG_ENDIAN
         byteorder.
+
+    Returns
+    -------
+    BytesCodec[Any, Any]
+        specified codec.
+
+    Raises
+    ------
+    ValueError
+        if there is no codec for specified format.
     """
+    if fmt in BytesIntCodec.ALLOWED:
+        return BytesIntCodec(fmt=fmt, order=order)
 
-    def __init__(
-        self, fmt: Code = Code.U8, order: Code = Code.BIG_ENDIAN
-    ) -> None:
-        self._encoder: BytesIntEncoder | BytesFloatEncoder
-        if fmt in BytesIntEncoder.ALLOWED:
-            self._encoder = BytesIntEncoder(fmt, order)
+    if fmt in BytesFloatCodec.ALLOWED:
+        return BytesFloatCodec(fmt=fmt, order=order)
 
-        elif fmt in BytesFloatEncoder.ALLOWED:
-            self._encoder = BytesFloatEncoder(fmt, order)
-
-        else:
-            raise ValueError(f"invalid fmt: {fmt!r}")
-
-    def decode(self, data: bytes) -> Any:
-        """
-        Decode `data` from bytes.
-
-        Parameters
-        ----------
-        data : bytes
-            data for decoding.
-
-        Returns
-        -------
-        Any
-            decoded data.
-        """
-        return self._encoder.decode(data)
-
-    def encode(self, data: Any) -> bytes:
-        """
-        Encode `data` to bytes.
-
-        Parameters
-        ----------
-        data : Any
-            data to encoding.
-
-        Returns
-        -------
-        bytes
-            encoded data.
-        """
-        if isinstance(data, bytes):
-            return data
-        return self._encoder.encode(data)
-
-    @property
-    def value_size(self) -> int:
-        """
-        Returns
-        -------
-        int
-            single value bytesize.
-        """
-        return self._encoder.value_size
+    raise ValueError(f"unsupported format: {fmt!r}")

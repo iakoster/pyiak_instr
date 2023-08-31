@@ -1,4 +1,4 @@
-"""Private module of ``pyiak_instr.encoders``"""
+"""Private module of ``pyiak_instr.codecs``"""
 import re
 import itertools
 from typing import Any, Callable, Generator
@@ -6,14 +6,14 @@ from typing import Any, Callable, Generator
 import numpy as np
 
 from ..core import Code
-from .types import Encoder
+from .types import Codec
 
 
-__all__ = ["StringEncoder"]
+__all__ = ["StringCodec"]
 
 
 # todo: parameters (e.g. \npa[shape=\tpl(2,1),dtype=uint8](1,2))
-class StringEncoder(Encoder[Any, Any, str]):
+class StringCodec(Codec[Any, Any, str]):
     """
     Represent class for encoding/decoding python values to/from string.
     """

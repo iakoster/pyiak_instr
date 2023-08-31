@@ -6,7 +6,7 @@ from numpy.testing import assert_array_almost_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotAmongTheOptions
-from src.pyiak_instr.encoders.bin import BytesEncoder, BytesIntEncoder, BytesFloatEncoder
+from src.pyiak_instr.codecs.bin import get_bytes_codec, BytesIntCodec, BytesFloatCodec
 
 from tests.utils import validate_object
 
@@ -69,14 +69,14 @@ class TestBytesIntEncoder(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            BytesIntEncoder(Code.U16),
-            value_size=2,
+            BytesIntCodec(Code.U16),
+            fmt_bytesize=2,
         )
 
     def test_init_exc(self) -> None:
         with self.subTest(test="invalid fmt"):
             with self.assertRaises(NotAmongTheOptions) as exc:
-                BytesIntEncoder(Code.F32)
+                BytesIntCodec(Code.F32)
             self.assertEqual(
                 "'fmt' option <Code.F32: 529> not allowed",
                 exc.exception.args[0],
@@ -84,7 +84,7 @@ class TestBytesIntEncoder(unittest.TestCase):
 
         with self.subTest(test="invalid order"):
             with self.assertRaises(NotAmongTheOptions) as exc:
-                BytesIntEncoder(order=Code.U8)
+                BytesIntCodec(order=Code.U8)
             self.assertEqual(
                 "'order' option <Code.U8: 520> not allowed",
                 exc.exception.args[0],
@@ -94,14 +94,14 @@ class TestBytesIntEncoder(unittest.TestCase):
         for name, (decoded, encoded, *args) in FOR_INT.items():
             with self.subTest(test=name):
                 assert_array_almost_equal(
-                    decoded, BytesIntEncoder(*args).decode(encoded),
+                    decoded, BytesIntCodec(*args).decode(encoded),
                 )
 
     def test_encode(self) -> None:
         for name, (decoded, encoded, *args) in FOR_INT.items():
             with self.subTest(test=name):
                 self.assertEqual(
-                    encoded, BytesIntEncoder(*args).encode(decoded),
+                    encoded, BytesIntCodec(*args).encode(decoded),
                 )
 
 
@@ -110,14 +110,14 @@ class TestBytesFloatEncoder(unittest.TestCase):
     def test_init(self) -> None:
         validate_object(
             self,
-            BytesFloatEncoder(),
-            value_size=4,
+            BytesFloatCodec(),
+            fmt_bytesize=4,
         )
 
     def test_init_exc(self) -> None:
         with self.subTest(test="invalid fmt"):
             with self.assertRaises(NotAmongTheOptions) as exc:
-                BytesFloatEncoder(Code.U8)
+                BytesFloatCodec(Code.U8)
             self.assertEqual(
                 "'fmt' option <Code.U8: 520> not allowed",
                 exc.exception.args[0],
@@ -125,7 +125,7 @@ class TestBytesFloatEncoder(unittest.TestCase):
 
         with self.subTest(test="invalid order"):
             with self.assertRaises(NotAmongTheOptions) as exc:
-                BytesFloatEncoder(order=Code.F32)
+                BytesFloatCodec(order=Code.F32)
             self.assertEqual(
                 "'order' option <Code.F32: 529> not allowed",
                 exc.exception.args[0],
@@ -135,49 +135,29 @@ class TestBytesFloatEncoder(unittest.TestCase):
         for name, (decoded, encoded, *args) in FOR_FLOAT.items():
             with self.subTest(test=name):
                 assert_array_almost_equal(
-                    decoded, BytesFloatEncoder(*args).decode(encoded),
+                    decoded, BytesFloatCodec(*args).decode(encoded),
                 )
 
     def test_encode(self) -> None:
         for name, (decoded, encoded, *args) in FOR_FLOAT.items():
             with self.subTest(test=name):
                 self.assertEqual(
-                    encoded, BytesFloatEncoder(*args).encode(decoded),
+                    encoded, BytesFloatCodec(*args).encode(decoded),
                 )
 
 
-class TestBytesEncoder(unittest.TestCase):
+class TestGetBytesCodec(unittest.TestCase):
 
-    def test_init(self) -> None:
-        validate_object(
-            self,
-            BytesEncoder(),
-            value_size=1,
-        )
+    def test_basic(self) -> None:
+        for fmt, ref_codec in {
+            Code.U8: BytesIntCodec,
+            Code.I32: BytesIntCodec,
+            Code.F16: BytesFloatCodec,
+        }.items():
+            with self.subTest(fmt=repr(fmt)):
+                self.assertIsInstance(get_bytes_codec(fmt), ref_codec)
 
-    def test_init_exc(self) -> None:
-        with self.subTest(test="invalid fmt"):
-            with self.assertRaises(ValueError) as exc:
-                BytesEncoder(Code.STRING)
-            self.assertEqual(
-                "invalid fmt: <Code.STRING: 264>", exc.exception.args[0],
-            )
-
-    def test_decode(self) -> None:
-        for name, (decoded, encoded, *args) in chain(FOR_INT.items(), FOR_FLOAT.items()):
-            with self.subTest(test=name):
-                assert_array_almost_equal(
-                    decoded, BytesEncoder(*args).decode(encoded),
-                )
-
-        with self.subTest(test="bytes"):
-            self.assertEqual(
-                b"a", BytesEncoder(fmt=Code.U32).encode(b"a"),
-            )
-
-    def test_encode(self) -> None:
-        for name, (decoded, encoded, *args) in chain(FOR_INT.items(), FOR_FLOAT.items()):
-            with self.subTest(test=name):
-                self.assertEqual(
-                    encoded, BytesEncoder(*args).encode(decoded),
-                )
+    def test_exc(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            get_bytes_codec(Code.NONE)
+        self.assertEqual("unsupported format: <Code.NONE: 0>", exc.exception.args[0])

@@ -54,7 +54,7 @@ class TestFieldPattern(unittest.TestCase):
             fmt=Code.U16,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
     def test_bytesize(self) -> None:
@@ -122,7 +122,7 @@ class TestStructPattern(unittest.TestCase):
             fmt=Code.U8,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
 
@@ -186,7 +186,7 @@ class TestBytesStoragePatternABC(unittest.TestCase):
             fmt=Code.U16,
             fill_value=b"",
             has_fill_value=False,
-            wo_attrs=["encoder"],
+            wo_attrs=["codec"],
         )
 
     def test_configure_exc(self) -> None:
@@ -320,7 +320,7 @@ class TestContinuousBytesStorageStructPatternABC(unittest.TestCase):
         compare_objects(self, ref, res)
         for ref_field, res_field in zip(ref, res):
             with self.subTest(field=ref_field.name):
-                compare_objects(self, ref_field, res_field, wo_attrs=["encoder"])
+                compare_objects(self, ref_field, res_field, wo_attrs=["codec"])
 
     def test__modify_additions(self) -> None:
 
