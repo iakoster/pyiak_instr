@@ -7,9 +7,8 @@ from pandas.testing import assert_series_equal, assert_frame_equal
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import NotAmongTheOptions
 from src.pyiak_instr.communication.format import RegisterMap
+from src.pyiak_instr.testing import validate_object, compare_objects
 
-
-from ....utils import validate_object, compare_objects
 from ...env import get_local_test_data_dir, remove_test_data_dir
 from tests.pyiak_instr_ti.communication.message import (
     TIMessagePattern,

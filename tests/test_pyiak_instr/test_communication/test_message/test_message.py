@@ -1,8 +1,8 @@
 import unittest
 
 from src.pyiak_instr.core import Code
+from src.pyiak_instr.testing import validate_object, get_object_attrs
 
-from tests.utils import validate_object, get_object_attrs
 from tests.pyiak_instr_ti.communication.message import (
     TIBasic,
     TIStatic,

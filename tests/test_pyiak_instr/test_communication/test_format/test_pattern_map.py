@@ -1,6 +1,6 @@
 import unittest
 
-from ....utils import validate_object
+from src.pyiak_instr.testing import validate_object
 from ...env import get_local_test_data_dir, remove_test_data_dir
 
 from tests.pyiak_instr_ti.communication.message import (

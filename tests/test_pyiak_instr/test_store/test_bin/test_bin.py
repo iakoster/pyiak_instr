@@ -1,18 +1,13 @@
 from __future__ import annotations
 
 import unittest
-from dataclasses import dataclass
 
-import numpy as np
-import numpy.typing as npt
 from numpy.testing import assert_array_equal
 
 from src.pyiak_instr.core import Code
-from src.pyiak_instr.exceptions import NotConfiguredYet
-from src.pyiak_instr.codecs.types import Codec
+from src.pyiak_instr.testing import validate_object
 
 from tests.test_pyiak_instr.env import TEST_DATA_DIR
-from tests.utils import validate_object, compare_objects
 
 from tests.pyiak_instr_ti.store import TIField, TIStruct, TIContainer
 

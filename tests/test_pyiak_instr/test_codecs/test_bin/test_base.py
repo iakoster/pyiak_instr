@@ -13,8 +13,7 @@ from src.pyiak_instr.codecs.bin import (
     BytesHexCodec,
     BytesStringCodec,
 )
-
-from tests.utils import validate_object
+from src.pyiak_instr.testing import validate_object
 
 
 FOR_INT = dict(

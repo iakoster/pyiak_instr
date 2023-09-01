@@ -3,8 +3,7 @@ import unittest
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.codecs import get_bytes_codec
 from src.pyiak_instr.exceptions import NotAmongTheOptions, ContentError
-
-from tests.utils import validate_object, get_object_attrs
+from src.pyiak_instr.testing import validate_object, get_object_attrs
 
 from src.pyiak_instr.communication.message import STRUCT_DATACLASS
 from tests.pyiak_instr_ti.communication.message import (

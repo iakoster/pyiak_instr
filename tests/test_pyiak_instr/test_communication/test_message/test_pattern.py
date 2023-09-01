@@ -3,8 +3,8 @@ import unittest
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.types import Additions
 from src.pyiak_instr.exceptions import NotAmongTheOptions
+from src.pyiak_instr.testing import validate_object
 
-from tests.utils import validate_object, get_object_attrs
 from tests.pyiak_instr_ti.communication.message import (
     TIFieldPattern,
     TIStructPattern,

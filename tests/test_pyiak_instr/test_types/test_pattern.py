@@ -3,8 +3,7 @@ from typing import Any
 
 import numpy as np
 
-from ...utils import validate_object
-
+from src.pyiak_instr.testing import validate_object
 from src.pyiak_instr.exceptions import NotConfiguredYet
 from src.pyiak_instr.types import (
     Additions,

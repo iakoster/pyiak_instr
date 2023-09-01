@@ -4,8 +4,7 @@ from numpy.testing import assert_array_equal
 
 from src.pyiak_instr.core import Code
 from src.pyiak_instr.exceptions import ContentError
-
-from tests.utils import validate_object
+from src.pyiak_instr.testing import validate_object
 
 from tests.pyiak_instr_ti.store import TIField, TIStruct
 

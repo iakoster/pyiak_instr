@@ -3,8 +3,8 @@ from pathlib import Path
 
 from src.pyiak_instr.rwfile.types import RWData
 from src.pyiak_instr.exceptions import FileSuffixError, NotSupportedMethod
+from src.pyiak_instr.testing import validate_object
 
-from ....utils import validate_object
 from ...env import get_local_test_data_dir, remove_test_data_dir
 
 

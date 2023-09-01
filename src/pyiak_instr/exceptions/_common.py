@@ -53,7 +53,7 @@ class NotSupportedMethod(PyiError):
             msg = "not supported method"
 
         if hasattr(frame, "f_code"):
-            frame = frame.f_code.co_qualname
+            frame = frame.f_code.co_qualname  # type: ignore[union-attr]
 
         if isinstance(frame, str):
             qualname = frame.split(".")

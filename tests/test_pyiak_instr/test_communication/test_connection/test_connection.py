@@ -2,8 +2,8 @@ import unittest
 from datetime import datetime, timedelta
 
 from src.pyiak_instr.core import Code
+from src.pyiak_instr.testing import validate_object
 
-from ....utils import validate_object
 from ....pyiak_instr_ti.communication.connection import TIConnection
 from ....pyiak_instr_ti.communication.message import (
     TIMessagePattern,
