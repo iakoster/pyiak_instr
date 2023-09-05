@@ -1,4 +1,5 @@
-from src.pyiak_instr.store.bin import STRUCT_DATACLASS
+from dataclasses import dataclass
+
 from src.pyiak_instr.communication.format import (
     FormatMap,
     PatternMap,
@@ -9,7 +10,7 @@ from src.pyiak_instr.communication.format import (
 from .message import TIMessage, TIMessagePattern
 
 
-@STRUCT_DATACLASS
+@dataclass(frozen=True, kw_only=True)
 class TIRegister(Register):
     ...
 

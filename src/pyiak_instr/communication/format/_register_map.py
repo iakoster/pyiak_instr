@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 from itertools import takewhile
+from dataclasses import dataclass
 from typing import Any, Generic, Self, TypeVar
 
 import pandas as pd
@@ -11,7 +12,6 @@ import pandas as pd
 from ...core import Code
 from ...exceptions import NotAmongTheOptions
 from ...types import Additions
-from ...store.bin import STRUCT_DATACLASS
 from ...codecs import StringCodec
 from ..message import MessagePattern, Message
 
@@ -22,7 +22,8 @@ __all__ = ["Register", "RegisterMap"]
 MessageT = TypeVar("MessageT", bound=Message[Any, Any, Any, Any])
 
 
-@STRUCT_DATACLASS
+# pylint: disable=too-many-instance-attributes
+@dataclass(frozen=True, kw_only=True)
 class Register(Generic[MessageT]):
     """
     Base structure for device/service register.

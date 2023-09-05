@@ -196,8 +196,7 @@ class FieldPattern(BinFieldPattern[FieldT]):
         order: Code = Code.BIG_ENDIAN,
         poly: int = 0x1021,
         init: int = 0,
-        default: bytes = b"",
-        fill_value: bytes = b"\x00",
+        default: bytes = b"\x00",
         wo_fields: set[str] | None = None,
     ) -> Self:
         """
@@ -217,10 +216,8 @@ class FieldPattern(BinFieldPattern[FieldT]):
             poly for crc algorithm.
         init : int, default=0
             init value for crc algorithm.
-        default : bytes, default=b''
+        default : bytes, default=b'\x00'
             default value for field.
-        fill_value : bytes, default=b''
-            fill value for field
         wo_fields : set[str] | None, default=None
             a set of field names that are not used to calculate the crc.
 
@@ -240,7 +237,6 @@ class FieldPattern(BinFieldPattern[FieldT]):
             poly=poly,
             init=init,
             default=default,
-            fill_value=fill_value,
             wo_fields=wo_fields,
         )
 
@@ -296,8 +292,7 @@ class FieldPattern(BinFieldPattern[FieldT]):
         behaviour: Code = Code.ACTUAL,
         units: Code = Code.BYTES,
         additive: int = 0,
-        default: bytes = b"",
-        fill_value: bytes = b"\x00",
+        default: bytes = b"\x00",
     ) -> Self:
         """
         Get initialized pattern for data length field.
@@ -318,10 +313,8 @@ class FieldPattern(BinFieldPattern[FieldT]):
             data length units.
         additive: int, default=0
             additive value for data length value.
-        default : bytes, default=b''
+        default : bytes, default=b'\x00'
             default value for field.
-        fill_value : bytes, default=b''
-            fill value for field
 
         Returns
         -------
@@ -338,7 +331,6 @@ class FieldPattern(BinFieldPattern[FieldT]):
             units=units,
             additive=additive,
             default=default,
-            fill_value=fill_value,
         )
 
     @classmethod

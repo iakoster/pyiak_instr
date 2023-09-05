@@ -142,19 +142,19 @@ class Message(
         dyn = self._s[dyn_name]
         dyn_step = self._s.mtu - self._s.minimum_size
         # todo: useless if address units is Code.BYTES
-        dyn_step -= dyn_step % dyn.word_bytesize
+        dyn_step -= dyn_step % dyn.fmt_bytesize
 
         has_address = self.has.address
         address_name = self.get.address.name if has_address else ""
         address = self.decode(address_name)[0] if has_address else -1
 
         # todo: useless if units of address is Code.BYTES
-        if dyn_step % dyn.word_bytesize != 0:
+        if dyn_step % dyn.fmt_bytesize != 0:
             raise ValueError(
                 "step of dynamic field is not even: "
-                f"{dyn_step}/{dyn.word_bytesize}"
+                f"{dyn_step}/{dyn.fmt_bytesize}"
             )
-        address_word_step = dyn_step // dyn.word_bytesize
+        address_word_step = dyn_step // dyn.fmt_bytesize
 
         for dyn_start in range(0, self.bytes_count(dyn_name), dyn_step):
             part = self.__class__(self._s, self._p)  # todo: vulnerability?
@@ -219,7 +219,7 @@ class Message(
             self._c,
             dlen.name,
             dlen.encode(
-                dlen.calculate(self.content(dyn.name), dyn.word_bytesize)
+                dlen.calculate(self.content(dyn.name), dyn.fmt_bytesize)
             ),
             verify=True,
         )

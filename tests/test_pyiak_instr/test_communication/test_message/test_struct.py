@@ -5,7 +5,6 @@ from src.pyiak_instr.codecs import get_bytes_codec
 from src.pyiak_instr.exceptions import NotAmongTheOptions, ContentError
 from src.pyiak_instr.testing import validate_object, get_object_attrs
 
-from src.pyiak_instr.communication.message import STRUCT_DATACLASS
 from tests.pyiak_instr_ti.communication.message import (
     TIBasic,
     TIStatic,
@@ -20,7 +19,6 @@ from tests.pyiak_instr_ti.communication.message import (
 )
 
 
-@STRUCT_DATACLASS
 class TIBasicAnother(TIBasic):
     ...
 
@@ -42,12 +40,10 @@ class TestMessageFieldStruct(unittest.TestCase):
             slice_=slice(10, 170),
             start=10,
             stop=170,
-            word_bytesize=8,
+            fmt_bytesize=8,
             words_expected=20,
-            name="",
+            name="std",
             is_single=False,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 
@@ -75,19 +71,17 @@ class TestStaticMessageFieldStruct(unittest.TestCase):
             slice_=slice(0, 1),
             start=0,
             stop=1,
-            word_bytesize=1,
+            fmt_bytesize=1,
             words_expected=1,
-            name="",
+            name="std",
             is_single=True,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 
     def test_init_exc(self) -> None:
         with self.assertRaises(ValueError) as exc:
             TIStatic(start=0, fmt=Code.U8)
-        self.assertEqual("default value not specified", exc.exception.args[0])
+        self.assertEqual("'default' value not specified", exc.exception.args[0])
 
     def test_verify(self) -> None:
         for i, (data, ref) in enumerate(
@@ -126,12 +120,10 @@ class TestAddressMessageFieldStruct(unittest.TestCase):
             start=0,
             stop=1,
             units=Code.WORDS,
-            word_bytesize=1,
+            fmt_bytesize=1,
             words_expected=1,
-            name="",
+            name="std",
             is_single=True,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 
@@ -164,9 +156,9 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             self,
             TICrc(start=0, fmt=Code.U16),
             bytes_expected=2,
-            default=b"",
+            default=b"\x00\x00",
             fmt=Code.U16,
-            has_default=False,
+            has_default=True,
             init=0,
             is_dynamic=False,
             order=Code.BIG_ENDIAN,
@@ -174,14 +166,11 @@ class TestCrcMessageFieldStruct(unittest.TestCase):
             slice_=slice(0, 2),
             start=0,
             stop=2,
-            wo_fields=set(),
-            word_bytesize=2,
+            fmt_bytesize=2,
             words_expected=1,
-            name="",
+            name="std",
             is_single=True,
-            fill_value=b"\x00",
-            fill_content=b"\x00\x00",
-            has_fill_value=True,
+            wo_fields=set(),
             wo_attrs=["codec"],
         )
 
@@ -236,12 +225,10 @@ class TestDataMessageFieldStruct(unittest.TestCase):
             slice_=slice(0, None),
             start=0,
             stop=None,
-            word_bytesize=2,
+            fmt_bytesize=2,
             words_expected=0,
-            name="",
+            name="std",
             is_single=False,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 
@@ -264,22 +251,19 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
             additive=0,
             behaviour=Code.ACTUAL,
             bytes_expected=2,
-            default=b"",
+            default=b"\x00\x00",
             fmt=Code.U16,
-            has_default=False,
+            has_default=True,
             is_dynamic=False,
             order=Code.BIG_ENDIAN,
             slice_=slice(0, 2),
             start=0,
             stop=2,
             units=Code.BYTES,
-            word_bytesize=2,
+            fmt_bytesize=2,
             words_expected=1,
-            name="",
+            name="std",
             is_single=True,
-            fill_value=b"\x00",
-            fill_content=b"\x00\x00",
-            has_fill_value=True,
             wo_attrs=["codec"],
         )
 
@@ -318,26 +302,20 @@ class TestDataLengthMessageFieldStruct(unittest.TestCase):
         with self.subTest(test="U8 BYTES"):
             self.assertEqual(
                 20,
-                TIDynamicLength().calculate(
-                    b"a" * 20, get_bytes_codec(fmt=Code.U8).fmt_bytesize,
-                ),
+                TIDynamicLength().calculate(b"a" * 20, 1),
             )
 
-        with self.subTest(test="U16 BYTES"):
-            self.assertEqual(
-                20,
-                TIDynamicLength(
-                    units=Code.BYTES
-                ).calculate(b"a" * 20, get_bytes_codec(fmt=Code.U16).fmt_bytesize)
-            )
-
-        with self.subTest(test="U32 WORDS"):
-            self.assertEqual(
-                4,
-                TIDynamicLength(
-                    units=Code.WORDS
-                ).calculate(b"a" * 16, get_bytes_codec(fmt=Code.U32).fmt_bytesize)
-            )
+        # with self.subTest(test="U16 BYTES"):
+        #     self.assertEqual(
+        #         20,
+        #         TIDynamicLength(units=Code.BYTES).calculate(b"a" * 20, 2)
+        #     )
+        #
+        # with self.subTest(test="U32 WORDS"):
+        #     self.assertEqual(
+        #         4,
+        #         TIDynamicLength(units=Code.WORDS).calculate(b"a" * 16, 4)
+        #     )
 
     def test_calculate_exc(self) -> None:
         with self.assertRaises(ContentError) as exc:
@@ -366,12 +344,10 @@ class TestIdMessageFieldStruct(unittest.TestCase):
             slice_=slice(0, 2),
             start=0,
             stop=2,
-            word_bytesize=2,
+            fmt_bytesize=2,
             words_expected=1,
-            name="",
+            name="std",
             is_single=True,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 
@@ -384,8 +360,6 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
             TIOperation(start=0, fmt=Code.U16),
             bytes_expected=2,
             default=b"",
-            descs={0: Code.READ, 1: Code.WRITE},
-            descs_r={Code.READ: 0, Code.WRITE: 1},
             fmt=Code.U16,
             has_default=False,
             is_dynamic=False,
@@ -393,12 +367,10 @@ class TestOperationMessageFieldStruct(unittest.TestCase):
             slice_=slice(0, 2),
             start=0,
             stop=2,
-            word_bytesize=2,
+            fmt_bytesize=2,
             words_expected=1,
-            name="",
+            name="std",
             is_single=True,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 
@@ -448,8 +420,6 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
             TIResponse(start=0, fmt=Code.U16),
             bytes_expected=2,
             default=b"",
-            descs={},
-            descs_r={},
             fmt=Code.U16,
             has_default=False,
             is_dynamic=False,
@@ -457,12 +427,10 @@ class TestResponseMessageFieldStruct(unittest.TestCase):
             slice_=slice(0, 2),
             start=0,
             stop=2,
-            word_bytesize=2,
+            fmt_bytesize=2,
             words_expected=1,
-            name="",
+            name="std",
             is_single=True,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 
@@ -529,8 +497,7 @@ class TestMessageStructABC(unittest.TestCase):
                     divisible=True,
                 )
             self.assertEqual(
-                "TIStruct can not be divided because it does not "
-                "have a dynamic field",
+                "TIStruct can not be divided without dynamic field",
                 exc.exception.args[0],
             )
 

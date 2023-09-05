@@ -3,7 +3,6 @@ from dataclasses import InitVar
 
 from src.pyiak_instr.rwfile import RWConfig
 from src.pyiak_instr.store.bin import (
-    STRUCT_DATACLASS,
     Field,
     FieldPattern,
     Container,
@@ -14,12 +13,10 @@ from src.pyiak_instr.store.bin import (
 )
 
 
-@STRUCT_DATACLASS
 class TIField(Field):
     ...
 
 
-@STRUCT_DATACLASS
 class TIStruct(Struct[TIField]):
     ...
 

@@ -15,7 +15,7 @@ class TestField(unittest.TestCase):
         validate_object(
             self,
             self._instance(),
-            name="",
+            name="std",
             bytes_expected=0,
             default=b"",
             fmt=Code.U8,
@@ -25,12 +25,69 @@ class TestField(unittest.TestCase):
             slice_=slice(0, None),
             start=0,
             stop=None,
-            word_bytesize=1,
+            fmt_bytesize=1,
             words_expected=0,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
+
+    def test_init_exc(self) -> None:
+        with self.subTest(test="empty 'name'"):
+            with self.assertRaises(ValueError) as exc:
+                self._instance(name="")
+            self.assertEqual("empty 'name' not allowed", exc.exception.args[0])
+
+        with self.subTest(test="'bytes_expected' is a negative"):
+            with self.assertRaises(ValueError) as exc:
+                self._instance(bytes_expected=-1)
+            self.assertEqual(
+                "'bytes_expected' can't be a negative number",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(test="'stop' is equal to zero"):
+            with self.assertRaises(ValueError) as exc:
+                self._instance(stop=0)
+            self.assertEqual(
+                "'stop' can't be equal to zero", exc.exception.args[0]
+            )
+
+        with self.subTest(test="'stop' and 'bytes_expected' setting"):
+            with self.assertRaises(TypeError) as exc:
+                self._instance(stop=1, bytes_expected=1)
+            self.assertEqual(
+                "'bytes_expected' and 'stop' setting not allowed",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(
+                test="'bytes_expected' is not comparable with 'word_bytesize'"
+        ):
+            with self.assertRaises(ValueError) as exc:
+                self._instance(bytes_expected=5, fmt=Code.U16)
+            self.assertEqual(
+                "'bytes_expected' does not match an integer word count",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(test="'bytes_expected' more than negative start"):
+            with self.assertRaises(ValueError) as exc:
+                self._instance(start=-2, bytes_expected=3)
+            self.assertEqual(
+                "it will be out of bounds",
+                exc.exception.args[0],
+            )
+
+        with self.subTest(test="default changes"):
+            self._instance(stop=5, default=b"aaaaa")
+            self._instance(stop=4, fmt=Code.U16, default=b"aaaa")
+            with self.assertRaises(ValueError):
+                self._instance(fmt=Code.U16, default=b"aaa")
+            with self.assertRaises(ValueError) as exc:
+                self._instance(stop=4, default=b"aaa")
+            self.assertEqual(
+                "default value is incorrect",
+                exc.exception.args[0],
+            )
 
     def test_init_start_stop(self) -> None:
         cases = (
@@ -43,13 +100,19 @@ class TestField(unittest.TestCase):
             ((-4, -2, 2), dict(start=-4, stop=-2)),
             ((-2, None, 2), dict(start=-2)),
             ((-2, None, 2), dict(start=-2, bytes_expected=2)),
+            ((0, 2, 2), dict(stop=2)),
+            ((-6, -3, 3), dict(start=-6, stop=-3)),
+            ((0, -3, 0), dict(stop=-3)),
+            ((0, 2, 2), dict(bytes_expected=2)),
+            ((-6, -3, 3), dict(start=-6, bytes_expected=3)),
+            ((-2, None, 2), dict(start=-2, bytes_expected=2)),
         )
         for case, ((start, stop, expected), kw) in enumerate(cases):
             with self.subTest(case=case):
-                res = TIField(**kw)
-                self.assertEqual(start, res.start)
-                self.assertEqual(stop, res.stop)
-                self.assertEqual(expected, res.bytes_expected)
+                fld = TIField(**kw)
+                self.assertEqual(start, fld.start)
+                self.assertEqual(stop, fld.stop)
+                self.assertEqual(expected, fld.bytes_expected)
 
     def test_decode(self) -> None:
         assert_array_equal(
@@ -101,122 +164,34 @@ class TestField(unittest.TestCase):
 
         obj = self._instance(start=-1)
         self.assertEqual(1, obj.bytes_expected)
-        self.assertIs(Code.INVALID_LENGTH, obj.verify(b"ff"))
+        with self.assertRaises(ContentError) as exc:
+            obj.verify(b"ff", raise_if_false=True)
+        self.assertEqual(
+            "invalid content in TIField: <Code.INVALID_LENGTH: 1026>",
+            exc.exception.args[0],
+        )
 
-    def test_magic_post_init(self) -> None:
-
-        with self.subTest(test="'bytes_expected' < 0"):
-            self.assertEqual(
-                0, self._instance(bytes_expected=-255).bytes_expected
-            )
-
-        cases = [
-            (dict(stop=2), 2),
-            (dict(start=-6, stop=-3), 3),
-            (dict(stop=-3), 0),  # dynamic - slice(0, -3)
-        ]
-        for i_case, (kwargs, bytes_expected) in enumerate(cases):
-            with self.subTest(test="stop is not None", case=i_case):
-                self.assertEqual(
-                    bytes_expected,
-                    self._instance(**kwargs).bytes_expected,
-                )
-
-        cases = [
-            (dict(bytes_expected=2), 2),
-            (dict(start=-6, bytes_expected=3), -3),
-            (dict(start=-2, bytes_expected=2), None),
-        ]
-        for i_case, (kwargs, stop) in enumerate(cases):
-            with self.subTest(test="'bytes_expected' > 0", case=i_case):
-                self.assertEqual(stop, self._instance(**kwargs).stop)
-
-    def test_magic_post_init_exc(self) -> None:
-        with self.subTest(test="'stop' is equal to zero"):
-            with self.assertRaises(ValueError) as exc:
-                self._instance(stop=0)
-            self.assertEqual(
-                "'stop' can't be equal to zero", exc.exception.args[0]
-            )
-
-        with self.subTest(test="'stop' and 'bytes_expected' setting"):
-            with self.assertRaises(TypeError) as exc:
-                self._instance(stop=1, bytes_expected=1)
-            self.assertEqual(
-                "'bytes_expected' and 'stop' setting not allowed",
-                exc.exception.args[0],
-            )
-
-        with self.subTest(test="'default' and 'fill_value' setting"):
-            with self.assertRaises(TypeError) as exc:
-                self._instance(default=b"\x00", fill_value=b"\x00")
-            self.assertEqual(
-                "'default' and 'fill_value' setting not allowed",
-                exc.exception.args[0],
-            )
-
-        with self.subTest(test="'fill_value' more than one"):
-            with self.assertRaises(ValueError) as exc:
-                self._instance(fill_value=b"\x00\x00")
-            self.assertEqual(
-                "'fill_value' should only be equal to one byte",
-                exc.exception.args[0]
-            )
-
-        with self.subTest(
-                test="'bytes_expected' is not comparable with 'word_bytesize'"
-        ):
-            with self.assertRaises(ValueError) as exc:
-                self._instance(bytes_expected=5, fmt=Code.U16)
-            self.assertEqual(
-                "'bytes_expected' does not match an integer word count",
-                exc.exception.args[0],
-            )
-
-        with self.subTest(test="'bytes_expected' more than negative start"):
-            with self.assertRaises(ValueError) as exc:
-                self._instance(start=-2, bytes_expected=3)
-            self.assertEqual(
-                "it will be out of bounds",
-                exc.exception.args[0],
-            )
-
-        with self.subTest(test="default changes"):
-            self._instance(stop=5, default=b"aaaaa")
-            self._instance(stop=4, fmt=Code.U16, default=b"aaaa")
-            with self.assertRaises(ValueError):
-                self._instance(fmt=Code.U16, default=b"aaa")
-            with self.assertRaises(ValueError) as exc:
-                self._instance(stop=4, default=b"aaa")
-            self.assertEqual(
-                "default value is incorrect",
-                exc.exception.args[0],
-            )
-
-        with self.subTest(test="'fill_value' in dynamic field"):
-            with self.assertRaises(TypeError) as exc:
-                self._instance(fill_value=b"a")
-            self.assertEqual(
-                "fill value not allowed for dynamic fields",
-                exc.exception.args[0],
-            )
+    def test_default(self) -> None:
+        self.assertEqual(
+            b"a" * 10, self._instance(stop=10, default=b"a").default
+        )
 
     @staticmethod
     def _instance(
+            name: str = "std",
             start: int = 0,
             stop: int | None = None,
             bytes_expected: int = 0,
             fmt: Code = Code.U8,
             default: bytes = b"",
-            fill_value: bytes = b"",
     ) -> TIField:
         return TIField(
+            name=name,
             start=start,
             stop=stop,
             bytes_expected=bytes_expected,
             fmt=fmt,
             default=default,
-            fill_value=fill_value,
         )
 
 
@@ -227,7 +202,6 @@ class TestStruct(unittest.TestCase):
             self,
             self._instance(),
             name="std",
-            fields={},
             dynamic_field_name="f2",
             minimum_size=7,
             is_dynamic=True,
@@ -238,7 +212,7 @@ class TestStruct(unittest.TestCase):
             with self.assertRaises(ValueError) as exc:
                 TIStruct()
             self.assertEqual(
-                "TIStruct without fields", exc.exception.args[0]
+                "TIStruct without fields not allowed", exc.exception.args[0]
             )
 
         with self.subTest(test="empty field name"):
@@ -252,7 +226,7 @@ class TestStruct(unittest.TestCase):
             with self.assertRaises(KeyError) as exc:
                 TIStruct(fields={"f0": TIField()})
             self.assertEqual(
-                "invalid struct name: 'f0' != ''", exc.exception.args[0]
+                "invalid struct name: 'f0' != 'std'", exc.exception.args[0]
             )
 
         with self.subTest(test="two dynamic"):
@@ -264,8 +238,14 @@ class TestStruct(unittest.TestCase):
                     }
                 )
             self.assertEqual(
-                "two dynamic field not allowed", exc.exception.args[0]
+                "two dynamic fields not allowed", exc.exception.args[0]
             )
+
+    def test_change(self) -> None:
+        instance = self._instance()
+        content = bytearray(range(20))
+        instance.change(content, "f2", b"a")
+        self.assertEqual(b"\x00\x01\x02a\x10\x11\x12\x13", content)
 
     def test_decode(self) -> None:
         with self.subTest(test="decode one field"):
@@ -330,7 +310,7 @@ class TestStruct(unittest.TestCase):
                 self._instance(
                     f0=TIField(name="f0", stop=2, default=b"aa"),
                     f1=TIField(name="f1", start=2, stop=-2),
-                    f2=TIField(name="f2", start=-2, fill_value=b"d"),
+                    f2=TIField(name="f2", start=-2, default=b"d"),
                 ).encode(all_fields=True)
             )
 
@@ -439,6 +419,38 @@ class TestStruct(unittest.TestCase):
                 self._instance().encode(1, 2)
             self.assertEqual("invalid arguments count (got 2)", exc.exception.args[0])
 
+    def test_extract(self) -> None:
+        instance = self._instance()
+        content = bytes(range(10))
+
+        with self.subTest(test="extract all"):
+            self.assertDictEqual(
+                {
+                    "f0": b"\x00",
+                    "f1": b"\x01\x02",
+                    "f2": b"\x03\x04\x05",
+                    "f3": b"\x06\x07\x08",
+                    "f4": b"\t",
+                },
+                instance.extract(content)
+            )
+
+        with self.subTest(test="extract one"):
+            self.assertEqual(b"\x01\x02", instance.extract(content, "f1"))
+
+        with self.subTest(test="extract several"):
+            self.assertDictEqual(
+                {
+                    "f1": b"\x01\x02",
+                    "f2": b"\x03\x04\x05",
+                },
+                instance.extract(content, "f1", "f2")
+            )
+
+    def test_verify(self) -> None:
+        with self.subTest(test="correct content"):
+            self._instance().verify(bytes(range(10)), verify_fields=True)
+
     def test_items(self) -> None:
         obj = self._instance()
         for ref, (res, parser) in zip(obj._f, obj.items()):
@@ -504,7 +516,7 @@ class TestStruct(unittest.TestCase):
                     stop=1,
                 ),
                 f1=TIField(
-                    name="f1", start=1, bytes_expected=2, fill_value=b"\xff"
+                    name="f1", start=1, bytes_expected=2, default=b"\xff"
                 ),
                 f2=TIField(
                     name="f2", start=3, stop=-4

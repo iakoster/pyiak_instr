@@ -61,8 +61,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 order=Code.BIG_ENDIAN,
                 poly=0x1021,
                 init=0,
-                default=b"",
-                fill_value=b"\x00",
+                default=b"\x00",
                 wo_fields=set(),
             ),
             data=dict(
@@ -82,8 +81,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 behaviour=Code.ACTUAL,
                 units=Code.BYTES,
                 additive=0,
-                default=b"",
-                fill_value=b"\x00",
+                default=b"\x00",
             ),
             id_=dict(
                 typename="id",
@@ -135,13 +133,12 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
         validate_object(
             self,
             TIFieldPattern(
-                typename="crc", default=b"aa", fill_value=b""
+                typename="crc", default=b"aa"
             ).get(Additions(current=dict(fmt=Code.U16))),
             has_default=True,
             default=b"aa",
-            word_bytesize=2,
-            wo_fields=set(),
-            name="",
+            fmt_bytesize=2,
+            name="std",
             slice_=slice(0, 2),
             start=0,
             order=Code.BIG_ENDIAN,
@@ -153,8 +150,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
             is_dynamic=False,
             stop=2,
             is_single=True,
-            fill_value=b"",
-            has_fill_value=False,
+            wo_fields=set(),
             wo_attrs=["codec"],
         )
 
@@ -165,14 +161,12 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 order=Code.BIG_ENDIAN,
                 default=b"",
                 stop=None,
-                fill_value=b"",
             ),
             static=dict(
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 default=b"\x00",
                 stop=1,
-                fill_value=b"",
             ),
             address=dict(
                 fmt=Code.U8,
@@ -181,25 +175,21 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 units=Code.WORDS,
                 default=b"",
                 stop=1,
-                fill_value=b"",
             ),
             crc=dict(
                 fmt=Code.U16,
                 order=Code.BIG_ENDIAN,
                 poly=0x1021,
                 init=0,
-                default=b"",
+                default=b"\x00\x00",
                 wo_fields=set(),
                 stop=2,
-                fill_value=b"\x00",
-                fill_content=b"\x00\x00",
             ),
             data=dict(
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 stop=None,
                 default=b"",
-                fill_value=b"",
             ),
             dynamic_length=dict(
                 fmt=Code.U8,
@@ -207,35 +197,26 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                 behaviour=Code.ACTUAL,
                 units=Code.BYTES,
                 additive=0,
-                default=b"",
+                default=b"\x00",
                 stop=1,
-                fill_value=b"\x00",
-                fill_content=b"\x00",
             ),
             id_=dict(
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
                 default=b"",
                 stop=1,
-                fill_value=b"",
             ),
             operation=dict(
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
-                descs={0: Code.READ, 1: Code.WRITE},
-                descs_r={Code.READ: 0, Code.WRITE: 1},
                 default=b"",
                 stop=1,
-                fill_value=b"",
             ),
             response=dict(
                 fmt=Code.U8,
                 order=Code.BIG_ENDIAN,
-                descs={},
-                descs_r={},
                 default=b"",
                 stop=1,
-                fill_value=b"",
             ),
         )
 
@@ -253,7 +234,7 @@ class TestMessageFieldStructPatternABC(unittest.TestCase):
                         "name",
                         "start",
                         "is_dynamic",
-                        "word_bytesize",
+                        "fmt_bytesize",
                         "words_expected",
                         "slice_",
                         "has_default",
@@ -320,7 +301,7 @@ class TestMessageStructPatternABC(unittest.TestCase):
             msg["f1"],
             has_default=False,
             default=b"",
-            word_bytesize=2,
+            fmt_bytesize=2,
             name="f1",
             slice_=slice(1, None),
             start=1,
@@ -331,8 +312,6 @@ class TestMessageStructPatternABC(unittest.TestCase):
             is_dynamic=True,
             stop=None,
             is_single=False,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 
@@ -423,7 +402,7 @@ class TestMessagePatternABC(unittest.TestCase):
             msg.struct["f1"],
             has_default=False,
             default=b"",
-            word_bytesize=2,
+            fmt_bytesize=2,
             name="f1",
             slice_=slice(1, None),
             start=1,
@@ -434,8 +413,6 @@ class TestMessagePatternABC(unittest.TestCase):
             is_dynamic=True,
             stop=None,
             is_single=False,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 

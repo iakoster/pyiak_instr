@@ -1,6 +1,6 @@
 """Private module of ``pyiak_instr.communication.message.types``."""
+# pylint: disable=too-many-lines
 from __future__ import annotations
-from dataclasses import field as _field
 from typing import (
     Any,
     ClassVar,
@@ -13,15 +13,14 @@ from typing import (
 
 from ...exceptions import ContentError, NotAmongTheOptions
 from ...core import Code
+from ...codecs import get_bytes_codec
 from ...store.bin import (
-    STRUCT_DATACLASS,
     Field as BinField,
     Struct as BinStruct,
 )
 
 
 __all__ = [
-    "STRUCT_DATACLASS",
     "Basic",
     "Static",
     "Address",
@@ -39,22 +38,56 @@ __all__ = [
 
 
 # todo: refactor (join classes to one and use metaclass)
-@STRUCT_DATACLASS
 class Basic(BinField):
     """
     Represents a base class for base field.
+
+    Parameters
+    ----------
+    name : str, default='std'
+        field name.
+    start : int, default=0
+        start byte index of the field.
+    stop : int, default=None
+        stop byte index of the field.
+    bytes_expected : int, default=0
+        expected bytes count for field.
+    fmt : Code, default=U8
+        format for packing or unpacking the content.
+    order : Code, default=BIG_ENDIAN
+        bytes order for packing and unpacking.
+    default : bytes, default=b''
+        default value of the field.
     """
 
     is_single: ClassVar[bool] = False
     "indicate that only one word expected."
 
-    def _modify_values(self) -> None:
-        if self.is_single and self.stop is None and self.bytes_expected == 0:
-            object.__setattr__(self, "bytes_expected", self.word_bytesize)
-        super()._modify_values()
+    def __init__(
+        self,
+        name: str = "std",
+        start: int = 0,
+        stop: int = None,
+        bytes_expected: int = 0,
+        fmt: Code = Code.U8,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"",
+    ) -> None:
+        if self.is_single and stop is None and bytes_expected == 0:
+            bytes_expected = get_bytes_codec(fmt).fmt_bytesize
 
-    def _verify_modified_values(self) -> None:
-        super()._verify_modified_values()
+        super().__init__(
+            name=name,
+            start=start,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
+
+    def _verify_initialized_field(self) -> None:
+        super()._verify_initialized_field()
         if self.is_single and self.words_expected != 1:
             raise ValueError(
                 f"{self.__class__.__name__} should expect one word"
@@ -64,13 +97,51 @@ class Basic(BinField):
 BasicT = TypeVar("BasicT", bound=Basic)
 
 
-@STRUCT_DATACLASS
 class Static(Basic):
     """
     Represents a base class for field with static single word (e.g. preamble).
+
+    Parameters
+    ----------
+    name : str, default='std'
+        field name.
+    start : int, default=0
+        start byte index of the field.
+    stop : int, default=None
+        stop byte index of the field.
+    bytes_expected : int, default=0
+        expected bytes count for field.
+    fmt : Code, default=U8
+        format for packing or unpacking the content.
+    order : Code, default=BIG_ENDIAN
+        bytes order for packing and unpacking.
+    default : bytes, default=b''
+        default value of the field.
     """
 
     is_single = True
+
+    def __init__(
+        self,
+        name: str = "std",
+        start: int = 0,
+        stop: int = None,
+        bytes_expected: int = 0,
+        fmt: Code = Code.U8,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"",
+    ) -> None:
+        if len(default) == 0:
+            raise ValueError("'default' value not specified")
+        super().__init__(
+            name=name,
+            start=start,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
 
     def verify(self, content: bytes, raise_if_false: bool = False) -> Code:
         """
@@ -95,61 +166,162 @@ class Static(Basic):
         """
         code = super().verify(content, raise_if_false=raise_if_false)
         if code is Code.OK and content != self.default:
-            if raise_if_false:
-                raise ContentError(
-                    self,
-                    clarification=(
-                        f"{Code.INVALID_CONTENT!r} - '{content.hex(' ')}'"
-                    ),
-                )
-            return Code.INVALID_CONTENT
-        return Code.OK
+            code = Code.INVALID_CONTENT
 
-    def _verify_init_values(self) -> None:
-        super()._verify_init_values()
-        if not self.has_default:
-            raise ValueError("default value not specified")
+        if code is not Code.OK and raise_if_false:
+            raise ContentError(
+                self, clarification=f"{code!r} - '{content.hex(' ')}'"
+            )
+        return code
 
 
-@STRUCT_DATACLASS
 class Address(Basic):
     """
     Represents base class for field with address.
+
+    Parameters
+    ----------
+    name : str, default='std'
+        field name.
+    start : int, default=0
+        start byte index of the field.
+    stop : int, default=None
+        stop byte index of the field.
+    bytes_expected : int, default=0
+        expected bytes count for field.
+    fmt : Code, default=U8
+        format for packing or unpacking the content.
+    order : Code, default=BIG_ENDIAN
+        bytes order for packing and unpacking.
+    default : bytes, default=b''
+        default value of the field.
+    behaviour : {DMA, STRONG}, default=DMA
+        address change behavior. DMA (Direct Memory Access) enables address
+        shifting.
+    units : {BYTES, WORDS}, default=WORDS
+        address value units.
     """
 
     is_single = True
 
-    behaviour: Code = Code.DMA
-
-    units: Code = Code.WORDS
-
-    def _verify_init_values(self) -> None:
-        if self.behaviour not in {Code.DMA, Code.STRONG}:
+    def __init__(
+        self,
+        name: str = "std",
+        start: int = 0,
+        stop: int = None,
+        bytes_expected: int = 0,
+        fmt: Code = Code.U8,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"",
+        behaviour: Code = Code.DMA,
+        units: Code = Code.WORDS,
+    ) -> None:
+        if behaviour not in {Code.DMA, Code.STRONG}:
             raise NotAmongTheOptions(
-                "behaviour", self.behaviour, {Code.DMA, Code.STRONG}
+                "behaviour", behaviour, {Code.DMA, Code.STRONG}
             )
-        if self.units not in {Code.BYTES, Code.WORDS}:
-            raise NotAmongTheOptions(
-                "units", self.units, {Code.BYTES, Code.WORDS}
-            )
-        super()._verify_init_values()
+        if units not in {Code.BYTES, Code.WORDS}:
+            raise NotAmongTheOptions("units", units, {Code.BYTES, Code.WORDS})
+
+        self._behaviour = behaviour
+        self._units = units
+
+        super().__init__(
+            name=name,
+            start=start,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
+
+    @property
+    def behaviour(self) -> Code:
+        """
+        Returns
+        -------
+        Code
+            address change behavior.
+        """
+        return self._behaviour
+
+    @property
+    def units(self) -> Code:
+        """
+        Returns
+        -------
+        Code
+            address value units.
+        """
+        return self._units
 
 
-@STRUCT_DATACLASS
 class Crc(Basic):
     """
     Represents base class for field with crc.
+
+    Parameters
+    ----------
+    name : str, default='std'
+        field name.
+    start : int, default=0
+        start byte index of the field.
+    stop : int, default=None
+        stop byte index of the field.
+    bytes_expected : int, default=0
+        expected bytes count for field.
+    fmt : Code, default=U8
+        format for packing or unpacking the content.
+    order : Code, default=BIG_ENDIAN
+        bytes order for packing and unpacking.
+    default : bytes, default=b''
+        default value of the field.
+    poly : int, default=0x1021
+        poly value for crc function.
+    init : int, default=0
+        init value for crc function.
+    wo_fields : set[str], default=None
+        set of field names whose contents will not be included in the crc
+        calculation.
     """
 
     is_single = True
 
-    fill_value: bytes = b"\x00"
+    def __init__(
+        self,
+        name: str = "std",
+        start: int = 0,
+        stop: int = None,
+        bytes_expected: int = 0,
+        fmt: Code = Code.U8,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"\x00",
+        poly: int = 0x1021,
+        init: int = 0,
+        wo_fields: set[str] = None,
+    ) -> None:
+        if wo_fields is None:
+            wo_fields = set()
 
-    poly: int = 0x1021
+        self._poly = poly
+        self._init = init
+        self._wo_fields = wo_fields
 
-    init: int = 0
+        super().__init__(
+            name=name,
+            start=start,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
 
-    wo_fields: set[str] = _field(default_factory=set)
+        if self.bytes_expected != 2 or poly != 0x1021 or init != 0:
+            raise NotImplementedError(
+                "Crc algorithm not verified for other values"
+            )  # todo: implement for any crc
 
     def calculate(self, content: bytes) -> int:
         """
@@ -166,53 +338,157 @@ class Crc(Basic):
             crc value of `content`.
         """
 
-        crc = self.init
+        crc = self._init
         for byte in content:
             crc ^= byte << 8
             for _ in range(8):
                 crc <<= 1
                 if crc & 0x10000:
-                    crc ^= self.poly
+                    crc ^= self._poly
                 crc &= 0xFFFF
         return crc
 
-    def _verify_modified_values(self) -> None:
-        super()._verify_modified_values()
-        if self.bytes_expected != 2 or self.poly != 0x1021 or self.init != 0:
-            raise NotImplementedError(
-                "Crc algorithm not verified for other values"
-            )  # todo: implement for any crc
+    @property
+    def poly(self) -> int:
+        """
+        Returns
+        -------
+        int
+            poly value for crc function.
+        """
+        return self._poly
+
+    @property
+    def init(self) -> int:
+        """
+        Returns
+        -------
+        int
+            init value for crc function.
+        """
+        return self._init
+
+    @property
+    def wo_fields(self) -> set[str]:  # todo: protect
+        """
+        Returns
+        -------
+        set[str]
+            set of field names whose contents will not be included in the crc
+            calculation.
+        """
+        return self._wo_fields
 
 
-@STRUCT_DATACLASS
 class Data(Basic):
-    """Represents a field of a Message with data."""
+    """
+    Represents a field of a Message with data.
 
-    def _verify_modified_values(self) -> None:
-        super()._verify_modified_values()
+    Parameters
+    ----------
+    name : str, default='std'
+        field name.
+    start : int, default=0
+        start byte index of the field.
+    stop : int, default=None
+        stop byte index of the field.
+    bytes_expected : int, default=0
+        expected bytes count for field.
+    fmt : Code, default=U8
+        format for packing or unpacking the content.
+    order : Code, default=BIG_ENDIAN
+        bytes order for packing and unpacking.
+    default : bytes, default=b''
+        default value of the field.
+    """
+
+    def __init__(
+        self,
+        name: str = "std",
+        start: int = 0,
+        stop: int = None,
+        bytes_expected: int = 0,
+        fmt: Code = Code.U8,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"",
+    ) -> None:
+        super().__init__(
+            name=name,
+            start=start,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
+
         if self.bytes_expected != 0:
             raise ValueError(f"{self.__class__.__name__} can only be dynamic")
 
 
-# todo: rename to DynamicLength
-@STRUCT_DATACLASS
 class DynamicLength(Basic):
     """
     Represents base class for field with length of dynamic field.
+
+    Parameters
+    ----------
+    name : str, default='std'
+        field name.
+    start : int, default=0
+        start byte index of the field.
+    stop : int, default=None
+        stop byte index of the field.
+    bytes_expected : int, default=0
+        expected bytes count for field.
+    fmt : Code, default=U8
+        format for packing or unpacking the content.
+    order : Code, default=BIG_ENDIAN
+        bytes order for packing and unpacking.
+    default : bytes, default=b''
+        default value of the field.
+    behaviour : {ACTUAL, EXPECTED}, default=ACTUAL
+        determines the behavior of determining the content value.
+    units : {BYTES, WORDS}, default=WORDS
+        data length units.
+    additive : int, default=0
+        additional value to the length of the data.
     """
 
     is_single = True
 
-    fill_value: bytes = b"\x00"
+    def __init__(
+        self,
+        name: str = "std",
+        start: int = 0,
+        stop: int = None,
+        bytes_expected: int = 0,
+        fmt: Code = Code.U8,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"\x00",
+        behaviour: Code = Code.ACTUAL,
+        units: Code = Code.BYTES,
+        additive: int = 0,
+    ) -> None:
+        if additive < 0:
+            raise ValueError("additive number must be positive integer")
+        if behaviour not in {Code.ACTUAL, Code.EXPECTED}:
+            raise NotAmongTheOptions("behaviour", behaviour)
+        if units not in {Code.BYTES, Code.WORDS}:
+            raise NotAmongTheOptions("units", units)
 
-    behaviour: Code = Code.ACTUAL  # todo: logic
-    """determines the behavior of determining the content value."""
+        self._add = additive
+        self._behaviour = behaviour
+        self._units = units
 
-    units: Code = Code.BYTES
-    """data length units. Data can be measured in bytes or words."""
-
-    additive: int = 0
-    """additional value to the length of the data."""
+        super().__init__(
+            name=name,
+            start=start,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
 
     def calculate(self, data: bytes, value_size: int) -> int:
         """
@@ -235,46 +511,104 @@ class DynamicLength(Basic):
         ContentError
             if data has non-integer count of words.
         """
-        if self.units is Code.WORDS:
+        if self._units is Code.WORDS:
             if len(data) % value_size != 0:
                 raise ContentError(self, "non-integer words count in data")
             dyn_length = len(data) // value_size
         else:  # units is a BYTES
             dyn_length = len(data)
 
-        return dyn_length + self.additive
+        return dyn_length + self._add
 
-    def _verify_init_values(self) -> None:
-        if self.additive < 0:
-            raise ValueError("additive number must be positive integer")
-        if self.behaviour not in {Code.ACTUAL, Code.EXPECTED}:
-            raise NotAmongTheOptions("behaviour", self.behaviour)
-        if self.units not in {Code.BYTES, Code.WORDS}:
-            raise NotAmongTheOptions("units", self.units)
+    @property
+    def behaviour(self) -> Code:
+        """
+        Returns
+        -------
+        Code
+            determines the behavior of determining the content value.
+        """
+        return self._behaviour
+
+    @property
+    def units(self) -> Code:
+        """
+        Returns
+        -------
+        Code
+            data length units.
+        """
+        return self._units
+
+    @property
+    def additive(self) -> int:
+        """
+        Returns
+        -------
+        int
+            additional value to the length of the data.
+        """
+        return self._add
 
 
-@STRUCT_DATACLASS
 class Id(Basic):
     """Represents a field with a unique identifier of a particular message."""
 
     is_single = True
 
 
-@STRUCT_DATACLASS
 class Operation(Basic):
     """
     Represents base class for field with operation.
+
+    Parameters
+    ----------
+    name : str, default='std'
+        field name.
+    start : int, default=0
+        start byte index of the field.
+    stop : int, default=None
+        stop byte index of the field.
+    bytes_expected : int, default=0
+        expected bytes count for field.
+    fmt : Code, default=U8
+        format for packing or unpacking the content.
+    order : Code, default=BIG_ENDIAN
+        bytes order for packing and unpacking.
+    default : bytes, default=b''
+        default value of the field.
+    descs : dict[int, Code], default=None
+        matching dictionary value and codes. Default value
+        is {0: READ, 1: WRITE}.
     """
 
     is_single = True
 
-    descs: dict[int, Code] = _field(
-        default_factory=lambda: {0: Code.READ, 1: Code.WRITE}
-    )
-    """matching dictionary value and codes."""
+    def __init__(
+        self,
+        name: str = "std",
+        start: int = 0,
+        stop: int = None,
+        bytes_expected: int = 0,
+        fmt: Code = Code.U8,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"",
+        descs: dict[int, Code] = None,
+    ) -> None:
+        if descs is None:
+            descs = {0: Code.READ, 1: Code.WRITE}
+        self._descs = descs
+        self._descs_r = {v: k for k, v in descs.items()}
 
-    descs_r: dict[Code, int] = _field(init=False)
-    """reversed `descriptions`."""
+        super().__init__(
+            name=name,
+            start=start,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
 
     def encode(self, content: Any, verify: bool = False) -> bytes:
         """
@@ -320,9 +654,9 @@ class Operation(Basic):
         Code
             description code. If Code.UNDEFINED - value not found.
         """
-        if value not in self.descs:
+        if value not in self._descs:
             return Code.UNDEFINED
-        return self.descs[value]
+        return self._descs[value]
 
     def desc_r(self, code: Code) -> int | None:
         """
@@ -338,34 +672,62 @@ class Operation(Basic):
         int | None
             description value. If None - Code not found.
         """
-        if code not in self.descs_r:
+        if code not in self._descs_r:
             return None
-        return self.descs_r[code]
-
-    def _modify_values(self) -> None:
-        super()._modify_values()
-        self._setattr(
-            "descs_r",
-            {
-                v: k
-                for k, v in self.descs.items()  # pylint: disable=no-member
-            },
-        )
+        return self._descs_r[code]
 
 
-@STRUCT_DATACLASS
 class Response(Basic):
     """
     Represents base class for field with response.
+
+    Parameters
+    ----------
+    name : str, default='std'
+        field name.
+    start : int, default=0
+        start byte index of the field.
+    stop : int, default=None
+        stop byte index of the field.
+    bytes_expected : int, default=0
+        expected bytes count for field.
+    fmt : Code, default=U8
+        format for packing or unpacking the content.
+    order : Code, default=BIG_ENDIAN
+        bytes order for packing and unpacking.
+    default : bytes, default=b''
+        default value of the field.
+    descs : dict[int, Code], default=None
+        matching dictionary value and codes. Default value is {}.
     """
 
     is_single = True
 
-    descs: dict[int, Code] = _field(default_factory=dict)
-    """matching dictionary value and codes."""
+    def __init__(
+        self,
+        name: str = "std",
+        start: int = 0,
+        stop: int = None,
+        bytes_expected: int = 0,
+        fmt: Code = Code.U8,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"",
+        descs: dict[int, Code] = None,
+    ) -> None:
+        if descs is None:
+            descs = {0: Code.READ, 1: Code.WRITE}
+        self._descs = descs
+        self._descs_r = {v: k for k, v in descs.items()}
 
-    descs_r: dict[Code, int] = _field(init=False)
-    """reversed `descriptions`."""
+        super().__init__(
+            name=name,
+            start=start,
+            stop=stop,
+            bytes_expected=bytes_expected,
+            fmt=fmt,
+            order=order,
+            default=default,
+        )
 
     def encode(self, content: Any, verify: bool = False) -> bytes:
         """
@@ -413,9 +775,9 @@ class Response(Basic):
         Code
             value code.
         """
-        if value not in self.descs:
+        if value not in self._descs:
             return Code.UNDEFINED
-        return self.descs[value]
+        return self._descs[value]
 
     def desc_r(self, code: Code) -> int | None:
         """
@@ -433,19 +795,9 @@ class Response(Basic):
         int | None
             code value.
         """
-        if code not in self.descs_r:
+        if code not in self._descs_r:
             return None
-        return self.descs_r[code]
-
-    def _modify_values(self) -> None:
-        super()._modify_values()
-        self._setattr(
-            "descs_r",
-            {
-                v: k
-                for k, v in self.descs.items()  # pylint: disable=no-member
-            },
-        )
+        return self._descs_r[code]
 
 
 FieldUnionT = Union[  # pylint: disable=invalid-name
@@ -461,62 +813,67 @@ FieldUnionT = Union[  # pylint: disable=invalid-name
 ]
 
 
-@STRUCT_DATACLASS
 class Struct(BinStruct[BasicT]):
     """
     Represents base class for message structure.
+
+    Parameters
+    ----------
+    name : str, default='std'
+        name of storage configuration.
+    fields : dict[str, FieldT], default=None
+        dictionary with fields.
+    divisible : bool, default=False
+        shows that the message can be divided by the infinite field.
+    mtu : int, default=1500
+        max size of one message part.
     """
 
-    divisible: bool = False
-    """shows that the message can be divided by the infinite field."""
+    _f_type_codes: dict[type[BasicT], Code] = {}  # ClassVar
 
-    mtu: int = 1500
-    """max size of one message part."""
+    def __init__(
+        self,
+        name: str = "std",
+        fields: dict[str, BasicT] = None,
+        divisible: bool = False,
+        mtu: int = 1500,
+    ) -> None:
+        super().__init__(name=name, fields=fields)
 
-    _field_type_codes: dict[type[BasicT], Code] = _field(
-        default_factory=dict, init=False
-    )  # ClassVar
+        self._div = divisible
+        self._mtu = mtu
 
-    _field_types: dict[Code, str] = _field(default_factory=dict, init=False)
-
-    def __post_init__(self, fields: dict[str, BasicT]) -> None:
-        super().__post_init__(fields)
-
-        field_types = {}
+        self._f_types: dict[Code, str] = {}
         for struct in self:
-            field_class = struct.__class__
-            if field_class not in self._field_type_codes:
-                raise KeyError(
-                    f"{field_class.__name__} not represented in codes"
-                )
+            f_class = struct.__class__
+            if f_class not in self._f_type_codes:
+                raise KeyError(f"{f_class.__name__} not represented in codes")
 
-            field_code = self._field_type_codes[field_class]
-            if field_code not in field_types:
-                field_types[field_code] = struct.name
-
-        self._setattr("_field_types", field_types)
+            f_code = self._f_type_codes[f_class]
+            if f_code not in self._f_types:
+                self._f_types[f_code] = struct.name
 
         if self.has.dynamic_length and not self.is_dynamic:
             raise TypeError(
                 "dynamic length field without dynamic length detected"
             )
 
-        if self.divisible:
+        if self._div:
             if not self.is_dynamic:
                 raise TypeError(
-                    f"{self.__class__.__name__} can not be divided because "
-                    "it does not have a dynamic field"
+                    f"{self.__class__.__name__} can not be divided without "
+                    f"dynamic field"
                 )
 
             min_mtu = (
                 self.minimum_size
-                + self._f[self.dynamic_field_name].word_bytesize
+                + self._f[self.dynamic_field_name].fmt_bytesize
             )
-            if self.mtu < min_mtu:
+            if self._mtu < min_mtu:
                 raise ValueError(
                     "MTU value does not allow you to split the message if "
                     f"necessary. The minimum MTU is {min_mtu} "
-                    f"(got {self.mtu})"
+                    f"(got {self._mtu})"
                 )
 
     @property
@@ -527,7 +884,7 @@ class Struct(BinStruct[BasicT]):
         StructGetParser
             message get parser.
         """
-        return StructGetParser(self, self._field_types)
+        return StructGetParser(self, self._f_types)
 
     @property
     def has(self) -> StructHasParser[Self, BasicT]:
@@ -537,7 +894,27 @@ class Struct(BinStruct[BasicT]):
         MessageHasParserABC
             message has parser.
         """
-        return StructHasParser(self, self._field_types)
+        return StructHasParser(self, self._f_types)
+
+    @property
+    def divisible(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            shows that the message can be divided by the infinite field.
+        """
+        return self._div
+
+    @property
+    def mtu(self) -> int:
+        """
+        Returns
+        -------
+        int
+            max size of one message part.
+        """
+        return self._mtu
 
 
 StructT = TypeVar("StructT", bound=Struct[Any])

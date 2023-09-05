@@ -4,7 +4,6 @@ Bin (:mod:`pyiak_instr.store`)
 ==============================
 """
 from ._struct import (
-    STRUCT_DATACLASS,
     Field,
     Struct,
 )
@@ -20,7 +19,6 @@ from ._pattern import (
 
 
 __all__ = [
-    "STRUCT_DATACLASS",
     "Field",
     "FieldPattern",
     "Container",

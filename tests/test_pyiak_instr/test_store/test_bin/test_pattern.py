@@ -41,19 +41,17 @@ class TestFieldPattern(unittest.TestCase):
                 typename="basic", bytes_expected=4, fmt=Code.U16
             ).get(),
             has_default=False,
-            name="",
+            name="std",
             stop=4,
             start=0,
             words_expected=2,
             order=Code.BIG_ENDIAN,
-            word_bytesize=2,
+            fmt_bytesize=2,
             bytes_expected=4,
             is_dynamic=False,
             default=b"",
             slice_=slice(0, 4),
             fmt=Code.U16,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 
@@ -103,7 +101,6 @@ class TestStructPattern(unittest.TestCase):
             is_dynamic=False,
             minimum_size=3,
             name="test",
-            fields={},
         )
         validate_object(
             self,
@@ -114,14 +111,12 @@ class TestStructPattern(unittest.TestCase):
             start=0,
             words_expected=3,
             order=Code.BIG_ENDIAN,
-            word_bytesize=1,
+            fmt_bytesize=1,
             bytes_expected=3,
             is_dynamic=False,
             default=b"",
             slice_=slice(0, 3),
             fmt=Code.U8,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 
@@ -167,7 +162,6 @@ class TestBytesStoragePatternABC(unittest.TestCase):
             is_dynamic=False,
             minimum_size=2,
             name="test",
-            fields={},
         )
         validate_object(
             self,
@@ -178,14 +172,12 @@ class TestBytesStoragePatternABC(unittest.TestCase):
             start=0,
             words_expected=1,
             order=Code.BIG_ENDIAN,
-            word_bytesize=2,
+            fmt_bytesize=2,
             bytes_expected=2,
             is_dynamic=False,
             default=b"",
             slice_=slice(0, 2),
             fmt=Code.U16,
-            fill_value=b"",
-            has_fill_value=False,
             wo_attrs=["codec"],
         )
 

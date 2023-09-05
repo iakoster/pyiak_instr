@@ -5,7 +5,6 @@ Message (:mod:`pyiak_instr.communication`)
 """
 # pylint: disable=duplicate-code
 from ._struct import (
-    STRUCT_DATACLASS,
     Basic,
     Static,
     Address,
@@ -28,7 +27,6 @@ from ._pattern import (
 )
 
 __all__ = [
-    "STRUCT_DATACLASS",
     "Message",
     "Basic",
     "FieldUnionT",

@@ -1,74 +1,79 @@
 """Private module of ``pyiak_instr.types.store`` with types for store
 module."""
 from __future__ import annotations
-from dataclasses import InitVar, dataclass, field as field_
 from abc import ABC
 from typing import (
     Any,
     Generator,
     Generic,
     TypeVar,
+    cast,
     overload,
 )
 
 from ...core import Code
 from ...exceptions import ContentError
-from ...codecs.bin import BytesCodec, get_bytes_codec
+from ...codecs.bin import get_bytes_codec
 
 
 __all__ = [
-    "STRUCT_DATACLASS",
     "Field",
     "Struct",
 ]
 
 
-STRUCT_DATACLASS = dataclass(frozen=True, kw_only=True)
-
-
 # todo: drop to default
 # todo: shortcut decode default?
-@STRUCT_DATACLASS
 class Field(ABC):
     """
     Represents base class for field structure.
+
+    Parameters
+    ----------
+    name : str, default='std'
+        field name.
+    start : int, default=0
+        start byte index of the field.
+    stop : int, default=None
+        stop byte index of the field.
+    bytes_expected : int, default=0
+        expected bytes count for field.
+    fmt : Code, default=U8
+        format for packing or unpacking the content.
+    order : Code, default=BIG_ENDIAN
+        bytes order for packing and unpacking.
+    default : bytes, default=b''
+        default value of the field.
     """
 
-    name: str = ""
-    """field name."""
+    def __init__(
+        self,
+        name: str = "std",
+        start: int = 0,
+        stop: int = None,
+        bytes_expected: int = 0,
+        fmt: Code = Code.U8,
+        order: Code = Code.BIG_ENDIAN,
+        default: bytes = b"",  # todo: to ContentType
+    ) -> None:
+        if len(name) == 0:
+            raise ValueError("empty 'name' not allowed")
+        self._validate_bytes_range(start, stop, bytes_expected)
 
-    start: int = 0
-    """the number of bytes in the message from which the fields begin."""
+        if bytes_expected > 0:
+            stop = start + bytes_expected
+            if stop == 0:
+                stop = None
 
-    stop: int | None = None
-    """index of stop byte. If None - stop is end of bytes."""
+        self._name = name
+        self._slc = slice(start, stop)
+        self._fmt = fmt
+        self._order = order
+        self._default = default
+        # todo: variant with an already initialized instance
+        self._codec = get_bytes_codec(fmt, order)
 
-    bytes_expected: int = 0
-    """expected bytes count for field. If less than 1, from the start byte
-    to the end of the message."""
-
-    fmt: Code = Code.U8
-    """format for packing or unpacking the content.
-    The word length is calculated from the format."""
-
-    order: Code = Code.BIG_ENDIAN
-    """bytes order for packing and unpacking."""
-
-    default: bytes = b""  # todo: to ContentType
-    """default value of the field."""
-
-    fill_value: bytes = b""
-    """fill value of the field (instead of default)"""
-
-    # todo: generalize encoder
-    # todo: variant with an already initialized instance
-    codec: BytesCodec[Any, Any] = field_(init=False)
-
-    def __post_init__(self) -> None:
-        self._setattr("codec", get_bytes_codec(self.fmt, self.order))
-        self._verify_init_values()
-        self._modify_values()
-        self._verify_modified_values()
+        self._verify_initialized_field()
 
     def decode(self, content: bytes, verify: bool = False) -> Any:
         """
@@ -88,7 +93,7 @@ class Field(ABC):
         """
         if verify:
             self.verify(content, raise_if_false=True)
-        return self.codec.decode(content)  # pylint: disable=no-member
+        return self._codec.decode(content)
 
     def encode(self, content: Any, verify: bool = False) -> bytes:
         """
@@ -106,7 +111,7 @@ class Field(ABC):
         bytes
             encoded content.
         """
-        encoded = self.codec.encode(content)  # pylint: disable=no-member
+        encoded = self._codec.encode(content)
         if verify:
             self.verify(encoded, raise_if_false=True)
         return encoded
@@ -127,7 +132,6 @@ class Field(ABC):
         """
         return content[self.slice_]
 
-    # todo: clarify the error with Code
     def verify(
         self,
         content: bytes,
@@ -153,136 +157,157 @@ class Field(ABC):
         ContentError
             if `raise_if_false` is True and content is not correct.
         """
+        code = Code.OK
+
         if self.is_dynamic:
-            if len(content) % self.word_bytesize != 0:
-                if raise_if_false:
-                    raise ContentError(
-                        self, clarification=repr(Code.INVALID_LENGTH)
-                    )
-                return Code.INVALID_LENGTH
-        else:
-            if len(content) != self.bytes_expected:
-                if raise_if_false:
-                    raise ContentError(
-                        self, clarification=repr(Code.INVALID_LENGTH)
-                    )
-                return Code.INVALID_LENGTH
-        return Code.OK
+            if len(content) % self.fmt_bytesize != 0:
+                code = Code.INVALID_LENGTH
+        elif len(content) != self.bytes_expected:
+            code = Code.INVALID_LENGTH
 
-    def _modify_values(self) -> None:
-        """
-        Modify values of the struct.
+        if code is not Code.OK and raise_if_false:
+            raise ContentError(self, clarification=repr(Code.INVALID_LENGTH))
+        return code
 
-        Raises
-        ------
-        AssertionError
-            if in some reason `start`, `stop` or `bytes_expected` can't be
-            modified.
-        """
-        if self.bytes_expected < 0:
-            self._setattr("bytes_expected", 0)
-
-        if self.bytes_expected > 0:
-            stop = self.start + self.bytes_expected
-            if stop != 0:
-                self._setattr("stop", stop)
-
-        elif self.stop is not None:
-            if not self.start >= 0 > self.stop:
-                self._setattr("bytes_expected", self.stop - self.start)
-
-        elif self.start <= 0 and self.stop is None:
-            self._setattr("bytes_expected", -self.start)
-
-        elif not self.is_dynamic:
-            raise AssertionError(
-                "impossible to modify start, stop and bytes_expected"
-            )
-
-    def _setattr(self, name: str, value: Any) -> None:
-        """
-        Set dataclass attribute by `key`.
-
-        Parameters
-        ----------
-        name : str
-            attribute name.
-        value : Any
-            attribute value.
-        """
-        # todo: check that key exists
-        object.__setattr__(self, name, value)
-
-    def _verify_init_values(self) -> None:
-        """
-        Verify values before modifying.
-
-        Raises
-        ------
-        ValueError
-            if `stop` is equal to zero;
-            if `start` is negative and more than `bytes_expected`;
-            if `fill_value` more than one byte.
-        TypeError
-            if `stop` and `bytes_expected` is specified.
-            if `default` and `fill_value` is specified.
-        """
-        if self.stop == 0:
-            raise ValueError("'stop' can't be equal to zero")
-        if self.stop is not None and self.bytes_expected > 0:
-            raise TypeError("'bytes_expected' and 'stop' setting not allowed")
-        if self.has_fill_value:
-            if self.has_default:
-                raise TypeError(
-                    "'default' and 'fill_value' setting not allowed"
-                )
-            if len(self.fill_value) > 1:
-                raise ValueError(
-                    "'fill_value' should only be equal to one byte"
-                )
-        if 0 > self.start > -self.bytes_expected:
-            raise ValueError("it will be out of bounds")
-
-    def _verify_modified_values(self) -> None:
+    def _verify_initialized_field(self) -> None:
         """
         Verify values after modifying.
 
         Raises
         ------
         ValueError
-            if `bytes_expected` is not evenly divisible by `word_bytesize`;
-            if `default` is not correct for this struct.
+            * if `bytes_expected` is not evenly divisible by `word_bytesize`;
+            * if `default` is not correct for this struct.
         TypeError
-            if `fill_value` specified in dynamic field.
+            * if `default` specified as 1 byte in dynamic field.
         """
-        if self.bytes_expected % self.word_bytesize:
+        if self.bytes_expected % self.fmt_bytesize:
             raise ValueError(
                 "'bytes_expected' does not match an integer word count"
             )
-        if self.has_default and self.verify(self.default) is not Code.OK:
+
+        if (
+            len(self._default) > 1
+            and self.verify(self._default) is not Code.OK
+        ):
             raise ValueError("default value is incorrect")
-        if self.has_fill_value and self.is_dynamic:
-            raise TypeError("fill value not allowed for dynamic fields")
+
+    @staticmethod
+    def _validate_bytes_range(
+        start: int,
+        stop: int | None,
+        bytes_expected: int,
+    ) -> None:
+        """
+        Validate `start`, `stop` and `bytes_expected` values.
+
+        Parameters
+        ----------
+        start : int
+            start byte index of the field.
+        stop : int | None
+            stop byte index of the field.
+        bytes_expected : int
+            expected bytes count for field.
+
+        Raises
+        ------
+        ValueError
+            * if `bytes_expected` is a negative number;
+            * if `stop` is equal to zero;
+            * if `start` is negative and more than `bytes_expected`.
+        TypeError
+            * if `stop` and `bytes_expected` is specified.
+        """
+        if bytes_expected < 0:
+            raise ValueError("'bytes_expected' can't be a negative number")
+        if stop is not None and bytes_expected > 0:
+            raise TypeError("'bytes_expected' and 'stop' setting not allowed")
+        if stop == 0:
+            raise ValueError("'stop' can't be equal to zero")
+        if 0 > start > -bytes_expected:
+            raise ValueError("it will be out of bounds")
 
     @property
-    def fill_content(self) -> bytes:
+    def name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            field name.
+        """
+        return self._name
+
+    @property
+    def start(self) -> int:
+        """
+        Returns
+        -------
+        int
+            start byte of the field.
+        """
+        return cast(int, self._slc.start)
+
+    @property
+    def stop(self) -> int | None:
+        """
+        Returns
+        -------
+        int | None
+            stop byte of the field.
+        """
+        return cast(int | None, self._slc.stop)
+
+    @property
+    def bytes_expected(self) -> int:
+        """
+        Returns
+        -------
+        int
+            expected bytes count for field. If equal to zero - field
+            is dynamic.
+        """
+        # pylint: disable=invalid-unary-operand-type,chained-comparison
+        if self.stop is None:
+            if self.start < 0:
+                return -self.start
+            return 0
+        if self.start >= 0 and self.stop < 0:
+            return 0
+        return self.stop - self.start
+
+    @property
+    def fmt(self) -> Code:
+        """
+        Returns
+        -------
+        Code
+            format for packing or unpacking the content.
+        """
+        return self._fmt
+
+    @property
+    def order(self) -> Code:
+        """
+        Returns
+        -------
+        Code
+            bytes order for packing and unpacking.
+        """
+        return self._order
+
+    @property
+    def default(self) -> bytes:
         """
         Returns
         -------
         bytes
-            fill content.
-
-        Raises
-        ------
-        AttributeError
-            if `fill_value` is empty.
+            default value of the field. If there is one byte - it will be
+            used as fill value for bytes with length as `bytes_expected`.
         """
-        if not self.has_fill_value:
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute "
-                "'fill_content'"
-            )
-        return self.fill_value * self.bytes_expected
+        if len(self._default) == 1 and not self.is_dynamic:
+            return self._default * self.bytes_expected
+        return self._default
 
     @property
     def has_default(self) -> bool:
@@ -292,17 +317,7 @@ class Field(ABC):
         bool
             True - default length more than zero.
         """
-        return len(self.default) != 0
-
-    @property
-    def has_fill_value(self) -> bool:
-        """
-        Returns
-        -------
-        bool
-            True - fill value length more than zero.
-        """
-        return len(self.fill_value) != 0
+        return len(self._default) > 0
 
     @property
     def is_dynamic(self) -> bool:
@@ -322,17 +337,17 @@ class Field(ABC):
         slice
             slice with start and stop indexes of field.
         """
-        return slice(self.start, self.stop)
+        return self._slc
 
     @property
-    def word_bytesize(self) -> int:
+    def fmt_bytesize(self) -> int:
         """
         Returns
         -------
         int
             count of bytes in one word.
         """
-        return self.codec.fmt_bytesize  # pylint: disable=no-member
+        return self._codec.fmt_bytesize
 
     @property
     def words_expected(self) -> int:
@@ -342,43 +357,51 @@ class Field(ABC):
         int
             expected words count in the field. Returns 0 if field is infinite.
         """
-        return self.bytes_expected // self.word_bytesize
+        return self.bytes_expected // self.fmt_bytesize
 
 
 FieldT = TypeVar("FieldT", bound=Field)
 
 
-@STRUCT_DATACLASS
 class Struct(ABC, Generic[FieldT]):
     """
     Represents base class for storage structure.
+
+    Parameters
+    ----------
+    name : str, default='std'
+        name of storage configuration.
+    fields : dict[str, FieldT], default=None
+        dictionary with fields.
     """
 
-    name: str = "std"
-    """name of storage configuration."""
-
-    fields: InitVar[dict[str, FieldT]] = {}  # type: ignore[assignment]
-    """dictionary of fields."""
-
-    dynamic_field_name: str = field_(default="", init=False)
-    """dynamic field name."""
-
-    _f: dict[str, FieldT] = field_(default_factory=dict, init=False)
-
-    def __post_init__(self, fields: dict[str, FieldT]) -> None:
-        if len(fields) == 0:
-            raise ValueError(f"{self.__class__.__name__} without fields")
+    def __init__(
+        self,
+        name: str = "std",
+        fields: dict[str, FieldT] = None,
+    ) -> None:
+        if fields is None or len(fields) == 0:
+            raise ValueError(
+                f"{self.__class__.__name__} without fields not allowed"
+            )
         if "" in fields:
             raise KeyError("empty field name not allowed")
-        for name, struct in fields.items():
+
+        self._dyn_field = ""
+        for f_name, struct in fields.items():
             s_name = struct.name
-            if name != s_name:
-                raise KeyError(f"invalid struct name: {name!r} != {s_name!r}")
+            if f_name != s_name:
+                raise KeyError(
+                    f"invalid struct name: {f_name!r} != {s_name!r}"
+                )
+            if struct.is_dynamic and self.is_dynamic:
+                raise TypeError("two dynamic fields not allowed")
+            if struct.is_dynamic:
+                self._dyn_field = f_name
 
-        self._setattr("_f", fields)
-        self._modify_values()
+        self._name = name
+        self._f = fields
 
-    # todo: tests
     def change(
         self,
         content: bytearray,
@@ -534,7 +557,6 @@ class Struct(ABC, Generic[FieldT]):
     ) -> dict[str, bytes]:
         ...
 
-    # todo: tests
     def extract(  # type: ignore[misc]
         self, content: bytes, *names: str, verify: bool = True
     ) -> bytes | dict[str, bytes]:
@@ -607,42 +629,36 @@ class Struct(ABC, Generic[FieldT]):
         Raises
         ------
         ContentError
-            if content length smaller than minimal storage length;
-            if storage not dynamic and `content` too long.
+            * if content length smaller than minimal storage length;
+            * if storage not dynamic and `content` too long;
+            * if content for any field is not correct.
         """
         minimum_size, content_len = self.minimum_size, len(content)
-        if content_len < minimum_size:
-            if raise_if_false:
-                raise ContentError(
-                    self,
-                    clarification=(
-                        f"{Code.INVALID_LENGTH!r} - expected at least "
-                        f"{minimum_size}, got {content_len}"
-                    ),
-                )
-            return Code.INVALID_LENGTH
+        code, clarification = Code.OK, ""
 
-        if not self.is_dynamic and content_len > minimum_size:
-            if raise_if_false:
-                raise ContentError(
-                    self,
-                    clarification=(
-                        f"{Code.INVALID_LENGTH!r} - expected "
-                        f"{minimum_size}, got {content_len}"
-                    ),
-                )
-            return Code.INVALID_LENGTH
+        if (
+            content_len < minimum_size
+            or not self.is_dynamic
+            and content_len > minimum_size
+        ):
+            code = Code.INVALID_LENGTH
+            clarification = (
+                f"{code!r} - expected"
+                f"{' at least' if self.is_dynamic else ''} "
+                f"{minimum_size}, got {content_len}"
+            )
 
-        # todo: tests
-        if verify_fields:
+        if verify_fields and code is Code.OK:
             for field in self:
                 code = field.verify(
                     field.extract(content), raise_if_false=raise_if_false
                 )
                 if code is not Code.OK:
-                    return code
+                    break
 
-        return Code.OK
+        if raise_if_false and code is not Code.OK:
+            raise ContentError(self, clarification=clarification)
+        return code
 
     def _get_all_fields(self, fields: dict[str, Any]) -> dict[str, bytes]:
         """
@@ -676,44 +692,12 @@ class Struct(ABC, Generic[FieldT]):
             elif field.is_dynamic:
                 content[name] = b""
 
-            elif field.has_fill_value:
-                content[name] = field.fill_content
-
             else:
                 raise AssertionError(
                     f"it is impossible to encode the value for {name!r}"
                 )
 
         return content
-
-    def _modify_values(self) -> None:
-        """
-        Modify values of the struct.
-
-        Raises
-        ------
-        TypeError
-            if second dynamic field is found.
-        """
-        for name, struct in self.items():
-            if struct.is_dynamic and self.is_dynamic:
-                raise TypeError("two dynamic field not allowed")
-            if struct.is_dynamic:
-                self._setattr("dynamic_field_name", name)
-
-    def _setattr(self, name: str, value: Any) -> None:
-        """
-        Set dataclass attribute by `key`.
-
-        Parameters
-        ----------
-        name : str
-            attribute name.
-        value : Any
-            attribute value.
-        """
-        # todo: check that key exists
-        object.__setattr__(self, name, value)
 
     def _verify_fields_list(self, fields: set[str]) -> None:
         """
@@ -733,11 +717,7 @@ class Struct(ABC, Generic[FieldT]):
         for name in diff.copy():
             if name in self:
                 field = self[name]
-                if (
-                    field.has_fill_value
-                    or field.has_default
-                    or field.is_dynamic
-                ):
+                if field.has_default or field.is_dynamic:
                     diff.remove(name)
 
         if len(diff) != 0:
@@ -747,6 +727,26 @@ class Struct(ABC, Generic[FieldT]):
             )
 
     @property
+    def name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            name of storage configuration.
+        """
+        return self._name
+
+    @property
+    def dynamic_field_name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            dynamic field name.
+        """
+        return self._dyn_field
+
+    @property
     def is_dynamic(self) -> bool:
         """
         Returns
@@ -754,7 +754,7 @@ class Struct(ABC, Generic[FieldT]):
         bool
             True - has dynamic field.
         """
-        return bool(len(self.dynamic_field_name))
+        return len(self.dynamic_field_name) != 0
 
     @property
     def minimum_size(self) -> int:
@@ -764,7 +764,6 @@ class Struct(ABC, Generic[FieldT]):
         int
             minimum message size in bytes.
         """
-        # pylint: disable=no-member
         return sum(s.bytes_expected for s in self._f.values())
 
     def __contains__(self, name: str) -> bool:
@@ -777,5 +776,5 @@ class Struct(ABC, Generic[FieldT]):
 
     def __iter__(self) -> Generator[FieldT, None, None]:
         """Iterate by field structs."""
-        for struct in self._f.values():  # pylint: disable=no-member
+        for struct in self._f.values():
             yield struct

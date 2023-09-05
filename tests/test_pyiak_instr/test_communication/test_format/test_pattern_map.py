@@ -70,10 +70,10 @@ class TestPatternMap(unittest.TestCase):
             "f1 = \dct(typename,dynamic_length,direction,\cod(5),"
             "bytes_expected,1,fmt,\cod(520),order,\cod(1280),"
             "behaviour,\cod(1536),units,\cod(257),additive,0,"
-            r"default,\bts(),fill_value,\bts(0))",
+            r"default,\bts(0))",
             "f2 = \dct(typename,crc,direction,\cod(5),bytes_expected,2,"
             "fmt,\cod(521),order,\cod(1280),poly,4129,init,0,"
-            r"default,\bts(),fill_value,\bts(0),wo_fields,\set())",
+            r"default,\bts(0),wo_fields,\set())",
         ]
 
         with open(TEST_DIR / "test_write.ini", "r") as file:

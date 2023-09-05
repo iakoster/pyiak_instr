@@ -233,12 +233,12 @@ class Container(
         match args:
             case _ if len(args) == 0:
                 return {
-                    n: self.bytes_count(n) // f.word_bytesize
+                    n: self.bytes_count(n) // f.fmt_bytesize
                     for n, f in self._s.items()
                 }
 
             case (str() as name,):
-                return self.bytes_count(name) // self._s[name].word_bytesize
+                return self.bytes_count(name) // self._s[name].fmt_bytesize
 
         raise TypeError("invalid arguments")
 
@@ -288,7 +288,7 @@ class Container(
         if length == 0:
             return "EMPTY"
 
-        step = field.word_bytesize
+        step = field.fmt_bytesize
         if length > 20 and self.words_count(name) > 2:
             if step == 1:
                 border = 4
