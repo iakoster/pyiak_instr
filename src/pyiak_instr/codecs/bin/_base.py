@@ -27,6 +27,7 @@ __all__ = [
     "BytesFloatCodec",
     "BytesHexCodec",
     "BytesStringCodec",
+    "bytes_instant_return",
     "get_bytes_codec",
 ]
 

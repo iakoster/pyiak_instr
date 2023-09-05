@@ -10,6 +10,7 @@ from ._base import (
     BytesFloatCodec,
     BytesHexCodec,
     BytesStringCodec,
+    bytes_instant_return,
     get_bytes_codec,
 )
 
@@ -20,5 +21,6 @@ __all__ = [
     "BytesFloatCodec",
     "BytesHexCodec",
     "BytesStringCodec",
+    "bytes_instant_return",
     "get_bytes_codec",
 ]
