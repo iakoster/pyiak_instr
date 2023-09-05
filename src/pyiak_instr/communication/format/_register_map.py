@@ -129,7 +129,6 @@ class Register(Generic[MessageT]):
 
         return msg
 
-    # todo: tests
     def get_additions(self, struct_name: str) -> Additions:
         """
         Get Additions instance.
@@ -144,15 +143,15 @@ class Register(Generic[MessageT]):
         Additions
             additions instance.
         """
-        encoder = StringCodec()
+        codec = StringCodec()
         return Additions(
-            current=encoder.decode(self.message_kw),
+            current=codec.decode(self.message_kw),
             lower={
                 struct_name: Additions(
-                    current=encoder.decode(self.struct_kw),
+                    current=codec.decode(self.struct_kw),
                     lower={
                         n: Additions(current=kw)
-                        for n, kw in encoder.decode(self.fields_kw).items()
+                        for n, kw in codec.decode(self.fields_kw).items()
                     },
                 )
             },

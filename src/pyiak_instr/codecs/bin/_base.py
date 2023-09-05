@@ -1,8 +1,11 @@
 """Private module of ``pyiak_instr.codecs.bin``."""
+from __future__ import annotations
 from struct import calcsize
+from functools import wraps
 from abc import ABC
 from typing import (
     Any,
+    Callable,
     ClassVar,
     Generic,
     Iterable,
@@ -26,6 +29,34 @@ __all__ = [
     "BytesStringCodec",
     "get_bytes_codec",
 ]
+
+
+def bytes_instant_return(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    Changing the method functionality so that it always returns bytes type
+    when trying to encode them.
+
+    Parameters
+    ----------
+    func: Callable[..., Any]
+        method.
+
+    Returns
+    -------
+    Callable[..., Any]
+        wrapper
+    """
+
+    # pylint: disable=missing-return-doc,missing-return-type-doc
+    @wraps(func)
+    def wrapper(  # type: ignore[no-untyped-def]
+        self: BytesCodec[Any, Any], data: Any, *args: Any, **kwargs: Any
+    ):
+        if isinstance(data, bytes):
+            return data
+        return func(self, data, *args, **kwargs)
+
+    return wrapper
 
 
 DecodeT_co = TypeVar("DecodeT_co", covariant=True)
@@ -146,6 +177,7 @@ class BytesIntCodec(BytesCodec[IntDecodeT, IntEncodeT]):
             dtype=np.int_,
         )
 
+    @bytes_instant_return
     def encode(self, data: IntEncodeT) -> bytes:
         """
         Encode `data` to bytes.
@@ -160,8 +192,6 @@ class BytesIntCodec(BytesCodec[IntDecodeT, IntEncodeT]):
         bytes
             encoded data.
         """
-        if isinstance(data, bytes):
-            return data
         if not isinstance(data, Iterable | np.ndarray):
             data = [data]
         return b"".join(
@@ -225,6 +255,7 @@ class BytesFloatCodec(BytesCodec[FloatDecodeT, FloatEncodeT]):
         """
         return np.frombuffer(data, dtype=self._dtype)
 
+    @bytes_instant_return
     def encode(self, data: FloatEncodeT) -> bytes:
         """
         Encode `data` to bytes.
@@ -239,8 +270,6 @@ class BytesFloatCodec(BytesCodec[FloatDecodeT, FloatEncodeT]):
         bytes
             encoded data.
         """
-        if isinstance(data, bytes):
-            return data
         return np.array(data, dtype=self._dtype).tobytes()
 
 
@@ -282,6 +311,7 @@ class BytesHexCodec(BytesCodec[HexDecodeT, HexEncodeT]):
         """
         return data.hex()
 
+    @bytes_instant_return
     def encode(self, data: HexEncodeT) -> bytes:
         """
         Encode `data` to bytes.
@@ -296,8 +326,7 @@ class BytesHexCodec(BytesCodec[HexDecodeT, HexEncodeT]):
         bytes
             encoded data.
         """
-        if isinstance(data, bytes):
-            return data
+        assert not isinstance(data, bytes), "bytes not allowed"
         return bytes.fromhex(data)
 
 
@@ -341,6 +370,7 @@ class BytesStringCodec(BytesCodec[StringDecodeT, StringEncodeT]):
         """
         return data.decode(encoding=self._encoding)
 
+    @bytes_instant_return
     def encode(self, data: StringEncodeT) -> bytes:
         """
         Encode `data` to bytes.
@@ -355,8 +385,7 @@ class BytesStringCodec(BytesCodec[StringDecodeT, StringEncodeT]):
         bytes
             encoded data.
         """
-        if isinstance(data, bytes):
-            return data
+        assert not isinstance(data, bytes), "bytes not allowed"
         return data.encode(encoding=self._encoding)
 
 
