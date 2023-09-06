@@ -392,8 +392,7 @@ class BytesStringCodec(BytesCodec[StringDecodeT, StringEncodeT]):
 
 def get_bytes_codec(
     fmt: Code,
-    order: Code = Code.BIG_ENDIAN,
-    encoding: str = "ascii",
+    **other: Any,
 ) -> BytesCodec[Any, Any]:
     """
     Get codec to encoding to/decoding from bytes.
@@ -402,14 +401,13 @@ def get_bytes_codec(
     ----------
     fmt : Code
         format of single value.
-    order : Code, default=BIG_ENDIAN
-        byteorder. Used for:
+    **other : Any
+        other kwargs for codec.
 
+        **order** : Code - byteorder. Used for:
             * BytesIntCodec;
             * BytesFloatCodec.
-    encoding : str, default='ascii'
-        encoding for strings. Used for:
-
+        **encoding** : str - encoding for strings. Used for:
             * BytesStringCodec
 
     Returns
@@ -423,15 +421,15 @@ def get_bytes_codec(
         if there is no codec for specified format.
     """
     if fmt in BytesIntCodec.ALLOWED:
-        return BytesIntCodec(fmt=fmt, order=order)
+        return BytesIntCodec(fmt=fmt, **other)
 
     if fmt in BytesFloatCodec.ALLOWED:
-        return BytesFloatCodec(fmt=fmt, order=order)
+        return BytesFloatCodec(fmt=fmt, **other)
 
     if fmt in BytesHexCodec.ALLOWED:
         return BytesHexCodec(fmt=fmt)
 
     if fmt in BytesStringCodec.ALLOWED:
-        return BytesStringCodec(fmt=fmt, encoding=encoding)
+        return BytesStringCodec(fmt=fmt, **other)
 
     raise ValueError(f"unsupported format: {fmt!r}")
