@@ -1,4 +1,4 @@
-"""Private module of ``pyiak_instr.utilities`` with common functions"""
+"""Private module of ``pyiak_instr.utilities``"""
 from typing import Any, Literal
 
 from ..exceptions import NotAmongTheOptions

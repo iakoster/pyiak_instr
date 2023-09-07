@@ -71,7 +71,7 @@ class Field(ABC):
         self._order = order
         self._default = default
         # todo: variant with an already initialized instance
-        self._codec = get_bytes_codec(fmt, order)
+        self._codec = get_bytes_codec(fmt, order=order)
 
         self._verify_initialized_field()
 
