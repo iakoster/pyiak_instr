@@ -119,6 +119,14 @@ class Register(Generic[MessageT]):
             fields_data[msg.get.operation.name] = operation
 
         if dynamic_length > 0 and msg.has.dynamic_length:
+            if msg.get.dynamic_length.units is Code.WORDS:
+                if dynamic_length % msg.get.data.fmt_bytesize != 0:
+                    raise ValueError(
+                        "dynamic length value represents a non-integer "
+                        "words count"
+                    )
+                dynamic_length //= msg.get.data.fmt_bytesize
+
             fields_data[msg.get.dynamic_length.name] = dynamic_length
 
         if data is not None and msg.struct.is_dynamic:

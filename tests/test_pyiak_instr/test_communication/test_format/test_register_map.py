@@ -28,7 +28,7 @@ class TestRegister(unittest.TestCase):
             self,
             self._instance(),
             address=20,
-            length=42,
+            length=44,
             name="test",
             description="Short. Long.",
             pattern="pat",
@@ -88,9 +88,9 @@ class TestRegister(unittest.TestCase):
     def test_read(self) -> None:
         with self.subTest(test="basic"):
             msg = self._instance().read(self._pattern())
-            self.assertEqual(b"\x00\x14\x00\x2a", msg.content())
+            self.assertEqual(b"\x00\x14\x00\x0B", msg.content())
             for name, ref in dict(
-                    f0=b"\x00\x14", f1=b"\x00", f3=b"\x2a", f4=b""
+                    f0=b"\x00\x14", f1=b"\x00", f3=b"\x0B", f4=b""
             ).items():
                 self.assertEqual(ref, msg.content(name))
 
@@ -103,6 +103,14 @@ class TestRegister(unittest.TestCase):
                     f0=b"\x00\x14", f1=b"\x00", f3=b"\x00", f4=b""
             ).items():
                 self.assertEqual(ref, msg.content(name))
+
+    def test_read_with_invalid_dynamic_length(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            self._instance().read(self._pattern(), dynamic_length=5)
+        self.assertEqual(
+            "dynamic length value represents a non-integer words count",
+            exc.exception.args[0],
+        )
 
     def test_write(self) -> None:
         with self.subTest(test="basic"):
@@ -119,8 +127,6 @@ class TestRegister(unittest.TestCase):
                 self.assertEqual(ref, msg.content(name))
 
     def test_from_series(self) -> None:
-        ref = self._instance()
-
         validate_object(
             self,
             TIRegister.from_series(pd.Series(dict(
@@ -153,7 +159,7 @@ class TestRegister(unittest.TestCase):
                 pattern="pat",
                 name="test",
                 address=20,
-                length=42,
+                length=44,
                 rw_type=Code.ANY,
                 description="Short. Long.",
                 message_kw="\dct()",
@@ -184,7 +190,7 @@ class TestRegister(unittest.TestCase):
                 pattern="pat",
                 name="test",
                 address=20,
-                length=42,
+                length=44,
                 description="Short. Long.",
             )
 
